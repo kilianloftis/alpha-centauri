@@ -20,6 +20,32 @@
             "amount": 8,
             "op": "MultiplyGeometric"
           }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "Player"
+          },
+          "parameters": {
+            "stat": "upheaval_cost",
+            "amount": 0,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "AI"
+          },
+          "parameters": {
+            "stat": "upheaval_cost",
+            "amount": 3,
+            "op": "Add"
+          }
         }
       ]
     },
@@ -40,6 +66,32 @@
             "stat": "bureaucracy",
             "amount": 7,
             "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "Player"
+          },
+          "parameters": {
+            "stat": "upheaval_cost",
+            "amount": 1,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "AI"
+          },
+          "parameters": {
+            "stat": "upheaval_cost",
+            "amount": 3,
+            "op": "Add"
           }
         }
       ]
@@ -62,6 +114,32 @@
             "amount": 6,
             "op": "MultiplyGeometric"
           }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "Player"
+          },
+          "parameters": {
+            "stat": "upheaval_cost",
+            "amount": 2,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "AI"
+          },
+          "parameters": {
+            "stat": "upheaval_cost",
+            "amount": 3,
+            "op": "Add"
+          }
         }
       ]
     },
@@ -82,6 +160,32 @@
             "stat": "bureaucracy",
             "amount": 5,
             "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "Player"
+          },
+          "parameters": {
+            "stat": "upheaval_cost",
+            "amount": 3,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "AI"
+          },
+          "parameters": {
+            "stat": "upheaval_cost",
+            "amount": 3,
+            "op": "Add"
           }
         }
       ]
@@ -121,6 +225,32 @@
             "amount": 4,
             "op": "MultiplyGeometric"
           }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "Player"
+          },
+          "parameters": {
+            "stat": "upheaval_cost",
+            "amount": 4,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "AI"
+          },
+          "parameters": {
+            "stat": "upheaval_cost",
+            "amount": 3,
+            "op": "Add"
+          }
         }
       ]
     },
@@ -158,6 +288,32 @@
             "stat": "bureaucracy",
             "amount": 3,
             "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "Player"
+          },
+          "parameters": {
+            "stat": "upheaval_cost",
+            "amount": 5,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "AI"
+          },
+          "parameters": {
+            "stat": "upheaval_cost",
+            "amount": 3,
+            "op": "Add"
           }
         }
       ]

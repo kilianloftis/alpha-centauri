@@ -126,6 +126,32 @@
             "amount": 30,
             "op": "AddPercent"
           }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "Player"
+          },
+          "parameters": {
+            "stat": "upheaval_cost",
+            "amount": 0,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "AI"
+          },
+          "parameters": {
+            "stat": "upheaval_cost",
+            "amount": 3,
+            "op": "Add"
+          }
         }
       ]
     },
@@ -244,6 +270,32 @@
             "amount": 20,
             "op": "AddPercent"
           }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "Player"
+          },
+          "parameters": {
+            "stat": "upheaval_cost",
+            "amount": 1,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "AI"
+          },
+          "parameters": {
+            "stat": "upheaval_cost",
+            "amount": 3,
+            "op": "Add"
+          }
         }
       ]
     },
@@ -340,6 +392,32 @@
             "amount": 10,
             "op": "AddPercent"
           }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "Player"
+          },
+          "parameters": {
+            "stat": "upheaval_cost",
+            "amount": 2,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "AI"
+          },
+          "parameters": {
+            "stat": "upheaval_cost",
+            "amount": 3,
+            "op": "Add"
+          }
         }
       ]
     },
@@ -417,6 +495,32 @@
           "scope": "FactionGlobal",
           "parameters": {
             "stat": "tech_cost_catch_up",
+            "amount": 3,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "Player"
+          },
+          "parameters": {
+            "stat": "upheaval_cost",
+            "amount": 3,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "AI"
+          },
+          "parameters": {
+            "stat": "upheaval_cost",
             "amount": 3,
             "op": "Add"
           }
@@ -530,6 +634,32 @@
             "amount": -20,
             "op": "AddPercent"
           }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "Player"
+          },
+          "parameters": {
+            "stat": "upheaval_cost",
+            "amount": 4,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "AI"
+          },
+          "parameters": {
+            "stat": "upheaval_cost",
+            "amount": 3,
+            "op": "Add"
+          }
         }
       ]
     },
@@ -626,6 +756,32 @@
             "stat": "cost_multiplier",
             "amount": -30,
             "op": "AddPercent"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "Player"
+          },
+          "parameters": {
+            "stat": "upheaval_cost",
+            "amount": 5,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "AI"
+          },
+          "parameters": {
+            "stat": "upheaval_cost",
+            "amount": 3,
+            "op": "Add"
           }
         }
       ]

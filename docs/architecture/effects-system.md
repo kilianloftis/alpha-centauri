@@ -815,9 +815,17 @@ grants fewer units and reports the real count rather than throwing.
   resolves it and throws, naming the category, when a category declares none or more than one.
   The ids used to be compiled in, which meant a mod shipping its own policy set threw from every
   faction constructor rather than from config load.
+- **Pending vs committed.** `SetActivePolicy` / `SetPendingDraft` write the pending selection
+  (what `CollectEffects` / ratings read). Committed is the upheaval cost baseline. The SE panel
+  holds a local `SocialPolicyDraft_t` (all four categories); clicks only edit the draft.
+  OK runs `AdoptDraft`: pays or refunds `QuoteUpheavalDelta(draft)` from energy, adjusts
+  `upheavalPaid`, then copies the draft into pending. Absolute cost is `cost_formula` ×
+  `UpheavalCost`, then `UpheavalCostScale`, comparing the full draft to committed.
+  `SocialEngineeringUpkeep` (after Mood) copies pending → committed and clears paid with no
+  refund (`docs/thinker/terranx-map.md` social upheaval).
 - **`GetSocialRating` is memoized** against the manager's own `Revision` (bumped by
-  `SetActivePolicy`). Answering one axis re-collected every policy's effects and re-accumulated
-  the whole map, and the UI asks once per axis per frame.
+  `SetActivePolicy` / `SetPendingDraft`). Answering one axis re-collected every policy's
+  effects and re-accumulated the whole map, and the UI asks once per axis per frame.
 
 ### Social Ratings (two-level)
 - `SocialRatingModifier` effects are ordinary effects from **faction-internal** sources: a
@@ -835,8 +843,9 @@ grants fewer units and reports the real count rather than throwing.
     `SocialPolicyImpunity` policy in the same list), then applies **MaxClamp** /
     **MinClamp** (MinClamp wins a crossing pair). Base-context callers pass no filter
     (`FilterForBase` established the context); the faction lane passes `FactionWide`.
-  - `ForbiddenSocialPolicy` is read by `PolicyAvailable` (with the tech gate). Impunity and
-    rating clamps are accumulate-time only — not RuleFlags or StatIds.
+  - `ForbiddenSocialPolicy` is read by `PolicyAvailable` (with the tech gate). Upheaval
+    affordability is `CanAdoptDraft` beside it. Impunity and rating clamps are
+    accumulate-time only — not RuleFlags or StatIds.
   - `ResolveSocialRatingLevelEffects(const BaseEffects_t&, ratingRegistry)` — base lane:
     maps each non-zero accumulated level through `SocialRatingConfig_t::levelEffects`
     (SMAC clamp-at-extremes) and **returns** the gameplay effects with sourceId

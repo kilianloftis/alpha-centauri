@@ -2,10 +2,13 @@
 
 #include "ui/IGameView.h"
 
+#include <string>
+
 namespace ac
 {
 
 class Faction;
+class SocialEngineeringDisplay;
 class SocialPolicyRegistry;
 class SocialRatingRegistry;
 
@@ -21,6 +24,11 @@ public:
     );
 
     bool HandleKey(const KeyEvent_t& rEvent) override;
+
+private:
+    void Notice_(std::string message);
+
+    SocialEngineeringDisplay* m_pDisplay = nullptr;
 };
 
 } // namespace ac

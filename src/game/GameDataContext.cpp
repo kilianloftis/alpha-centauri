@@ -34,8 +34,10 @@
 #include "game/research/TechCostCalculator.h"
 #include "game/research/TechCostConfig.h"
 #include "game/research/TechRegistry.h"
+#include "game/social-engineering/SocialPolicyConfigParser.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/social-engineering/SocialRatingRegistry.h"
+#include "game/social-engineering/UpheavalCostCalculator.h"
 #include "game/units/UnitComponentConfigParser.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitSlotRegistry.h"
@@ -226,7 +228,14 @@ void LoadEffectRegistries_(GameDataContext& rData)
     rData.baseSpriteSizes = ParseOwned_<BaseSpriteSizesConfigParser>(rPaths.baseSpriteSizes);
     ValidateStageBumpBuildings_(rData);
     rData.stockpileRegistry = LoadRegistry_<StockpileRegistry>(rPaths.stockpiles);
-    rData.socialPolicyRegistry = LoadRegistry_<SocialPolicyRegistry>(rPaths.socialPolicies);
+    {
+        SocialPoliciesConfig_t socialPolicies =
+            SocialPolicyConfigParser{}.ParseConfig(rPaths.socialPolicies);
+        rData.upheavalCostConfig =
+            std::make_unique<UpheavalCostConfig_t>(std::move(socialPolicies.upheaval));
+        rData.socialPolicyRegistry = std::make_unique<SocialPolicyRegistry>();
+        rData.socialPolicyRegistry->Assign(std::move(socialPolicies.policies));
+    }
     rData.socialRatingRegistry = LoadRegistry_<SocialRatingRegistry>(rPaths.socialRatings);
     rData.factionRegistry = LoadRegistry_<FactionRegistry>(rPaths.factions);
 }
@@ -308,6 +317,8 @@ void LoadFormulasAndCalculators_(GameDataContext& rData)
     rData.diplomacyCalculator = std::make_unique<DiplomacyCalculator>(*rData.diplomacyConfig);
     rData.baseConquestCalculator =
         std::make_unique<BaseConquestCalculator>(*rData.baseConquestConfig);
+    rData.upheavalCostCalculator =
+        std::make_unique<UpheavalCostCalculator>(*rData.upheavalCostConfig, rLua);
 }
 
 } // namespace
@@ -327,6 +338,7 @@ void ThrowIfIncomplete(const GameDataContext& rData)
         {rData.techRegistry.get(), "techRegistry"},
         {rData.socialPolicyRegistry.get(), "socialPolicyRegistry"},
         {rData.socialRatingRegistry.get(), "socialRatingRegistry"},
+        {rData.upheavalCostConfig.get(), "upheavalCostConfig"},
         {rData.factionRegistry.get(), "factionRegistry"},
         {rData.popTypeRegistry.get(), "popTypeRegistry"},
         {rData.popCompositionConfig.get(), "popCompositionConfig"},
@@ -364,6 +376,7 @@ void ThrowIfIncomplete(const GameDataContext& rData)
         {rData.probeCalculator.get(), "probeCalculator"},
         {rData.diplomacyCalculator.get(), "diplomacyCalculator"},
         {rData.baseConquestCalculator.get(), "baseConquestCalculator"},
+        {rData.upheavalCostCalculator.get(), "upheavalCostCalculator"},
     };
     for (const auto& [pMember, pName] : required)
     {

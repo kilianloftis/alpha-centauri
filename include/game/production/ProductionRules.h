@@ -73,8 +73,8 @@ int CompletionPopulationFloor();
 // count, as SMAC's prompt does not.
 bool CompletionAbandonsBase(const BaseManager& rBase);
 
-// The closest base by TabletopDiagonalDistance, then the lower BaseId. Empty outside the
-// faction's territory. TODO: SMAC's nearest-base metric for unit disband is not recorded.
+// Closest own-faction base by TabletopDiagonalDistance, then the lower BaseId. Empty outside
+// the faction's territory.
 std::optional<BaseId_t> ScrapRefundBase(const Faction& rFaction, const Tile& rTile);
 
 } // namespace ac

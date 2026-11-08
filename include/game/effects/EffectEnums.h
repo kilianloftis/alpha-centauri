@@ -197,6 +197,12 @@ enum class StatId_t
     // Subtracted from the local tech factor. Not the live Research SE rating.
     TechCostResearch,
 
+    // Difficulty band for social-engineering upheaval (Additive). Difficulty emits player
+    // Citizen…Transcend as 0…5 and AI as 3 (Librarian). Multiplies the upheaval cost_formula.
+    UpheavalCost,
+    // Scales the formula×UpheavalCost product (RawScaled). Progenitor factions emit +50%.
+    UpheavalCostScale,
+
     // Tile terrain mutation (resolved back into Tile::SetMoisture, not a runtime-queried stat)
     MoistureTier,
 
@@ -357,6 +363,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::TechCostCatchUp:
         case StatId_t::TechCostTurnLag:
         case StatId_t::TechCostResearch:
+        case StatId_t::UpheavalCost:
         case StatId_t::SizeFreeDrones:
         case StatId_t::CouncilVotes:
         case StatId_t::CommerceEnergyBonus:
@@ -391,6 +398,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::MoistureTier:
         case StatId_t::FacilityEnergyUpkeep:
         case StatId_t::ScrapRefund:
+        case StatId_t::UpheavalCostScale:
         case StatId_t::GiftGivenValue:
         case StatId_t::GiftReceivedValue:
         case StatId_t::MoveCost:             return StatKind_t::RawScaled;
@@ -479,6 +487,8 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::TechCostCatchUp:
         case StatId_t::TechCostTurnLag:
         case StatId_t::TechCostResearch:
+        case StatId_t::UpheavalCost:
+        case StatId_t::UpheavalCostScale:
         case StatId_t::CommerceRate:
         case StatId_t::ProbeActorCost:
         case StatId_t::CouncilVotes:
@@ -609,6 +619,8 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "tech_cost_catch_up")      return StatId_t::TechCostCatchUp;
     if (rStat == "tech_cost_turn_lag")      return StatId_t::TechCostTurnLag;
     if (rStat == "tech_cost_research")      return StatId_t::TechCostResearch;
+    if (rStat == "upheaval_cost")           return StatId_t::UpheavalCost;
+    if (rStat == "upheaval_cost_scale")     return StatId_t::UpheavalCostScale;
     if (rStat == "moisture_tier")           return StatId_t::MoistureTier;
     if (rStat == "commerce_rate")           return StatId_t::CommerceRate;
     if (rStat == "commerce_rating")         return StatId_t::CommerceRating;

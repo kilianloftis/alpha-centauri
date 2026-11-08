@@ -252,7 +252,7 @@ TEST_CASE("Transferring an embarked passenger detaches it cleanly without destro
     Unit* pPassengerAddress = &passenger;
 
     // Subvert the passenger only — the carrier stays with the giver. Must not throw despite
-    // the carrier still occupying the passenger's tile (no CanPlaceUnitOnTile re-check).
+    // the carrier still occupying the passenger's tile.
     CHECK_NOTHROW(giver.TransferUnitTo(passenger.GetUnitId(), receiver));
 
     CHECK_FALSE(pPassengerAddress->Transport().IsEmbarked());

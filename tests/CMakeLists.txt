@@ -52,6 +52,7 @@ add_executable(effects-tests
     faction/PopCompositionTests.cpp
     faction/ResearchSelectorTests.cpp
     faction/SocialEngineeringManagerTests.cpp
+    faction/UpheavalCostTests.cpp
     game/GameCategoryParserTests.cpp
     game/CurrentGameStateTests.cpp
     game/UnitPositionTests.cpp

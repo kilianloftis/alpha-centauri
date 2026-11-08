@@ -1,6 +1,6 @@
 // Unit-position state model: UnitPositionIndex is the single owner — units register for
 // their lifetime (RAII), movement goes through MoveUnit (which keeps the unit's tile
-// pointer and the occupancy lists in sync). Stacking legality lives in MovementRules.
+// pointer and the occupancy lists in sync).
 
 #include "GameFixtures.h"
 
@@ -32,10 +32,6 @@ using namespace actest;
 
 namespace
 {
-
-// (The SingleUnitPerTileGuard that used to live here is gone: the stacking rule is per-world
-// state on UnitPositionIndex now, so a test sets it on its own fixture's index and cannot leak
-// it into the next case.)
 
 struct MovementHarness_
 {

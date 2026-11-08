@@ -13,6 +13,7 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 #include <filesystem>
 #include <fstream>
+#include <string>
 
 using namespace ac;
 
@@ -27,7 +28,17 @@ std::filesystem::path WriteTempJson(const std::string& name, const std::string& 
     return path;
 }
 
-const char* k_ValidDefaults = R"([
+// social_policies.json is an object with upheaval coefficients plus the policy list.
+std::string WrapPolicies(const char* pPoliciesArray)
+{
+    return std::string(R"({
+  "upheaval": {
+    "cost_formula": "(changed_categories + 1) ^ 3"
+  },
+  "policies": )") + pPoliciesArray + "}";
+}
+
+const char* k_ValidPolicies = R"([
     { "id": "frontier",     "name": "Frontier",     "category": "politics",       "default": true, "effects": [] },
     { "id": "simple",       "name": "Simple",       "category": "economics",      "default": true, "effects": [] },
     { "id": "survival",     "name": "Survival",     "category": "values",         "default": true, "effects": [] },
@@ -40,15 +51,16 @@ const char* k_ValidDefaults = R"([
 TEST_CASE("SocialEngineeringManager: starts on the policies config marks as default",
           "[social-engineering][validation]")
 {
-    const std::filesystem::path path = WriteTempJson("ac_sem_valid.json", k_ValidDefaults);
+    const std::filesystem::path path =
+        WriteTempJson("ac_sem_valid.json", WrapPolicies(k_ValidPolicies));
     SocialPolicyRegistry registry;
     registry.Load(path.string());
 
     SocialEngineeringManager manager(registry);
-    CHECK(manager.GetActivePolicy(SocialCategory_t::Politics)->id == "frontier");
-    CHECK(manager.GetActivePolicy(SocialCategory_t::Economics)->id == "simple");
-    CHECK(manager.GetActivePolicy(SocialCategory_t::Values)->id == "survival");
-    CHECK(manager.GetActivePolicy(SocialCategory_t::FutureSociety)->id == "none_future");
+    CHECK(manager.GetActivePolicy(SocialCategory_t::Politics).id == "frontier");
+    CHECK(manager.GetActivePolicy(SocialCategory_t::Economics).id == "simple");
+    CHECK(manager.GetActivePolicy(SocialCategory_t::Values).id == "survival");
+    CHECK(manager.GetActivePolicy(SocialCategory_t::FutureSociety).id == "none_future");
     std::filesystem::remove(path);
 }
 
@@ -56,29 +68,29 @@ TEST_CASE("SocialEngineeringManager: a mod's own ids work as long as each catego
           "[social-engineering][validation]")
 {
     // The point of the config flag: nothing here shares an id with the shipped policy set.
-    const std::filesystem::path path = WriteTempJson("ac_sem_modded.json", R"([
+    const std::filesystem::path path = WriteTempJson("ac_sem_modded.json", WrapPolicies(R"([
         { "id": "clan_rule",  "name": "Clan Rule",  "category": "politics",       "default": true, "effects": [] },
         { "id": "barter",     "name": "Barter",     "category": "economics",      "default": true, "effects": [] },
         { "id": "ancestral",  "name": "Ancestral",  "category": "values",         "default": true, "effects": [] },
         { "id": "no_future",  "name": "No Future",  "category": "future_society", "default": true, "effects": [] }
-    ])");
+    ])"));
     SocialPolicyRegistry registry;
     registry.Load(path.string());
 
     SocialEngineeringManager manager(registry);
-    CHECK(manager.GetActivePolicy(SocialCategory_t::Politics)->id == "clan_rule");
+    CHECK(manager.GetActivePolicy(SocialCategory_t::Politics).id == "clan_rule");
     std::filesystem::remove(path);
 }
 
 TEST_CASE("A social-policy file with no default for a category is rejected at load",
           "[social-engineering][validation]")
 {
-    const std::filesystem::path path = WriteTempJson("ac_sem_missing.json", R"([
+    const std::filesystem::path path = WriteTempJson("ac_sem_missing.json", WrapPolicies(R"([
         { "id": "frontier",    "name": "Frontier",    "category": "politics",       "default": true, "effects": [] },
         { "id": "simple",      "name": "Simple",      "category": "economics",      "default": true, "effects": [] },
         { "id": "survival",    "name": "Survival",    "category": "values",         "default": true, "effects": [] },
         { "id": "none_future", "name": "None",        "category": "future_society", "effects": [] }
-    ])");
+    ])"));
     // At load, not at the first faction constructor: a mod's file used to load clean and then
     // throw from deep inside session setup.
     SocialPolicyRegistry registry;
@@ -91,27 +103,24 @@ TEST_CASE("A social-policy file with two defaults for a category is rejected at 
           "[social-engineering][validation]")
 {
     // Ambiguity is a config error, not a coin flip over which policy a faction starts on.
-    const std::filesystem::path path = WriteTempJson("ac_sem_two_defaults.json", R"([
+    const std::filesystem::path path = WriteTempJson("ac_sem_two_defaults.json", WrapPolicies(R"([
         { "id": "frontier",     "name": "Frontier",     "category": "politics",       "default": true, "effects": [] },
         { "id": "police_state", "name": "Police State", "category": "politics",       "default": true, "effects": [] },
         { "id": "simple",       "name": "Simple",       "category": "economics",      "default": true, "effects": [] },
         { "id": "survival",     "name": "Survival",     "category": "values",         "default": true, "effects": [] },
         { "id": "none_future",  "name": "None",         "category": "future_society", "default": true, "effects": [] }
-    ])");
+    ])"));
     SocialPolicyRegistry registry;
     CHECK_THROWS_WITH(registry.Load(path.string()),
                       Catch::Matchers::ContainsSubstring("Politics"));
     std::filesystem::remove(path);
 }
 
-// (Removed: "a null registry skips default-policy validation". The registry is a constructor
-// reference now, so skipping validation is unrepresentable — that test pinned the escape hatch
-// that let a faction be built with no policies at all.)
-
 TEST_CASE("SocialEngineeringManager: SetActivePolicy stores the policy under its own category",
           "[social-engineering][validation]")
 {
-    const std::filesystem::path path = WriteTempJson("ac_sem_set_active.json", k_ValidDefaults);
+    const std::filesystem::path path =
+        WriteTempJson("ac_sem_set_active.json", WrapPolicies(k_ValidPolicies));
     SocialPolicyRegistry registry;
     registry.Load(path.string());
 
@@ -119,9 +128,9 @@ TEST_CASE("SocialEngineeringManager: SetActivePolicy stores the policy under its
 
     const SocialPolicyConfig_t& rPoliceState = registry.Get("police_state");
     CHECK_NOTHROW(manager.SetActivePolicy(rPoliceState));
-    CHECK(manager.GetActivePolicy(SocialCategory_t::Politics) == &rPoliceState);
+    CHECK(&manager.GetActivePolicy(SocialCategory_t::Politics) == &rPoliceState);
     // Economics slot is unchanged (still the default "simple").
-    CHECK(manager.GetActivePolicy(SocialCategory_t::Economics)->id == "simple");
+    CHECK(manager.GetActivePolicy(SocialCategory_t::Economics).id == "simple");
 
     CHECK_THROWS_WITH(manager.SetActivePolicy(SocialPolicyConfig_t{
                           .id = "not_in_registry",
@@ -135,7 +144,7 @@ TEST_CASE("SocialEngineeringManager: SetActivePolicy stores the policy under its
 TEST_CASE("SocialEngineeringManager: GetSocialRating sums active policy modifiers only",
           "[social-engineering][rating]")
 {
-    const std::filesystem::path path = WriteTempJson("ac_sem_rating.json", R"([
+    const std::filesystem::path path = WriteTempJson("ac_sem_rating.json", WrapPolicies(R"([
         { "id": "frontier", "name": "Frontier", "category": "politics", "default": true, "effects": [
             { "type": "SocialRatingModifier", "scope": "FactionGlobal",
               "parameters": { "rating": "growth", "amount": 2 } }
@@ -150,7 +159,7 @@ TEST_CASE("SocialEngineeringManager: GetSocialRating sums active policy modifier
         ]},
         { "id": "survival", "name": "Survival", "category": "values", "default": true, "effects": [] },
         { "id": "none_future", "name": "None", "category": "future_society", "default": true, "effects": [] }
-    ])");
+    ])"));
     SocialPolicyRegistry registry;
     registry.Load(path.string());
 

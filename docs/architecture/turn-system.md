@@ -47,6 +47,7 @@ graph TB
         PlayerActions[PlayerActions]
         PostActionsProduction[PostActionsProduction]
         Mood[Mood]
+        SocialEngineeringUpkeep[SocialEngineeringUpkeep]
         EcoDamage[EcoDamage]
     end
 
@@ -100,6 +101,7 @@ graph TB
     PerFactionTurnStage --> PlayerActions
     PerFactionTurnStage --> PostActionsProduction
     PerFactionTurnStage --> Mood
+    PerFactionTurnStage --> SocialEngineeringUpkeep
     PerFactionTurnStage --> EcoDamage
     PerFactionTurnStage --> CustomPerFactionTurnStage
 
@@ -244,6 +246,8 @@ about a pending riot without being a yielding stage.
   mineral bank happens per turn, inside `BaseProduction`.
 - **`PlayerActions`**: interactive yield + idempotent order resolution (above).
 - **`Mood`**: `CommitMood` per base — the second half of the split `Population` began.
+- **`SocialEngineeringUpkeep`**: after Mood, `CommitSocialEngineering` per faction — pending
+  social policies become committed and `upheavalPaid` clears with no energy refund.
   Forecast warns *before* `PlayerActions` so the player can still avert a riot by moving
   specialists or psych; commit re-evaluates *after* they had that chance and latches the
   result, and advances the consecutive-riot count that selects the escalation tier. The

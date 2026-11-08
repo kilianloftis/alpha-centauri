@@ -11,10 +11,8 @@ namespace ac
 class Unit;
 class Tile;
 
-// Owns unit positions: units register for life, and every move goes through MoveUnit, which
-// also owns the stacking rule.
-// TODO: Register_ and Unit::Disembark bypass the stacking check; what unloading onto a full
-// tile does is an open game rule.
+// Owns unit positions: units register for life, and every move goes through MoveUnit.
+// Tiles may hold any number of units (SMAC stacking).
 class UnitPositionIndex
 {
 public:

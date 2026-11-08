@@ -329,9 +329,9 @@ Some consequences have no condition, no choice and no amount: a transferred base
 - **Added to the plan (commit 9):** `ResearchRules::AvailableTechs(const Faction&)`. `GetAvailableTechs` delegates to it.
 
 ### [D] RES-4 A policy is available when its tech is known
-`SocialEngineeringManager.cpp:83` (`GetAvailablePolicies`).
-- `SetActivePolicy` has no legality or switching-cost check. When that lands, it goes beside this.
-- **Added to the plan (commit 9):** `SocialEngineeringRules::AvailablePolicies(const Faction&)`.
+`SocialEngineeringRules::PolicyAvailable` / `CanAdoptDraft` (tech + ForbiddenSocialPolicy +
+upheaval affordability for a full four-category draft). Adoption goes through `AdoptDraft`;
+turn commit is `SocialEngineeringUpkeep`.
 
 **Stays with its mutation:** the research stage discovers techs in a loop while points suffice (`ResearchAccumulation.cpp:18`). A one-tech-per-turn switch would extract that loop's condition.
 

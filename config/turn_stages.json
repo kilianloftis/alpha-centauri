@@ -165,6 +165,17 @@
     }
   },
   {
+    "id": "SocialEngineeringUpkeep",
+    "name": "Social Engineering Upkeep",
+    "description": "Commits pending social policies and clears upheavalPaid after the player window; must run after Mood",
+    "repeatForEachFaction": true,
+    "hooks": {
+      "pre": [],
+      "post": [],
+      "replace": []
+    }
+  },
+  {
     "id": "TurnEnd",
     "name": "Turn End",
     "description": "Finalizes the end of the turn",

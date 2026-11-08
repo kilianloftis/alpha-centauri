@@ -1,12 +1,16 @@
 #include "ui/social-engineering/SocialEngineeringDisplay.h"
 
+#include "game/social-engineering/SocialEngineeringMutations.h"
 #include "game/social-engineering/SocialEngineeringRules.h"
 
+#include "game/economy/EconomyManager.h"
+#include "game/effects/ActiveEffect.h"
 #include "game/faction/Faction.h"
 #include "game/faction/FactionConfig.h"
 #include "game/research/ResearchManager.h"
 #include "game/social-engineering/SocialEngineeringManager.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
+#include "game/social-engineering/SocialPolicyDraft.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/social-engineering/SocialRatingConfig.h"
 #include "game/social-engineering/SocialRatingRegistry.h"
@@ -19,10 +23,13 @@
 
 #include <array>
 #include <cctype>
+#include <map>
+#include <optional>
 #include <string_view>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace ac
 {
@@ -270,19 +277,38 @@ const SocialPolicyConfig_t* FindAvailablePolicyAt(
     return pPolicy;
 }
 
+std::map<SocialRatingId_t, int> DraftRatingTotals_(const SocialPolicyDraft_t& rDraft)
+{
+    std::vector<ActiveEffect_t> effects;
+    for (const SocialCategory_t category : magic_enum::enum_values<SocialCategory_t>())
+    {
+        const SocialPolicyConfig_t& rPolicy = rDraft.Get(category);
+        AppendActiveEffects(rPolicy.effects, nullptr, rPolicy.id, effects);
+    }
+    return AccumulateSocialRatings(effects, std::nullopt);
+}
+
 } // namespace
 
 SocialEngineeringDisplay::SocialEngineeringDisplay(
     Faction& rFaction,
     const SocialPolicyRegistry& rPolicyRegistry,
     const SocialRatingRegistry& rRatingRegistry,
-    WindowLayout_t layout
+    WindowLayout_t layout,
+    ConfirmFn confirm,
+    NoticeFn notice,
+    CommittedFn onCommitted
 )
     : UIElement(layout)
     , m_rFaction(rFaction)
     , m_rPolicyRegistry(rPolicyRegistry)
     , m_rRatingRegistry(rRatingRegistry)
-{}
+    , m_confirm(std::move(confirm))
+    , m_notice(std::move(notice))
+    , m_onCommitted(std::move(onCommitted))
+    , m_draft(PendingSocialDraft(rFaction))
+{
+}
 
 void SocialEngineeringDisplay::Render(Graphics& rGraphics)
 {
@@ -346,8 +372,7 @@ void SocialEngineeringDisplay::DrawCategory_(Graphics& rGraphics, size_t categor
 
     const std::vector<const SocialPolicyConfig_t*> policies =
         m_rPolicyRegistry.GetByCategory(category);
-    const SocialPolicyConfig_t* pActivePolicy =
-        m_rFaction.GetSocialEngineering().GetActivePolicy(category);
+    const SocialPolicyConfig_t& rDraftPolicy = m_draft.Get(category);
     const WindowLayout_t policyRowsBand = ResolveLayout(categoryBand, {
         0.0f,
         s.categoryNameRowRatio,
@@ -368,29 +393,37 @@ void SocialEngineeringDisplay::DrawCategory_(Graphics& rGraphics, size_t categor
                                s.hiddenPolicySlotColor, Style().outline.width);
             continue;
         }
-        DrawPolicyCell_(rGraphics, policyCell, *pPolicy, pActivePolicy, rPadding.horizontal,
+        DrawPolicyCell_(rGraphics, policyCell, *pPolicy, rDraftPolicy, rPadding.horizontal,
                         nameRowHeight);
     }
 }
 
 void SocialEngineeringDisplay::DrawPolicyCell_(Graphics& rGraphics, const WindowLayout_t& rCell,
                                                const SocialPolicyConfig_t& rPolicy,
-                                               const SocialPolicyConfig_t* pActivePolicy,
+                                               const SocialPolicyConfig_t& rDraftPolicy,
                                                float horizontalPadding, float nameRowHeight) const
 {
     const auto& s = Style().socialEngineeringDisplay;
-    const bool bIsActive = pActivePolicy && pActivePolicy->id == rPolicy.id;
-    const Color_t policyColor = bIsActive ? s.activePolicyColor : s.inactivePolicyColor;
+    const bool bIsDraft = rDraftPolicy.id == rPolicy.id;
+    const Color_t policyColor = bIsDraft ? s.activePolicyColor : s.inactivePolicyColor;
 
     rGraphics.DrawText(rPolicy.name, rCell.x + horizontalPadding, rCell.y,
                        FontSize_(s.policyFontSizeRatio), policyColor);
     rGraphics.DrawText(FormatPolicyBonuses(rPolicy), rCell.x + horizontalPadding,
                        rCell.y + nameRowHeight, FontSize_(s.bonusFontSizeRatio), policyColor);
-    if (bIsActive)
+    if (bIsDraft)
     {
         rGraphics.DrawRect(rCell.x, rCell.y, rCell.width, rCell.height, s.activePolicyColor,
                            Style().outline.width);
     }
+}
+
+WindowLayout_t SocialEngineeringDisplay::OkButtonLayout_(
+    const WindowLayout_t& rScoresList) const
+{
+    const auto& s = Style().socialEngineeringDisplay;
+    return ResolveLayout(rScoresList, {0.0f, 1.0f - s.scoreFontSizeRatio * 2.0f, 1.0f,
+                                       s.scoreFontSizeRatio * 2.0f});
 }
 
 void SocialEngineeringDisplay::DrawScores_(Graphics& rGraphics,
@@ -405,11 +438,19 @@ void SocialEngineeringDisplay::DrawScores_(Graphics& rGraphics,
         FontSize_(s.headerFontSizeRatio),
         s.scoreHeaderColor
     );
-    const float scoreLineHeight = rScoresList.height / static_cast<float>(k_AllRatings.size() + 1);
+    const SocialEngineeringManager& rSe = m_rFaction.GetSocialEngineering();
+    const int upheavalAbsolute = QuoteUpheavalAbsolute(m_rFaction, m_draft);
+    const bool bShowUpheaval = upheavalAbsolute != 0;
+    const std::map<SocialRatingId_t, int> draftRatings = DraftRatingTotals_(m_draft);
+    // Header + ratings + optional upheaval + OK.
+    const float lineCount =
+        static_cast<float>(k_AllRatings.size() + 2 + (bShowUpheaval ? 1 : 0));
+    const float scoreLineHeight = rScoresList.height / lineCount;
     for (size_t ratingIndex = 0; ratingIndex < k_AllRatings.size(); ++ratingIndex)
     {
         const SocialRatingId_t rating = k_AllRatings[ratingIndex];
-        const int score = m_rFaction.GetSocialEngineering().GetSocialRating(rating);
+        const auto it = draftRatings.find(rating);
+        const int score = it == draftRatings.end() ? 0 : it->second;
         std::ostringstream oss;
         oss << RatingDisplayName(rating) << ": " << score;
         rGraphics.DrawText(
@@ -420,6 +461,35 @@ void SocialEngineeringDisplay::DrawScores_(Graphics& rGraphics,
             s.scoreValueColor
         );
     }
+    float nextLine = static_cast<float>(k_AllRatings.size() + 1);
+    if (bShowUpheaval)
+    {
+        const int paid = rSe.GetUpheavalPaid();
+        std::ostringstream oss;
+        if (upheavalAbsolute >= paid)
+        {
+            oss << "Upheaval Cost: " << upheavalAbsolute;
+        }
+        else
+        {
+            oss << "Upheaval Refund: " << (paid - upheavalAbsolute);
+        }
+        rGraphics.DrawText(
+            oss.str(),
+            rScoresList.x + rPadding.horizontal,
+            rScoresList.y + scoreLineHeight * nextLine,
+            FontSize_(s.scoreFontSizeRatio),
+            s.scoreValueColor
+        );
+    }
+    const WindowLayout_t okButton = OkButtonLayout_(rScoresList);
+    rGraphics.DrawText(
+        "OK",
+        okButton.x + rPadding.horizontal,
+        okButton.y + rPadding.vertical,
+        FontSize_(s.scoreFontSizeRatio),
+        s.activePolicyColor
+    );
 }
 
 void SocialEngineeringDisplay::DrawFactionBonus_(Graphics& rGraphics,
@@ -463,6 +533,19 @@ void SocialEngineeringDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
     const float clickX = static_cast<float>(rEvent.x);
     const float clickY = static_cast<float>(rEvent.y);
 
+    const auto& s = Style().socialEngineeringDisplay;
+    const WindowLayout_t scoresLayout =
+        ResolveLayout(m_layout, {1.0f - s.scoresPanelWidthRatio, 0.0f, s.scoresPanelWidthRatio,
+                                 1.0f});
+    const float bonusRatio = s.factionBonusSectionRatio;
+    const WindowLayout_t scoresList =
+        ResolveLayout(scoresLayout, {0.0f, 0.0f, 1.0f, 1.0f - bonusRatio});
+    if (ContainsMouseCoord(OkButtonLayout_(scoresList), clickX, clickY))
+    {
+        TryCommitDraft();
+        return;
+    }
+
     for (size_t categoryIndex = 0; categoryIndex < k_Categories.size(); ++categoryIndex)
     {
         const SocialCategory_t category = k_Categories[categoryIndex];
@@ -493,10 +576,49 @@ void SocialEngineeringDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
                 return;
             }
 
-            m_rFaction.GetSocialEngineering().SetActivePolicy(*pPolicy);
+            SelectDraftPolicy_(*pPolicy);
             return;
         }
     }
+}
+
+void SocialEngineeringDisplay::SelectDraftPolicy_(const SocialPolicyConfig_t& rPolicy)
+{
+    m_draft.Set(m_rPolicyRegistry.Get(rPolicy.id));
+}
+
+void SocialEngineeringDisplay::TryCommitDraft()
+{
+    const int delta = QuoteUpheavalDelta(m_rFaction, m_draft);
+    if (delta > 0 && !m_rFaction.GetEconomy().CanAfford(delta))
+    {
+        std::ostringstream oss;
+        oss << "Such a drastic change in our society would cost us " << delta
+            << " energy credits to effect, but we have only "
+            << m_rFaction.GetEconomy().GetEnergy() << " credits in reserve.";
+        m_notice(oss.str());
+        return;
+    }
+
+    Faction& rFaction = m_rFaction;
+    const SocialPolicyDraft_t draft = m_draft;
+    const CommittedFn onCommitted = m_onCommitted;
+    auto adoptAndClose = [&rFaction, draft, onCommitted]() {
+        AdoptDraft(rFaction, draft);
+        onCommitted();
+    };
+
+    if (delta <= 0)
+    {
+        adoptAndClose();
+        return;
+    }
+
+    std::ostringstream oss;
+    oss << "Such a drastic change in our society will cost us " << delta
+        << " energy credits to effect. We have " << m_rFaction.GetEconomy().GetEnergy()
+        << " credits available.";
+    m_confirm(oss.str(), adoptAndClose);
 }
 
 } // namespace ac

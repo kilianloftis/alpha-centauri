@@ -18,6 +18,8 @@
 #include "game/council/CouncilRulesConfigParser.h"
 #include "game/base/BaseConquestCalculator.h"
 #include "game/diplomacy/DiplomacyCalculator.h"
+#include "game/social-engineering/SocialPolicyConfigParser.h"
+#include "game/social-engineering/UpheavalCostCalculator.h"
 #include "game/diplomacy/DiplomacyConfigParser.h"
 #include "game/display/BaseSpriteSizesConfig.h"
 #include "game/display/BaseSpriteSizesConfigParser.h"
@@ -188,8 +190,16 @@ SessionInputs::SessionInputs(const OccupantFiles_t& rOccupants,
             ac::TechCostConfig_t{k_TestTechCostFormula});
     dataContext.techCostCalculator = std::make_unique<ac::TechCostCalculator>(
         *dataContext.techCostConfig, *dataContext.luaRuntime);
-    dataContext.socialPolicyRegistry = std::make_unique<ac::SocialPolicyRegistry>();
-    dataContext.socialPolicyRegistry->Load(FixturePath("social_policies.json"));
+    {
+        ac::SocialPoliciesConfig_t socialPolicies =
+            ac::SocialPolicyConfigParser{}.ParseConfig(FixturePath("social_policies.json"));
+        dataContext.upheavalCostConfig =
+            std::make_unique<ac::UpheavalCostConfig_t>(std::move(socialPolicies.upheaval));
+        dataContext.socialPolicyRegistry = std::make_unique<ac::SocialPolicyRegistry>();
+        dataContext.socialPolicyRegistry->Assign(std::move(socialPolicies.policies));
+        dataContext.upheavalCostCalculator = std::make_unique<ac::UpheavalCostCalculator>(
+            *dataContext.upheavalCostConfig, *dataContext.luaRuntime);
+    }
     dataContext.socialRatingRegistry = std::make_unique<ac::SocialRatingRegistry>();
     dataContext.socialRatingRegistry->Load(FixturePath("social_rating_effects.json"));
     dataContext.policeRules = ac::PoliceRulesConfigParser{}.ParseConfig(
@@ -447,9 +457,6 @@ ac::Unit& FactionFixture::MakeBuiltUnit(ac::Faction& rFaction, int x, int y,
 
 void FactionFixture::MoveUnit(ac::Unit& rUnit, int x, int y)
 {
-    // No pre-check here: UnitPositionIndex::MoveUnit enforces the stacking rule itself now.
-    // The guard this used to duplicate threw a different exception type than production,
-    // so a fixture move and a real move failed differently.
     map.GetUnitPositions().MoveUnit(rUnit, At(x, y));
 }
 

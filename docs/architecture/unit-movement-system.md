@@ -322,7 +322,7 @@ rolled against has its order cleared.
 
 **Diplomatic evacuate (forced relocate).** `EvacuateUnitsFromTerritory` teleports a guest
 faction's free units off a named host's territory onto the nearest Chebyshev own-territory
-tile that passes `CanHoldTileWithoutCarrier` and `CanPlaceUnitOnTile` and holds no unit the
+tile that passes `CanHoldTileWithoutCarrier` and holds no unit the
 guest may not share a tile with (`MayShareTiles`). `EvacuateUnitsSharingWith` does the same
 for units standing on a tile with the host's units or in its bases. A unit already on its own
 territory is home and stays, so of two factions sharing a tile there, the guest moves. Search expands

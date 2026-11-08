@@ -437,7 +437,7 @@ One directory under `include/game/` and `src/game/` per domain. The filename suf
 - `probes/`: probe actions, targets, mind control
 - `production/`: production, the queue (`ProductionQueue` / `ProductionQueueRules`), costs, completion, hurry, scrap, stockpiles, the constructable interface
 - `research/`: techs, tech cost, research progress and selection
-- `social-engineering/`: policies, social ratings, a faction's choices
+- `social-engineering/`: policies, social ratings, upheaval cost, a faction's pending/committed choices
 - `stages/`: the turn processor, stage infrastructure and mod hooks, every turn stage
 - `terraform/`: terraform projects, elevation change, terraform spread, surface flips
 - `units/`: the unit aggregate, designs, components and slots, orders, the order executor
@@ -533,8 +533,8 @@ seed. (Persisting that seed into save state is still open — see the world-gene
   `UnitManager::AdoptUnit` on the receiver (rebinds the unit's `Faction*` via `Unit::RebindFaction`,
   adds it to the receiver's `UnitManager`, emits `OnUnitAdopted`). A transferred carrier's entire
   embarked cargo graph moves with it, still embarked, under the new owner. A unit transferred
-  while embarked on someone else's carrier is disembarked cleanly first (no destroy, no
-  `CanPlaceUnitOnTile` conflict against the carrier's own tile), then transferred. Home-base
+  while embarked on someone else's carrier is disembarked cleanly first (no destroy), then
+  transferred. Home-base
   claims do not follow a transferred unit to a foreign faction's base — cleared on transfer, not
   reassigned. Permanent `ProducedAtThisBase` grants stamped at construction stay on the unit
   (`Unit::GetProductionGrants`); they do not re-query the new owner's pool by a production-base

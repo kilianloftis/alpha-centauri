@@ -1,161 +1,439 @@
-[
-  {
-    "id": "frontier",
-    "default": true,
-    "name": "Frontier",
-    "category": "politics",
-    "effects": []
+{
+  "upheaval": {
+    "cost_formula": "(changed_categories + 1) ^ 3"
   },
-  {
-    "id": "police_state",
-    "name": "Police State",
-    "category": "politics",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "support",    "amount":  2 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "police",     "amount":  2 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "efficiency", "amount": -2 } }
-    ]
-  },
-  {
-    "id": "democratic",
-    "name": "Democratic",
-    "category": "politics",
-    "required_tech": "ethical_calculus",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "efficiency", "amount":  2 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "growth",     "amount":  2 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "support",    "amount": -2 } }
-    ]
-  },
-  {
-    "id": "fundamentalist",
-    "name": "Fundamentalist",
-    "category": "politics",
-    "required_tech": "secrets_of_the_human_brain",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "probe",    "amount":  2 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "morale",   "amount":  1 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "research", "amount": -2 } }
-    ]
-  },
-  {
-    "id": "simple",
-    "default": true,
-    "name": "Simple",
-    "category": "economics",
-    "effects": []
-  },
-  {
-    "id": "free_market",
-    "name": "Free Market",
-    "category": "economics",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "economy", "amount":  2 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "planet",  "amount": -3 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "police",  "amount": -5 } }
-    ]
-  },
-  {
-    "id": "planned",
-    "name": "Planned",
-    "category": "economics",
-    "required_tech": "planetary_networks",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "growth",     "amount":  2 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "industry",   "amount":  1 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "efficiency", "amount": -2 } }
-    ]
-  },
-  {
-    "id": "green",
-    "name": "Green",
-    "category": "economics",
-    "required_tech": "centauri_empathy",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "efficiency", "amount":  2 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "planet",     "amount":  2 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "growth",     "amount": -2 } }
-    ]
-  },
-  {
-    "id": "survival",
-    "default": true,
-    "name": "Survival",
-    "category": "values",
-    "effects": []
-  },
-  {
-    "id": "power",
-    "name": "Power",
-    "category": "values",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "support",  "amount":  2 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "morale",   "amount":  2 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "industry", "amount": -2 } }
-    ]
-  },
-  {
-    "id": "knowledge",
-    "name": "Knowledge",
-    "category": "values",
-    "required_tech": "cyberethics",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "research",   "amount":  2 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "efficiency", "amount":  1 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "probe",      "amount": -2 } }
-    ]
-  },
-  {
-    "id": "wealth",
-    "name": "Wealth",
-    "category": "values",
-    "required_tech": "industrial_automation",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "economy",  "amount":  1 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "industry", "amount":  1 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "morale",   "amount": -2 } }
-    ]
-  },
-  {
-    "id": "none_future",
-    "default": true,
-    "name": "None",
-    "category": "future_society",
-    "effects": []
-  },
-  {
-    "id": "cybernetic",
-    "name": "Cybernetic",
-    "category": "future_society",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "efficiency", "amount":  2 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "planet",     "amount":  2 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "research",   "amount":  2 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "police",     "amount": -3 } }
-    ]
-  },
-  {
-    "id": "eudaimonic",
-    "name": "Eudaimonic",
-    "category": "future_society",
-    "required_tech": "eudaimonia",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "economy",  "amount":  2 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "growth",   "amount":  2 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "industry", "amount":  2 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "morale",   "amount": -2 } }
-    ]
-  },
-  {
-    "id": "thought_control",
-    "name": "Thought Control",
-    "category": "future_society",
-    "required_tech": "the_will_to_power",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "morale",  "amount":  2 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "police",  "amount":  2 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "probe",   "amount":  2 } },
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "support", "amount": -3 } }
-    ]
-  }
-]
+  "policies": [
+    {
+      "id": "frontier",
+      "default": true,
+      "name": "Frontier",
+      "category": "politics",
+      "effects": []
+    },
+    {
+      "id": "police_state",
+      "name": "Police State",
+      "category": "politics",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "support",
+            "amount": 2
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "police",
+            "amount": 2
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "efficiency",
+            "amount": -2
+          }
+        }
+      ]
+    },
+    {
+      "id": "democratic",
+      "name": "Democratic",
+      "category": "politics",
+      "required_tech": "ethical_calculus",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "efficiency",
+            "amount": 2
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "growth",
+            "amount": 2
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "support",
+            "amount": -2
+          }
+        }
+      ]
+    },
+    {
+      "id": "fundamentalist",
+      "name": "Fundamentalist",
+      "category": "politics",
+      "required_tech": "secrets_of_the_human_brain",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "probe",
+            "amount": 2
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "morale",
+            "amount": 1
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "research",
+            "amount": -2
+          }
+        }
+      ]
+    },
+    {
+      "id": "simple",
+      "default": true,
+      "name": "Simple",
+      "category": "economics",
+      "effects": []
+    },
+    {
+      "id": "free_market",
+      "name": "Free Market",
+      "category": "economics",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "economy",
+            "amount": 2
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "planet",
+            "amount": -3
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "police",
+            "amount": -5
+          }
+        }
+      ]
+    },
+    {
+      "id": "planned",
+      "name": "Planned",
+      "category": "economics",
+      "required_tech": "planetary_networks",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "growth",
+            "amount": 2
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "industry",
+            "amount": 1
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "efficiency",
+            "amount": -2
+          }
+        }
+      ]
+    },
+    {
+      "id": "green",
+      "name": "Green",
+      "category": "economics",
+      "required_tech": "centauri_empathy",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "efficiency",
+            "amount": 2
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "planet",
+            "amount": 2
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "growth",
+            "amount": -2
+          }
+        }
+      ]
+    },
+    {
+      "id": "survival",
+      "default": true,
+      "name": "Survival",
+      "category": "values",
+      "effects": []
+    },
+    {
+      "id": "power",
+      "name": "Power",
+      "category": "values",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "support",
+            "amount": 2
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "morale",
+            "amount": 2
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "industry",
+            "amount": -2
+          }
+        }
+      ]
+    },
+    {
+      "id": "knowledge",
+      "name": "Knowledge",
+      "category": "values",
+      "required_tech": "cyberethics",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "research",
+            "amount": 2
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "efficiency",
+            "amount": 1
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "probe",
+            "amount": -2
+          }
+        }
+      ]
+    },
+    {
+      "id": "wealth",
+      "name": "Wealth",
+      "category": "values",
+      "required_tech": "industrial_automation",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "economy",
+            "amount": 1
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "industry",
+            "amount": 1
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "morale",
+            "amount": -2
+          }
+        }
+      ]
+    },
+    {
+      "id": "none_future",
+      "default": true,
+      "name": "None",
+      "category": "future_society",
+      "effects": []
+    },
+    {
+      "id": "cybernetic",
+      "name": "Cybernetic",
+      "category": "future_society",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "efficiency",
+            "amount": 2
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "planet",
+            "amount": 2
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "research",
+            "amount": 2
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "police",
+            "amount": -3
+          }
+        }
+      ]
+    },
+    {
+      "id": "eudaimonic",
+      "name": "Eudaimonic",
+      "category": "future_society",
+      "required_tech": "eudaimonia",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "economy",
+            "amount": 2
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "growth",
+            "amount": 2
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "industry",
+            "amount": 2
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "morale",
+            "amount": -2
+          }
+        }
+      ]
+    },
+    {
+      "id": "thought_control",
+      "name": "Thought Control",
+      "category": "future_society",
+      "required_tech": "the_will_to_power",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "morale",
+            "amount": 2
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "police",
+            "amount": 2
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "probe",
+            "amount": 2
+          }
+        },
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "support",
+            "amount": -3
+          }
+        }
+      ]
+    }
+  ]
+}

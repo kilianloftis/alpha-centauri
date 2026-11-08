@@ -469,6 +469,27 @@ artifact is killed like any unit.
 - Popups: `#OURBOOTY1` / `#OURBOOTY2` (count) to the captor. The victim gets
   `#THEIRBOOTY1` / `2` under Vendetta, otherwise `#THEIRBOOTY3` ("has appropriated").
 
+## Unit disband
+
+### `Console::disband` (`0x4D2AC0`)
+
+Player disband of one unit (`veh_id` at `[ebp+0x8]`). The mineral refund destination is
+`base_at(x, y)` (`0x4E3A50` at `0x4D2B83`): the base whose center is the unit's tile, or
+`−1`. There is **no** `base_find` / `base_find_2` / `vector_dist` scan. When `base_at`
+returns `−1`, the mineral credit block is skipped (`jl` at `0x4D2CAC` → `0x4D2D85`) and the
+unit is still killed.
+
+When a base is on the tile and the player confirms Disband (dialog result ≠ 0 and ≠ 2 —
+2 is Self Destruct, which also skips the credit at `0x4D2CF8`):
+
+- skip the credit for unit id `0xF` (Spore Launcher) and when the chassis cost byte at
+  `UNIT+0x9ab88d` is negative (`0x4D2CE3`);
+- `cost_factor(faction, 1, −1)` (`0x4E4430` at `0x4D2D1A`), then
+  `signed(result × UNIT.cost) / 2` (`imul` + `cdq; sub; sar 1` at `0x4D2D46`–`0x4D2D4C`);
+- add that to the base's mineral stockpile (`BASE+0x40` / `0x97d080`).
+
+Thinker does not rewrite this path.
+
 ## Sea bases
 
 ### `base_init` (`0x4E4B80`)
@@ -712,6 +733,25 @@ Addresses from Thinker's `engine.cpp` (GOG `terranx.exe`
   adding `SE_*_base`, `RULE_IMMUNITY` clamps that effect index to ≥ 0;
   `RULE_ROBUST` halves a still-negative axis. Impunity is per **setting**;
   immunity is per **rating axis** (e.g. Hive `IMMUNITY, EFFIC`).
+
+### Social engineering: upheaval cost
+
+Confirmed in vanilla (`terranx.exe` SHA1 above). Thinker's `social_upheaval` /
+`social_upkeep` match the formula; AI payment differs when `conf.social_ai` is on.
+
+- `social_upheaval(faction, choices[4])` (`0x5B4550`): `N` = count of categories
+  (Politics / Economics / Values / Future) where `choices[i]` differs from the
+  faction's **committed** `SE_Politics…Future` (`Faction+0x238`). Pending is not
+  consulted. `N == 0` → 0. Else `cost = (N + 1)³ × D`. Humans use
+  `diff_level` (`Faction+0x8`, Citizen…Transcend = 0…5); AI uses 3 (Librarian).
+  `MFaction.rule_flags & 0x80` (`RFLAG_ALIEN`) then `cost += cost / 2` (signed
+  toward 0). Currency is `energy_credits` (`Faction+0x220`).
+- Human UI (`0x4AEF10`): `delta = abs − SE_upheaval_cost_paid` (`Faction+0x248`);
+  scenario-editor + omniscient forces `delta = 0`. Positive delta confirms
+  `UPHEAVAL` / aborts `UPHEAVALTOOMUCH`; negative refunds without confirm.
+  Then `SE_upheaval_cost_paid += delta`, proposal → pending, `net_energy(−delta)`.
+- `social_upkeep` (`0x5B44D0`): pending → committed, recalculate effects,
+  `SE_upheaval_cost_paid = 0` with **no** energy refund.
 
 ### `base_energy` labs (`0x4EB560`)
 

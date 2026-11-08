@@ -1,222 +1,395 @@
-[
-  {
-    "id": "frontier",
-    "default": true,
-    "name": "Frontier",
-    "category": "politics",
-    "effects": []
+{
+  "upheaval": {
+    "cost_formula": "(changed_categories + 1) ^ 3"
   },
-  {
-    "id": "growth_policy",
-    "name": "Growth Policy (+2 Growth rating, faction-wide)",
-    "category": "politics",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "growth", "amount": 2 } }
-    ]
-  },
-  {
-    "id": "wealth_policy",
-    "name": "Wealth Policy (+1 energy in every base)",
-    "category": "economics",
-    "effects": [
-      { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "energy", "amount": 1 } }
-    ]
-  },
-  {
-    "id": "industry_policy",
-    "name": "Industry Policy (+2 Industry rating, faction-wide)",
-    "category": "economics",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "industry", "amount": 2 } }
-    ]
-  },
-  {
-    "id": "economy_policy",
-    "name": "Economy Policy (+2 Economy rating, faction-wide)",
-    "category": "economics",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "economy", "amount": 2 } }
-    ]
-  },
-  {
-    "id": "low_economy_policy",
-    "name": "Low Economy Policy (-1 Economy rating, faction-wide)",
-    "category": "economics",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "economy", "amount": -1 } }
-    ]
-  },
-  {
-    "id": "high_economy_policy",
-    "name": "High Economy Policy (+4 Economy rating, faction-wide)",
-    "category": "economics",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "economy", "amount": 4 } }
-    ]
-  },
-  {
-    "id": "research_policy",
-    "name": "Research Policy (+2 Research rating, faction-wide)",
-    "category": "values",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "research", "amount": 2 } }
-    ]
-  },
-  {
-    "id": "low_research_policy",
-    "name": "Low Research Policy (-2 Research rating, faction-wide)",
-    "category": "values",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "research", "amount": -2 } }
-    ]
-  },
-  {
-    "id": "efficiency_policy",
-    "name": "Efficiency Policy (+2 Efficiency rating, faction-wide)",
-    "category": "economics",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "efficiency", "amount": 2 } }
-    ]
-  },
-  {
-    "id": "low_efficiency_policy",
-    "name": "Low Efficiency Policy (-2 Efficiency rating, faction-wide)",
-    "category": "economics",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "efficiency", "amount": -2 } }
-    ]
-  },
-  {
-    "id": "collapse_efficiency_policy",
-    "name": "Collapse Efficiency Policy (-4 Efficiency rating, faction-wide)",
-    "category": "economics",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "efficiency", "amount": -4 } }
-    ]
-  },
-  {
-    "id": "support_policy",
-    "name": "Support Policy (+2 Support rating, faction-wide)",
-    "category": "politics",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "support", "amount": 2 } }
-    ]
-  },
-  {
-    "id": "low_support_policy",
-    "name": "Low Support Policy (-2 Support rating, faction-wide)",
-    "category": "politics",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "support", "amount": -2 } }
-    ]
-  },
-  {
-    "id": "collapse_support_policy",
-    "name": "Collapse Support Policy (-4 Support rating, faction-wide)",
-    "category": "politics",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "support", "amount": -4 } }
-    ]
-  },
-  {
-    "id": "police_minus5_policy",
-    "name": "Police -5",
-    "category": "politics",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "police", "amount": -5 } }
-    ]
-  },
-  {
-    "id": "police_minus4_policy",
-    "name": "Police -4",
-    "category": "politics",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "police", "amount": -4 } }
-    ]
-  },
-  {
-    "id": "police_minus3_policy",
-    "name": "Police -3",
-    "category": "politics",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "police", "amount": -3 } }
-    ]
-  },
-  {
-    "id": "police_minus2_policy",
-    "name": "Police -2",
-    "category": "politics",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "police", "amount": -2 } }
-    ]
-  },
-  {
-    "id": "police_plus3_policy",
-    "name": "Police +3",
-    "category": "politics",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "police", "amount": 3 } }
-    ]
-  },
-  {
-    "id": "probe_plus3_policy",
-    "name": "Probe +3",
-    "category": "values",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "probe", "amount": 3 } }
-    ]
-  },
-  {
-    "id": "morale_policy",
-    "name": "Morale Policy (+2 Morale rating, faction-wide)",
-    "category": "values",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "morale", "amount": 2 } }
-    ]
-  },
-  {
-    "id": "low_morale_policy",
-    "name": "Low Morale Policy (-2 Morale rating)",
-    "category": "values",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "morale", "amount": -2 } }
-    ]
-  },
-  {
-    "id": "very_low_morale_policy",
-    "name": "Very Low Morale Policy (-4 Morale rating)",
-    "category": "values",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "morale", "amount": -4 } }
-    ]
-  },
-  {
-    "id": "high_morale_policy",
-    "name": "High Morale Policy (+4 Morale rating)",
-    "category": "values",
-    "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "morale", "amount": 4 } }
-    ]
-  },
-  {
-    "id": "simple",
-    "default": true,
-    "name": "Simple",
-    "category": "economics",
-    "effects": []
-  },
-  {
-    "id": "survival",
-    "default": true,
-    "name": "Survival",
-    "category": "values",
-    "effects": []
-  },
-  {
-    "id": "none_future",
-    "default": true,
-    "name": "None",
-    "category": "future_society",
-    "effects": []
-  }
-]
+  "policies": [
+    {
+      "id": "frontier",
+      "default": true,
+      "name": "Frontier",
+      "category": "politics",
+      "effects": []
+    },
+    {
+      "id": "growth_policy",
+      "name": "Growth Policy (+2 Growth rating, faction-wide)",
+      "category": "politics",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "growth",
+            "amount": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "wealth_policy",
+      "name": "Wealth Policy (+1 energy in every base)",
+      "category": "economics",
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "energy",
+            "amount": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "industry_policy",
+      "name": "Industry Policy (+2 Industry rating, faction-wide)",
+      "category": "economics",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "industry",
+            "amount": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "economy_policy",
+      "name": "Economy Policy (+2 Economy rating, faction-wide)",
+      "category": "economics",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "economy",
+            "amount": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "low_economy_policy",
+      "name": "Low Economy Policy (-1 Economy rating, faction-wide)",
+      "category": "economics",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "economy",
+            "amount": -1
+          }
+        }
+      ]
+    },
+    {
+      "id": "high_economy_policy",
+      "name": "High Economy Policy (+4 Economy rating, faction-wide)",
+      "category": "economics",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "economy",
+            "amount": 4
+          }
+        }
+      ]
+    },
+    {
+      "id": "research_policy",
+      "name": "Research Policy (+2 Research rating, faction-wide)",
+      "category": "values",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "research",
+            "amount": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "low_research_policy",
+      "name": "Low Research Policy (-2 Research rating, faction-wide)",
+      "category": "values",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "research",
+            "amount": -2
+          }
+        }
+      ]
+    },
+    {
+      "id": "efficiency_policy",
+      "name": "Efficiency Policy (+2 Efficiency rating, faction-wide)",
+      "category": "economics",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "efficiency",
+            "amount": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "low_efficiency_policy",
+      "name": "Low Efficiency Policy (-2 Efficiency rating, faction-wide)",
+      "category": "economics",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "efficiency",
+            "amount": -2
+          }
+        }
+      ]
+    },
+    {
+      "id": "collapse_efficiency_policy",
+      "name": "Collapse Efficiency Policy (-4 Efficiency rating, faction-wide)",
+      "category": "economics",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "efficiency",
+            "amount": -4
+          }
+        }
+      ]
+    },
+    {
+      "id": "support_policy",
+      "name": "Support Policy (+2 Support rating, faction-wide)",
+      "category": "politics",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "support",
+            "amount": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "low_support_policy",
+      "name": "Low Support Policy (-2 Support rating, faction-wide)",
+      "category": "politics",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "support",
+            "amount": -2
+          }
+        }
+      ]
+    },
+    {
+      "id": "collapse_support_policy",
+      "name": "Collapse Support Policy (-4 Support rating, faction-wide)",
+      "category": "politics",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "support",
+            "amount": -4
+          }
+        }
+      ]
+    },
+    {
+      "id": "police_minus5_policy",
+      "name": "Police -5",
+      "category": "politics",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "police",
+            "amount": -5
+          }
+        }
+      ]
+    },
+    {
+      "id": "police_minus4_policy",
+      "name": "Police -4",
+      "category": "politics",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "police",
+            "amount": -4
+          }
+        }
+      ]
+    },
+    {
+      "id": "police_minus3_policy",
+      "name": "Police -3",
+      "category": "politics",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "police",
+            "amount": -3
+          }
+        }
+      ]
+    },
+    {
+      "id": "police_minus2_policy",
+      "name": "Police -2",
+      "category": "politics",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "police",
+            "amount": -2
+          }
+        }
+      ]
+    },
+    {
+      "id": "police_plus3_policy",
+      "name": "Police +3",
+      "category": "politics",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "police",
+            "amount": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": "probe_plus3_policy",
+      "name": "Probe +3",
+      "category": "values",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "probe",
+            "amount": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": "morale_policy",
+      "name": "Morale Policy (+2 Morale rating, faction-wide)",
+      "category": "values",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "morale",
+            "amount": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "low_morale_policy",
+      "name": "Low Morale Policy (-2 Morale rating)",
+      "category": "values",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "morale",
+            "amount": -2
+          }
+        }
+      ]
+    },
+    {
+      "id": "very_low_morale_policy",
+      "name": "Very Low Morale Policy (-4 Morale rating)",
+      "category": "values",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "morale",
+            "amount": -4
+          }
+        }
+      ]
+    },
+    {
+      "id": "high_morale_policy",
+      "name": "High Morale Policy (+4 Morale rating)",
+      "category": "values",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "morale",
+            "amount": 4
+          }
+        }
+      ]
+    },
+    {
+      "id": "simple",
+      "default": true,
+      "name": "Simple",
+      "category": "economics",
+      "effects": []
+    },
+    {
+      "id": "survival",
+      "default": true,
+      "name": "Survival",
+      "category": "values",
+      "effects": []
+    },
+    {
+      "id": "none_future",
+      "default": true,
+      "name": "None",
+      "category": "future_society",
+      "effects": []
+    }
+  ]
+}

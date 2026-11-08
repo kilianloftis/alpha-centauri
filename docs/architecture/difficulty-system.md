@@ -167,6 +167,8 @@ Difficulty stats split cleanly by whether the resolve site holds a raw number:
 | `EcologicalDamage` | PureMultiplier | `1.0` — difficulty (×3 / ×5) is one factor of the eco multiplier stack beside the Planet rating, native life level and Perihelion; see [ecology-system.md](ecology-system.md) |
 | `TechCostDiff` | Additive | `0.0` — factor-band ordinals fed to `tech_cost.lua` as `diff` |
 | `TechCostCatchUp` | Additive | `0.0` — catch-up ordinals fed to `tech_cost.lua` as `catch_up_diff` |
+| `UpheavalCost` | Additive | `0.0` — multiplies upheaval `cost_formula`; player emissions 0…5, AI emissions 3 (Librarian) via `PlayerType` filters |
+| `UpheavalCostScale` | RawScaled | formula×`UpheavalCost` product — Progenitor factions AddPercent 50 (SMAC ×³⁄₂) |
 | `LastDefenderPopLoss`, `CapturePopLoss` | Additive | `0.0` — `base_conquest.json`'s effects list Adds the baseline |
 | `ConqueredDroneCap` | Additive | `0.0` — difficulty Adds `0.25 × level` (Citizen = 1); `base_conquest.json` Adds −0.5 |
 | `FacilityEnergyUpkeep` | RawScaled | `BuildingConfig_t::upkeep` |

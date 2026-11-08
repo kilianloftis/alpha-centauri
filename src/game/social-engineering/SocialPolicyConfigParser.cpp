@@ -8,11 +8,44 @@
 namespace ac
 {
 
-std::vector<SocialPolicyConfig_t> SocialPolicyConfigParser::ParseConfig(const std::string& configPath)
+SocialPoliciesConfig_t SocialPolicyConfigParser::ParseConfig(const std::string& configPath)
 {
-    return JsonConfigLoader::LoadFile<SocialPolicyConfig_t>(
-        configPath, "social policy",
-        [this](const nlohmann::json& rJson) { return ParsePolicyConfig_(rJson); });
+    return JsonConfigLoader::LoadObjectFile<SocialPoliciesConfig_t>(
+        configPath, "social policies",
+        [this](const nlohmann::json& rJson) {
+            if (!rJson.contains("upheaval") || !rJson.at("upheaval").is_object())
+            {
+                throw std::runtime_error("social_policies: requires object 'upheaval'");
+            }
+            if (!rJson.contains("policies") || !rJson.at("policies").is_array())
+            {
+                throw std::runtime_error("social_policies: requires array 'policies'");
+            }
+
+            SocialPoliciesConfig_t config;
+            config.upheaval = ParseUpheaval_(rJson.at("upheaval"));
+            for (const nlohmann::json& rPolicyJson : rJson.at("policies"))
+            {
+                config.policies.push_back(ParsePolicyConfig_(rPolicyJson));
+            }
+            return config;
+        });
+}
+
+UpheavalCostConfig_t SocialPolicyConfigParser::ParseUpheaval_(
+    const nlohmann::json& rUpheavalJson) const
+{
+    if (!rUpheavalJson.contains("cost_formula") || !rUpheavalJson.at("cost_formula").is_string())
+    {
+        throw std::runtime_error("social_policies upheaval: requires string 'cost_formula'");
+    }
+    UpheavalCostConfig_t config;
+    config.costFormula = rUpheavalJson.at("cost_formula").get<std::string>();
+    if (config.costFormula.empty())
+    {
+        throw std::runtime_error("social_policies upheaval: cost_formula must not be empty");
+    }
+    return config;
 }
 
 SocialPolicyConfig_t SocialPolicyConfigParser::ParsePolicyConfig_(const nlohmann::json& policyJson)
@@ -23,7 +56,8 @@ SocialPolicyConfig_t SocialPolicyConfigParser::ParsePolicyConfig_(const nlohmann
     config.category = ParseCategory_(policyJson.at("category"));
     config.requiredTech = ConfigFields::ParseRequiredTech(policyJson);
     config.bDefault = policyJson.value("default", false);
-    config.effects = EffectConfigParser::ParseEffects(policyJson, EffectSourceKind_t::SocialPolicy, config.id);
+    config.effects = EffectConfigParser::ParseEffects(policyJson, EffectSourceKind_t::SocialPolicy,
+                                                      config.id);
 
     return config;
 }

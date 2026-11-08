@@ -20,6 +20,12 @@ inline std::string CategoryName(SocialCategory_t category)
 class SocialPolicyRegistry : public Registry<SocialPolicyConfig_t, SocialPolicyConfigParser>
 {
 public:
+    // social_policies.json is an object (upheaval + policies); only the policy list is stored.
+    void Load(const std::string& rConfigPath)
+    {
+        Assign(SocialPolicyConfigParser{}.ParseConfig(rConfigPath).policies);
+    }
+
     // Exactly one default per category, checked at load so a bad mod file is named.
     void Validate_() override
     {

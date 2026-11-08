@@ -44,6 +44,16 @@ absent.
 
 ## TODO
 
+### Unit scrap refund destination `[Ours]`
+
+- **Original:** `Console::disband` credits minerals only when `base_at` finds a base on the
+  unit's tile; otherwise the unit dies with no refund ("Unit disband").
+- **Ours:** `ScrapRefundBase` credits the closest own-faction base by
+  `TabletopDiagonalDistance` (lower `BaseId` on a tie) when the unit stands on that faction's
+  territory, and pays 0 off territory — including when the unit is not on a base tile.
+- **Where:** `ScrapRefundBase` (`ProductionRules`); `Faction::QuoteScrapUnit` / `ScrapUnit`.
+- **Missing:** the original on-base-only version and a switch.
+
 ### Missile expended on Destroy Enhancement `[Ours]`
 
 - **Original:** `action_destroy` only `veh_skip`s; a missile survives Destroy Enhancement

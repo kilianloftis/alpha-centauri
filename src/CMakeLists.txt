@@ -68,6 +68,9 @@ add_library(ac-core STATIC
     game/world-events/WorldEventTracker.cpp
     game/social-engineering/SocialEngineeringManager.cpp
     game/social-engineering/SocialEngineeringRules.cpp
+    game/social-engineering/SocialEngineeringMutations.cpp
+    game/social-engineering/SocialPolicyDraft.cpp
+    game/social-engineering/UpheavalCostCalculator.cpp
     game/base/BaseManager.cpp
     game/base/HomeBaseIndex.cpp
     game/buildings/BuildingManager.cpp
@@ -285,6 +288,7 @@ add_library(ac-turn-stages OBJECT
     game/stages/Upkeep.cpp
     game/stages/PlayerActions.cpp
     game/stages/Mood.cpp
+    game/stages/SocialEngineeringUpkeep.cpp
     game/stages/WorldEvents.cpp
     game/stages/EcoDamage.cpp
     game/stages/VictoryConditionChecks.cpp

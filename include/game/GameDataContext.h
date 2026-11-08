@@ -46,8 +46,10 @@ class CommerceCalculator;
 class ProbeCalculator;
 class DiplomacyCalculator;
 class BaseConquestCalculator;
+class UpheavalCostCalculator;
 struct ProbeActionsConfig_t;
 struct BaseConquestConfig_t;
+struct UpheavalCostConfig_t;
 struct CombatConfig_t;
 class CouncilProposalRegistry;
 struct CouncilRulesConfig_t;
@@ -85,6 +87,7 @@ struct GameDataContext
     std::unique_ptr<TechRegistry> techRegistry;
     std::unique_ptr<SocialPolicyRegistry> socialPolicyRegistry;
     std::unique_ptr<SocialRatingRegistry> socialRatingRegistry;
+    std::unique_ptr<UpheavalCostConfig_t> upheavalCostConfig;
     std::unique_ptr<FactionRegistry> factionRegistry;
     std::unique_ptr<PopTypeRegistry> popTypeRegistry;
     std::unique_ptr<PopCompositionConfig_t> popCompositionConfig;
@@ -137,6 +140,7 @@ struct GameDataContext
     std::unique_ptr<ProbeCalculator> probeCalculator;
     std::unique_ptr<DiplomacyCalculator> diplomacyCalculator;
     std::unique_ptr<BaseConquestCalculator> baseConquestCalculator;
+    std::unique_ptr<UpheavalCostCalculator> upheavalCostCalculator;
 
     // For config files LoadGameData does not parse, so they resolve against the same root.
     GameDataPaths paths;

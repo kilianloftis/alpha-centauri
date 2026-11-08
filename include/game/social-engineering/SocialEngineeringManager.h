@@ -14,6 +14,7 @@ namespace ac
 
 class SocialPolicyRegistry;
 class SocialRatingRegistry;
+struct SocialPolicyDraft_t;
 
 class SocialEngineeringManager
 {
@@ -22,22 +23,33 @@ public:
     explicit SocialEngineeringManager(const SocialPolicyRegistry& rRegistry);
     ~SocialEngineeringManager();
 
-    // Set the active policy for its category (rPolicy.category). Throws if the
-    // policy is not in the registry (when a registry is bound).
+    // Pending selection for its category (rPolicy.category). Throws if the policy is not in
+    // the registry. Ratings and CollectEffects read pending.
     void SetActivePolicy(const SocialPolicyConfig_t& rPolicy);
 
-    // Get the active policy config for a category. Returns nullptr if none is set.
-    const SocialPolicyConfig_t* GetActivePolicy(SocialCategory_t category) const;
+    // Replace every pending category from rDraft (one revision bump).
+    void SetPendingDraft(const SocialPolicyDraft_t& rDraft);
 
-    // Effects of the current policy selections.
+    // Pending policy for a category. Construction seeds every category.
+    const SocialPolicyConfig_t& GetActivePolicy(SocialCategory_t category) const;
+
+    // Committed baseline for upheaval cost. Construction seeds every category.
+    const SocialPolicyConfig_t& GetCommittedPolicy(SocialCategory_t category) const;
+
+    int GetUpheavalPaid() const { return m_upheavalPaid; }
+    void SetUpheavalPaid(int paid);
+
+    // Copy pending into committed and clear upheavalPaid (turn upkeep).
+    void CommitPending();
+
+    // Effects of the pending policy selections.
     std::vector<ActiveEffect_t> CollectEffects() const;
 
-    // Faction-wide social rating on one axis from active policies only.
+    // Faction-wide social rating on one axis from pending policies only.
     // Base-local modifiers (buildings, pops) live on BaseManager::GetEffectiveSocialRating.
     int GetSocialRating(SocialRatingId_t rating) const;
 
-
-    // Bumped on every policy change; consumed by effect-pool caches.
+    // Bumped on every pending policy change; consumed by effect-pool caches.
     uint64_t GetRevision() const { return m_revision.Get(); }
 
 private:
@@ -45,7 +57,9 @@ private:
     const std::map<SocialRatingId_t, int>& AccumulatedRatings_() const;
 
     const SocialPolicyRegistry& m_rRegistry;
-    std::map<SocialCategory_t, const SocialPolicyConfig_t*> m_activePolicies;
+    std::map<SocialCategory_t, const SocialPolicyConfig_t*> m_pendingPolicies;
+    std::map<SocialCategory_t, const SocialPolicyConfig_t*> m_committedPolicies;
+    int m_upheavalPaid = 0;
     Revision m_revision;
     mutable std::map<SocialRatingId_t, int> m_cachedRatings;
     // Starts at max so the first query cannot match revision 0 and read an empty cache.
