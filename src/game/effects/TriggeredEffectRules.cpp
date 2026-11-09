@@ -156,6 +156,11 @@ bool UnitCanDetonate(const Unit& rUnit)
     return !rUnit.GetDesign().CollectOnDetonateEffects().empty();
 }
 
+bool UnitCanFoundBase(const Unit& rUnit)
+{
+    return !rUnit.GetDesign().CollectOnFoundEffects().empty();
+}
+
 int PredictModifyPopulationDelta(int size, const ModifyPopulationEffect_t& rEffect)
 {
     int delta = 0;

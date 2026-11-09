@@ -26,7 +26,6 @@
 #include "game/production/StockpileConfig.h"
 #include "game/production/StockpileRegistry.h"
 #include "game/map/ImprovementIds.h"
-#include "game/terraform/SurfaceOccupancy.h"
 #include "game/map/MapUtils.h"
 #include "game/map/WorldMap.h"
 #include "game/social-engineering/SocialRatingResolver.h"
@@ -137,7 +136,6 @@ BaseManager::BaseManager(
     , m_name(std::move(name))
     , m_effects(*this, m_rSocialRatingRegistry, rFaction)
     , m_ecology(*this, rRules.rEcoDamage)
-    , m_bMayOccupyWater(tile.IsWater())
 {
     ConnectSignals_();
     // A base provides its own garrison defense bonus, modeled as the "Base" improvement.
@@ -298,7 +296,7 @@ BaseSnapshot_t BaseManager::CaptureSnapshot() const
 
 bool BaseManager::MayOccupyWater() const
 {
-    return m_bMayOccupyWater || m_pBuildings->HasBuilding(k_PressureDomeBuildingId);
+    return ResolveFlag(*this, RuleFlagId_t::MayOccupyWater);
 }
 
 bool BaseManager::IsHeadquarters() const
@@ -568,7 +566,7 @@ std::optional<ScrapPayout_t> BaseManager::QuoteScrapBuilding_(const BuildingId_t
         {
             continue;
         }
-        if (!CanScrapBuilding(*pBuilding))
+        if (!CanScrapBuilding(*this, *pBuilding))
         {
             return std::nullopt;
         }

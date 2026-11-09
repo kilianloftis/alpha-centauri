@@ -1026,13 +1026,6 @@
         "type": "RuleFlag",
         "scope": "ThisUnit",
         "parameters": {
-          "flag": "found_base"
-        }
-      },
-      {
-        "type": "RuleFlag",
-        "scope": "ThisUnit",
-        "parameters": {
           "flag": "single_use"
         }
       },
@@ -1042,14 +1035,25 @@
         "parameters": {
           "flag": "cannot_capture_bases"
         }
+      }
+    ],
+    "on_found_effects": [
+      {
+        "type": "GrantResource",
+        "parameters": {
+          "resource": "minerals",
+          "amount": 10,
+          "stat": "starting_minerals"
+        }
       },
       {
-        "type": "StatModifier",
-        "scope": "ThisUnit",
+        "type": "AddBuilding",
         "parameters": {
-          "stat": "starting_minerals",
-          "amount": 10,
-          "op": "Add"
+          "building_id": "Pressure_Dome"
+        },
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "Water"
         }
       }
     ],
@@ -1074,13 +1078,6 @@
         "type": "RuleFlag",
         "scope": "ThisUnit",
         "parameters": {
-          "flag": "found_base"
-        }
-      },
-      {
-        "type": "RuleFlag",
-        "scope": "ThisUnit",
-        "parameters": {
           "flag": "single_use"
         }
       },
@@ -1090,14 +1087,25 @@
         "parameters": {
           "flag": "cannot_capture_bases"
         }
+      }
+    ],
+    "on_found_effects": [
+      {
+        "type": "GrantResource",
+        "parameters": {
+          "resource": "minerals",
+          "amount": 40,
+          "stat": "starting_minerals"
+        }
       },
       {
-        "type": "StatModifier",
-        "scope": "ThisUnit",
+        "type": "AddBuilding",
         "parameters": {
-          "stat": "starting_minerals",
-          "amount": 40,
-          "op": "Add"
+          "building_id": "Pressure_Dome"
+        },
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "Water"
         }
       }
     ],
@@ -1193,14 +1201,44 @@
         "type": "RuleFlag",
         "scope": "ThisUnit",
         "parameters": {
-          "flag": "found_base"
+          "flag": "cannot_capture_bases"
         }
-      },
+      }
+    ],
+    "on_found_effects": [
+      {
+        "type": "AddBuilding",
+        "parameters": {
+          "building_id": "Pressure_Dome"
+        },
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "Water"
+        }
+      }
+    ],
+    "upgrade_class": "colony"
+  },
+  {
+    "id": "test_found_flat_minerals",
+    "name": "Test Found Base Flat Minerals Grant",
+    "type": "weapon",
+    "mineral_cost": 0,
+    "effects": [
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
         "parameters": {
           "flag": "cannot_capture_bases"
+        }
+      }
+    ],
+    "on_found_effects": [
+      {
+        "type": "GrantResource",
+        "parameters": {
+          "resource": "minerals",
+          "amount": 7
         }
       }
     ],

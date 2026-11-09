@@ -45,6 +45,15 @@ struct GrantEnergyEffect_t
     int amount = 0;
 };
 
+// Credits a base resource stockpile. `amount` seeds the resolve; optional `modifierStat`
+// (e.g. StartingMinerals) applies that base-domain stack on top. Floored at 0.
+struct GrantResourceEffect_t
+{
+    StatId_t resource = StatId_t::Minerals;
+    int amount = 0;
+    std::optional<StatId_t> modifierStat;
+};
+
 // World-state change applied by PlanetaryCouncil (sea level / climate).
 struct WorldParameterEffect_t
 {
@@ -195,6 +204,7 @@ using TriggeredEffectVariant_t = std::variant<
     GrantTechEffect_t,
     GrantUnitEffect_t,
     GrantEnergyEffect_t,
+    GrantResourceEffect_t,
     WorldParameterEffect_t,
     SetInfiltrationEffect_t,
     ModifyPopulationEffect_t,

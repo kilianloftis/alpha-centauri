@@ -120,9 +120,6 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
         "level_max_meters": 1500,
         "reference_level_meters": 1000,
         "spread_altitude_limit_meters": 1000,
-        "submerged_pop_loss_roll_min": 2,
-        "submerged_pop_loss_roll_max": 4,
-        "submerged_pop_loss_cap": 10,
         "missing_headquarters_distance": 12
     })");
     CHECK_THROWS_WITH(MapRulesConfigParser{}.ParseConfig(path.string()),
@@ -136,9 +133,6 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
         "max_adjacent_difference_meters": 1500,
         "reference_level_meters": 1000,
         "spread_altitude_limit_meters": 1000,
-        "submerged_pop_loss_roll_min": 2,
-        "submerged_pop_loss_roll_max": 4,
-        "submerged_pop_loss_cap": 10,
         "missing_headquarters_distance": 12
     })");
     CHECK_THROWS_WITH(MapRulesConfigParser{}.ParseConfig(path.string()),
@@ -152,9 +146,6 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
         "max_adjacent_difference_meters": 1500,
         "reference_level_meters": 1000,
         "spread_altitude_limit_meters": 1000,
-        "submerged_pop_loss_roll_min": 2,
-        "submerged_pop_loss_roll_max": 4,
-        "submerged_pop_loss_cap": 10,
         "missing_headquarters_distance": 12
     })");
     CHECK_THROWS_WITH(MapRulesConfigParser{}.ParseConfig(path.string()),
@@ -168,9 +159,6 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
         "max_adjacent_difference_meters": 0,
         "reference_level_meters": 1000,
         "spread_altitude_limit_meters": 1000,
-        "submerged_pop_loss_roll_min": 2,
-        "submerged_pop_loss_roll_max": 4,
-        "submerged_pop_loss_cap": 10,
         "missing_headquarters_distance": 12
     })");
     CHECK_THROWS_WITH(MapRulesConfigParser{}.ParseConfig(path.string()),
@@ -184,9 +172,6 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
         "max_adjacent_difference_meters": 1500,
         "reference_level_meters": 1000,
         "spread_altitude_limit_meters": -500,
-        "submerged_pop_loss_roll_min": 2,
-        "submerged_pop_loss_roll_max": 4,
-        "submerged_pop_loss_cap": 10,
         "missing_headquarters_distance": 12
     })");
     CHECK_THROWS_WITH(MapRulesConfigParser{}.ParseConfig(path.string()),
@@ -199,10 +184,7 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
         "level_max_meters": 1500,
         "max_adjacent_difference_meters": 1500,
         "reference_level_meters": 1000,
-        "spread_altitude_limit_meters": 1000,
-        "submerged_pop_loss_roll_min": 2,
-        "submerged_pop_loss_roll_max": 4,
-        "submerged_pop_loss_cap": 10
+        "spread_altitude_limit_meters": 1000
     })");
     CHECK_THROWS_WITH(MapRulesConfigParser{}.ParseConfig(path.string()),
                       ContainsSubstring("missing_headquarters_distance"));
@@ -215,9 +197,6 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
         "max_adjacent_difference_meters": 1500,
         "reference_level_meters": 1000,
         "spread_altitude_limit_meters": 1000,
-        "submerged_pop_loss_roll_min": 2,
-        "submerged_pop_loss_roll_max": 4,
-        "submerged_pop_loss_cap": 10,
         "missing_headquarters_distance": 0
     })");
     CHECK_THROWS_WITH(MapRulesConfigParser{}.ParseConfig(path.string()),

@@ -180,7 +180,7 @@ TEST_CASE("Non-combat specials resolve capability flags and cargo capacity", "[u
     {
         const UnitDesign design = MakeSpecialDesign_(chassis, specials.Get("Colony_Pod"));
         CHECK(ResolveFlag(design, RuleFlagId_t::SingleUse));
-        CHECK(ResolveFlag(design, RuleFlagId_t::FoundBase));
+        CHECK_FALSE(design.CollectOnFoundEffects().empty());
     }
 
     SECTION("Transport")

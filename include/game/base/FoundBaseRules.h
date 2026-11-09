@@ -22,15 +22,12 @@ bool IsTooCloseToAnyBase(const Tile& rTile, const std::vector<const BaseManager*
 bool IsInForeignTerritory(const Tile& rTile, FactionId_t founderFactionId,
                           const TerritoryMap& rTerritory);
 
-// Territory + spacing checks only (does not require a FoundBase-capable unit).
+// Territory + spacing checks only (does not require a founding-capable unit).
 bool CanFoundBaseAt(const Tile& rTile, FactionId_t founderFactionId,
                     const std::vector<const BaseManager*>& rBases);
 
-// A FoundBase unit founds where it stands: only a sea unit on water, and CanFoundBaseAt.
+// A unit with on_found_effects founds where it stands: not embarked, water only for sea
+// domain (land/air/orbital on land only), and CanFoundBaseAt.
 bool CanFoundBase(const Unit& rUnit);
-
-// Resolve StartingMinerals for a newly created base: base-level effects (SE, secret
-// projects, …) plus the founding unit's live effects when provided. Floored at 0.
-int ResolveStartingMinerals(const BaseManager& rBase, const Unit* pFoundingUnit);
 
 } // namespace ac

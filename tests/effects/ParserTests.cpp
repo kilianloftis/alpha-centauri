@@ -165,7 +165,7 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
     CHECK(ParseRuleFlagId("ignores_difficult_terrain") == RuleFlagId_t::IgnoreDifficultTerrain);
     CHECK(ParseRuleFlagId("forces_psi_combat") == RuleFlagId_t::ForcesPsiCombat);
     CHECK(ParseRuleFlagId("native_life") == RuleFlagId_t::NativeLife);
-    CHECK(ParseRuleFlagId("found_base") == RuleFlagId_t::FoundBase);
+    CHECK(ParseRuleFlagId("may_occupy_water") == RuleFlagId_t::MayOccupyWater);
     CHECK(ParseRuleFlagId("terraform") == RuleFlagId_t::Terraform);
     CHECK(ParseRuleFlagId("supply_crawl") == RuleFlagId_t::SupplyCrawl);
     CHECK(ParseRuleFlagId("probe_team") == RuleFlagId_t::ProbeTeam);

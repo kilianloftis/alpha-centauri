@@ -202,7 +202,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   - Base resources: `Nutrients`, `Minerals`, `Energy`. `EnergyCredits` is the spendable
     faction treasury (`EconomyManager`), not tile energy.
   - Base output allocated directly rather than via energy split: `Econ`, `Labs`, `Psych`.
-  - Unit stats: `Attack`, `Defense`, `Movement`, `HitPoints`, `EarthquakeLevels` (Additive levels an `Earthquake` triggered effect raises when its `levels_stat` names this stat; reactors Add their tier), `FungalBloomTiles` (Additive tiles a `FungalBloom` converts when its `tiles_stat` names this stat; reactors Add 3, 5, 7, 9), `ExplosionRadius` (Additive Chebyshev radius an `Explosion` wipes when its `radius_stat` names this stat; reactors Add 1, 2, 3, 4; radius 1 is 9 tiles), `CollateralDamage` (HP the attacker removes from other occupants when it kills a defender; the attacker's stat alone), `CollateralSusceptibility` (PureMultiplier, seed 1; each occupant scales that splash by `lround(splash * susceptibility)`; a tile `MaxClamp` that leaves 0 skips that occupant; `world_rules.json` `MultiplyGeometric` 0 on air), `PlanetPearls` (energy credits paid to the killer of a wild native; the design Adds the base and the intrinsic lifecycle level `MultiplyGeometric`s it), `DisengageChance`, `TurnsOfFuel`, `DamageFromOutOfFuel`, `CargoCapacity`, `DifficultTerrainCost`, `MoveCost` (RawScaled tile-entry ceiling; `MaxClamp` only; amount stored as move fragments), `MineralUpkeep` (home-base mineral support cost; floored at 0), `FreeUnitSupport` (base-level free support slots), `CostMultiplier` (also used for base production cost after Industry rating expansion), `PrototypeSurchargeScale` (PureMultiplier on the prototype mineral *extra* only; Skunkworks uses `MultiplyGeometric` 0 on `ThisBase`), `RetoolPenaltyScale` (PureMultiplier on the retool forfeit; Skunkworks zeros it the same way), `FacilityEnergyUpkeep` (RawScaled on constructed-facility energy maintenance from `BuildingConfig_t::upkeep`; optional `buildingFilter`), `StartingMinerals` (credited to a new base's production stockpile at founding; resolved from the new base's effects plus the founding unit), `ScrapRefund` (RawScaled: player-scrap amount after the kind formula or config override; bonuses stack, then `refund_ceiling_percent` clamps).
+  - Unit stats: `Attack`, `Defense`, `Movement`, `HitPoints`, `EarthquakeLevels` (Additive levels an `Earthquake` triggered effect raises when its `levels_stat` names this stat; reactors Add their tier), `FungalBloomTiles` (Additive tiles a `FungalBloom` converts when its `tiles_stat` names this stat; reactors Add 3, 5, 7, 9), `ExplosionRadius` (Additive Chebyshev radius an `Explosion` wipes when its `radius_stat` names this stat; reactors Add 1, 2, 3, 4; radius 1 is 9 tiles), `CollateralDamage` (HP the attacker removes from other occupants when it kills a defender; the attacker's stat alone), `CollateralSusceptibility` (PureMultiplier, seed 1; each occupant scales that splash by `lround(splash * susceptibility)`; a tile `MaxClamp` that leaves 0 skips that occupant; `world_rules.json` `MultiplyGeometric` 0 on air), `PlanetPearls` (energy credits paid to the killer of a wild native; the design Adds the base and the intrinsic lifecycle level `MultiplyGeometric`s it), `DisengageChance`, `TurnsOfFuel`, `DamageFromOutOfFuel`, `CargoCapacity`, `DifficultTerrainCost`, `MoveCost` (RawScaled tile-entry ceiling; `MaxClamp` only; amount stored as move fragments), `MineralUpkeep` (home-base mineral support cost; floored at 0), `FreeUnitSupport` (base-level free support slots), `CostMultiplier` (also used for base production cost after Industry rating expansion), `PrototypeSurchargeScale` (PureMultiplier on the prototype mineral *extra* only; Skunkworks uses `MultiplyGeometric` 0 on `ThisBase`), `RetoolPenaltyScale` (PureMultiplier on the retool forfeit; Skunkworks zeros it the same way), `FacilityEnergyUpkeep` (RawScaled on constructed-facility energy maintenance from `BuildingConfig_t::upkeep`; optional `buildingFilter`), `StartingMinerals` (base-domain modifiers applied by a founding `GrantResource` that names this stat), `ScrapRefund` (RawScaled: player-scrap amount after the kind formula or config override; bonuses stack, then `refund_ceiling_percent` clamps).
   - Difficulty stats (see [difficulty-system.md](difficulty-system.md)): `SizeFreeDrones` (Additive free population before size drones — difficulty is the sole emitter), `TechCostDiff` (Additive ordinal fed to `tech_cost.lua` as `diff`; Talent and Librarian both 3), `TechCostCatchUp` (Additive ordinal fed as `catch_up_diff`; Citizen 0 … Transcend 5), `Bureaucracy` (PureMultiplier product for the bureaucracy base-limit formula; difficulty and Efficiency SE emit MultiplyGeometric), `EcologicalDamage` (PureMultiplier: the eco multiplier stack — difficulty, Planet rating, native life level and Perihelion each emit MultiplyGeometric), `ConqueredDroneCap` (Additive offset on the recently-conquered drone cap; difficulty Adds `0.25 × level` with Citizen = 1, `base_conquest.json` Adds −0.5).
   - Research cost: `TechCost` (PureMultiplier, seed 1). Faction and optional `ThisTech` emitters (`MultiplyGeometric`) and `config/world_rules.json` (`TechCost` 1.5× plus `TechCostTurnLag`) apply after the formula returns. `TechCostResearch` (Additive) is the inherent SOCIAL RESEARCH index fed to `tech_cost.lua` as `research` and subtracted from the local tech factor (floored at 1). `TechCostTurnLag` (Additive; nonzero is on) is the slower turn-lag band. There is no per-tech base cost field.
   - Population modifier: `GrowthRate` (`AddPercent`, base = 100%) — modifies the faction-wide population growth rate. `LastDefenderPopLoss` and `CapturePopLoss` are two independent Additive stats whose baselines come from `base_conquest.json`'s own `effects` array (an `Add` each, injected into every faction's pool like `production.json`'s). Perimeter Defense and Citizen difficulty `MaxClamp` 0 the last-defender one only; nothing in the shipping config modifies capture loss. `CaptureFacilitiesDestroyedMin` and `CaptureFacilitiesDestroyedMaxPercent` are the same shape. `ConqueredDroneCap` is the recently-conquered drone-cap offset: difficulty Adds `0.25` per level (Citizen = 1) and `base_conquest.json` Adds −0.5, so the drone formula's `floor(base_size/4 + conquered_drone_cap)` is `(BaseSize + Difficulty − 2) / 4`. Peak extra drones and the 10-turn decay live on `pop_composition.json` (`assimilation_drones`, `assimilation_decay_turns`) because they are calculator coefficients, not modifiers. So **every numeric tunable in `base_conquest.json` is a modifiable stat** — the file holds no scalars at all, only its effects list and the escape-pod component ids. Because each baseline is an ordinary contribution rather than a hard-coded seed, a mod can *raise* these values, not merely clamp them; vanilla simply ships no emitter besides the baseline for most of them.
@@ -269,8 +269,10 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
     (preview); production assembles unit ∪ base under the base subject so Industry applies.
   - **UpgradeCostScale** (`DomainFor → Faction`): Nano Factory MultiplyGeometric 0.5 on
     `FactionGlobal`; upgrade quotes resolve it with the faction pool.
-  - **StartingMinerals** (`DomainFor → Base`): founding merges base-list + founding-unit
-    effects into one stockpile credit — multi-pool ubiquity, not a DomainFor escape hatch.
+  - **StartingMinerals** (`DomainFor → Base`): continuous modifiers on the new base's pool
+    (SE, projects). A founding `GrantResource` may name this stat so those modifiers scale
+    the grant's amount seed; the pod itself no longer carries a continuous StartingMinerals
+    effect.
   - **AwayFromHomeDrones** (`DomainFor → Unit`): resolved from live-unit effects *and* from
     the base's own list (`AwayFromHomeDrones.cpp`). Routing the base half through
     `ResolveUnitStat` would throw, so it filters and resolves by hand with one
@@ -517,7 +519,7 @@ resolution. One-shot effects are **executed**: RNG, ledger writes, ownership tra
 once. These are two machines, and they are two types.
 
 - **`TriggeredEffectConfig_t`** (`TriggeredEffect.h`) holds a `TriggeredEffectVariant_t` —
-  `AddBuilding`, `GrantTech`, `GrantUnit`, `GrantEnergy`, `GrantXp`, `RestoreHitPoints`,
+  `AddBuilding`, `GrantTech`, `GrantUnit`, `GrantEnergy`, `GrantResource`, `GrantXp`, `RestoreHitPoints`,
   `WorldParameter`,
   `SetInfiltration`, `ModifyPopulation`, `DestroyFacility`, `Rebel`, `DestroyUnit`, `Earthquake`, `FungalBloom`, `Explosion`, `SetTerrainFeature`, `StepRockiness`, `ElevationChange`, `CommitAtrocity`, `RecordMindControl`, `GrantCleanMinerals`, `AddVirtualMinerals` — plus an optional
   `oncePer`, an optional `condition` (same `Condition_t` as continuous, evaluated against
@@ -540,7 +542,7 @@ container declares a continuous `effects` array and, where a trigger exists, a n
 |---|---|---|
 | `buildings/*.json` | `effects`, `destroyed_effects` (secret projects; while tombstoned) | `on_complete_effects`, `on_unit_produced_effects` |
 | `production.json` | `effects` | `on_unit_produced_effects` |
-| `unit_components/*.json` | `effects` | `on_complete_effects`, `on_hold_effects`, `on_detonate_effects` |
+| `unit_components/*.json` | `effects` | `on_complete_effects`, `on_hold_effects`, `on_detonate_effects`, `on_found_effects` |
 | `native_units.json` | `effects` | `on_hold_effects` |
 | `probe_actions.json` | `effects` (top level, every faction's pool) and per action | `on_paid_effects`, `on_success_effects` |
 | `council/proposals.json` | `effects` | `on_passed_effects` |
@@ -725,6 +727,15 @@ Thought Control records 4 (`on_paid_effects`), a successful Subvert Unit records
 (`on_success_effects`), and the base mind-control quote passes the actor's total to its cost
 formula as `mind_control_total` (shipping adds a quarter of it to the first factor). The ledger is
 a stub holding per-actor totals; per-act records come later.
+
+### GrantResource
+Base-subject stockpile credit. Required `resource` (`minerals` now; nutrients when that
+writer exists — energy treasury stays `GrantEnergy`). Required integer `amount` seeds the
+resolve; optional `stat` names a base-domain stat whose continuous modifiers apply on top
+(literal seed plus modifier stat, distinct from Earthquake / Explosion's literal *or* stat).
+Result floored at 0 and added to that resource's stockpile. Colony pods use
+`resource: minerals`, `amount: 10`, `stat: starting_minerals` on `on_found_effects`; a
+flat supply grant omits `stat`.
 
 ### GrantCleanMinerals / AddVirtualMinerals
 Both write the subject faction's tally in `GameState`'s `EcologyLedger`, per-faction-subject

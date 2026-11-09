@@ -6,8 +6,5 @@
   "max_adjacent_difference_meters": 1500,
   "reference_level_meters": 1000,
   "spread_altitude_limit_meters": 1000,
-  "submerged_pop_loss_roll_min": 2,
-  "submerged_pop_loss_roll_max": 4,
-  "submerged_pop_loss_cap": 10,
   "missing_headquarters_distance": 12
 }

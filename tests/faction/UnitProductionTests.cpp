@@ -326,7 +326,7 @@ TEST_CASE("Completing colony pod production decreases base population by 1",
     const std::vector<Unit*> onTile =
         game.fixtures.state.GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile());
     REQUIRE(onTile.size() == 1);
-    CHECK(ResolveFlag(*onTile.front(), RuleFlagId_t::FoundBase));
+    CHECK_FALSE(onTile.front()->GetDesign().CollectOnFoundEffects().empty());
 }
 
 TEST_CASE("Colony pod that would abandon the base asks for confirmation",

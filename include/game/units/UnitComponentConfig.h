@@ -59,6 +59,8 @@ struct UnitComponentConfig_t
     std::vector<TriggeredEffectConfig_t> onHoldEffects;
     // Fired when the unit is ordered to detonate in place, for a warhead that cannot attack.
     std::vector<TriggeredEffectConfig_t> onDetonateEffects;
+    // Fired when the unit founds a base. Non-empty is the FoundBase capability (like detonate).
+    std::vector<TriggeredEffectConfig_t> onFoundEffects;
     // Overrides kinds.unit.default_scrap per key, later slots winning. A null formula denies
     // scrap.
     std::optional<ScrapOverride_t> scrap;

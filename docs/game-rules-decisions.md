@@ -87,11 +87,12 @@ turn original exists; while the turn original is still null (fresh base, or last
 `ApplyProduction` had nothing current), `SetProduction` stays free. Integer division rounds the
 forfeit down, so an odd stockpile favours the player.
 
-**Founding minerals:** `StartingMinerals` effects (colony pod, SE, secret projects, …) are
-credited into the new base's production stockpile once at founding (`TryFoundBase` only —
-never on transfer or snapshot restore). Retooling is free while the turn original is still
-null (a fresh base has none); once `ApplyProduction` banks a turn with something current and
-stamps an original, ordinary retooling rules apply.
+**Founding minerals:** the founder's `on_found_effects` may include `GrantResource` (minerals
+seed, optional base-domain `stat` such as `starting_minerals`). Continuous `StartingMinerals`
+modifiers (SE, projects) apply only when that grant names the stat — base pool only. Founding
+does not credit minerals inherently. Retooling is free while the turn original is still null
+(a fresh base has none); once `ApplyProduction` banks a turn with something current and stamps
+an original, ordinary retooling rules apply.
 
 ## 4. Faction elimination
 

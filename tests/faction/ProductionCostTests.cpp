@@ -461,12 +461,26 @@ TEST_CASE("OverflowCarried keeps leftover minerals up to the retool threshold",
     CHECK(OverflowCarried(30, k_TestConfig) == k_TestConfig.retoolPenaltyThreshold);
 }
 
-TEST_CASE("Secret projects cannot be scrapped", "[production][scrap]")
+TEST_CASE("Secret projects cannot be scrapped; Pressure Dome cannot on water",
+          "[production][scrap]")
 {
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& landBase = fixture.MakeFactionBase(faction, 8, 8);
+    BaseManager& waterBase = fixture.MakeFactionBase(faction, 8, 12);
+    waterBase.GetTile().SetElevation(-100);
+    REQUIRE(waterBase.GetTile().IsWater());
+
     BuildingConfig_t facility;
-    CHECK(CanScrapBuilding(facility));
+    CHECK(CanScrapBuilding(landBase, facility));
     facility.bIsSecretProject = true;
-    CHECK_FALSE(CanScrapBuilding(facility));
+    CHECK_FALSE(CanScrapBuilding(landBase, facility));
+
+    const BuildingConfig_t* pDome =
+        fixture.dataContext.buildingRegistry->Find("Pressure_Dome");
+    REQUIRE(pDome);
+    CHECK(CanScrapBuilding(landBase, *pDome));
+    CHECK_FALSE(CanScrapBuilding(waterBase, *pDome));
 }
 
 TEST_CASE("A rioting base banks, completes and hurries nothing", "[production][riot]")

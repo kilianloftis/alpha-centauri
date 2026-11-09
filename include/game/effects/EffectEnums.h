@@ -161,8 +161,8 @@ enum class StatId_t
     GarrisonProbeMultiplier,
     // PureMultiplier on genetic-plague pop and garrison damage. Hospitals emit ×0.5.
     PlagueDamageScale,
-    // Minerals credited to a newly founded base's production stockpile (resolved once at
-    // founding from the new base's effect list plus the founding unit). Not a live yield.
+    // Base-domain modifiers applied by GrantResource when founding names this stat (SE,
+    // projects). Not a live yield; the grant's amount is the seed.
     StartingMinerals,
     // Shifts the displayed rank word (morale_veh): SE table, home Crèche, riot in combat.
     // Added to Unit::m_xp and clamped; not seeded into m_xp.
@@ -711,7 +711,7 @@ enum class RuleFlagId_t
     NativeLife,
 
     // Non-combat special equipment (weapon-slot) capability gates.
-    FoundBase,
+    // Founding is on_found_effects presence (UnitCanFoundBase), not a RuleFlag.
     Terraform,
     SupplyCrawl,
     ProbeTeam,
@@ -756,6 +756,8 @@ enum class RuleFlagId_t
     NearZeroGrowth,
     // Base is the faction headquarters (assassinate / MC eligibility).
     Headquarters,
+    // Base may sit on water (Pressure Dome). Queried by MayOccupyWater / surface flip.
+    MayOccupyWater,
     // SE Probe +3 / Thought Control: bases and units cannot be subverted by standard probes.
     ProbeSubversionImmune,
     // Targeted sabotage of this facility is at least risk 2 (Perimeter Defense, Tachyon Field).
@@ -802,7 +804,6 @@ inline RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "ignores_difficult_terrain")   return RuleFlagId_t::IgnoreDifficultTerrain;
     if (rFlag == "forces_psi_combat")            return RuleFlagId_t::ForcesPsiCombat;
     if (rFlag == "native_life")                  return RuleFlagId_t::NativeLife;
-    if (rFlag == "found_base")                   return RuleFlagId_t::FoundBase;
     if (rFlag == "terraform")                   return RuleFlagId_t::Terraform;
     if (rFlag == "supply_crawl")                return RuleFlagId_t::SupplyCrawl;
     if (rFlag == "probe_team")                  return RuleFlagId_t::ProbeTeam;
@@ -820,6 +821,7 @@ inline RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "airdrop_launch")              return RuleFlagId_t::AirdropLaunch;
     if (rFlag == "airdrop_interdiction")        return RuleFlagId_t::AirdropInterdiction;
     if (rFlag == "headquarters")                return RuleFlagId_t::Headquarters;
+    if (rFlag == "may_occupy_water")            return RuleFlagId_t::MayOccupyWater;
     if (rFlag == "probe_subversion_immune")     return RuleFlagId_t::ProbeSubversionImmune;
     if (rFlag == "high_risk_sabotage")          return RuleFlagId_t::HighRiskSabotage;
     if (rFlag == "allow_gene_warfare")          return RuleFlagId_t::AllowGeneWarfare;

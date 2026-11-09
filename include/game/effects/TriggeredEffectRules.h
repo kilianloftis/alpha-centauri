@@ -31,6 +31,9 @@ std::string HoldLinkHostName(const Unit& rUnit);
 // presence, so a new warhead is config alone.
 bool UnitCanDetonate(const Unit& rUnit);
 
+// True when rUnit's design carries any on_found_effects. The capability is the list's presence.
+bool UnitCanFoundBase(const Unit& rUnit);
+
 // Signed size change from one ModifyPopulation, as ApplyModifyPopulation_ applies it. Shrinks
 // honor minSize; growth is uncapped.
 int PredictModifyPopulationDelta(int size, const ModifyPopulationEffect_t& rEffect);

@@ -3,8 +3,8 @@
 namespace ac
 {
 
-// config/map_rules.json: the ocean line, play-time elevation edits, flooded bases and the
-// headquarters distance fallback. The storage range is copied from the world-gen preset.
+// config/map_rules.json: the ocean line, play-time elevation edits, and the headquarters
+// distance fallback. The storage range is copied from the world-gen preset.
 struct MapRulesConfig_t
 {
     // Inclusive storage range from the preset that generated this world.
@@ -25,11 +25,6 @@ struct MapRulesConfig_t
     // Land above this takes forest and fungus spread only when moist or wet. Separate from
     // reference_level_meters so a mod can move either.
     int spreadAltitudeLimitMeters = 0;
-    // A base flooded without a Pressure Dome loses clamp(size / 2, roll, cap) pop, the roll
-    // uniform in [rollMin, rollMax] (terranx alt_set: 2-4, capped at 10).
-    int submergedPopLossRollMin = 0;
-    int submergedPopLossRollMax = 0;
-    int submergedPopLossCap = 0;
     // Headquarters distance of a faction that has none (terranx vulnerable: 12).
     int missingHeadquartersDistance = 0;
 };

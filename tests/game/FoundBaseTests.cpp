@@ -20,10 +20,13 @@
 #include "game/base/BaseMutations.h"
 #include "game/base/BaseRules.h"
 #include "game/base/FoundBaseRules.h"
+#include "game/effects/TriggeredEffectRules.h"
+#include "game/units/UnitMutations.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDomain.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitSlotConfig.h"
+#include "game/units/UnitTransport.h"
 #include "game/social-engineering/SocialEngineeringManager.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/units/UnitComponentRegistry.h"
@@ -98,10 +101,17 @@ struct FoundBaseGame_
         pAi = &fixtures.state.AddFaction(std::move(pFactionB));
     }
 
-    // The caller's founding path: CanFoundBase, then the mutation. nullptr when it may not.
+    // The caller's founding path: CanFoundBase, then the mutation, then SingleUse. nullptr when
+    // it may not.
     BaseManager* FoundBase(Unit& rFounder)
     {
-        return CanFoundBase(rFounder) ? &ac::FoundBase(fixtures.state, rFounder) : nullptr;
+        if (!CanFoundBase(rFounder))
+        {
+            return nullptr;
+        }
+        BaseManager& rBase = ac::FoundBase(fixtures.state, rFounder);
+        ExpendIfSingleUse(rFounder);
+        return &rBase;
     }
 
     BaseManager& MakeBase(Faction& rFaction, int x, int y)
@@ -185,7 +195,7 @@ TEST_CASE("FoundBase creates a base; SingleUse expends the colony pod", "[unit][
     BaseManager& home = game.MakeBase(*game.pPlayer, 8, 8);
     home.GetBuildingManager().AddBuilding("Headquarters");
     Unit& pod = game.MakeUnit(*game.pPlayer, 11, 11, {"test_chassis", "test_colony_pod"}, &home);
-    REQUIRE(ResolveFlag(pod, RuleFlagId_t::FoundBase));
+    REQUIRE(UnitCanFoundBase(pod));
     REQUIRE(ResolveFlag(pod, RuleFlagId_t::SingleUse));
     REQUIRE(game.pPlayer->GetBaseCount() == 1);
     REQUIRE(CountUnits_(*game.pPlayer) == 1);
@@ -197,7 +207,7 @@ TEST_CASE("FoundBase creates a base; SingleUse expends the colony pod", "[unit][
     CHECK(game.pPlayer->GetBaseCount() == 2);
     CHECK(CountUnits_(*game.pPlayer) == 0);
     CHECK(game.fixtures.state.FindBaseAt(11, 11) == pNew);
-    // Colony pod's StartingMinerals Add 10 lands in the new base's production stockpile.
+    // GrantResource minerals 10 (stat starting_minerals) with no base modifiers.
     CHECK(pNew->GetProduction().GetMineralStockpile() == 10);
     CHECK(game.pPlayer->GetHeadquarters() == &home);
     CHECK(home.GetBuildingManager().HasBuilding("Headquarters"));
@@ -217,7 +227,7 @@ TEST_CASE("A Headquarters base keeps all energy", "[unit][found-base][hq]")
           == home.GetEnergyProduction());
 }
 
-TEST_CASE("FoundBase stacks founding-unit and AllOwnerBases StartingMinerals",
+TEST_CASE("FoundBase GrantResource applies base StartingMinerals modifiers",
           "[unit][found-base][starting-minerals]")
 {
     FoundBaseGame_ game;
@@ -227,7 +237,7 @@ TEST_CASE("FoundBase stacks founding-unit and AllOwnerBases StartingMinerals",
     Unit& pod = game.MakeUnit(*game.pPlayer, 11, 11, {"test_chassis", "test_colony_pod"}, &home);
     BaseManager* pNew = game.FoundBase(pod);
     REQUIRE(pNew);
-    // Pod 10 + project AllOwnerBases +5.
+    // Grant seed 10 + project AllOwnerBases +5.
     CHECK(pNew->GetProduction().GetMineralStockpile() == 15);
 }
 
@@ -243,7 +253,7 @@ TEST_CASE("Support -2 cancels the colony pod's 10 free founding minerals",
     Unit& pod = game.MakeUnit(*game.pPlayer, 11, 11, {"test_chassis", "test_colony_pod"}, &home);
     BaseManager* pNew = game.FoundBase(pod);
     REQUIRE(pNew);
-    // Pod +10 offset by Support ≤ -2 StartingMinerals -10.
+    // Grant seed 10 offset by Support ≤ -2 StartingMinerals -10.
     CHECK(pNew->GetProduction().GetMineralStockpile() == 0);
 }
 
@@ -259,8 +269,38 @@ TEST_CASE("Support -2 still allows project StartingMinerals above the cancelled 
     Unit& pod = game.MakeUnit(*game.pPlayer, 11, 11, {"test_chassis", "test_colony_pod"}, &home);
     BaseManager* pNew = game.FoundBase(pod);
     REQUIRE(pNew);
-    // Pod 10 + project 5 + Support -10 → 5.
+    // Grant seed 10 + project 5 + Support -10 → 5.
     CHECK(pNew->GetProduction().GetMineralStockpile() == 5);
+}
+
+TEST_CASE("GrantResource without stat credits the flat amount",
+          "[unit][found-base][starting-minerals]")
+{
+    FoundBaseGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 8);
+    home.GetBuildingManager().AddBuilding("founding_minerals_project");
+    game.pPlayer->GetSocialEngineering().SetActivePolicy(
+        game.fixtures.socialPolicies().Get("low_support_policy"));
+
+    Unit& pod =
+        game.MakeUnit(*game.pPlayer, 11, 11, {"test_chassis", "test_found_flat_minerals"}, &home);
+    BaseManager* pNew = game.FoundBase(pod);
+    REQUIRE(pNew);
+    CHECK(pNew->GetProduction().GetMineralStockpile() == 7);
+}
+
+TEST_CASE("A founder with no GrantResource founds at zero minerals",
+          "[unit][found-base][starting-minerals]")
+{
+    FoundBaseGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 8);
+    home.GetBuildingManager().AddBuilding("founding_minerals_project");
+
+    Unit& pod =
+        game.MakeUnit(*game.pPlayer, 11, 11, {"test_chassis", "test_found_base_only"}, &home);
+    BaseManager* pNew = game.FoundBase(pod);
+    REQUIRE(pNew);
+    CHECK(pNew->GetProduction().GetMineralStockpile() == 0);
 }
 
 TEST_CASE("Founding minerals above the retool threshold may switch freely",
@@ -297,7 +337,7 @@ TEST_CASE("FoundBase without SingleUse leaves the unit alive", "[unit][found-bas
     FoundBaseGame_ game;
     BaseManager& home = game.MakeBase(*game.pPlayer, 8, 8);
     Unit& pod = game.MakeUnit(*game.pPlayer, 11, 11, {"test_chassis", "test_found_base_only"}, &home);
-    REQUIRE(ResolveFlag(pod, RuleFlagId_t::FoundBase));
+    REQUIRE(UnitCanFoundBase(pod));
     REQUIRE_FALSE(ResolveFlag(pod, RuleFlagId_t::SingleUse));
 
     BaseManager* pNew = game.FoundBase(pod);
@@ -306,7 +346,7 @@ TEST_CASE("FoundBase without SingleUse leaves the unit alive", "[unit][found-bas
     CHECK(CountUnits_(*game.pPlayer) == 1);
 }
 
-TEST_CASE("FoundBase fails without FoundBase or on an illegal tile", "[unit][found-base]")
+TEST_CASE("FoundBase fails without on_found_effects or on an illegal tile", "[unit][found-base]")
 {
     FoundBaseGame_ game;
     BaseManager& home = game.MakeBase(*game.pPlayer, 8, 8);
@@ -359,13 +399,53 @@ TEST_CASE("A land colony pod cannot found on water; a sea pod can and may occupy
     BaseManager* pLandFounded = game.FoundBase(seaOnLand);
     REQUIRE(pLandFounded);
     CHECK_FALSE(pLandFounded->MayOccupyWater());
+    CHECK_FALSE(pLandFounded->GetBuildingManager().HasBuilding(k_PressureDomeBuildingId));
 
     Unit& seaPod = game.MakeUnit(*game.pPlayer, 11, 11, {"test_sea_chassis", "test_colony_pod"}, &home);
     BaseManager* pSea = game.FoundBase(seaPod);
     REQUIRE(pSea);
     CHECK(pSea->GetTile().IsWater());
+    CHECK(pSea->GetBuildingManager().HasBuilding(k_PressureDomeBuildingId));
     CHECK(pSea->MayOccupyWater());
     CHECK(pSea->GetTile().HasImprovement(ImprovementIds::k_Base));
+}
+
+TEST_CASE("An embarked land colony pod cannot found on water", "[unit][found-base][surface]")
+{
+    FoundBaseGame_ game;
+    Tile& water = *game.fixtures.state.GetWorldMap().GetTile(11, 11);
+    water.SetElevation(-100);
+    REQUIRE(water.IsWater());
+
+    Unit& transport =
+        game.MakeUnit(*game.pPlayer, 11, 11, {"test_sea_chassis", "test_transport"});
+    Unit& landPod =
+        game.MakeUnit(*game.pPlayer, 11, 11, {"test_chassis", "test_colony_pod"});
+    landPod.Transport().EmbarkInto(transport);
+    REQUIRE(landPod.Transport().IsEmbarked());
+    CHECK_FALSE(CanFoundBase(landPod));
+    CHECK_FALSE(game.FoundBase(landPod));
+    CHECK(game.pPlayer->GetBaseCount() == 0);
+}
+
+TEST_CASE("Air and orbital colonies may found on land only", "[unit][found-base][surface]")
+{
+    FoundBaseGame_ game;
+    Unit& airOnLand =
+        game.MakeUnit(*game.pPlayer, 8, 8, {"test_flight_chassis", "test_colony_pod"});
+    Unit& orbitalOnLand =
+        game.MakeUnit(*game.pPlayer, 11, 11, {"test_orbital_chassis", "test_colony_pod"});
+    CHECK(CanFoundBase(airOnLand));
+    CHECK(CanFoundBase(orbitalOnLand));
+
+    Tile& water = *game.fixtures.state.GetWorldMap().GetTile(5, 5);
+    water.SetElevation(-100);
+    Unit& airOnWater =
+        game.MakeUnit(*game.pPlayer, 5, 5, {"test_flight_chassis", "test_colony_pod"});
+    Unit& orbitalOnWater =
+        game.MakeUnit(*game.pPlayer, 5, 5, {"test_orbital_chassis", "test_colony_pod"});
+    CHECK_FALSE(CanFoundBase(airOnWater));
+    CHECK_FALSE(CanFoundBase(orbitalOnWater));
 }
 
 TEST_CASE("A surface flip removes improvements whose domain no longer matches",
@@ -455,7 +535,7 @@ TEST_CASE("A domed base and a sea base keep their tiles across a flip",
     CHECK(pSea->GetTile().HasImprovement(ImprovementIds::k_Base));
 }
 
-TEST_CASE("A flooded base loses half its population and gains a Pressure Dome",
+TEST_CASE("An undomed base is razed when its tile flips to water",
           "[unit][found-base][elevation][surface]")
 {
     FoundBaseGame_ game;
@@ -466,32 +546,22 @@ TEST_CASE("A flooded base loses half its population and gains a Pressure Dome",
     game.fixtures.state.GetTileEffects().AddOccupantWithEffects(flooded.GetTile(), "Farm");
     CrossElevation_(game.fixtures.state, flooded.GetTile(), -500);
 
-    // Half of 10 beats every roll (2-4) and stays under the cap of 10.
-    CHECK_FALSE(flooded.IsRazed());
-    CHECK(flooded.GetPopulation().GetSize() == 5);
-    CHECK(flooded.GetBuildingManager().HasBuilding(k_PressureDomeBuildingId));
-    CHECK(flooded.GetTile().HasImprovement(ImprovementIds::k_Base));
+    CHECK(flooded.IsRazed());
+    CHECK_FALSE(flooded.GetTile().HasImprovement(ImprovementIds::k_Base));
     CHECK_FALSE(flooded.GetTile().HasImprovement("Farm"));
+    CHECK(game.fixtures.state.FindBaseAt(8, 8) == nullptr);
 }
 
-TEST_CASE("A flooded base left with no population is destroyed, unless it is the last one",
+TEST_CASE("The last undomed base is still razed on a water flip",
           "[unit][found-base][elevation][surface]")
 {
     FoundBaseGame_ game;
     BaseManager& last = game.MakeBase(*game.pAi, 4, 4);
     REQUIRE(last.GetPopulation().GetSize() == 1);
     CrossElevation_(game.fixtures.state, last.GetTile(), -500);
-    CHECK_FALSE(last.IsRazed());
-    CHECK(last.GetPopulation().GetSize() == 1);
-    CHECK(last.GetBuildingManager().HasBuilding(k_PressureDomeBuildingId));
-
-    game.MakeBase(*game.pPlayer, 14, 14);
-    BaseManager& small = game.MakeBase(*game.pPlayer, 8, 8);
-    REQUIRE(small.GetPopulation().GetSize() == 1);
-    CrossElevation_(game.fixtures.state, small.GetTile(), -500);
-    CHECK(small.IsRazed());
-    CHECK_FALSE(small.GetTile().HasImprovement(ImprovementIds::k_Base));
-    CHECK(game.fixtures.state.FindBaseAt(8, 8) == nullptr);
+    CHECK(last.IsRazed());
+    CHECK_FALSE(last.GetTile().HasImprovement(ImprovementIds::k_Base));
+    CHECK(game.fixtures.state.FindBaseAt(4, 4) == nullptr);
 }
 
 TEST_CASE("A flip kills units on the wrong surface unless a standing base shelters them",
@@ -504,13 +574,12 @@ TEST_CASE("A flip kills units on the wrong surface unless a standing base shelte
     CHECK_FALSE(HasUnit_(*game.pPlayer, exposedId));
 
     game.MakeBase(*game.pPlayer, 14, 14);
-    BaseManager& flooded = game.MakeBase(*game.pPlayer, 8, 8);
-    actest::SetMaxBaseSize(*game.fixtures.dataContext.growthConfig, 20);
-    GrowTo_(flooded, 10);
+    BaseManager& domed = game.MakeBase(*game.pPlayer, 8, 8);
+    domed.GetBuildingManager().AddBuilding(k_PressureDomeBuildingId);
     Unit& garrison = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis"});
     const UnitId_t garrisonId = garrison.GetUnitId();
-    CrossElevation_(game.fixtures.state, flooded.GetTile(), -500);
-    REQUIRE_FALSE(flooded.IsRazed());
+    CrossElevation_(game.fixtures.state, domed.GetTile(), -500);
+    REQUIRE_FALSE(domed.IsRazed());
     CHECK(HasUnit_(*game.pPlayer, garrisonId));
 }
 
@@ -528,7 +597,7 @@ TEST_CASE("Only a sea colony founds on water, and its base keeps the water tile"
     CHECK_FALSE(CanFoundBase(rover));
 }
 
-TEST_CASE("A flip to water names what it removes and which base floods",
+TEST_CASE("A flip to water marks an undomed base for raze and keeps a domed one",
           "[unit][found-base][surface]")
 {
     FoundBaseGame_ game;
@@ -539,9 +608,7 @@ TEST_CASE("A flip to water names what it removes and which base floods",
 
     const SurfaceFlipConsequences_t flooded =
         SurfaceFlipConsequences(land.GetTile(), /*bNowWater=*/true, &land);
-    REQUIRE(flooded.submerged.has_value());
-    CHECK(flooded.submerged->size == land.GetPopulation().GetSize());
-    CHECK_FALSE(flooded.submerged->bLastBase);
+    CHECK(flooded.bRazeBase);
     CHECK(std::ranges::count(flooded.removedImprovements, std::string(ImprovementIds::k_Base))
           == 0);
     CHECK(std::ranges::count(flooded.removedImprovements, std::string("Farm")) == 1);
@@ -549,28 +616,23 @@ TEST_CASE("A flip to water names what it removes and which base floods",
 
     const SurfaceFlipConsequences_t spared =
         SurfaceFlipConsequences(domed.GetTile(), /*bNowWater=*/true, &domed);
-    CHECK_FALSE(spared.submerged.has_value());
+    CHECK_FALSE(spared.bRazeBase);
 }
 
-TEST_CASE("Submergence loses clamp(size / 2, roll, cap) pop", "[surface]")
+TEST_CASE("Pressure Dome alone grants +1 nutrients minerals and energy",
+          "[unit][found-base][dome]")
 {
-    SubmergedBase_t base;
-    base.rollMin = 2;
-    base.rollMax = 4;
-    base.lossCap = 10;
+    FoundBaseGame_ game;
+    BaseManager& base = game.MakeBase(*game.pPlayer, 8, 8);
+    const int nutrients = base.GetNutrientProduction();
+    const int minerals = base.GetMineralProduction();
+    const int energy = base.GetEnergyProduction();
 
-    base.size = 7; // half 3
-    CHECK(ResolveSubmergence(base, 2).popLoss == 3);
-    CHECK(ResolveSubmergence(base, 4).popLoss == 4);
-    base.size = 30; // half 15, capped
-    CHECK(ResolveSubmergence(base, 2).popLoss == 10);
-
-    base.size = 3;
-    CHECK(ResolveSubmergence(base, 4).bDestroyed);
-    base.bLastBase = true;
-    const SubmergenceOutcome_t last = ResolveSubmergence(base, 4);
-    CHECK_FALSE(last.bDestroyed);
-    CHECK(last.popLoss == 2);
+    base.GetBuildingManager().AddBuilding(k_PressureDomeBuildingId);
+    CHECK(base.MayOccupyWater());
+    CHECK(base.GetNutrientProduction() == nutrients + 1);
+    CHECK(base.GetMineralProduction() == minerals + 1);
+    CHECK(base.GetEnergyProduction() == energy + 1);
 }
 
 TEST_CASE("Founding a base grants no headquarters", "[found-base][hq]")

@@ -148,8 +148,7 @@ public:
     BuildingManager& GetBuildingManager();
     const BuildingManager& GetBuildingManager() const;
 
-    // True when this base may sit on water: it was built on water, or it has Pressure_Dome.
-    // Checked when the tile becomes water.
+    // True when this base may sit on water (RuleFlag may_occupy_water, e.g. Pressure Dome).
     bool MayOccupyWater() const;
 
     // RuleFlag headquarters among this base's effects.
@@ -343,8 +342,6 @@ private:
     // Set by MarkRazed_. Suppresses the destructor's OnDestroyed / tile release, which the
     // raze already performed.
     bool m_bRazed = false;
-    // Sea colony pod founded this base on water. Pressure Dome is checked live, not stored here.
-    bool m_bMayOccupyWater = false;
     bool m_bStolenResearch = false;
     bool m_bPlagueIntroduced = false;
 };

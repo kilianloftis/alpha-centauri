@@ -179,6 +179,8 @@ UnitComponentConfig_t UnitComponentConfigParser::ParseComponentConfig_(const nlo
         rComponentJson, "on_hold_effects", config.id);
     config.onDetonateEffects = TriggeredEffectParser::ParseTriggeredEffects(
         rComponentJson, "on_detonate_effects", config.id);
+    config.onFoundEffects = TriggeredEffectParser::ParseTriggeredEffects(
+        rComponentJson, "on_found_effects", config.id);
     config.combatRatingModifiers = ParseCombatRatingModifiers_(rComponentJson, config.id);
     config.combatRatingLabels = ParseCombatRatingLabels_(rComponentJson, config.id);
     if (rComponentJson.contains("scrap"))

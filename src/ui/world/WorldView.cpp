@@ -2,6 +2,7 @@
 
 #include "game/base/BaseMutations.h"
 #include "game/base/FoundBaseRules.h"
+#include "game/units/UnitMutations.h"
 #include "game/terraform/TerraformMutations.h"
 #include "game/terraform/TerraformRules.h"
 #include "game/units/SupplyCrawlMutations.h"
@@ -557,6 +558,7 @@ void WorldView::FoundBaseWith_(Unit& rUnit)
         return;
     }
     FoundBase(m_rGameState, rUnit);
+    ExpendIfSingleUse(rUnit);
     // DestroyUnit clears selection via OnUnitDestroyed; pick the next unit.
     SelectNextAvailableUnit_();
 }

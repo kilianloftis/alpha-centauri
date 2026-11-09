@@ -58,6 +58,12 @@ struct EnergyGranted_t
     int amount = 0;
 };
 
+struct ResourceGranted_t
+{
+    StatId_t resource = StatId_t::Minerals;
+    int amount = 0;
+};
+
 struct XpGranted_t
 {
     int amount = 0;
@@ -139,6 +145,7 @@ using TriggeredEffectResult_t = std::variant<
     TechGranted_t,
     UnitsGranted_t,
     EnergyGranted_t,
+    ResourceGranted_t,
     XpGranted_t,
     HitPointsRestored_t,
     BaseRebelled_t,

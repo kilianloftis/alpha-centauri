@@ -25,6 +25,7 @@
 #include "game/production/StockpileConfig.h"
 #include "game/production/StockpileRegistry.h"
 #include "game/research/ResearchManager.h"
+#include "game/terraform/SurfaceOccupancy.h"
 #include "game/units/IDesign.h"
 #include "game/units/Military.h"
 #include "game/units/UnitDesign.h"
@@ -174,9 +175,17 @@ bool CanHurry(const BaseManager& rBase)
     return !rBase.IsProductionDisabled();
 }
 
-bool CanScrapBuilding(const BuildingConfig_t& rBuilding)
+bool CanScrapBuilding(const BaseManager& rBase, const BuildingConfig_t& rBuilding)
 {
-    return !rBuilding.bIsSecretProject;
+    if (rBuilding.bIsSecretProject)
+    {
+        return false;
+    }
+    if (rBuilding.id == k_PressureDomeBuildingId && rBase.GetTile().IsWater())
+    {
+        return false;
+    }
+    return true;
 }
 
 std::vector<const IConstructable*> ConstructableItems(const BaseManager& rBase)

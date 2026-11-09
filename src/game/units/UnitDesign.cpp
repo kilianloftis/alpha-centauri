@@ -219,6 +219,16 @@ std::vector<TriggeredEffectConfig_t> UnitDesign::CollectOnDetonateEffects() cons
     return result;
 }
 
+std::vector<TriggeredEffectConfig_t> UnitDesign::CollectOnFoundEffects() const
+{
+    std::vector<TriggeredEffectConfig_t> result;
+    for (const UnitComponentConfig_t* pComp : m_components)
+    {
+        result.insert(result.end(), pComp->onFoundEffects.begin(), pComp->onFoundEffects.end());
+    }
+    return result;
+}
+
 int UnitDesign::GetBaseCost() const
 {
     const int rawCost = RawComponentCost_(m_slotComponents);

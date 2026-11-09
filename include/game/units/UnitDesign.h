@@ -36,6 +36,7 @@ public:
     std::vector<ActiveEffect_t> CollectEffects() const override;
     std::vector<TriggeredEffectConfig_t> CollectOnHoldEffects() const override;
     std::vector<TriggeredEffectConfig_t> CollectOnDetonateEffects() const override;
+    std::vector<TriggeredEffectConfig_t> CollectOnFoundEffects() const override;
 
     // Filled components, in slot order.
     const std::vector<const UnitComponentConfig_t*>& GetComponents() const { return m_components; }

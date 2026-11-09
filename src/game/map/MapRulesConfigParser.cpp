@@ -34,18 +34,6 @@ int RequireCount_(const nlohmann::json& rJson, const char* pKey)
     return rJson.at(pKey).get<int>();
 }
 
-void ValidateSubmergedPopLoss_(const MapRulesConfig_t& rConfig)
-{
-    if (rConfig.submergedPopLossRollMin < 1
-        || rConfig.submergedPopLossRollMax < rConfig.submergedPopLossRollMin
-        || rConfig.submergedPopLossCap < rConfig.submergedPopLossRollMax)
-    {
-        throw std::runtime_error(
-            "map_rules submerged pop loss needs 1 <= 'submerged_pop_loss_roll_min' <= "
-            "'submerged_pop_loss_roll_max' <= 'submerged_pop_loss_cap'");
-    }
-}
-
 void ValidateElevationRules_(const MapRulesConfig_t& rConfig)
 {
     if (rConfig.oceanShelfMeters >= rConfig.oceanLevelMeters)
@@ -85,7 +73,6 @@ void ValidateElevationRules_(const MapRulesConfig_t& rConfig)
             + std::to_string(rConfig.spreadAltitudeLimitMeters) + " < "
             + std::to_string(rConfig.oceanLevelMeters));
     }
-    ValidateSubmergedPopLoss_(rConfig);
     if (rConfig.missingHeadquartersDistance < 1)
     {
         throw std::runtime_error("map_rules 'missing_headquarters_distance' must be >= 1, got "
@@ -114,9 +101,6 @@ MapRulesConfig_t MapRulesConfigParser::ParseConfig(const std::string& configPath
     config.referenceLevelMeters = RequireWholeMeters_(json, "reference_level_meters");
     config.spreadAltitudeLimitMeters =
         RequireWholeMeters_(json, "spread_altitude_limit_meters");
-    config.submergedPopLossRollMin = RequireCount_(json, "submerged_pop_loss_roll_min");
-    config.submergedPopLossRollMax = RequireCount_(json, "submerged_pop_loss_roll_max");
-    config.submergedPopLossCap = RequireCount_(json, "submerged_pop_loss_cap");
     config.missingHeadquartersDistance = RequireCount_(json, "missing_headquarters_distance");
 
     ValidateElevationRules_(config);

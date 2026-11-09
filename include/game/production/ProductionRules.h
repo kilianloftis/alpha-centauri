@@ -58,7 +58,8 @@ bool CanBankProduction(const BaseManager& rBase);
 bool CanCompleteProduction(const BaseManager& rBase);
 bool CanHurry(const BaseManager& rBase);
 
-bool CanScrapBuilding(const BuildingConfig_t& rBuilding);
+// Secret projects cannot be scrapped. Pressure Dome cannot be scrapped on water.
+bool CanScrapBuilding(const BaseManager& rBase, const BuildingConfig_t& rBuilding);
 
 std::vector<const IConstructable*> ConstructableItems(const BaseManager& rBase);
 

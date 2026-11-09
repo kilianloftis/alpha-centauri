@@ -20,6 +20,7 @@
 #include "game/buildings/BuildingMutations.h"
 #include "game/buildings/BuildingManager.h"
 #include "game/production/ProductionConfigParser.h"
+#include "game/production/ProductionManager.h"
 #include "game/terraform/ElevationChange.h"
 #include "game/terraform/TerraformMutations.h"
 #include "game/terraform/TerraformRules.h"
@@ -461,6 +462,7 @@ bool IsPerFactionSubject_(const TriggeredEffectVariant_t& rEffect)
                 return true;
             }
             else if constexpr (std::is_same_v<T, AddBuildingEffect_t>
+                               || std::is_same_v<T, GrantResourceEffect_t>
                                || std::is_same_v<T, ModifyPopulationEffect_t>
                                || std::is_same_v<T, GrantXpEffect_t>
                                || std::is_same_v<T, RestoreHitPointsEffect_t>
@@ -566,6 +568,38 @@ struct TriggeredEffectApplier_
     {
         rFaction.GetEconomy().AddEnergy(rGrant.amount);
         rOut.push_back(EnergyGranted_t{rGrant.amount});
+        return true;
+    }
+
+    bool operator()(const GrantResourceEffect_t& rGrant) const
+    {
+        if (!rCtx.pBase)
+        {
+            return false;
+        }
+        const double seed = static_cast<double>(rGrant.amount);
+        double total = seed;
+        if (rGrant.modifierStat)
+        {
+            const EffectContext_t ctx{.pBase = rCtx.pBase};
+            total = ResolveBaseStat(rCtx.pBase->GetBaseEffects(), *rGrant.modifierStat, seed, &ctx);
+        }
+        const int credit = std::max(0, FinalizeResolvedStat(total));
+        if (rGrant.resource == StatId_t::Minerals)
+        {
+            ProductionManager& rProduction = rCtx.pBase->GetProduction();
+            rProduction.SetMineralStockpile(rProduction.GetMineralStockpile() + credit);
+        }
+        else if (rGrant.resource == StatId_t::Nutrients)
+        {
+            PopulationManager& rPops = rCtx.pBase->GetPopulation();
+            rPops.SetNutrientStockpile(rPops.GetNutrientStockpile() + credit);
+        }
+        else
+        {
+            throw std::logic_error("GrantResource: unsupported resource stockpile");
+        }
+        rOut.push_back(ResourceGranted_t{rGrant.resource, credit});
         return true;
     }
 

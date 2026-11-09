@@ -244,7 +244,7 @@ TEST_CASE("ResolveBaseStat: BaseSize evaluates on GrowthRate without a wired cal
 TEST_CASE("FilterBaseLevelByStatId: BaseSize admission keys on pCtx, not the bundle subject",
           "[effects][filter][amount_source]")
 {
-    // A hand-rolled filter+resolve pair (FoundBaseRules, AwayFromHomeDrones) passes no context
+    // A hand-rolled filter+resolve pair (AwayFromHomeDrones and similar) passes no context
     // or one context to both. Admitting BaseSize on the bundle's own subject while
     // ResolveStatModifiers evaluates against the context is what made the no-context form
     // throw instead of resolving.
@@ -262,7 +262,7 @@ TEST_CASE("FilterBaseLevelByStatId: BaseSize admission keys on pCtx, not the bun
     baseSizeConfig.scope = EffectScope_t::ThisBase;
 
     const BaseEffects_t baseEffects{base, {
-        Active(pool.StatMod(StatId_t::StartingMinerals, 10.0), "pod"),
+        Active(pool.StatMod(StatId_t::StartingMinerals, 10.0), "project"),
         Active(pool.Add(std::move(baseSizeConfig)), "per_pop"),
     }};
 

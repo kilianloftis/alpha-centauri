@@ -185,6 +185,7 @@ struct TriggeredPayloadValidator
     }
 
     void operator()(const GrantEnergyEffect_t&) const {}
+    void operator()(const GrantResourceEffect_t&) const {}
     void operator()(const WorldParameterEffect_t&) const {}
     void operator()(const SetInfiltrationEffect_t&) const {}
     void operator()(const ModifyPopulationEffect_t&) const {}
@@ -451,6 +452,7 @@ void CheckUnitAndPopSources_(const GameDataContext& rData, const EffectSourceChe
         rCheck.Triggered(rConfig.onCompleteEffects, rConfig.id);
         rCheck.Triggered(rConfig.onHoldEffects, rConfig.id);
         rCheck.Triggered(rConfig.onDetonateEffects, rConfig.id);
+        rCheck.Triggered(rConfig.onFoundEffects, rConfig.id);
     }
     for (const NativeUnitConfig_t& rConfig : rData.nativeUnitRegistry->GetAll())
     {

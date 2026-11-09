@@ -92,7 +92,8 @@ void FillEffectReferenceContext(GameDataContext& rData)
 constexpr const char* k_ReferenceBuildings = R"([
     { "id": "granted_hall", "name": "Granted Hall", "mineral_cost": 10, "category": "grow" },
     { "id": "upkeep_hall", "name": "Upkeep Hall", "mineral_cost": 10, "category": "build" },
-    { "id": "Network_Node", "name": "Network Node", "mineral_cost": 10, "category": "discover" }
+    { "id": "Network_Node", "name": "Network Node", "mineral_cost": 10, "category": "discover" },
+    { "id": "Pressure_Dome", "name": "Pressure Dome", "mineral_cost": 10, "category": "build" }
 ])";
 
 // The context above with the registries the reference tests check ids against. Every effect

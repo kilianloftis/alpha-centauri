@@ -550,17 +550,6 @@ std::vector<Unit*> StrandedUnits_(const Tile& rTile, bool bNowWater)
     return units;
 }
 
-SubmergedBase_t SubmergedBase_(const BaseManager& rBase, const MapRulesConfig_t& rRules)
-{
-    SubmergedBase_t submerged;
-    submerged.size = rBase.GetPopulation().GetSize();
-    submerged.rollMin = rRules.submergedPopLossRollMin;
-    submerged.rollMax = rRules.submergedPopLossRollMax;
-    submerged.lossCap = rRules.submergedPopLossCap;
-    submerged.bLastBase = rBase.GetFaction().GetBaseCount() <= 1;
-    return submerged;
-}
-
 } // namespace
 
 SurfaceFlipConsequences_t SurfaceFlipConsequences(const Tile& rTile, bool bNowWater,
@@ -585,24 +574,10 @@ SurfaceFlipConsequences_t SurfaceFlipConsequences(const Tile& rTile, bool bNowWa
     }
     if (pBase)
     {
-        consequences.submerged = SubmergedBase_(*pBase, rTile.MapRules());
+        consequences.bRazeBase = true;
     }
     consequences.strandedUnits = StrandedUnits_(rTile, bNowWater);
     return consequences;
-}
-
-SubmergenceOutcome_t ResolveSubmergence(const SubmergedBase_t& rSubmerged, int roll)
-{
-    const int loss = std::clamp(rSubmerged.size / 2, roll, rSubmerged.lossCap);
-    if (loss < rSubmerged.size)
-    {
-        return SubmergenceOutcome_t{.popLoss = loss, .bDestroyed = false};
-    }
-    if (rSubmerged.bLastBase)
-    {
-        return SubmergenceOutcome_t{.popLoss = rSubmerged.size - 1, .bDestroyed = false};
-    }
-    return SubmergenceOutcome_t{.popLoss = rSubmerged.size, .bDestroyed = true};
 }
 
 std::optional<FactionId_t> RainfallGrievant(const Faction& rTerraformer,

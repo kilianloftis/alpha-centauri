@@ -116,6 +116,30 @@ void ParseGrantEnergy_(const nlohmann::json& parameters, TriggeredEffectConfig_t
     grant.amount = static_cast<int>(EffectConfigParser::RequireNumber(parameters, "amount"));
     rEffect.effect = grant;
 }
+// TODO: We may need to refactor this concept once we add Supply Pods
+void ParseGrantResource_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+{
+    GrantResourceEffect_t grant;
+    grant.resource = ParseStatId(parameters.value("resource", ""));
+    if (grant.resource != StatId_t::Minerals && grant.resource != StatId_t::Nutrients)
+    {
+        throw std::runtime_error(
+            "GrantResource 'resource' must be minerals or nutrients (energy treasury uses "
+            "GrantEnergy)");
+    }
+    grant.amount = static_cast<int>(EffectConfigParser::RequireNumber(parameters, "amount"));
+    if (parameters.contains("stat"))
+    {
+        const StatId_t modifier = ParseStatId(parameters.at("stat").get<std::string>());
+        if (DomainFor(modifier) != ResolveDomain_t::Base)
+        {
+            throw std::runtime_error(
+                "GrantResource 'stat' must be a base-domain stat (resolved on the subject base)");
+        }
+        grant.modifierStat = modifier;
+    }
+    rEffect.effect = grant;
+}
 
 void ParseWorldParameter_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
 {
@@ -414,6 +438,7 @@ const std::unordered_map<std::string, ParseFn_>& TypeParsers_()
         {"GrantTech", ParseGrantTech_},
         {"GrantUnit", ParseGrantUnit_},
         {"GrantEnergy", ParseGrantEnergy_},
+        {"GrantResource", ParseGrantResource_},
         {"WorldParameter", ParseWorldParameter_},
         {"SetInfiltration", ParseSetInfiltration_},
         {"ModifyPopulation", ParseModifyPopulation_},

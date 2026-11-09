@@ -26,6 +26,8 @@ public:
     std::vector<TriggeredEffectConfig_t> CollectOnHoldEffects() const override;
     // Native life carries no warhead; always empty.
     std::vector<TriggeredEffectConfig_t> CollectOnDetonateEffects() const override { return {}; }
+    // Native life cannot found bases.
+    std::vector<TriggeredEffectConfig_t> CollectOnFoundEffects() const override { return {}; }
     bool IsCombatUnit() const override;
     bool HasComponent(const std::string& rComponentId) const override;
     UnitDomain_t GetDomain() const override;

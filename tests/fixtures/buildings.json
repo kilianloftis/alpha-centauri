@@ -1436,7 +1436,39 @@
     "category": "build",
     "mineral_cost": 0,
     "upkeep": 0,
-    "effects": []
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisBase",
+        "parameters": {
+          "flag": "may_occupy_water"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 1
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 1
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "energy",
+          "amount": 1
+        }
+      }
+    ]
   },
   {
     "id": "test_tree_farm",

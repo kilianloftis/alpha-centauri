@@ -61,7 +61,7 @@ std::vector<HotkeyAction_t> UnitOrderInputController::MatchingOrderActions_(
     consider(HotkeyAction_t::AttachTransport, true);
     consider(HotkeyAction_t::SupplyCrawl,
              ResolveFlag(rUnit, RuleFlagId_t::SupplyCrawl) && rUnit.GetHomeBase());
-    consider(HotkeyAction_t::FoundBase, ResolveFlag(rUnit, RuleFlagId_t::FoundBase));
+    consider(HotkeyAction_t::FoundBase, UnitCanFoundBase(rUnit));
     consider(HotkeyAction_t::Detonate, UnitCanDetonate(rUnit));
     consider(HotkeyAction_t::Airdrop, CanAttemptAirdrop(rUnit).Ok());
     consider(HotkeyAction_t::DestroyEnhancement, CanDestroyEnhancement(rUnit));

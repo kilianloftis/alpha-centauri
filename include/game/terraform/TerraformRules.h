@@ -73,22 +73,11 @@ int FormerLowerFloorMeters(UnitDomain_t formerDomain, const MapRulesConfig_t& rR
 // from the first playable year.
 int TerraformSpreadGrowthAttempts(int mapTileCount, int turnIndex);
 
-// A base without a Pressure Dome on a tile that became water floods (terranx alt_set, see
-// docs/thinker/terranx-map.md "Sea bases"). The roll is drawn in [rollMin, rollMax].
-struct SubmergedBase_t
-{
-    int size = 0;
-    int rollMin = 0;
-    int rollMax = 0;
-    int lossCap = 0;
-    // The faction's last base is kept at one pop rather than destroyed.
-    bool bLastBase = false;
-};
-
 struct SurfaceFlipConsequences_t
 {
     std::vector<std::string> removedImprovements;
-    std::optional<SubmergedBase_t> submerged;
+    // True when a base on new water may not occupy water and must be razed.
+    bool bRazeBase = false;
     // Units whose domain no longer matches the surface. They die unless a base on the tile is
     // still standing after the flip.
     std::vector<Unit*> strandedUnits;
@@ -96,20 +85,9 @@ struct SurfaceFlipConsequences_t
 
 // A flip removes every improvement whose domain is not the new surface (an omitted domain stays),
 // except the Base marker of a base on the tile. A base that may occupy water, or whose tile became
-// land, is untouched and shelters the units on it; any other base on new water floods.
+// land, is untouched and shelters the units on it; any other base on new water is razed.
 SurfaceFlipConsequences_t SurfaceFlipConsequences(const Tile& rTile, bool bNowWater,
                                                   const BaseManager* pBase);
-
-struct SubmergenceOutcome_t
-{
-    int popLoss = 0;
-    bool bDestroyed = false;
-};
-
-// The base loses clamp(size / 2, roll, cap) pop. Left with none, it is destroyed, unless it is
-// the faction's last base, which keeps one.
-// TODO: SMAC also keeps an objective base at one pop (is_objective); there are no scenarios yet.
-SubmergenceOutcome_t ResolveSubmergence(const SubmergedBase_t& rSubmerged, int roll);
 
 struct TerraformSpread_t
 {

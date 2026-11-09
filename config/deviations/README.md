@@ -44,6 +44,35 @@ absent.
 
 ## TODO
 
+### Founding surface and embarked exceptions `[Ours]`
+
+- **Original:** only a sea-triad colony founds on ocean; a land colony on a transport cannot
+  found at sea. Air colony designs exist in the workshop (air non-combat cost divisor) and
+  found on land; they are not a water-founding path ("Sea bases" / colony workshop practice).
+- **Ours (shipping):** `CanFoundBase` refuses while embarked; water founding requires sea
+  domain; land / air / orbital may found only on land.
+- **Ours (optional):** configs that widen that matrix — e.g. allow founding while embarked
+  (land colony from a transport at sea) and/or allow air (or other domains) to found on water
+  — via a founding surface table and/or per-design `RuleFlag`s (`found_while_embarked`,
+  `found_on_water`), without a full interaction grid.
+- **Where:** `CanFoundBase` (`FoundBaseRules`); shipping strictness lands with Pressure Dome /
+  `on_found_effects` work.
+- **Missing:** the optional table or flags, a selectable switch or variant file, and tests for
+  the widened cases.
+
+### Flood razes undomed bases `[Ours]`
+
+- **Original:** (`docs/thinker/terranx-map.md` “Sea bases” / `alt_set`) an undomed land base
+  on a flood loses `clamp(size/2, roll, cap)` population, is granted Pressure Dome, and is
+  razed only when emptied (last-base exception).
+- **Ours:** a base may always sit on land. Pressure Dome (`RuleFlag may_occupy_water`) adds
+  water occupancy. If the tile is water and the base may not occupy water, raze immediately
+  (no pop-loss / emergency-dome path). Sea founding constructs Pressure Dome via the
+  founder's `on_found_effects`.
+- **Where:** `SurfaceFlipConsequences` / `ReconcileSurfaceFlips` (`TerraformRules`,
+  `SurfaceOccupancy`); founding `AddBuilding` on Colony_Pod `on_found_effects`.
+- **Missing:** the original pop-loss / emergency-dome path and a selectable switch.
+
 ### Evacuate on territory change / Covert reveal `[Ours]`
 
 - **Original:** `reset_territory` (`0x523DD0`) redraws ownership only; it does not relocate

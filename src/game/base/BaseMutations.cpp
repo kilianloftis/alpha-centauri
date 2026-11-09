@@ -4,11 +4,9 @@
 #include "game/faction/Faction.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
-#include "game/units/UnitMutations.h"
 
 #include "game/base/BaseManager.h"
-#include "game/base/FoundBaseRules.h"
-#include "game/production/ProductionManager.h"
+#include "game/effects/TriggeredEffectDispatch.h"
 
 namespace ac
 {
@@ -21,17 +19,10 @@ BaseManager& FoundBase(GameState& rGameState, Unit& rFounder)
                                              rFaction.SuggestBaseName(), &rTile,
                                              rGameState.GetTileEffects(), std::nullopt);
 
-    // Before the founder is spent: its StartingMinerals still resolve on the pod.
-    ApplyStartingMinerals(*pBase, &rFounder);
-    ExpendIfSingleUse(rFounder);
+    TriggeredEffectContext_t context(rGameState, *pBase);
+    context.pUnit = &rFounder;
+    ApplyTriggeredEffects(rFounder.GetDesign().CollectOnFoundEffects(), context);
     return *pBase;
-}
-
-void ApplyStartingMinerals(BaseManager& rBase, const Unit* pFoundingUnit)
-{
-    // Founding only; retooling stays free while the turn original is null.
-    rBase.GetProduction().SetMineralStockpile(
-        ResolveStartingMinerals(rBase, pFoundingUnit));
 }
 
 } // namespace ac

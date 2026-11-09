@@ -3,17 +3,16 @@
 #include "game/CurrentGameState.h"
 #include "game/GameState.h"
 #include "game/faction/Faction.h"
-#include "game/effects/ActiveEffect.h"
-#include "game/effects/EffectEnums.h"
 #include "game/base/BaseManager.h"
+#include "game/effects/TriggeredEffectRules.h"
 #include "game/map/MapUtils.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDomain.h"
+#include "game/units/UnitTransport.h"
 
-#include <algorithm>
 #include <vector>
 
 namespace ac
@@ -33,6 +32,16 @@ std::vector<const BaseManager*> CollectAllBases_(const GameState& rGameState)
         }
     }
     return bases;
+}
+
+bool SurfaceMatchesDomain_(const Tile& rTile, UnitDomain_t domain)
+{
+    if (rTile.IsWater())
+    {
+        // Sea founds on water; land / air / orbital do not.
+        return domain == UnitDomain_t::Sea;
+    }
+    return true;
 }
 
 } // namespace
@@ -81,49 +90,22 @@ bool CanFoundBaseAt(const Tile& rTile, FactionId_t founderFactionId,
 
 bool CanFoundBase(const Unit& rUnit)
 {
-    if (!ResolveFlag(rUnit, RuleFlagId_t::FoundBase))
+    if (!UnitCanFoundBase(rUnit))
+    {
+        return false;
+    }
+    if (rUnit.Transport().IsEmbarked())
     {
         return false;
     }
     const Tile& rTile = rUnit.GetTile();
-    if (rTile.IsWater() && rUnit.GetDomain() != UnitDomain_t::Sea)
+    if (!SurfaceMatchesDomain_(rTile, rUnit.GetDomain()))
     {
         return false;
     }
     const GameState& rGame = CurrentGameState();
     const std::vector<const BaseManager*> bases = CollectAllBases_(rGame);
     return CanFoundBaseAt(rTile, rUnit.GetFaction().GetFactionId(), bases);
-}
-
-int ResolveStartingMinerals(const BaseManager& rBase, const Unit* pFoundingUnit)
-{
-    std::vector<ActiveEffect_t> combined;
-    const BaseEffects_t& rBaseEffects = rBase.GetBaseEffects();
-    // The same ctx filters and resolves, so a BaseSize amount_source admitted here can be
-    // evaluated.
-    const EffectContext_t ctx{.pBase = &rBase};
-    for (const ActiveEffect_t& rEffect :
-         FilterBaseLevelByStatId(rBaseEffects, StatId_t::StartingMinerals, &ctx))
-    {
-        combined.push_back(rEffect);
-    }
-
-    if (pFoundingUnit)
-    {
-        // Materialize: FilterByStatId borrows the vector. Context-free on purpose — the unit
-        // lane carries ThisUnit / FactionUnits scopes, which no amount_source is legal on.
-        const std::vector<ActiveEffect_t> unitEffects = CollectLiveUnitEffects(*pFoundingUnit).effects;
-        for (const ActiveEffect_t& rEffect :
-             FilterByStatId(unitEffects, StatId_t::StartingMinerals))
-        {
-            combined.push_back(rEffect);
-        }
-    }
-
-    const double total =
-        ResolveStatModifiers(combined, SeedFor(StatId_t::StartingMinerals), &ctx).total;
-    const int raw = FinalizeResolvedStat(total);
-    return std::max(0, raw);
 }
 
 } // namespace ac
