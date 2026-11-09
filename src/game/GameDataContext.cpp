@@ -43,6 +43,8 @@
 #include "game/units/UnitComponentConfigParser.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitSlotRegistry.h"
+#include "game/units/UpgradeCostCalculator.h"
+#include "game/units/UpgradeCostConfigParser.h"
 #include "game/natives/NativeUnitRegistry.h"
 #include "game/effects/TileYieldRulesConfigParser.h"
 #include "game/map/MapRulesConfigParser.h"
@@ -313,6 +315,10 @@ void LoadFormulasAndCalculators_(GameDataContext& rData)
         std::make_unique<HurryProductionCalculator>(*rData.productionConfig, rLua);
     rData.scrapRefundCalculator =
         std::make_unique<ScrapRefundCalculator>(*rData.productionConfig, rLua);
+    rData.upgradeCostConfig = std::make_unique<UpgradeCostConfig_t>(
+        UpgradeCostConfigParser{}.ParseConfig(rPaths.unitUpgrade, rLua));
+    rData.upgradeCostCalculator =
+        std::make_unique<UpgradeCostCalculator>(*rData.upgradeCostConfig, rLua);
     rData.moraleCalculator = std::make_unique<MoraleCalculator>(*rData.moraleConfig, rLua);
     rData.commerceCalculator = std::make_unique<CommerceCalculator>(*rData.commerceConfig, rLua);
     rData.allocationImbalanceConfig = std::make_unique<AllocationImbalanceConfig_t>(
@@ -350,6 +356,7 @@ void ThrowIfIncomplete(const GameDataContext& rData)
         {rData.popCompositionConfig.get(), "popCompositionConfig"},
         {rData.growthConfig.get(), "growthConfig"},
         {rData.productionConfig.get(), "productionConfig"},
+        {rData.upgradeCostConfig.get(), "upgradeCostConfig"},
         {rData.commerceConfig.get(), "commerceConfig"},
         {rData.allocationImbalanceConfig.get(), "allocationImbalanceConfig"},
         {rData.diplomacyConfig.get(), "diplomacyConfig"},
@@ -377,6 +384,7 @@ void ThrowIfIncomplete(const GameDataContext& rData)
         {rData.ecoDamageCalculator.get(), "ecoDamageCalculator"},
         {rData.hurryProductionCalculator.get(), "hurryProductionCalculator"},
         {rData.scrapRefundCalculator.get(), "scrapRefundCalculator"},
+        {rData.upgradeCostCalculator.get(), "upgradeCostCalculator"},
         {rData.popTypeAvailabilityCalculator.get(), "popTypeAvailabilityCalculator"},
         {rData.moraleCalculator.get(), "moraleCalculator"},
         {rData.commerceCalculator.get(), "commerceCalculator"},

@@ -59,7 +59,7 @@ Unit::Unit(UnitId_t unitId,
            Faction& rFaction,
            const MoraleCalculator& rMorale)
     : m_unitId(unitId)
-    , m_rDesign(rDesign)
+    , m_pDesign(&rDesign)
     , m_rPositions(rPositions)
     , m_pTile(&rTile)
     , m_pFaction(&rFaction)
@@ -110,11 +110,11 @@ void Unit::DetachFromWorld_()
 
 UnitId_t Unit::GetUnitId() const { return m_unitId; }
 
-const IDesign& Unit::GetDesign() const { return m_rDesign; }
+const IDesign& Unit::GetDesign() const { return *m_pDesign; }
 
 UnitDomain_t Unit::GetDomain() const
 {
-    return m_rDesign.GetDomain();
+    return m_pDesign->GetDomain();
 }
 
 const Tile& Unit::GetTile() const                                      { return *m_pTile; }
@@ -131,9 +131,17 @@ void Unit::RebindFaction(Faction& rFaction)
     m_pFaction = &rFaction;
 }
 
+void Unit::RebindDesign(const IDesign& rDesign)
+{
+    m_pDesign = &rDesign;
+    SetCurrentHp(m_currentHp);
+    SetCurrentFuel(m_currentFuel);
+    SetMoveFragmentsRemaining(m_moveFragmentsRemaining);
+}
+
 int Unit::GetCurrentHp() const              { return m_currentHp; }
 int Unit::GetCurrentFuel() const            { return m_currentFuel; }
-int Unit::GetMaxFuel() const                { return m_rDesign.MaxFuel(); }
+int Unit::GetMaxFuel() const                { return m_pDesign->MaxFuel(); }
 int Unit::GetMovementPoints() const         { return ResolveStat(*this, StatId_t::Movement); }
 int Unit::GetMineralUpkeep() const
 {
@@ -142,7 +150,7 @@ int Unit::GetMineralUpkeep() const
 int Unit::GetMoveFragmentsRemaining() const { return m_moveFragmentsRemaining; }
 int Unit::GetXp() const                     { return m_xp; }
 bool Unit::IsPrototype() const              { return m_bPrototype; }
-bool Unit::IsCombatUnit() const             { return m_rDesign.IsCombatUnit(); }
+bool Unit::IsCombatUnit() const             { return m_pDesign->IsCombatUnit(); }
 
 // Clamped to [0, live max], which follows faction effects gained after spawn.
 void Unit::SetCurrentHp(int hp)
@@ -176,7 +184,7 @@ void Unit::SpendMoveFragments(int fragments)
         return;
     }
     SetMoveFragmentsRemaining(m_moveFragmentsRemaining - fragments);
-    if (!m_rDesign.UsesFuel())
+    if (!m_pDesign->UsesFuel())
     {
         return;
     }

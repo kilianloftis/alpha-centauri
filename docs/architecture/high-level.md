@@ -440,7 +440,8 @@ One directory under `include/game/` and `src/game/` per domain. The filename suf
 - `social-engineering/`: policies, social ratings, upheaval cost, a faction's pending/committed choices
 - `stages/`: the turn processor, stage infrastructure and mod hooks, every turn stage
 - `terraform/`: terraform projects, elevation change, terraform spread, surface flips
-- `units/`: the unit aggregate, designs, components and slots, orders, the order executor
+- `units/`: the unit aggregate, designs, components and slots, upgrade rules/cost/mutations,
+  orders, the order executor
 - `visibility/`: exploration, fog, tile memory, revealed units, visibility settings
 - `world-events/`: scheduled world events
 - `worldgen/`: world generation, presets, decoration

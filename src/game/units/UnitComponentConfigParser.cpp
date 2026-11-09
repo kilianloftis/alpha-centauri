@@ -188,6 +188,15 @@ UnitComponentConfig_t UnitComponentConfigParser::ParseComponentConfig_(const nlo
     }
     config.domain = ParseDomain_(rComponentJson, config);
     config.plan = ParsePlan_(rComponentJson, config);
+    if (rComponentJson.contains("upgrade_class"))
+    {
+        config.upgradeClass = rComponentJson.at("upgrade_class").get<std::string>();
+        if (config.upgradeClass.empty())
+        {
+            throw std::runtime_error(
+                "Component '" + config.id + "': upgrade_class must not be empty");
+        }
+    }
     return config;
 }
 

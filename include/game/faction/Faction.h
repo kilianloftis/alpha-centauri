@@ -40,6 +40,7 @@ class FactionFlavor;
 class EconomyManager;
 class CommerceCache;
 class Military;
+class UnitDesign;
 class ResearchManager;
 class ResearchSelector;
 class SocialEngineeringManager;
@@ -255,6 +256,13 @@ public:
 
     // Player scrap only: destroys the unit and pays QuoteScrapUnit. Throws if the quote is empty.
     int ScrapUnit(Unit& rUnit);
+
+    // Energy to upgrade rUnit to rNew when valid and affordable to quote; empty otherwise.
+    std::optional<int> QuoteUpgradeUnit(const Unit& rUnit, const UnitDesign& rNew) const;
+
+    // Pays QuoteUpgradeUnit and rebinds the design. Returns false when the quote is empty or
+    // the treasury cannot cover it.
+    bool UpgradeUnit(Unit& rUnit, const UnitDesign& rNew);
 
     // Explored memory and current vision. RebuildVisibility refreshes vision when units are
     // created, destroyed or moved and when bases are added.

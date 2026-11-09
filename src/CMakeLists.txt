@@ -165,6 +165,10 @@ add_library(ac-core STATIC
     game/units/UnitMoveExecutor.cpp
     game/units/UnitOrderExecutor.cpp
     game/units/UnitMutations.cpp
+    game/units/UpgradeCostCalculator.cpp
+    game/units/UpgradeCostConfigParser.cpp
+    game/units/UpgradeMutations.cpp
+    game/units/UpgradeRules.cpp
     game/units/UnitTransport.cpp
     game/units/UnitPlacementRules.cpp
     game/units/UnitPlanRules.cpp

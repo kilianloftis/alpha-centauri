@@ -52,6 +52,7 @@ inline ac::GameDataPaths FixtureDataPaths()
     paths.terrain = FixturePath("terrain.json");
     paths.unitComponents = FixturePath("unit_components.json");
     paths.unitSlots = FixturePath("unit_slots.json");
+    paths.unitUpgrade = FixturePath("unit_upgrade.lua");
     paths.nativeUnits = FixturePath("native_units.json");
     // techs.json plus every tech the other files cite.
     paths.techs = FixturePath("techs_full.json");

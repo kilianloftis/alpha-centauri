@@ -38,6 +38,8 @@
 #include "game/economy/EconomyMutations.h"
 #include "game/units/Military.h"
 #include "game/units/IDesign.h"
+#include "game/units/UpgradeMutations.h"
+#include "game/units/UpgradeRules.h"
 #include "game/research/ResearchManager.h"
 #include "game/research/ResearchSelector.h"
 #include "game/social-engineering/SocialEngineeringManager.h"
@@ -838,6 +840,33 @@ int Faction::ScrapUnit(Unit& rUnit)
     const int granted = CreditScrapRefund(*payout, *this);
     GetUnitManager().DestroyUnit(rUnit);
     return granted;
+}
+
+std::optional<int> Faction::QuoteUpgradeUnit(const Unit& rUnit, const UnitDesign& rNew) const
+{
+    if (&rUnit.GetFaction() != this)
+    {
+        throw std::invalid_argument("Faction::QuoteUpgradeUnit: unit is not owned by this faction");
+    }
+    if (!CanOfferUpgrade(rUnit))
+    {
+        return std::nullopt;
+    }
+    const UnitDesign* pOld = dynamic_cast<const UnitDesign*>(&rUnit.GetDesign());
+    if (!pOld)
+    {
+        return std::nullopt;
+    }
+    return QuoteUpgradeEnergy(*this, *pOld, rNew);
+}
+
+bool Faction::UpgradeUnit(Unit& rUnit, const UnitDesign& rNew)
+{
+    if (&rUnit.GetFaction() != this)
+    {
+        throw std::invalid_argument("Faction::UpgradeUnit: unit is not owned by this faction");
+    }
+    return TryUpgradeUnit(rUnit, rNew);
 }
 
 BaseManager* Faction::GetHeadquarters()

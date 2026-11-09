@@ -32,6 +32,8 @@ struct GrowthConfig_t;
 class LuaRuntime;
 class HurryProductionCalculator;
 class ScrapRefundCalculator;
+struct UpgradeCostConfig_t;
+class UpgradeCostCalculator;
 struct TechCostConfig_t;
 class TechCostCalculator;
 class PopTypeAvailabilityCalculator;
@@ -95,6 +97,7 @@ struct GameDataContext
     std::unique_ptr<PopCompositionConfig_t> popCompositionConfig;
     std::unique_ptr<GrowthConfig_t> growthConfig;
     std::unique_ptr<ProductionConfig_t> productionConfig;
+    std::unique_ptr<UpgradeCostConfig_t> upgradeCostConfig;
     std::unique_ptr<CommerceConfig_t> commerceConfig;
     std::unique_ptr<AllocationImbalanceConfig_t> allocationImbalanceConfig;
     std::unique_ptr<DiplomacyConfig_t> diplomacyConfig;
@@ -136,6 +139,7 @@ struct GameDataContext
     std::unique_ptr<PlanetFaunaCalculator> planetFaunaCalculator;
     std::unique_ptr<HurryProductionCalculator> hurryProductionCalculator;
     std::unique_ptr<ScrapRefundCalculator> scrapRefundCalculator;
+    std::unique_ptr<UpgradeCostCalculator> upgradeCostCalculator;
     std::unique_ptr<PopTypeAvailabilityCalculator> popTypeAvailabilityCalculator;
     // Reads no save state, so it lives here; every faction, unit and combat path borrows it.
     std::unique_ptr<MoraleCalculator> moraleCalculator;

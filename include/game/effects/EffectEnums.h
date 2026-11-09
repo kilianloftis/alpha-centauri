@@ -115,6 +115,9 @@ enum class StatId_t
     // Scales the retool mineral forfeit (PureMultiplier, seed 1.0). ApplyRetoolPenalty_ uses
     // stockpile * retoolPercent/100 * this. Skunkworks emits MultiplyGeometric 0 on ThisBase.
     RetoolPenaltyScale,
+    // Scales unit design upgrade energy rows (PureMultiplier, Faction, seed 1.0). Nano Factory
+    // emits MultiplyGeometric 0.5 on FactionGlobal.
+    UpgradeCostScale,
     // Facility energy upkeep (RawScaled from BuildingConfig_t::upkeep), per building type with an
     // optional buildingFilter.
     FacilityEnergyUpkeep,
@@ -382,6 +385,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::CostMultiplier:
         case StatId_t::PrototypeSurchargeScale:
         case StatId_t::RetoolPenaltyScale:
+        case StatId_t::UpgradeCostScale:
         case StatId_t::ProbeActionCost:
         case StatId_t::ProbeActorCost:
         case StatId_t::ProbeFailureScale:
@@ -501,7 +505,8 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::RebelJoinWeight:
         case StatId_t::GiftGivenValue:
         case StatId_t::GiftReceivedValue:
-        case StatId_t::GiftSizeThreshold: return ResolveDomain_t::Faction;
+        case StatId_t::GiftSizeThreshold:
+        case StatId_t::UpgradeCostScale: return ResolveDomain_t::Faction;
 
         case StatId_t::Attack:
         case StatId_t::Defense:
@@ -598,6 +603,7 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "cost_multiplier")         return StatId_t::CostMultiplier;
     if (rStat == "prototype_surcharge_scale") return StatId_t::PrototypeSurchargeScale;
     if (rStat == "retool_penalty_scale")     return StatId_t::RetoolPenaltyScale;
+    if (rStat == "upgrade_cost_scale")       return StatId_t::UpgradeCostScale;
     if (rStat == "facility_energy_upkeep")  return StatId_t::FacilityEnergyUpkeep;
     if (rStat == "probe_action_cost")       return StatId_t::ProbeActionCost;
     if (rStat == "probe_actor_cost")        return StatId_t::ProbeActorCost;

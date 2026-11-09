@@ -62,6 +62,8 @@
 #include "game/production/HurryProductionCalculator.h"
 #include "game/production/ProductionConfigParser.h"
 #include "game/production/ScrapRefundCalculator.h"
+#include "game/units/UpgradeCostCalculator.h"
+#include "game/units/UpgradeCostConfigParser.h"
 #include "game/production/StockpileRegistry.h"
 #include "game/research/ResearchManager.h"
 #include "game/research/TechCostCalculator.h"
@@ -190,6 +192,11 @@ SessionInputs::SessionInputs(const OccupantFiles_t& rOccupants,
     dataContext.scrapRefundCalculator =
         std::make_unique<ac::ScrapRefundCalculator>(*dataContext.productionConfig,
                                                     *dataContext.luaRuntime);
+    dataContext.upgradeCostConfig = std::make_unique<ac::UpgradeCostConfig_t>(
+        ac::UpgradeCostConfigParser{}.ParseConfig(FixturePath("unit_upgrade.lua"),
+                                                  *dataContext.luaRuntime));
+    dataContext.upgradeCostCalculator = std::make_unique<ac::UpgradeCostCalculator>(
+        *dataContext.upgradeCostConfig, *dataContext.luaRuntime);
     dataContext.techRegistry = std::make_unique<ac::TechRegistry>();
     dataContext.techRegistry->Load(FixturePath("techs.json"));
     // Trivial formula; tests that care about tech cost supply their own.

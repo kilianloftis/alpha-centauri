@@ -490,6 +490,72 @@ When a base is on the tile and the player confirms Disband (dialog result ≠ 0 
 
 Thinker does not rewrite this path.
 
+## Unit upgrade
+
+### `Console_upgrade` (`0x4D06C0`)
+
+Per-unit “upgrade to which design?” validity and picker. Thinker does **not** replace this
+function (only the `upgrade_cost` call sites inside it). Candidates are only that faction’s
+custom prototype slots (`faction_id * 64 … + 63`), not stock units 0–63.
+
+**Preconditions:** `veh_id ≥ 0`; `VEH.moves_spent == 0` (else `UNITMOVED` / `UNITMOVED2`);
+stock psi (`Weapon.offense_value < 0`) and unit id `0xF` (Spore Launcher) get an empty list /
+`NOUPGRADE`.
+
+**Design B is a valid upgrade from A when all hold:**
+
+1. `Units[B].unit_flags & UNIT_ACTIVE (0x1)`
+2. If `!(flags & UNIT_PROTOTYPED (0x4))` and the faction is not human → skip (humans may list
+   unprototyped designs)
+3. `!(obsolete_factions & (1 << faction))`
+4. `B ≠ A`
+5. AI only: matching `group_id`
+6. Exact same `chassis_id` (not merely same triad)
+7. `has_abil(…, ABL_ARTILLERY 0x8000)` equal on A and B
+8. Plan: if human and both `plan ≤ PLAN_RECON (3)`, any of those four may mix; else exact plan
+   match
+9. Weapon: if `Weapon[A].offense_value == 0`, same `weapon_id`; else
+   `offense(B) ≥ offense(A)` (signed compare of `0x94AE68`)
+10. Armor: `Armor[B].defense_value ≥ Armor[A].defense_value` (`0x94F280`). Human exception:
+    armor may drop only when `defense(B) ≠ 1`, old offense ≠ 0, and `offense(B) > offense(A)`.
+    AI has no that exception.
+
+Ours generalizes (6), (7), and plan matching (8) as equal `upgrade_class` sets on components
+(chassis, combat `offense`, per-special roles, `Bombard` → `artillery`). Energy on confirm is
+`10 * upgrade_cost`.
+
+### `upgrade_cost` (`0x4EFD50`)
+
+Mineral rows between two designs (SMAC table costs are rows; 1 row = 10 minerals before
+modifiers; UI energy is `10 × rows`):
+
+```
+rows = new.cost
+if new_id ≥ 64 && !(new.flags & UNIT_PROTOTYPED):
+    t = new.cost + (new.cost + 1) / 2
+    rows = t * (t + 1)
+
+rows += max(0, Weapon[new].cost - Weapon[old].cost)
+     + max(0, Armor[new].cost - Armor[old].cost)
+     + max(0, Chassis[new].speed - Chassis[old].speed)
+
+if faction owns Nano Factory: rows /= 2
+energy = 10 * rows
+```
+
+The chassis speed term is dead on every valid upgrade (exact `chassis_id`), so ours omits it.
+Ours never uses rows: `config/unit_upgrade.lua` returns energy from mineral costs
+(`energy_per_mineral` local, stock 1). Nano Factory `UpgradeCostScale` is applied in C++.
+
+Thinker’s `mod_upgrade_cost` matches this by default; optional `conf.modify_upgrade_cost`
+replaces the formula.
+
+### `do_upgrade` (`0x4EFB50`)
+
+Spends `10 * upgrade_cost` × count for the faction path: set each matching `VEH.unit_id`,
+adjust morale ±1 when gaining/losing `ABL_TRAINED`, rewrite base queues from old→new, mark
+new prototyped / clear old `UNIT_ACTIVE` when custom. Does not rewrite HP/`damage_taken`.
+
 ## Sea bases
 
 ### `base_init` (`0x4E4B80`)

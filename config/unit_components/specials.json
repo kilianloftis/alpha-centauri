@@ -46,7 +46,8 @@
           "amount": -1
         }
       }
-    ]
+    ],
+    "upgrade_class": "colony"
   },
   {
     "id": "Transport",
@@ -145,7 +146,8 @@
           "flag": "cannot_capture_bases"
         }
       }
-    ]
+    ],
+    "upgrade_class": "naval_transport"
   },
   {
     "id": "Supply_Crawler",
@@ -173,7 +175,8 @@
     ],
     "scrap": {
       "formula": "minerals"
-    }
+    },
+    "upgrade_class": "supply"
   },
   {
     "id": "Terraformer",
@@ -198,7 +201,8 @@
           "flag": "cannot_capture_bases"
         }
       }
-    ]
+    ],
+    "upgrade_class": "terraform"
   },
   {
     "id": "Probe_Team",
@@ -254,7 +258,8 @@
           "op": "Add"
         }
       }
-    ]
+    ],
+    "upgrade_class": "probe"
   },
   {
     "id": "Algorithmic_Enhancement",
@@ -300,7 +305,9 @@
     "plan": "tectonic_missile",
     "required_tech": "",
     "mineral_cost": 0,
-    "requires_chassis": ["Missile"],
+    "requires_chassis": [
+      "Missile"
+    ],
     "effects": [],
     "on_detonate_effects": [
       {
@@ -318,7 +325,8 @@
       {
         "type": "DestroyUnit"
       }
-    ]
+    ],
+    "upgrade_class": "tectonic_missile"
   },
   {
     "id": "Fungal_Payload",
@@ -328,7 +336,9 @@
     "plan": "fungal_missile",
     "required_tech": "",
     "mineral_cost": 0,
-    "requires_chassis": ["Missile"],
+    "requires_chassis": [
+      "Missile"
+    ],
     "effects": [],
     "on_detonate_effects": [
       {
@@ -340,7 +350,8 @@
       {
         "type": "DestroyUnit"
       }
-    ]
+    ],
+    "upgrade_class": "fungal_missile"
   },
   {
     "id": "Planet_Buster",
@@ -350,7 +361,9 @@
     "plan": "planet_buster",
     "required_tech": "",
     "mineral_cost": 0,
-    "requires_chassis": ["Missile"],
+    "requires_chassis": [
+      "Missile"
+    ],
     "effects": [],
     "on_detonate_effects": [
       {
@@ -368,6 +381,7 @@
       {
         "type": "DestroyUnit"
       }
-    ]
+    ],
+    "upgrade_class": "planet_buster"
   }
 ]

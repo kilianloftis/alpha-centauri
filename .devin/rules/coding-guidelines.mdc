@@ -136,7 +136,7 @@ value-line per array, not one element per line). Do not rewrite them with
 
 ## Moddability
 - Numbers, ids and switches a modder would change live in config, not C++. Calculator
-  coefficients follow `calculator-config.mdc`.
+  coefficients follow `calculators.mdc`.
 - A Lua or plugin hook is added with the mod feature that calls it.
 
 ## Code Formatting

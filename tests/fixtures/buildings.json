@@ -1675,5 +1675,25 @@
         }
       }
     ]
+  },
+  {
+    "id": "Nano_Factory",
+    "name": "Nano Factory",
+    "mineral_cost": 400,
+    "upkeep": 0,
+    "secret_project": true,
+    "category": "conquer",
+    "required_tech": "",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "upgrade_cost_scale",
+          "amount": 0.5,
+          "op": "MultiplyGeometric"
+        }
+      }
+    ]
   }
 ]

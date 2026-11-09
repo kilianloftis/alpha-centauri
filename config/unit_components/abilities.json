@@ -93,11 +93,29 @@
         "condition": {
           "kind": "AllOf",
           "conditions": [
-            { "kind": "SubjectDomain", "domain": "sea" },
-            { "kind": "DefenderDomain", "domains": ["sea"] },
-            { "kind": "DefenderIsNativeLife", "value": false },
-            { "kind": "TargetTileHas", "value": "Water" },
-            { "kind": "TargetTileHas", "value": "Base", "present": false }
+            {
+              "kind": "SubjectDomain",
+              "domain": "sea"
+            },
+            {
+              "kind": "DefenderDomain",
+              "domains": [
+                "sea"
+              ]
+            },
+            {
+              "kind": "DefenderIsNativeLife",
+              "value": false
+            },
+            {
+              "kind": "TargetTileHas",
+              "value": "Water"
+            },
+            {
+              "kind": "TargetTileHas",
+              "value": "Base",
+              "present": false
+            }
           ]
         },
         "parameters": {
@@ -402,7 +420,9 @@
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "bombard" }
+        "parameters": {
+          "flag": "bombard"
+        }
       },
       {
         "type": "StatModifier",
@@ -420,10 +440,13 @@
           "stat": "attack",
           "amount": 25,
           "op": "AddPercent",
-          "amount_source": { "kind": "LevelsAboveOpponent" }
+          "amount_source": {
+            "kind": "LevelsAboveOpponent"
+          }
         }
       }
-    ]
+    ],
+    "upgrade_class": "artillery"
   },
   {
     "id": "Poly_Encryption",

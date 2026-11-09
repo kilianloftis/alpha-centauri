@@ -48,7 +48,8 @@
           "value": "Base"
         }
       }
-    ]
+    ],
+    "upgrade_class": "Infantry"
   },
   {
     "id": "Speeder",
@@ -95,7 +96,8 @@
           "op": "Add"
         }
       }
-    ]
+    ],
+    "upgrade_class": "Speeder"
   },
   {
     "id": "Foil",
@@ -142,7 +144,8 @@
           "op": "Add"
         }
       }
-    ]
+    ],
+    "upgrade_class": "Foil"
   },
   {
     "id": "HoverTank",
@@ -187,7 +190,8 @@
           "flag": "ignores_difficult_terrain"
         }
       }
-    ]
+    ],
+    "upgrade_class": "HoverTank"
   },
   {
     "id": "Missile",
@@ -257,7 +261,8 @@
           "flag": "cannot_capture_bases"
         }
       }
-    ]
+    ],
+    "upgrade_class": "Missile"
   },
   {
     "id": "Needlejet",
@@ -336,7 +341,8 @@
           "op": "Add"
         }
       }
-    ]
+    ],
+    "upgrade_class": "Needlejet"
   },
   {
     "id": "Copter",
@@ -408,7 +414,8 @@
           "op": "Add"
         }
       }
-    ]
+    ],
+    "upgrade_class": "Copter"
   },
   {
     "id": "Gravship",
@@ -455,6 +462,7 @@
           "op": "Add"
         }
       }
-    ]
+    ],
+    "upgrade_class": "Gravship"
   }
 ]

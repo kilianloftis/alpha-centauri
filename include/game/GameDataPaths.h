@@ -20,6 +20,7 @@ struct GameDataPaths
     std::string terrain = "config/terrain.json";
     std::string unitComponents = "config/unit_components";
     std::string unitSlots = "config/unit_slot_config.json";
+    std::string unitUpgrade = "config/unit_upgrade.lua";
     std::string nativeUnits = "config/native_units.json";
     std::string techs = "config/techs.json";
     std::string socialPolicies = "config/social_policies.json";

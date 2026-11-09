@@ -65,6 +65,9 @@ public:
     const Faction& GetFaction() const;
     // For ownership transfer. Home base, cargo and position are the caller's to update.
     void RebindFaction(Faction& rFaction);
+    // Swap the design pointer; clamps HP, fuel, and move fragments to the new maxima.
+    // Does not touch prototype latch, XP, or the built-component ledger.
+    void RebindDesign(const IDesign& rDesign);
 
     int GetCurrentHp() const;
     int GetCurrentFuel() const;
@@ -140,7 +143,7 @@ private:
     int MaxMoveFragments_() const;
 
     UnitId_t m_unitId;
-    const IDesign& m_rDesign;
+    const IDesign* m_pDesign;
     UnitPositionIndex& m_rPositions;
     const Tile* m_pTile;
     // Holding the claim is the home-base link.

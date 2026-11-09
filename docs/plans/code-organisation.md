@@ -9,7 +9,7 @@ Based on `origin/main` at `96119e2` (Moisture generation update). Lands after
 
 The code already uses most of the right kinds, but only informally.
 
-- Calculators are built from config and owned by `GameDataContext`. The rule for them is about where their numbers live (`calculator-config.mdc`), not what they may touch.
+- Calculators are built from config and owned by `GameDataContext`. The rule for them is `calculators.mdc` (ownership, Rules split, where numbers live).
 - Diplomacy is split into Rules (queries) and Effects (mutations), and package 19 extended the split to proposals. `BaseConquestRules` / `BaseConquestEffects` follow the same split. Nothing writes the split down as a rule for the rest of the code.
 - Directories group code three different ways:
   - by domain: `research/`, `council/`, `atrocities/`

@@ -98,6 +98,14 @@ graph TB
 3. A `std::unique_ptr<UnitDesign>` is constructed and passed to `Military::AddDesign()`
 4. `DesignListPanel` reads `Military::GetDesigns()` each frame — new design appears immediately
 
+## upgrade_class
+
+Optional `upgrade_class` on any component — not the same as `plan` (`UnitPlan_t`, the SMAC
+AI/role). Stock tags: each chassis a unique value; combat guns `offense`; `Psi_Attack`
+`psi`; each special its role (`colony`, `terraform`, `probe`, …); `Bombard` `artillery`.
+A design's upgrade_class set is the union of those tags; field upgrades require identical
+sets (`UpgradeRules`), not matching `plan`.
+
 ## Unit Plan
 
 Every design has SMAC's `UNIT.plan`, the AI role (`IDesign::GetPlan`, `UnitPlan_t`). A

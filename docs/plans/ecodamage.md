@@ -377,7 +377,7 @@ ever emit them and a stat with no emitters is resolve cost plus config surface f
 | `/ 300` | same — it is what converts the damage factor into a percentage |
 | the `1 +` in `1 + damage_reduction` | structural: it makes zero good facilities the identity, not a divide-by-zero |
 
-`calculator-config.mdc` already blesses the Lua file as a home for a calculator's coefficients,
+`calculators.mdc` already blesses the Lua file as a home for a calculator's coefficients,
 so these are compliant where they are. The bar for a new `StatId_t` is *something wants to
 modify this at runtime* — per effects-system.md, split a stat when the **quantity** differs, not
 merely to route a number through the system.

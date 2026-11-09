@@ -227,11 +227,18 @@ Caller contract: the faction must have been constructed against the session's `W
 ### Military
 - **Purpose**: Holds the faction's **unit designs** and the **built-component ledger** backing
   prototypes.
+- **Unit upgrades**: `UpgradeRules` lists valid `UnitDesign` targets (equal `upgrade_class` sets
+  from components, plus SMAC weapon / armor floors — not `plan`). `UpgradeCostCalculator` prices one
+  unit via `unit_upgrade.lua` (energy credits from mineral inputs × resolved
+  `UpgradeCostScale`). `Faction::QuoteUpgradeUnit` / `UpgradeUnit` and `TryUpgradeUnit`
+  spend energy and `Unit::RebindDesign`. Stock `upgrade_class` tags cover chassis, combat
+  weapons (`offense`), each special role, and `Bombard` (`artillery`) — separate from `plan`.
 - **Prototype ledger**: `RecordBuiltComponents` marks every filled component of a design as
   fielded; `UnitManager::CreateUnit` calls it for *every* unit the faction gains, so starting
   units, produced units and conquest spawns all share one ledger. `IsPrototype(faction, design)`
   (`ProductionRules`) is true while any filled component is still unfielded — several unknown
-  components on one design are still a single prototype.
+  components on one design are still a single prototype. A paid upgrade also records the new
+  design's components.
 - **Two consumers, one question**: `ItemMineralCost` (`ProductionRules`) asks it for the
   mineral surcharge (`production.json` `prototype_surcharge_percent`, scaled by base
   `PrototypeSurchargeScale` so Skunkworks can zero the extra without touching XP), and `Unit`'s

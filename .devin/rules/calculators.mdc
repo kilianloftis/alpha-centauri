@@ -1,0 +1,64 @@
+---
+description: How to add and shape *Calculator classes — ownership, Rules split, config/Lua, wiring
+alwaysApply: true
+---
+
+# Calculators
+
+Companions to "Calculators" in `code-kinds.mdc`. Follow a neighboring calculator in the same
+subsystem (`CommerceCalculator`, `EcoDamageCalculator`, `AllocationImbalanceCalculator`,
+`HurryProductionCalculator`).
+
+## Role
+
+- Evaluate configured formulas. `LoadGameData` builds them; `GameDataContext` owns them.
+- Methods are `const` and take plain values or an `*Inputs_t` / quote struct — never a
+  faction, base, unit, tile, `GameState`, or `CurrentGameState()`.
+- Never draw from an RNG and never mutate game state. `LuaRuntime&` may be non-const only
+  because `EvalInt` mutates interpreter globals.
+- Prefer constructor references to the config (and Lua) over owning pointers.
+
+## Split with Rules
+
+- **Rules** gather inputs, decide legality / pairing / which effect multipliers apply, call
+  the calculator, and apply the result.
+- **Calculator** only turns those numbers into the formula result (and throws if the formula
+  fails or yields an out-of-range value).
+- Do not put partner selection, SE lookups, or facility modifiers inside the calculator.
+
+```cpp
+// ❌ BAD — calculator reaches into the base
+int Loss(const BaseManager& rBase) const;
+
+// ✅ GOOD — rules assemble inputs; calculator is pure
+AllocationImbalanceLoss_t LossPercents(const AllocationImbalanceInputs_t& rInputs) const;
+```
+
+## Config and Lua
+
+- Numeric rates, percents, thresholds, and formulas belong in the subsystem's JSON and/or the
+  Lua file that config already points at. Do not hard-code those in the calculator, and do not
+  invent a C++ default that silently substitutes for a missing key.
+- Put parameters in the config file that already owns that subsystem. Production hurry/scrap
+  live in `production.json`; growth in `pop_growth.json`.
+- Coefficients only the Lua body uses stay as Lua locals (see `energy_allocation.lua`). Do not
+  mirror them into JSON just so C++ can hold them.
+- Do not config-ize fixed integer apply trivia (e.g. `+50` before `/100` for nearest percent).
+  Hard-code that at the apply site; extract a shared helper only when a second caller needs it.
+- If JSON would have no remaining keys, drop the file and load Lua only.
+- The parser requires every meaningful key and rejects invalid values at load.
+- Effects that already live in the effect list stay effects. This rule is for the calculator's
+  own coefficients.
+- A facility or secret project's mechanical bonus is a `StatId` (or other effect) on that
+  building's `effects` list. Rules resolve it from active effects. Do **not** put a building
+  id in calculator/subsystem JSON to mean "whoever owns X gets this discount" — that mistake
+  has been corrected more than once (e.g. Nano Factory → `UpgradeCostScale`, Skunkworks →
+  `PrototypeSurchargeScale` / `RetoolPenaltyScale`).
+
+## Wiring and tests
+
+- Add `GameDataPaths` / fixture paths, parse into `GameDataContext`, construct the calculator
+  beside its config, and list it in `ThrowIfIncomplete` when consumers dereference it.
+- Update `docs/architecture/` (high-level + the subsystem diagram) when adding one.
+- Tests that care about a rate use a fixture. They do not load shipping `config/` or bake its
+  number into the calculator.

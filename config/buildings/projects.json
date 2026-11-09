@@ -281,7 +281,18 @@
     "secret_project": true,
     "category": "conquer",
     "required_tech": "industrial_nanorobotics",
-    "icon": "assets/sprites/projects/proj022.png"
+    "icon": "assets/sprites/projects/proj022.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "upgrade_cost_scale",
+          "amount": 0.5,
+          "op": "MultiplyGeometric"
+        }
+      }
+    ]
   },
   {
     "id": "Living_Refinery",

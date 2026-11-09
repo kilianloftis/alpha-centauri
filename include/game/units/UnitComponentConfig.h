@@ -41,6 +41,9 @@ struct UnitComponentConfig_t
     std::string type; // e.g. "chassis", "weapon" — matches component_type in unit_slot_config.json
     std::string requiredTech;
     int mineralCost = 0;
+    // upgrade_class tag (not UnitPlan_t). Designs need equal upgrade_class sets to upgrade.
+    // Optional on every type; stock tags chassis, combat weapons, specials, Bombard.
+    std::string upgradeClass;
     // Required when type == "chassis"; must be unset for other component types.
     std::optional<UnitDomain_t> domain;
     // The only chassis this component may be designed on; empty means any.

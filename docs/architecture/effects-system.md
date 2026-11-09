@@ -267,6 +267,8 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   applicable lists. Examples:
   - **CostMultiplier** (`DomainFor → Base`): design UI resolves the unit/component pool only
     (preview); production assembles unit ∪ base under the base subject so Industry applies.
+  - **UpgradeCostScale** (`DomainFor → Faction`): Nano Factory MultiplyGeometric 0.5 on
+    `FactionGlobal`; upgrade quotes resolve it with the faction pool.
   - **StartingMinerals** (`DomainFor → Base`): founding merges base-list + founding-unit
     effects into one stockpile credit — multi-pool ubiquity, not a DomainFor escape hatch.
   - **AwayFromHomeDrones** (`DomainFor → Unit`): resolved from live-unit effects *and* from

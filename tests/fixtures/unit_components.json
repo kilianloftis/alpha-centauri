@@ -40,7 +40,8 @@
           "amount": 10
         }
       }
-    ]
+    ],
+    "upgrade_class": "test_chassis"
   },
   {
     "id": "test_slow_chassis",
@@ -82,7 +83,8 @@
           "amount": 10
         }
       }
-    ]
+    ],
+    "upgrade_class": "test_slow_chassis"
   },
   {
     "id": "test_sea_chassis",
@@ -124,7 +126,8 @@
           "amount": 10
         }
       }
-    ]
+    ],
+    "upgrade_class": "test_sea_chassis"
   },
   {
     "id": "test_flight_chassis",
@@ -175,7 +178,8 @@
           "op": "Add"
         }
       }
-    ]
+    ],
+    "upgrade_class": "test_flight_chassis"
   },
   {
     "id": "test_orbital_chassis",
@@ -224,7 +228,8 @@
           "flag": "single_use"
         }
       }
-    ]
+    ],
+    "upgrade_class": "test_orbital_chassis"
   },
   {
     "id": "test_sam_escort",
@@ -301,6 +306,21 @@
     ]
   },
   {
+    "id": "High_Morale",
+    "name": "High Morale",
+    "type": "ability",
+    "mineral_cost": 1,
+    "on_complete_effects": [
+      {
+        "type": "GrantXp",
+        "parameters": {
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
     "id": "covert",
     "name": "Covert",
     "type": "ability",
@@ -330,7 +350,8 @@
           "amount": 4
         }
       }
-    ]
+    ],
+    "upgrade_class": "offense"
   },
   {
     "id": "test_empire_pulse",
@@ -355,10 +376,13 @@
           "stat": "attack",
           "amount": 1,
           "op": "Add",
-          "amount_source": { "kind": "BasesOwned" }
+          "amount_source": {
+            "kind": "BasesOwned"
+          }
         }
       }
-    ]
+    ],
+    "upgrade_class": "offense"
   },
   {
     "id": "test_empire_morale",
@@ -374,10 +398,13 @@
           "stat": "morale_rank",
           "amount": 1,
           "op": "Add",
-          "amount_source": { "kind": "BasesOwned" }
+          "amount_source": {
+            "kind": "BasesOwned"
+          }
         }
       }
-    ]
+    ],
+    "upgrade_class": "offense"
   },
   {
     "id": "test_weak_weapon",
@@ -394,7 +421,8 @@
           "amount": 1
         }
       }
-    ]
+    ],
+    "upgrade_class": "offense"
   },
   {
     "id": "test_armor",
@@ -409,6 +437,23 @@
         "parameters": {
           "stat": "defense",
           "amount": 3
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_medium_armor",
+    "name": "Test Medium Armor",
+    "type": "armour",
+    "mineral_cost": 0,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "defense",
+          "amount": 2,
+          "op": "Add"
         }
       }
     ]
@@ -880,8 +925,15 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "condition": { "kind": "TargetTileHas", "value": "Fungus" },
-        "parameters": { "stat": "move_cost", "amount": "1/3", "op": "MaxClamp" }
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "Fungus"
+        },
+        "parameters": {
+          "stat": "move_cost",
+          "amount": "1/3",
+          "op": "MaxClamp"
+        }
       }
     ]
   },
@@ -943,7 +995,8 @@
     ],
     "scrap": {
       "formula": "minerals"
-    }
+    },
+    "upgrade_class": "supply"
   },
   {
     "id": "test_colony_pod",
@@ -990,7 +1043,8 @@
           "amount": -1
         }
       }
-    ]
+    ],
+    "upgrade_class": "colony"
   },
   {
     "id": "test_colony_pod_rich",
@@ -1037,7 +1091,8 @@
           "amount": -1
         }
       }
-    ]
+    ],
+    "upgrade_class": "colony"
   },
   {
     "id": "Probe_Team",
@@ -1084,7 +1139,8 @@
           "op": "Add"
         }
       }
-    ]
+    ],
+    "upgrade_class": "probe"
   },
   {
     "id": "test_terraformer",
@@ -1107,7 +1163,8 @@
           "flag": "cannot_capture_bases"
         }
       }
-    ]
+    ],
+    "upgrade_class": "terraform"
   },
   {
     "id": "test_found_base_only",
@@ -1129,7 +1186,8 @@
           "flag": "cannot_capture_bases"
         }
       }
-    ]
+    ],
+    "upgrade_class": "colony"
   },
   {
     "id": "test_single_use_weapon",
@@ -1351,7 +1409,8 @@
           "flag": "cannot_capture_bases"
         }
       }
-    ]
+    ],
+    "upgrade_class": "naval_transport"
   },
   {
     "id": "test_transport_2",
@@ -1384,7 +1443,8 @@
           "flag": "cannot_capture_bases"
         }
       }
-    ]
+    ],
+    "upgrade_class": "naval_transport"
   },
   {
     "id": "test_carrier_deck",
@@ -1439,7 +1499,8 @@
           "flag": "cannot_capture_bases"
         }
       }
-    ]
+    ],
+    "upgrade_class": "naval_transport"
   },
   {
     "id": "test_fuel_flight_chassis",
@@ -1527,7 +1588,8 @@
           "op": "Add"
         }
       }
-    ]
+    ],
+    "upgrade_class": "test_fuel_flight_chassis"
   },
   {
     "id": "test_copter_chassis",
@@ -1608,7 +1670,8 @@
           "op": "Add"
         }
       }
-    ]
+    ],
+    "upgrade_class": "test_copter_chassis"
   },
   {
     "id": "test_no_conquest_repair",
@@ -1697,7 +1760,8 @@
           "amount": 4
         }
       }
-    ]
+    ],
+    "upgrade_class": "offense"
   },
   {
     "id": "test_costly_weapon_alt",
@@ -1714,7 +1778,8 @@
           "amount": 4
         }
       }
-    ]
+    ],
+    "upgrade_class": "offense"
   },
   {
     "id": "test_costly_armor",
@@ -1778,7 +1843,9 @@
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "native_life" }
+        "parameters": {
+          "flag": "native_life"
+        }
       }
     ]
   },
@@ -1792,24 +1859,39 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "movement", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "movement",
+          "amount": 1,
+          "op": "Add"
+        }
       },
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "native_life" }
+        "parameters": {
+          "flag": "native_life"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "collateral_damage", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "collateral_damage",
+          "amount": 1,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "planet_pearls", "amount": 10, "op": "Add" }
+        "parameters": {
+          "stat": "planet_pearls",
+          "amount": 10,
+          "op": "Add"
+        }
       }
-    ]
+    ],
+    "upgrade_class": "native_life_chassis"
   },
   {
     "id": "bombard",
@@ -1821,7 +1903,9 @@
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "bombard" }
+        "parameters": {
+          "flag": "bombard"
+        }
       },
       {
         "type": "StatModifier",
@@ -1839,10 +1923,13 @@
           "stat": "attack",
           "amount": 25,
           "op": "AddPercent",
-          "amount_source": { "kind": "LevelsAboveOpponent" }
+          "amount_source": {
+            "kind": "LevelsAboveOpponent"
+          }
         }
       }
-    ]
+    ],
+    "upgrade_class": "artillery"
   },
   {
     "id": "test_poly_encryption",
@@ -1882,19 +1969,45 @@
         "condition": {
           "kind": "AllOf",
           "conditions": [
-            { "kind": "SubjectDomain", "domain": "sea" },
-            { "kind": "DefenderDomain", "domains": ["sea"] },
-            { "kind": "DefenderIsNativeLife", "value": false },
-            { "kind": "TargetTileHas", "value": "Water" },
-            { "kind": "TargetTileHas", "value": "Base", "present": false }
+            {
+              "kind": "SubjectDomain",
+              "domain": "sea"
+            },
+            {
+              "kind": "DefenderDomain",
+              "domains": [
+                "sea"
+              ]
+            },
+            {
+              "kind": "DefenderIsNativeLife",
+              "value": false
+            },
+            {
+              "kind": "TargetTileHas",
+              "value": "Water"
+            },
+            {
+              "kind": "TargetTileHas",
+              "value": "Base",
+              "present": false
+            }
           ]
         },
-        "parameters": { "stat": "board_chance", "amount": 100, "op": "Add" }
+        "parameters": {
+          "stat": "board_chance",
+          "amount": 100,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "board_hp_limit", "amount": 0.6667, "op": "Add" }
+        "parameters": {
+          "stat": "board_hp_limit",
+          "amount": 0.6667,
+          "op": "Add"
+        }
       }
     ]
   },
@@ -1910,19 +2023,45 @@
         "condition": {
           "kind": "AllOf",
           "conditions": [
-            { "kind": "SubjectDomain", "domain": "sea" },
-            { "kind": "DefenderDomain", "domains": ["sea"] },
-            { "kind": "DefenderIsNativeLife", "value": false },
-            { "kind": "TargetTileHas", "value": "Water" },
-            { "kind": "TargetTileHas", "value": "Base", "present": false }
+            {
+              "kind": "SubjectDomain",
+              "domain": "sea"
+            },
+            {
+              "kind": "DefenderDomain",
+              "domains": [
+                "sea"
+              ]
+            },
+            {
+              "kind": "DefenderIsNativeLife",
+              "value": false
+            },
+            {
+              "kind": "TargetTileHas",
+              "value": "Water"
+            },
+            {
+              "kind": "TargetTileHas",
+              "value": "Base",
+              "present": false
+            }
           ]
         },
-        "parameters": { "stat": "board_chance", "amount": 50, "op": "Add" }
+        "parameters": {
+          "stat": "board_chance",
+          "amount": 50,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "board_hp_limit", "amount": 0.6667, "op": "Add" }
+        "parameters": {
+          "stat": "board_hp_limit",
+          "amount": 0.6667,
+          "op": "Add"
+        }
       }
     ]
   },
@@ -1936,45 +2075,74 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "movement", "amount": 1 }
+        "parameters": {
+          "stat": "movement",
+          "amount": 1
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "hit_points", "amount": 1 }
+        "parameters": {
+          "stat": "hit_points",
+          "amount": 1
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "defense", "amount": 1, "op": "MaxClamp" }
+        "parameters": {
+          "stat": "defense",
+          "amount": 1,
+          "op": "MaxClamp"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "defense", "amount": 1, "op": "MinClamp" }
+        "parameters": {
+          "stat": "defense",
+          "amount": 1,
+          "op": "MinClamp"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "collateral_susceptibility", "amount": 0, "op": "MultiplyGeometric" }
+        "parameters": {
+          "stat": "collateral_susceptibility",
+          "amount": 0,
+          "op": "MultiplyGeometric"
+        }
       },
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "non_combatant" }
+        "parameters": {
+          "flag": "non_combatant"
+        }
       },
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "captured_on_defeat" }
+        "parameters": {
+          "flag": "captured_on_defeat"
+        }
       },
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "condition": { "kind": "TargetTileHas", "value": "Base", "present": false },
-        "parameters": { "flag": "attack_not_hostile" }
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "Base",
+          "present": false
+        },
+        "parameters": {
+          "flag": "attack_not_hostile"
+        }
       }
-    ]
+    ],
+    "upgrade_class": "test_artifact_chassis"
   },
   {
     "id": "test_extra_movement",
@@ -1985,7 +2153,10 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "movement", "amount": 1 }
+        "parameters": {
+          "stat": "movement",
+          "amount": 1
+        }
       }
     ]
   },
@@ -1998,7 +2169,10 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "disengage_chance", "amount": 50 }
+        "parameters": {
+          "stat": "disengage_chance",
+          "amount": 50
+        }
       }
     ]
   }
