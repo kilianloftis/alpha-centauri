@@ -92,6 +92,7 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("council_votes") == StatId_t::CouncilVotes);
     CHECK(ParseStatId("commerce_energy_bonus") == StatId_t::CommerceEnergyBonus);
     CHECK(ParseStatId("inefficiency_denominator") == StatId_t::InefficiencyDenominator);
+    CHECK(ParseStatId("allocation_imbalance_factor") == StatId_t::AllocationImbalanceFactor);
     CHECK(ParseStatId("scrap_refund") == StatId_t::ScrapRefund);
     CHECK(ParseStatId("last_defender_pop_loss") == StatId_t::LastDefenderPopLoss);
     CHECK(ParseStatId("capture_pop_loss") == StatId_t::CapturePopLoss);

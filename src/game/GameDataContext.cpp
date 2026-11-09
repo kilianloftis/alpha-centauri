@@ -24,6 +24,8 @@
 #include "game/population/PopCompositionCalculator.h"
 #include "game/population/PopTypeAvailabilityCalculator.h"
 #include "game/production/ProductionConfigParser.h"
+#include "game/economy/AllocationImbalanceCalculator.h"
+#include "game/economy/AllocationImbalanceConfigParser.h"
 #include "game/economy/CommerceConfigParser.h"
 #include "game/diplomacy/DiplomacyConfigParser.h"
 #include "game/population/GrowthConfigParser.h"
@@ -313,6 +315,10 @@ void LoadFormulasAndCalculators_(GameDataContext& rData)
         std::make_unique<ScrapRefundCalculator>(*rData.productionConfig, rLua);
     rData.moraleCalculator = std::make_unique<MoraleCalculator>(*rData.moraleConfig, rLua);
     rData.commerceCalculator = std::make_unique<CommerceCalculator>(*rData.commerceConfig, rLua);
+    rData.allocationImbalanceConfig = std::make_unique<AllocationImbalanceConfig_t>(
+        AllocationImbalanceConfigParser{}.ParseConfig(rPaths.energyAllocationFormula, rLua));
+    rData.allocationImbalanceCalculator = std::make_unique<AllocationImbalanceCalculator>(
+        *rData.allocationImbalanceConfig, rLua);
     rData.probeCalculator = std::make_unique<ProbeCalculator>(rLua);
     rData.diplomacyCalculator = std::make_unique<DiplomacyCalculator>(*rData.diplomacyConfig);
     rData.baseConquestCalculator =
@@ -345,6 +351,7 @@ void ThrowIfIncomplete(const GameDataContext& rData)
         {rData.growthConfig.get(), "growthConfig"},
         {rData.productionConfig.get(), "productionConfig"},
         {rData.commerceConfig.get(), "commerceConfig"},
+        {rData.allocationImbalanceConfig.get(), "allocationImbalanceConfig"},
         {rData.diplomacyConfig.get(), "diplomacyConfig"},
         {rData.techCostConfig.get(), "techCostConfig"},
         {rData.improvementRegistry.get(), "improvementRegistry"},
@@ -373,6 +380,7 @@ void ThrowIfIncomplete(const GameDataContext& rData)
         {rData.popTypeAvailabilityCalculator.get(), "popTypeAvailabilityCalculator"},
         {rData.moraleCalculator.get(), "moraleCalculator"},
         {rData.commerceCalculator.get(), "commerceCalculator"},
+        {rData.allocationImbalanceCalculator.get(), "allocationImbalanceCalculator"},
         {rData.probeCalculator.get(), "probeCalculator"},
         {rData.diplomacyCalculator.get(), "diplomacyCalculator"},
         {rData.baseConquestCalculator.get(), "baseConquestCalculator"},

@@ -27,6 +27,8 @@
 #include "game/display/MapOverlayChannelsConfigParser.h"
 #include "game/ecology/EcoDamageCalculator.h"
 #include "game/ecology/EcoDamageConfig.h"
+#include "game/economy/AllocationImbalanceCalculator.h"
+#include "game/economy/AllocationImbalanceConfigParser.h"
 #include "game/economy/CommerceCalculator.h"
 #include "game/economy/CommerceConfigParser.h"
 #include "game/economy/ResourceManager.h"
@@ -170,6 +172,12 @@ SessionInputs::SessionInputs(const OccupantFiles_t& rOccupants,
         ac::CommerceConfigParser{}.ParseConfig(FixturePath("commerce.json")));
     dataContext.commerceCalculator = std::make_unique<ac::CommerceCalculator>(
         *dataContext.commerceConfig, *dataContext.luaRuntime);
+    dataContext.allocationImbalanceConfig = std::make_unique<ac::AllocationImbalanceConfig_t>(
+        ac::AllocationImbalanceConfigParser{}.ParseConfig(FixturePath("energy_allocation.lua"),
+                                                          *dataContext.luaRuntime));
+    dataContext.allocationImbalanceCalculator =
+        std::make_unique<ac::AllocationImbalanceCalculator>(
+            *dataContext.allocationImbalanceConfig, *dataContext.luaRuntime);
     dataContext.diplomacyConfig = std::make_unique<ac::DiplomacyConfig_t>(
         ac::DiplomacyConfigParser{}.ParseConfig(FixturePath("diplomacy.json")));
     dataContext.combatConfig = std::make_unique<ac::CombatConfig_t>(

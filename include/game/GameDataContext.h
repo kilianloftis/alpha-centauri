@@ -43,6 +43,7 @@ struct LandmarkConfig_t;
 struct MoraleConfig_t;
 class MoraleCalculator;
 class CommerceCalculator;
+class AllocationImbalanceCalculator;
 class ProbeCalculator;
 class DiplomacyCalculator;
 class BaseConquestCalculator;
@@ -50,6 +51,7 @@ class UpheavalCostCalculator;
 struct ProbeActionsConfig_t;
 struct BaseConquestConfig_t;
 struct UpheavalCostConfig_t;
+struct AllocationImbalanceConfig_t;
 struct CombatConfig_t;
 class CouncilProposalRegistry;
 struct CouncilRulesConfig_t;
@@ -94,6 +96,7 @@ struct GameDataContext
     std::unique_ptr<GrowthConfig_t> growthConfig;
     std::unique_ptr<ProductionConfig_t> productionConfig;
     std::unique_ptr<CommerceConfig_t> commerceConfig;
+    std::unique_ptr<AllocationImbalanceConfig_t> allocationImbalanceConfig;
     std::unique_ptr<DiplomacyConfig_t> diplomacyConfig;
     std::unique_ptr<TechCostConfig_t> techCostConfig;
     std::unique_ptr<ImprovementRegistry> improvementRegistry;
@@ -137,6 +140,7 @@ struct GameDataContext
     // Reads no save state, so it lives here; every faction, unit and combat path borrows it.
     std::unique_ptr<MoraleCalculator> moraleCalculator;
     std::unique_ptr<CommerceCalculator> commerceCalculator;
+    std::unique_ptr<AllocationImbalanceCalculator> allocationImbalanceCalculator;
     std::unique_ptr<ProbeCalculator> probeCalculator;
     std::unique_ptr<DiplomacyCalculator> diplomacyCalculator;
     std::unique_ptr<BaseConquestCalculator> baseConquestCalculator;

@@ -141,8 +141,9 @@ std::string FormatLevelEffect(const EffectConfig_t& rEffect)
 {
     if (const auto* pModifier = std::get_if<StatModifierEffect_t>(&rEffect.effect))
     {
-        // Internal energy-pipeline parameter, not a player-facing bonus line.
-        if (pModifier->stat == StatId_t::InefficiencyDenominator)
+        // Internal energy-pipeline parameters, not player-facing bonus lines.
+        if (pModifier->stat == StatId_t::InefficiencyDenominator
+            || pModifier->stat == StatId_t::AllocationImbalanceFactor)
         {
             return {};
         }

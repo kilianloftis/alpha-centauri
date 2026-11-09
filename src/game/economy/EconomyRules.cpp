@@ -1,8 +1,11 @@
 #include "game/economy/EconomyRules.h"
 
+#include "game/CurrentGameState.h"
+#include "game/GameDataContext.h"
 #include "game/GameState.h"
 #include "game/base/BaseManager.h"
 #include "game/base/HomeBaseIndex.h"
+#include "game/economy/AllocationImbalanceCalculator.h"
 #include "game/economy/EconomyManager.h"
 #include "game/economy/Inefficiency.h"
 #include "game/economy/ResourceManager.h"
@@ -15,6 +18,7 @@
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/social-engineering/SocialEngineeringManager.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitOrder.h"
 
@@ -104,7 +108,7 @@ int EnergyAfterInefficiency(const BaseManager& rBase, int energy)
     const int mapWidth = rBase.GetTileEffects().GetWorldMap().GetWidth();
     const int distance = pHq ? TabletopDiagonalDistance(rBase.GetTile(), pHq->GetTile(), mapWidth)
                              : k_DefaultInefficiencyHqDistance;
-    const SocialRatingRegistry& rRatings = rBase.GetSocialRatings();
+    const SocialRatingRegistry& rRatings = rBase.GetSocialRatingRegistry();
     const int efficiency = rBase.GetEffectiveSocialRating(SocialRatingId_t::Efficiency);
     const int denominator = InefficiencyDenominatorForRating(rRatings, efficiency);
     const int loss = CalculateInefficiencyLoss(energy, distance, denominator);
@@ -131,6 +135,22 @@ EnergySplit_t AllocateBaseEnergy(const BaseManager& rBase, int energy)
     allocated.econ = ModifiedShare_(rEffects, StatId_t::Econ, split.econ);
     allocated.labs = ModifiedShare_(rEffects, StatId_t::Labs, split.labs);
     allocated.psych = ModifiedShare_(rEffects, StatId_t::Psych, split.psych);
+
+    // Faction pending Efficiency only — Creche must not change the slider imbalance factor.
+    const int efficiency = rBase.GetFaction().GetSocialEngineering().GetSocialRating(
+        SocialRatingId_t::Efficiency);
+    const AllocationImbalanceInputs_t imbalanceInputs{
+        AllocationImbalanceFactorForRating(rBase.GetSocialRatingRegistry(), efficiency),
+        allocation.econPercent,
+        allocation.labsPercent,
+        allocation.psychPercent,
+    };
+    const AllocationImbalanceCalculator& rCalculator =
+        *CurrentGameState().GetGameData().allocationImbalanceCalculator;
+    const AllocationImbalanceLoss_t loss = rCalculator.LossPercents(imbalanceInputs);
+    allocated.econ = rCalculator.ApplyLoss(allocated.econ, loss.econLossPercent);
+    allocated.labs = rCalculator.ApplyLoss(allocated.labs, loss.labsLossPercent);
+    allocated.psych = rCalculator.ApplyLoss(allocated.psych, loss.psychLossPercent);
     return allocated;
 }
 

@@ -13,10 +13,10 @@ namespace ac
 {
 
 BaseEffectsCache::BaseEffectsCache(const BaseManager& rBase,
-                                   const SocialRatingRegistry& rSocialRatings,
+                                   const SocialRatingRegistry& rSocialRatingRegistry,
                                    const IEffectsProvider& rProvider)
     : m_rBase(rBase)
-    , m_rSocialRatings(rSocialRatings)
+    , m_rSocialRatingRegistry(rSocialRatingRegistry)
     , m_pProvider(&rProvider)
     , m_cached(rBase)
 {
@@ -55,7 +55,7 @@ BaseEffects_t BaseEffectsCache::Build(const FactionEffects_t& rFactionEffects) c
 
     // Ratings accumulate from the local pool, and their level effects join the composed list.
     const std::vector<ActiveEffect_t> ratingEffects =
-        ResolveSocialRatingLevelEffects(CollectRatingSource(), m_rSocialRatings);
+        ResolveSocialRatingLevelEffects(CollectRatingSource(), m_rSocialRatingRegistry);
     baseEffects.effects.insert(baseEffects.effects.end(), ratingEffects.begin(),
                                ratingEffects.end());
 

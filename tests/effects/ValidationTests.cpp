@@ -238,6 +238,7 @@ static_assert(KindFor(StatId_t::CommerceRating) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::CouncilVotes) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::CommerceEnergyBonus) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::InefficiencyDenominator) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::AllocationImbalanceFactor) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::ScrapRefund) == StatKind_t::RawScaled);
 // Additive, not RawScaled: base_conquest.json's effects list supplies the whole baseline.
 static_assert(KindFor(StatId_t::LastDefenderPopLoss) == StatKind_t::Additive);

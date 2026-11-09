@@ -201,7 +201,10 @@ public:
 
     // Stockpile configs for conversion and the empty-queue fallback.
     const StockpileRegistry& GetStockpileRegistry() const { return m_rStockpileRegistry; }
-    const SocialRatingRegistry& GetSocialRatings() const { return m_rSocialRatings; }
+    const SocialRatingRegistry& GetSocialRatingRegistry() const
+    {
+        return m_rSocialRatingRegistry;
+    }
 
     // The queued item's mineral cost with CostMultiplier and any prototype surcharge; 0 for none or
     // a stockpile.
@@ -299,7 +302,7 @@ private:
     // Declared before m_pProduction: the default-item provider handed to ProductionManager
     // reads this registry while that member is being constructed.
     const StockpileRegistry& m_rStockpileRegistry;
-    const SocialRatingRegistry& m_rSocialRatings;
+    const SocialRatingRegistry& m_rSocialRatingRegistry;
     const HurryProductionCalculator& m_rHurryCalculator;
     const ScrapRefundCalculator& m_rScrapCalculator;
     const ProductionConfig_t& m_rProductionConfig;

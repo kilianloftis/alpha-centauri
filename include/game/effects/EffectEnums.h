@@ -224,6 +224,9 @@ enum class StatId_t
     // Set from the efficiency rating table.
     InefficiencyDenominator,
 
+    // Labs↔econ slider-imbalance scale from the efficiency rating table (Additive; 8…0 for −4…+4).
+    AllocationImbalanceFactor,
+
     // Scrap refund after the kind formula (RawScaled), capped by refund_ceiling_percent.
     ScrapRefund,
 
@@ -369,6 +372,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::CommerceEnergyBonus:
         case StatId_t::CommerceRating:
         case StatId_t::InefficiencyDenominator:
+        case StatId_t::AllocationImbalanceFactor:
         case StatId_t::EcoDamageContribution:
         case StatId_t::EcoDamageWorkedContribution:
         case StatId_t::EcoCleanMinerals:
@@ -470,6 +474,7 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::CommerceEnergyBonus:
         case StatId_t::CommerceRating:
         case StatId_t::InefficiencyDenominator:
+        case StatId_t::AllocationImbalanceFactor:
         case StatId_t::ScrapRefund:
         case StatId_t::LastDefenderPopLoss:
         case StatId_t::CaptureFacilitiesDestroyedMin:
@@ -628,6 +633,7 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "council_votes")           return StatId_t::CouncilVotes;
     if (rStat == "commerce_energy_bonus")   return StatId_t::CommerceEnergyBonus;
     if (rStat == "inefficiency_denominator") return StatId_t::InefficiencyDenominator;
+    if (rStat == "allocation_imbalance_factor") return StatId_t::AllocationImbalanceFactor;
     if (rStat == "scrap_refund")             return StatId_t::ScrapRefund;
     if (rStat == "last_defender_pop_loss")   return StatId_t::LastDefenderPopLoss;
     if (rStat == "capture_pop_loss")         return StatId_t::CapturePopLoss;

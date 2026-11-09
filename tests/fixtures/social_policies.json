@@ -146,6 +146,21 @@
       ]
     },
     {
+      "id": "peak_efficiency_policy",
+      "name": "Peak Efficiency Policy (+4 Efficiency rating, faction-wide)",
+      "category": "economics",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "efficiency",
+            "amount": 4
+          }
+        }
+      ]
+    },
+    {
       "id": "low_efficiency_policy",
       "name": "Low Efficiency Policy (-2 Efficiency rating, faction-wide)",
       "category": "economics",

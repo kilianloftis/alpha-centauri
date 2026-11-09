@@ -245,6 +245,15 @@
             "amount": 0,
             "op": "Add"
           }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "allocation_imbalance_factor",
+            "amount": 8,
+            "op": "Add"
+          }
         }
       ],
       "-3": [
@@ -254,6 +263,15 @@
           "parameters": {
             "stat": "inefficiency_denominator",
             "amount": 8,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "allocation_imbalance_factor",
+            "amount": 7,
             "op": "Add"
           }
         }
@@ -267,6 +285,15 @@
             "amount": 16,
             "op": "Add"
           }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "allocation_imbalance_factor",
+            "amount": 6,
+            "op": "Add"
+          }
         }
       ],
       "-1": [
@@ -276,6 +303,15 @@
           "parameters": {
             "stat": "inefficiency_denominator",
             "amount": 24,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "allocation_imbalance_factor",
+            "amount": 5,
             "op": "Add"
           }
         }
@@ -289,6 +325,15 @@
             "amount": 32,
             "op": "Add"
           }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "allocation_imbalance_factor",
+            "amount": 4,
+            "op": "Add"
+          }
         }
       ],
       "1": [
@@ -298,6 +343,15 @@
           "parameters": {
             "stat": "inefficiency_denominator",
             "amount": 40,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "allocation_imbalance_factor",
+            "amount": 3,
             "op": "Add"
           }
         }
@@ -311,6 +365,15 @@
             "amount": 48,
             "op": "Add"
           }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "allocation_imbalance_factor",
+            "amount": 2,
+            "op": "Add"
+          }
         }
       ],
       "3": [
@@ -322,6 +385,15 @@
             "amount": 56,
             "op": "Add"
           }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "allocation_imbalance_factor",
+            "amount": 1,
+            "op": "Add"
+          }
         }
       ],
       "4": [
@@ -331,6 +403,15 @@
           "parameters": {
             "stat": "inefficiency_denominator",
             "amount": 64,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "allocation_imbalance_factor",
+            "amount": 0,
             "op": "Add"
           }
         }

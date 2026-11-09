@@ -10,7 +10,7 @@ BaseRuleset_t MakeBaseRuleset(const GameDataContext& rData)
     return BaseRuleset_t{
         .rBuildings = *rData.buildingRegistry,
         .rStockpiles = *rData.stockpileRegistry,
-        .rSocialRatings = *rData.socialRatingRegistry,
+        .rSocialRatingRegistry = *rData.socialRatingRegistry,
         .rPopTypes = *rData.popTypeRegistry,
         .rPopTypeAvailability = *rData.popTypeAvailabilityCalculator,
         .rGrowth = *rData.growthConfig,

@@ -23,7 +23,7 @@ struct BaseRuleset_t
 {
     const BuildingRegistry& rBuildings;
     const StockpileRegistry& rStockpiles;
-    const SocialRatingRegistry& rSocialRatings;
+    const SocialRatingRegistry& rSocialRatingRegistry;
     const PopTypeRegistry& rPopTypes;
     const PopTypeAvailabilityCalculator& rPopTypeAvailability;
     const GrowthConfig_t& rGrowth;

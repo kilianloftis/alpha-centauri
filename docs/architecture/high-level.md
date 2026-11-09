@@ -427,7 +427,7 @@ One directory under `include/game/` and `src/game/` per domain. The filename suf
 - `diplomacy/`: statuses, the ledger, friction/blemishes clamp, standing writers, proposals and trade, transitions, permissions, first contact, infiltration
 - `display/`: presentation data the ruleset loads — occupant art, base sprite sizes, overlay channels
 - `ecology/`: eco-damage and fungal blooms
-- `economy/`: base resource production, worker assignment, inefficiency, mineral support, energy allocation, commerce
+- `economy/`: base resource production, worker assignment, inefficiency, mineral support, energy allocation (`energy_allocation.lua` loss formulas), commerce
 - `effects/`: the effects system — effect and triggered-effect definitions, collection, resolution and dispatch, tile effects, interaction grids
 - `faction/`: the faction aggregate, its definition, identity, flavour, AI profile, effects pool
 - `map/`: the world map, tiles, territory, spatial indexes, occupants, rivers

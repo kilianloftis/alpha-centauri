@@ -62,6 +62,7 @@ inline ac::GameDataPaths FixtureDataPaths()
     paths.popGrowth = FixturePath("pop_growth.json");
     paths.production = FixturePath("production.json");
     paths.commerce = FixturePath("commerce.json");
+    paths.energyAllocationFormula = FixturePath("energy_allocation.lua");
     paths.diplomacy = FixturePath("diplomacy.json");
     paths.techCost = FixturePath("tech_cost.lua");
     paths.worldGenPresets = FixturePath("worldGen/presets.json");

@@ -19,7 +19,7 @@ class BaseEffectsCache
 {
 public:
     // rBase owns this cache. The provider is rebindable, since a base changes owner.
-    BaseEffectsCache(const BaseManager& rBase, const SocialRatingRegistry& rSocialRatings,
+    BaseEffectsCache(const BaseManager& rBase, const SocialRatingRegistry& rSocialRatingRegistry,
                      const IEffectsProvider& rProvider);
     ~BaseEffectsCache() = default;
 
@@ -48,7 +48,7 @@ private:
     BaseEffects_t CollectBaseLocal_(const FactionEffects_t& rFactionEffects) const;
 
     const BaseManager& m_rBase;
-    const SocialRatingRegistry& m_rSocialRatings;
+    const SocialRatingRegistry& m_rSocialRatingRegistry;
     const IEffectsProvider* m_pProvider;
 
     mutable BaseEffects_t m_cached;

@@ -9,6 +9,7 @@ graph TB
         CommerceCache[CommerceCache]
         CommerceRules[CommerceRules<br/>pairing, sanctions, rates]
         CommerceCalculator[CommerceCalculator<br/>pair formula]
+        AllocationImbalance[AllocationImbalanceCalculator<br/>econ/labs/psych loss formulas]
     end
 
     subgraph "Base Resource Flow"
@@ -23,6 +24,7 @@ graph TB
     CommerceCache -->|"injected into"| ResourceManager
     CommerceCache --> CommerceRules
     CommerceRules --> CommerceCalculator
+    ResourceManager -->|"AllocateBaseEnergy"| AllocationImbalance
 
     Faction --> BaseManager
     BaseManager --> ResourceManager
@@ -35,6 +37,7 @@ graph TB
     style CommerceCache fill:#bfb,stroke:#333,stroke-width:3px
     style CommerceRules fill:#bfb,stroke:#333,stroke-width:2px
     style CommerceCalculator fill:#bfb,stroke:#333,stroke-width:2px
+    style AllocationImbalance fill:#bfb,stroke:#333,stroke-width:2px
     style ResourceManager fill:#bfb,stroke:#333,stroke-width:2px
     style EnergyAllocation fill:#bbf,stroke:#333,stroke-width:2px
     style TileResources fill:#bbf,stroke:#333,stroke-width:2px
@@ -70,9 +73,24 @@ graph TB
   - Add per-base **commerce** energy (from the injected `CommerceCache`) to that
     pre-inefficiency total during `ProduceResources` / production getters.
   - Bank what `AllocateBaseEnergy` returns: inefficiency (`EnergyAfterInefficiency`), the
-    faction's split (`SplitEnergy`), then the base's Econ / Labs / Psych modifiers. All three
-    are in `EconomyRules`.
+    faction's split (`SplitEnergy`), the base's Econ / Labs / Psych modifiers, then the
+    slider-imbalance penalty (configured econ/labs/psych loss formulas). All of that is in
+    `EconomyRules`.
 - **`GetEnergyProduction()`**: pre-commerce raw energy only (used for commerce pairing ranks).
+
+### Allocation imbalance
+- **Purpose**: Configurable slider tax after facility modifiers. Shipping SMAC cuts labs/econ
+  when those shares diverge and Efficiency is below +4; psych loss is a formula hook (0).
+- **Factor**: Efficiency SE level emits `allocation_imbalance_factor` (8…0 for −4…+4), looked
+  up like `inefficiency_denominator`. Faction pending Efficiency only — Creche does not apply.
+- **Config**: `config/energy_allocation.lua` owns divisor / scale / caps and names
+  `econ_loss_formula` / `labs_loss_formula` / `psych_loss_formula` (each one int percent).
+  Engine injects slider percents and `imbalance_factor`. Backend allocation is always
+  0–100 percents; UI may snap to tenths later.
+- **Calculator**: `AllocationImbalanceCalculator` evals the three formulas, then applies
+  `(value × (100 − loss) + 50) / 100` per bank (nearest percent).
+- **Order**: after facility modifiers inside `AllocateBaseEnergy`. Stockpile
+  `AddAllocatedEnergy` skips modifiers and this penalty.
 
 ### CommerceCache
 - **Purpose**: Faction-owned façade for commerce queries; injected into each base

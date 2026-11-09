@@ -770,6 +770,17 @@ Confirmed in vanilla (`terranx.exe` SHA1 above). Thinker's `social_upheaval` /
   `0x4EBFE7`). They stack.
 - Network Backbone (`0x9A6568`): +1 lab per Network Node in the game, plus
   commerce or (aliens) energy-grid (`0x4EC09C`–`0x4EC16B`).
+- Slider imbalance penalty (`0x4EC16D`–`0x4EC32F`): after facilities/SPs, scales
+  `labs_total` and `economy_total` only (psych untouched). Sliders are tenths;
+  econ = `10 − labs − psych`. Imbalance = `|labs − econ| / 2` (percents:
+  `|labs% − econ%| / 20`). Factor = `4 − clamp(SE_effic_pending, −4, 4)` (0 at
+  Efficiency ≥ 4). Penalty = imbalance × factor × 2. The smaller of labs/econ
+  takes `clamp(2 × penalty, 0, 80)%`; the larger takes `clamp(penalty, 0, 40)%`
+  (on a tie, labs takes the double cut). Applied as
+  `(value × (100 − pct) + 50) / 100`. Thinker's `mod_base_energy` matches.
+  Children's Creche does not enter this path (faction pending Efficiency only).
+  Our port: SMAC labs/econ (psych 0) loss bodies and divisor/scale/caps in
+  `energy_allocation.lua`; apply uses hardcoded `+50` nearest-percent.
 
 Punishment Sphere is not here; it halves in `base_research`.
 

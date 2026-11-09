@@ -106,7 +106,7 @@ BaseManager& MakeBaseWith_(FactionFixture& rFixtures, Faction& rFaction,
     const BaseRuleset_t rules{
         .rBuildings = rBuildings,
         .rStockpiles = rStockpiles,
-        .rSocialRatings = fixture.rSocialRatings,
+        .rSocialRatingRegistry = fixture.rSocialRatingRegistry,
         .rPopTypes = fixture.rPopTypes,
         .rPopTypeAvailability = fixture.rPopTypeAvailability,
         .rGrowth = fixture.rGrowth,
@@ -415,7 +415,8 @@ TEST_CASE("Converted energy does not re-apply flat econ modifiers",
 
     FactionFixture fixtures;
     Faction& faction = fixtures.MakeFaction();
-    faction.GetEconomy().SetEnergyAllocation({100, 0, 0});
+    // Balanced labs/econ so slider-imbalance does not also scale the flat +7 under test.
+    faction.GetEconomy().SetEnergyAllocation({50, 50, 0});
     BaseManager& base = MakeBaseWith_(fixtures, faction, buildings, stockpiles);
 
     LeaveMineralBank_(base, 10);

@@ -124,7 +124,7 @@ BaseManager::BaseManager(
     , m_homeUnits(*this)
     , m_rBuildingRegistry(rRules.rBuildings)
     , m_rStockpileRegistry(rRules.rStockpiles)
-    , m_rSocialRatings(rRules.rSocialRatings)
+    , m_rSocialRatingRegistry(rRules.rSocialRatingRegistry)
     , m_rHurryCalculator(rRules.rHurry)
     , m_rScrapCalculator(rRules.rScrap)
     , m_rProductionConfig(rRules.rProduction)
@@ -135,7 +135,7 @@ BaseManager::BaseManager(
     , m_pProduction(std::make_unique<ProductionManager>(
           rRules.rProduction, [this]() { return FallbackProduction_(); }, *this))
     , m_name(std::move(name))
-    , m_effects(*this, m_rSocialRatings, rFaction)
+    , m_effects(*this, m_rSocialRatingRegistry, rFaction)
     , m_ecology(*this, rRules.rEcoDamage)
     , m_bMayOccupyWater(tile.IsWater())
 {

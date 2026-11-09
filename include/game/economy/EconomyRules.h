@@ -25,7 +25,8 @@ int EnergyAfterInefficiency(const BaseManager& rBase, int energy);
 // Labs and psych take their floored shares and econ the remainder, so the split conserves energy.
 EnergySplit_t SplitEnergy(const EnergyAllocation_t& rAllocation, int energy);
 
-// Inefficiency, the faction's split, then the base's Econ / Labs / Psych modifiers.
+// Inefficiency, the faction's split, base Econ / Labs / Psych modifiers, then the configured
+// slider-imbalance penalty (faction Efficiency factor only; shipping taxes labs/econ).
 EnergySplit_t AllocateBaseEnergy(const BaseManager& rBase, int energy);
 
 // Worker pops' tiles, supply crawlers homed here, and the base tile.
