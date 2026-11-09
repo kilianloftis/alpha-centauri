@@ -1,15 +1,14 @@
 #include "game/movement/EvacuateTerritoryMutations.h"
 
+#include "game/GameState.h"
 #include "game/faction/Faction.h"
 #include "game/units/UnitManager.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
 #include "game/movement/EvacuateTerritoryRules.h"
-#include "game/movement/MovementRules.h"
 #include "game/units/Unit.h"
 
-#include <unordered_map>
 #include <vector>
 
 namespace ac
@@ -18,106 +17,43 @@ namespace ac
 namespace
 {
 
-using FreeByOrigin_t = std::unordered_map<const Tile*, std::vector<Unit*>>;
-
-// Clears orders on every on-host unit. Groups non-embarked units by their origin tile.
-FreeByOrigin_t ClearOrdersAndGroupFreeByOrigin_(const std::vector<Unit*>& rOnHost)
+void AddResult_(EvacuateTerritoryResult_t& rTotal, const EvacuateTerritoryResult_t& rOne)
 {
-    FreeByOrigin_t freeByOrigin;
-    for (Unit* pUnit : rOnHost)
-    {
-        pUnit->ClearOrder();
-        if (!pUnit->Transport().IsEmbarked())
-        {
-            freeByOrigin[&pUnit->GetTile()].push_back(pUnit);
-        }
-    }
-    return freeByOrigin;
+    rTotal.unitsMoved += rOne.unitsMoved;
+    rTotal.unitsLeftInPlace += rOne.unitsLeftInPlace;
 }
 
-bool TryMoveUnitTo_(Unit& rUnit, const Tile& rDest, WorldMap& rWorldMap)
-{
-    if (!CanHoldTileWithoutCarrier(rUnit, rDest))
-    {
-        return false;
-    }
-    rWorldMap.GetUnitPositions().MoveUnit(rUnit, rDest);
-    return true;
-}
-
-void RelocateUnitsIndividually_(std::vector<Unit*>& rUnits, WorldMap& rWorldMap,
-                                EvacuateTerritoryResult_t& rResult)
-{
-    for (Unit* pUnit : rUnits)
-    {
-        const Tile* pDest = FindNearestOwnTerritoryTile(*pUnit);
-        if (!pDest)
-        {
-            ++rResult.unitsLeftInPlace;
-            continue;
-        }
-        rWorldMap.GetUnitPositions().MoveUnit(*pUnit, *pDest);
-        ++rResult.unitsMoved;
-    }
-}
-
-// Moves every pending unit that can hold and place on rDest. Returns those that could not.
-std::vector<Unit*> MoveGroupToDestination_(std::vector<Unit*>& rPending, const Tile& rDest,
-                                           WorldMap& rWorldMap,
-                                           EvacuateTerritoryResult_t& rResult)
-{
-    std::vector<Unit*> remaining;
-    remaining.reserve(rPending.size());
-    for (Unit* pUnit : rPending)
-    {
-        if (TryMoveUnitTo_(*pUnit, rDest, rWorldMap))
-        {
-            ++rResult.unitsMoved;
-        }
-        else
-        {
-            remaining.push_back(pUnit);
-        }
-    }
-    return remaining;
-}
-
-void EvacuateOriginGroup_(std::vector<Unit*> pending, WorldMap& rWorldMap,
-                          EvacuateTerritoryResult_t& rResult)
-{
-    while (!pending.empty())
-    {
-        const Tile* pDest = FindNearestOwnTerritoryTile(*pending.front());
-        if (!pDest)
-        {
-            rResult.unitsLeftInPlace += static_cast<int>(pending.size());
-            return;
-        }
-
-        std::vector<Unit*> remaining =
-            MoveGroupToDestination_(pending, *pDest, rWorldMap, rResult);
-        if (remaining.size() == pending.size())
-        {
-            RelocateUnitsIndividually_(remaining, rWorldMap, rResult);
-            return;
-        }
-        pending = std::move(remaining);
-    }
-}
-
-EvacuateTerritoryResult_t EvacuateUnits_(const std::vector<Unit*>& rUnits, WorldMap& rWorldMap)
+EvacuateTerritoryResult_t EvacuateEach_(const std::vector<Unit*>& rUnits, WorldMap& rWorldMap)
 {
     EvacuateTerritoryResult_t result;
-    FreeByOrigin_t freeByOrigin = ClearOrdersAndGroupFreeByOrigin_(rUnits);
-    for (auto& [pOrigin, units] : freeByOrigin)
+    for (Unit* pUnit : rUnits)
     {
-        (void)pOrigin;
-        EvacuateOriginGroup_(std::move(units), rWorldMap, result);
+        AddResult_(result, EvacuateUnit(*pUnit, rWorldMap));
     }
     return result;
 }
 
 } // namespace
+
+EvacuateTerritoryResult_t EvacuateUnit(Unit& rUnit, WorldMap& rWorldMap)
+{
+    EvacuateTerritoryResult_t result;
+    rUnit.ClearOrder();
+    // Embarked cargo clears orders here; the carrier's MoveUnit tows it.
+    if (rUnit.Transport().IsEmbarked())
+    {
+        return result;
+    }
+    const Tile* pDest = FindNearestOwnTerritoryTile(rUnit);
+    if (!pDest)
+    {
+        result.unitsLeftInPlace = 1;
+        return result;
+    }
+    rWorldMap.GetUnitPositions().MoveUnit(rUnit, *pDest);
+    result.unitsMoved = 1;
+    return result;
+}
 
 EvacuateTerritoryResult_t EvacuateUnitsFromTerritory(Faction& rGuest,
                                                      FactionId_t hostTerritoryOwner,
@@ -131,7 +67,7 @@ EvacuateTerritoryResult_t EvacuateUnitsFromTerritory(Faction& rGuest,
             onHost.push_back(&rUnit);
         }
     }
-    return EvacuateUnits_(onHost, rWorldMap);
+    return EvacuateEach_(onHost, rWorldMap);
 }
 
 EvacuateTerritoryResult_t EvacuateUnitsSharingWith(Faction& rGuest, const Faction& rHost,
@@ -145,7 +81,36 @@ EvacuateTerritoryResult_t EvacuateUnitsSharingWith(Faction& rGuest, const Factio
             sharing.push_back(&rUnit);
         }
     }
-    return EvacuateUnits_(sharing, rWorldMap);
+    return EvacuateEach_(sharing, rWorldMap);
+}
+
+EvacuateTerritoryResult_t ApplyEvacuateOnTerritoryChange(GameState& rGameState)
+{
+    if (!EvacuateUnitsOnTerritoryChange())
+    {
+        return {};
+    }
+    std::vector<Unit*> illegal;
+    for (Faction& rFaction : rGameState.Factions())
+    {
+        for (Unit& rUnit : rFaction.GetUnitManager().Units())
+        {
+            if (MustVacateCurrentTerritory(rUnit))
+            {
+                illegal.push_back(&rUnit);
+            }
+        }
+    }
+    return EvacuateEach_(illegal, rGameState.GetWorldMap());
+}
+
+EvacuateTerritoryResult_t ApplyEvacuateOnTerritoryChange(Unit& rUnit, WorldMap& rWorldMap)
+{
+    if (!EvacuateUnitsOnTerritoryChange() || !MustVacateCurrentTerritory(rUnit))
+    {
+        return {};
+    }
+    return EvacuateUnit(rUnit, rWorldMap);
 }
 
 } // namespace ac

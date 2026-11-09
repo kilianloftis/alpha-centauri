@@ -1,6 +1,8 @@
 #include "GameFixtures.h"
 
 #include "game/base/BaseManager.h"
+#include "game/diplomacy/DiplomacyLedger.h"
+#include "game/diplomacy/DiplomaticStatus.h"
 #include "game/map/MapUtils.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
@@ -255,4 +257,65 @@ TEST_CASE("A guest shares a tile with the host in its base or beside its unit", 
     CHECK_FALSE(SharesTileWith(onTerritory, host));
     CHECK(MustLeaveTerritory(onTerritory, host.GetFactionId(), fixture.map.GetTerritory()));
     CHECK_FALSE(MustLeaveTerritory(besideUnit, host.GetFactionId(), fixture.map.GetTerritory()));
+}
+
+TEST_CASE("MustVacateCurrentTerritory follows MayEnterTerritoryOf", "[evacuate]")
+{
+    FactionFixture fixture;
+    actest::FillLand(fixture.map);
+    Faction& guest = fixture.MakeFaction();
+    Faction& host = fixture.MakeFaction();
+    fixture.MakeFactionBase(guest, 5, 5);
+    fixture.MakeFactionBase(host, 11, 11);
+
+    DiplomacyLedger& rLedger = fixture.state.GetDiplomacyLedger();
+    rLedger.SetStatus(guest.GetFactionId(), host.GetFactionId(), DiplomaticStatus_t::Treaty);
+
+    Unit& covert = fixture.MakeUnit(guest, 10, 10, {"test_chassis", "covert"});
+    Unit& open = fixture.MakeUnit(guest, 9, 9, {"test_chassis"});
+    CHECK_FALSE(MustVacateCurrentTerritory(covert));
+    CHECK(MustVacateCurrentTerritory(open));
+
+    rLedger.SetStatus(guest.GetFactionId(), host.GetFactionId(), DiplomaticStatus_t::Pact);
+    CHECK_FALSE(MustVacateCurrentTerritory(open));
+}
+
+TEST_CASE("EvacuateUnit relocates one illegal guest", "[evacuate]")
+{
+    FactionFixture fixture;
+    actest::FillLand(fixture.map);
+    Faction& guest = fixture.MakeFaction();
+    Faction& host = fixture.MakeFaction();
+    fixture.MakeFactionBase(guest, 5, 5);
+    fixture.MakeFactionBase(host, 11, 11);
+
+    fixture.state.GetDiplomacyLedger().SetStatus(
+        guest.GetFactionId(), host.GetFactionId(), DiplomaticStatus_t::Treaty);
+
+    Unit& unit = fixture.MakeUnit(guest, 10, 10, {"test_chassis"});
+    unit.SetOrder(HoldOrder_t{});
+    const EvacuateTerritoryResult_t result = EvacuateUnit(unit, fixture.map);
+    CHECK(result.unitsMoved == 1);
+    CHECK_FALSE(unit.GetOrder().has_value());
+    CHECK(fixture.map.GetTerritory().GetOwner(unit.GetTile()) == guest.GetFactionId());
+}
+
+TEST_CASE("ApplyEvacuateOnTerritoryChange is a no-op while the switch is off", "[evacuate]")
+{
+    FactionFixture fixture;
+    actest::FillLand(fixture.map);
+    Faction& guest = fixture.MakeFaction();
+    Faction& host = fixture.MakeFaction();
+    fixture.MakeFactionBase(guest, 5, 5);
+    fixture.MakeFactionBase(host, 11, 11);
+    fixture.state.GetDiplomacyLedger().SetStatus(
+        guest.GetFactionId(), host.GetFactionId(), DiplomaticStatus_t::Treaty);
+
+    Unit& unit = fixture.MakeUnit(guest, 10, 10, {"test_chassis"});
+    REQUIRE(MustVacateCurrentTerritory(unit));
+    REQUIRE_FALSE(EvacuateUnitsOnTerritoryChange());
+
+    CHECK(ApplyEvacuateOnTerritoryChange(unit, fixture.map).unitsMoved == 0);
+    CHECK(ApplyEvacuateOnTerritoryChange(fixture.state).unitsMoved == 0);
+    CHECK(&unit.GetTile() == &fixture.At(10, 10));
 }

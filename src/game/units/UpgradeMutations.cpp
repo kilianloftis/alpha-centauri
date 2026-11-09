@@ -5,6 +5,7 @@
 #include "game/units/Military.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
+#include "game/units/UnitManager.h"
 #include "game/units/UpgradeRules.h"
 
 #include <optional>
@@ -57,6 +58,7 @@ bool TryUpgradeUnit(Unit& rUnit, const UnitDesign& rNew)
         rUnit.SetXp(rUnit.GetXp() + moraleDelta);
     }
     rFaction.GetMilitary().RecordBuiltComponents(rNew);
+    rFaction.GetUnitManager().OnUnitDesignRebound.Emit(rUnit);
     return true;
 }
 

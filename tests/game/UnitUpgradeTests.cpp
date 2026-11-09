@@ -3,9 +3,13 @@
 
 #include "game/base/BaseManager.h"
 #include "game/buildings/BuildingManager.h"
+#include "game/diplomacy/DiplomacyLedger.h"
+#include "game/diplomacy/DiplomaticStatus.h"
 #include "game/economy/EconomyManager.h"
 #include "game/faction/Faction.h"
+#include "game/map/TerritoryMap.h"
 #include "game/map/WorldMap.h"
+#include "game/movement/EvacuateTerritoryRules.h"
 #include "game/production/ProductionRules.h"
 #include "game/units/Military.h"
 #include "game/units/Unit.h"
@@ -15,6 +19,7 @@
 #include "game/units/UpgradeCostCalculator.h"
 #include "game/units/UpgradeMutations.h"
 #include "game/units/UpgradeRules.h"
+#include "game/visibility/VisibilityRules.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -240,4 +245,85 @@ TEST_CASE("High_Morale presence adjusts XP on upgrade", "[unit][upgrade]")
 
     REQUIRE(TryUpgradeUnit(rUnit, rNew));
     CHECK(rUnit.GetXp() == xpBefore + 1);
+}
+
+TEST_CASE("Vision upgrade establishes first contact", "[unit][upgrade][first-contact]")
+{
+    FactionFixture fixture;
+    FillLand(fixture.map);
+    Faction& rScout = fixture.MakeFaction();
+    Faction& rOther = fixture.MakeFaction();
+    rScout.GetEconomy().AddEnergy(500);
+
+    const UnitDesign& rNearSight = RegisterDesign_(
+        fixture, rScout, {"test_chassis", "test_weapon", "test_armor"});
+    const UnitDesign& rFarSight = RegisterDesign_(
+        fixture, rScout, {"test_chassis", "test_weapon", "test_armor", "extra_vision"});
+    Unit& rUnit = SpawnOnDesign_(fixture, rScout, rNearSight, 8, 8);
+    fixture.MakeUnit(rOther, 14, 14, {"test_chassis"});
+
+    DiplomacyLedger& rLedger = fixture.state.GetDiplomacyLedger();
+    rLedger.SetKnown(rScout.GetFactionId(), rOther.GetFactionId(), false);
+    REQUIRE_FALSE(rLedger.AreKnown(rScout.GetFactionId(), rOther.GetFactionId()));
+    REQUIRE_FALSE(rScout.GetVisibleMap().IsVisible(fixture.At(14, 14)));
+
+    REQUIRE(TryUpgradeUnit(rUnit, rFarSight));
+    CHECK(rScout.GetVisibleMap().IsVisible(fixture.At(14, 14)));
+    CHECK(rLedger.AreKnown(rScout.GetFactionId(), rOther.GetFactionId()));
+}
+
+TEST_CASE("Dropping Covert on upgrade meets a watching faction",
+          "[unit][upgrade][first-contact][covert]")
+{
+    FactionFixture fixture;
+    FillLand(fixture.map);
+    Faction& rWatcher = fixture.MakeFaction();
+    Faction& rGuest = fixture.MakeFaction();
+    rGuest.GetEconomy().AddEnergy(500);
+
+    fixture.MakeFactionBase(rWatcher, 8, 8);
+    const UnitDesign& rCovert = RegisterDesign_(
+        fixture, rGuest, {"test_chassis", "test_weapon", "test_armor", "covert"});
+    const UnitDesign& rOpen = RegisterDesign_(
+        fixture, rGuest, {"test_chassis", "test_weapon", "test_armor"});
+    Unit& rUnit = SpawnOnDesign_(fixture, rGuest, rCovert, 10, 10);
+
+    DiplomacyLedger& rLedger = fixture.state.GetDiplomacyLedger();
+    rLedger.SetKnown(rWatcher.GetFactionId(), rGuest.GetFactionId(), false);
+    REQUIRE(rWatcher.GetVisibleMap().IsVisible(rUnit.GetTile()));
+    REQUIRE_FALSE(IsOwnerKnownTo(rWatcher.GetFactionId(), rUnit));
+    REQUIRE_FALSE(rLedger.AreKnown(rWatcher.GetFactionId(), rGuest.GetFactionId()));
+
+    REQUIRE(TryUpgradeUnit(rUnit, rOpen));
+    CHECK(IsOwnerKnownTo(rWatcher.GetFactionId(), rUnit));
+    CHECK(rLedger.AreKnown(rWatcher.GetFactionId(), rGuest.GetFactionId()));
+}
+
+TEST_CASE("Dropping Covert on foreign territory stays while EvacuateUnitsOnTerritoryChange is off",
+          "[unit][upgrade][evacuate][covert]")
+{
+    FactionFixture fixture;
+    FillLand(fixture.map);
+    Faction& rGuest = fixture.MakeFaction();
+    Faction& rHost = fixture.MakeFaction();
+    rGuest.GetEconomy().AddEnergy(500);
+
+    fixture.MakeFactionBase(rGuest, 5, 5);
+    fixture.MakeFactionBase(rHost, 11, 11);
+    REQUIRE(fixture.map.GetTerritory().GetOwner(10, 10) == rHost.GetFactionId());
+
+    DiplomacyLedger& rLedger = fixture.state.GetDiplomacyLedger();
+    rLedger.SetStatus(rGuest.GetFactionId(), rHost.GetFactionId(), DiplomaticStatus_t::Treaty);
+
+    const UnitDesign& rCovert = RegisterDesign_(
+        fixture, rGuest, {"test_chassis", "test_weapon", "test_armor", "covert"});
+    const UnitDesign& rOpen = RegisterDesign_(
+        fixture, rGuest, {"test_chassis", "test_weapon", "test_armor"});
+    Unit& rUnit = SpawnOnDesign_(fixture, rGuest, rCovert, 10, 10);
+    REQUIRE_FALSE(EvacuateUnitsOnTerritoryChange());
+    REQUIRE(MustVacateCurrentTerritory(rUnit) == false);
+    REQUIRE(TryUpgradeUnit(rUnit, rOpen));
+    // Identity is known and the tile is illegal, but shipping leaves the unit in place.
+    CHECK(MustVacateCurrentTerritory(rUnit));
+    CHECK(&rUnit.GetTile() == &fixture.At(10, 10));
 }

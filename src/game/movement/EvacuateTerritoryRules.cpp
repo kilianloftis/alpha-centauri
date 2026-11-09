@@ -122,6 +122,20 @@ bool MustLeaveTerritory(const Unit& rUnit, FactionId_t hostTerritoryOwner,
            && IsOwnerKnownTo(hostTerritoryOwner, rUnit);
 }
 
+bool MustVacateCurrentTerritory(const Unit& rUnit)
+{
+    const FactionId_t territoryOwner =
+        CurrentGameState().GetWorldMap().GetTerritory().GetOwner(rUnit.GetTile());
+    return !MayEnterTerritoryOf(rUnit, territoryOwner);
+}
+
+bool EvacuateUnitsOnTerritoryChange()
+{
+    // Shipping matches SMAC: reset_territory does not withdraw units; pact_withdraw is
+    // diplomacy-only (terranx-map / deviations EvacuateUnitsOnTerritoryChange).
+    return false;
+}
+
 bool SharesTileWith(const Unit& rUnit, const Faction& rHost)
 {
     const GameState& rGame = CurrentGameState();

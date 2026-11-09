@@ -45,6 +45,7 @@
 #include "game/atrocities/AtrocityLedger.h"
 #include "game/diplomacy/FirstContactResolver.h"
 #include "game/ecology/EcologyLedger.h"
+#include "game/movement/EvacuateTerritoryMutations.h"
 #include "game/movement/MoveCostRules.h"
 #include "game/movement/MovementConstants.h"
 #include "game/movement/StepEvaluator.h"
@@ -399,12 +400,25 @@ void GameState::ConsiderAllObservers_()
     }
 }
 
+void GameState::RefreshUnitSession_(Unit& rUnit)
+{
+    rUnit.GetFaction().RebuildVisibility();
+    // Stationary factions whose vision already covers the unit's tile must also meet.
+    m_pFirstContact->ConsiderUnit(rUnit);
+}
+
 // Visibility stays on Faction; the position index owns position only.
 void GameState::OnUnitMoved_(Unit& rMoved)
 {
-    rMoved.GetFaction().RebuildVisibility();
-    // Stationary factions whose vision already covers the new tile must also meet.
-    m_pFirstContact->ConsiderUnit(rMoved);
+    RefreshUnitSession_(rMoved);
+}
+
+void GameState::OnUnitDesignRebound_(Unit& rUnit)
+{
+    RefreshUnitSession_(rUnit);
+    // Same switch as territory redraw: Covert reveal relocates only when
+    // EvacuateUnitsOnTerritoryChange is on.
+    ApplyEvacuateOnTerritoryChange(rUnit, GetWorldMap());
 }
 
 void GameState::OnImprovementVisited(Unit& rVisitor)
@@ -467,6 +481,8 @@ void GameState::WireUnitObservers_(UnitManager& rUnits)
         // A transfer is not a birth, but the unit may still be seen by a faction it has not met.
         m_pFirstContact->ConsiderUnit(rAdopted);
     });
+    rUnits.OnUnitDesignRebound.Connect(
+        std::bind_front(&GameState::OnUnitDesignRebound_, this));
 }
 
 void GameState::WireBaseObservers_(Faction& rFaction)
@@ -821,6 +837,7 @@ void GameState::RebuildTerritory()
         }
     }
     m_worldMap->GetTerritory().Rebuild(*m_worldMap, bases);
+    ApplyEvacuateOnTerritoryChange(*this);
 }
 
 void GameState::ReapRazedBases()

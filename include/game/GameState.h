@@ -216,7 +216,10 @@ private:
     void WireBaseObservers_(Faction& rFaction);
     void WireBaseSession_(BaseManager& rBase);
     void ConsiderAllObservers_();
+    // Rebuild the unit's faction vision and run first-contact for the unit (move and design rebind).
+    void RefreshUnitSession_(Unit& rUnit);
     void OnUnitMoved_(Unit& rMoved);
+    void OnUnitDesignRebound_(Unit& rUnit);
 
     int m_missionYear;
     GameSettings& m_rSettings;

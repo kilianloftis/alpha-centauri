@@ -336,6 +336,23 @@
     ]
   },
   {
+    "id": "extra_vision",
+    "name": "Extra Vision",
+    "type": "ability",
+    "mineral_cost": 0,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "vision",
+          "amount": 8,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
     "id": "test_weapon",
     "name": "Test Weapon",
     "unit_name": "Laser",

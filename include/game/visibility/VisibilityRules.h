@@ -12,8 +12,8 @@ class Unit;
 // must be visible (or explored, for VisibleInFog) and every concealment detected.
 bool IsUnitVisibleTo(const Faction& rObserver, const Unit& rSubject);
 
-// Whether observer knows which faction owns rSubject: its own units, and any unit without Covert.
-// TODO: detection — a covert unit's owner becomes known to an observer that detects it.
+// Whether observer knows which faction owns rSubject: own units, and any unit without Covert.
+// Covert is live; design rebind / move refresh first contact when identity or vision changes.
 bool IsOwnerKnownTo(FactionId_t observer, const Unit& rSubject);
 
 } // namespace ac

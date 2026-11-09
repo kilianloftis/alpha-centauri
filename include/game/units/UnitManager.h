@@ -94,6 +94,8 @@ public:
     Signal<Unit&> OnUnitReleased;
     // After a unit joins from another faction. Not a birth, so not OnUnitCreated.
     Signal<Unit&> OnUnitAdopted;
+    // After the unit's design is rebound (upgrade). Vision, Covert, and other live flags may change.
+    Signal<Unit&> OnUnitDesignRebound;
 
 private:
     using OwnedUnits_t = std::vector<std::unique_ptr<Unit>>;

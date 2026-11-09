@@ -152,7 +152,9 @@ the map's `UnitPositionIndex`.
     them. The map draws the bombarded units while playback is up, then stops.
   - Seeing a unit is not knowing whose it is. `IsOwnerKnownTo` (`VisibilityRules.h`) is false
     for another faction's unit with the `Covert` rule flag, so the first-contact sweep skips
-    covert units, and diplomacy treats acts by or against them as unattributed. See
+    covert units, and diplomacy treats acts by or against them as unattributed. Move and
+    design rebind both call `GameState::RefreshUnitSession_` (rebuild vision + `ConsiderUnit`)
+    so Covert loss or a vision gain re-runs contact. See
     [diplomacy-system.md](diplomacy-system.md#hostile-acts).
 
 - The **seed** drives every per-faction random choice (base names, the starting research
@@ -231,8 +233,11 @@ Caller contract: the faction must have been constructed against the session's `W
   from components, plus SMAC weapon / armor floors — not `plan`). `UpgradeCostCalculator` prices one
   unit via `unit_upgrade.lua` (energy credits from mineral inputs × resolved
   `UpgradeCostScale`). `Faction::QuoteUpgradeUnit` / `UpgradeUnit` and `TryUpgradeUnit`
-  spend energy and `Unit::RebindDesign`. Stock `upgrade_class` tags cover chassis, combat
-  weapons (`offense`), each special role, and `Bombard` (`artillery`) — separate from `plan`.
+  spend energy and `Unit::RebindDesign`, then emit `UnitManager::OnUnitDesignRebound` so
+  `GameState` refreshes visibility / first contact (and, when
+  `EvacuateUnitsOnTerritoryChange` is on, relocates an illegal guest). Stock `upgrade_class`
+  tags cover chassis, combat weapons (`offense`), each special role, and `Bombard`
+  (`artillery`) — separate from `plan`.
 - **Prototype ledger**: `RecordBuiltComponents` marks every filled component of a design as
   fielded; `UnitManager::CreateUnit` calls it for *every* unit the faction gains, so starting
   units, produced units and conquest spawns all share one ledger. `IsPrototype(faction, design)`

@@ -44,6 +44,26 @@ absent.
 
 ## TODO
 
+### Evacuate on territory change / Covert reveal `[Ours]`
+
+- **Original:** `reset_territory` (`0x523DD0`) redraws ownership only; it does not relocate
+  units. Forced withdraw is `pact_withdraw` (`0x53C370`), called only from `pact_ends` when a
+  Pact ends ("Diplomatic evacuate" / pact paths in terranx-map). Founding or capture that
+  expands borders leaves foreign units in place. Covert identity is not a separate reveal
+  evacuate path in the binary.
+- **Ours (shipping):** same as original for redraw and Covert loss: no relocate.
+  `EvacuateUnitsOnTerritoryChange()` returns false. Diplomatic status loss still uses
+  `EvacuateUnitsFromTerritory` / `EvacuateUnitsSharingWith`.
+- **Ours (optional):** when the switch is true, `RebuildTerritory` and Covert/identity reveal
+  (`OnUnitDesignRebound`) both call `ApplyEvacuateOnTerritoryChange` for units that
+  `MustVacateCurrentTerritory`.
+- **Where:** `EvacuateUnitsOnTerritoryChange` / `MustVacateCurrentTerritory`
+  (`EvacuateTerritoryRules`); `ApplyEvacuateOnTerritoryChange` (`EvacuateTerritoryMutations`);
+  callers in `GameState::RebuildTerritory` and `OnUnitDesignRebound_`.
+- **Missing:** the true version as a selectable switch field (mechanic switches not wired yet);
+  name the field `EvacuateUnitsOnTerritoryChange` on the subsystem config that owns evacuate
+  when switches land.
+
 ### Unit scrap refund destination `[Ours]`
 
 - **Original:** `Console::disband` credits minerals only when `base_at` finds a base on the

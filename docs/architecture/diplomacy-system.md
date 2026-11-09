@@ -513,8 +513,10 @@ and either the targeted unit or the faction whose bases or improvements were hit
 
 A unit with the `Covert` rule flag (shipping: Probe Team) has an owner no other faction knows.
 Acting against one is not a hostile act against its owner, and its own attacks, bombards and probe
-actions are not hostile acts against their victims. **Stub:** detection is not implemented, so a
-covert unit is never identified.
+actions are not hostile acts against their victims. `IsOwnerKnownTo` follows the live Covert flag;
+losing Covert (e.g. design rebind) runs the same session refresh as a move (`RefreshUnitSession_`).
+Relocating that unit when `MayEnterTerritoryOf` flips is gated with territory-redraw evacuate by
+`EvacuateUnitsOnTerritoryChange` (shipping false; see deviations).
 
 `ApplyHostileAct` is called by:
 
@@ -697,9 +699,6 @@ save-game serialisation work to exist first. Recorded in
   ordering and expiry rules that are not specified anywhere.
 - **Treaty terms with duration** (tribute per turn). `DiplomaticProposal_t` carries only immediate
   transfers and a status change; the only timer is a status's own `duration_turns`.
-- **Detection.** `IsOwnerKnownTo` never identifies a covert unit on the map. A completed
-  probe mission (other than infiltrate or Total Thought Control) is attributed even for a
-  Covert probe team, so `VendettaFromHostileAct` can fire when `may_attack` is false.
 - **Healing.** `MayRepairAt` answers the diplomacy half; per-turn healing does not exist.
 - **Talk standing.** Atrocity, agreement-break, probe, relic-capture, allied-territory,
   terraform-rainfall and gift writers are in. The player's probe excuse dialog, trade friction,

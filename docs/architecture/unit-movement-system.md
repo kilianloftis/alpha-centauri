@@ -326,15 +326,17 @@ tile that passes `CanHoldTileWithoutCarrier` and holds no unit the
 guest may not share a tile with (`MayShareTiles`). `EvacuateUnitsSharingWith` does the same
 for units standing on a tile with the host's units or in its bases. A unit already on its own
 territory is home and stays, so of two factions sharing a tile there, the guest moves. Search expands
-rings and stops at the first hit; free units that share an origin tile share one search and
-move together when placement allows. Mutation is raw `UnitPositionIndex::MoveUnit` — no
-move fragments spent, no airdrop/arrival combat path. Every guest unit on the host's tiles
-(including embarked cargo) has its order cleared; embarked passengers are not relocated
-separately (the carrier tows them). When no legal own-territory tile exists the unit stays
-put (orders still cleared). Covert units the host cannot identify are not evacuated from its
-territory. Diplomacy is the caller: `ApplyStatusChange` when a status
-loses `enter_territory` or `share_tiles`, and a declared Vendetta (see
-[diplomacy-system.md](diplomacy-system.md#declaration-vs-sneak-attack)).
+rings and stops at the first hit. Bulk APIs only select which units leave, then each runs
+`EvacuateUnit` (clear order; free units `MoveUnit` to that nearest tile; embarked cargo clears
+orders and is towed by the carrier). When no legal own-territory tile exists the unit stays
+put (orders still cleared). Covert units the host cannot identify are not selected. Diplomacy
+is the caller: `ApplyStatusChange` when a status loses `enter_territory` or `share_tiles`, and a
+declared Vendetta (see [diplomacy-system.md](diplomacy-system.md#declaration-vs-sneak-attack)).
+Territory redraw and Covert/identity reveal share `EvacuateUnitsOnTerritoryChange` (shipping
+false): when on, `RebuildTerritory` and `OnUnitDesignRebound` call
+`ApplyEvacuateOnTerritoryChange` for units that `MustVacateCurrentTerritory`. Airdrops relocate
+through `MoveUnit` and therefore `GameState::RefreshUnitSession_` (visibility + first contact);
+forbidden territory is refused before the drop.
 
 **Grid shape.** Every grid in `interaction_grids.json` is the acting unit's domain (the row)
 against one other thing (the column). "Actor" is always the unit whose own overrides

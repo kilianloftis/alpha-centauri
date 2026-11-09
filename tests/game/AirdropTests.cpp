@@ -5,6 +5,7 @@
 #include "game/GameDataContext.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
+#include "game/diplomacy/DiplomacyLedger.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include "game/research/ResearchManager.h"
@@ -399,4 +400,30 @@ TEST_CASE("Airdrop landing never takes the last hit point", "[unit][airdrop]")
     const AirdropLanding_t landing = AirdropLanding(dropper, *rMap.GetTile(10, 10));
     CHECK(landing.hpAfter == 1);
     CHECK_FALSE(landing.bEndsTurn);
+}
+
+TEST_CASE("Airdrop into foreign vision establishes Known via OnUnitMoved",
+          "[unit][airdrop][first-contact]")
+{
+    AirdropGame_ game;
+    WorldMap& rMap = game.fixtures.state.GetWorldMap();
+
+    BaseManager& rHome = game.MakeBase(*game.pPlayer, 8, 8);
+    // AI base watches the field drop tile; player launch pad is outside AI vision of that pad.
+    game.MakeBase(*game.pAi, 12, 12);
+    Unit& dropper =
+        game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon", "drop_pods"}, &rHome);
+    game.LatchTurnStart(dropper);
+
+    DiplomacyLedger& rLedger = game.fixtures.state.GetDiplomacyLedger();
+    rLedger.SetKnown(game.pPlayer->GetFactionId(), game.pAi->GetFactionId(), false);
+
+    Tile* pField = rMap.GetTile(10, 10);
+    REQUIRE(pField);
+    REQUIRE(game.pAi->GetVisibleMap().IsVisible(*pField));
+    REQUIRE_FALSE(rLedger.AreKnown(game.pPlayer->GetFactionId(), game.pAi->GetFactionId()));
+
+    REQUIRE(game.fixtures.state.GetUnitMoves().TryAirdrop(dropper, *pField).Ok());
+    CHECK(&dropper.GetTile() == pField);
+    CHECK(rLedger.AreKnown(game.pPlayer->GetFactionId(), game.pAi->GetFactionId()));
 }
