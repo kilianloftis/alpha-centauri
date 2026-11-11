@@ -151,6 +151,11 @@ TEST_CASE("WorldGenDecorationConfigParser throws when fungus object is missing",
     "cloudmass_peaks": 5, "cloudmass_hills": 3, "rainfall_coeff": 1,
     "hill_min_elevation_meters": 2000, "peak_min_elevation_meters": 3000
   },
+  "erosive": {
+    "low": { "land_relief": 0.75, "roughness": 0.0 },
+    "average": { "land_relief": 1.0, "roughness": 0.0 },
+    "high": { "land_relief": 1.25, "roughness": 0.0 }
+  },
   "rockiness": {
     "poles": { "flat": 0, "rolling": 0, "rocky": 1 },
     "bands": [ { "flat": 1, "rolling": 0, "rocky": 0 } ]

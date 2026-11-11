@@ -6,6 +6,11 @@
     "hill_min_elevation_meters": 2000,
     "peak_min_elevation_meters": 3000
   },
+  "erosive": {
+    "low":     { "land_relief": 0.5, "roughness": 0.0 },
+    "average": { "land_relief": 1.0, "roughness": 0.05 },
+    "high":    { "land_relief": 1.5, "roughness": 0.2 }
+  },
   "rockiness": {
     "poles": { "flat": 0.0, "rolling": 0.0, "rocky": 1.0 },
     "bands": [

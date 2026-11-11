@@ -74,6 +74,11 @@ TEST_CASE("WorldGenDecorationConfigParser throws when rockiness object is missin
     "cloudmass_peaks": 5, "cloudmass_hills": 3, "rainfall_coeff": 1,
     "hill_min_elevation_meters": 2000, "peak_min_elevation_meters": 3000
   },
+  "erosive": {
+    "low": { "land_relief": 0.75, "roughness": 0.0 },
+    "average": { "land_relief": 1.0, "roughness": 0.0 },
+    "high": { "land_relief": 1.25, "roughness": 0.0 }
+  },
   "aquifers": { "fraction": 0.01 },
   "fungus": {
     "coverage": 0.3, "cluster_scale_tiles": 12, "fill": 0.85, "pole_row_chance": 0.5
@@ -97,6 +102,11 @@ TEST_CASE("WorldGenDecorationConfigParser requires poles weights", "[worldgen][r
   "moisture": {
     "cloudmass_peaks": 5, "cloudmass_hills": 3, "rainfall_coeff": 1,
     "hill_min_elevation_meters": 2000, "peak_min_elevation_meters": 3000
+  },
+  "erosive": {
+    "low": { "land_relief": 0.75, "roughness": 0.0 },
+    "average": { "land_relief": 1.0, "roughness": 0.0 },
+    "high": { "land_relief": 1.25, "roughness": 0.0 }
   },
   "rockiness": {
     "poles": { "flat": 0, "rolling": 0, "rocky": 0 },
@@ -127,6 +137,11 @@ TEST_CASE("WorldGenDecorationConfigParser requires max on non-final bands only",
     "cloudmass_peaks": 5, "cloudmass_hills": 3, "rainfall_coeff": 1,
     "hill_min_elevation_meters": 2000, "peak_min_elevation_meters": 3000
   },
+  "erosive": {
+    "low": { "land_relief": 0.75, "roughness": 0.0 },
+    "average": { "land_relief": 1.0, "roughness": 0.0 },
+    "high": { "land_relief": 1.25, "roughness": 0.0 }
+  },
   "rockiness": {
     "poles": { "flat": 0, "rolling": 0, "rocky": 1 },
     "bands": [
@@ -152,6 +167,11 @@ TEST_CASE("WorldGenDecorationConfigParser requires max on non-final bands only",
   "moisture": {
     "cloudmass_peaks": 5, "cloudmass_hills": 3, "rainfall_coeff": 1,
     "hill_min_elevation_meters": 2000, "peak_min_elevation_meters": 3000
+  },
+  "erosive": {
+    "low": { "land_relief": 0.75, "roughness": 0.0 },
+    "average": { "land_relief": 1.0, "roughness": 0.0 },
+    "high": { "land_relief": 1.25, "roughness": 0.0 }
   },
   "rockiness": {
     "poles": { "flat": 0, "rolling": 0, "rocky": 1 },
@@ -182,6 +202,11 @@ TEST_CASE("WorldGenDecorationConfigParser requires strictly increasing band maxe
   "moisture": {
     "cloudmass_peaks": 5, "cloudmass_hills": 3, "rainfall_coeff": 1,
     "hill_min_elevation_meters": 2000, "peak_min_elevation_meters": 3000
+  },
+  "erosive": {
+    "low": { "land_relief": 0.75, "roughness": 0.0 },
+    "average": { "land_relief": 1.0, "roughness": 0.0 },
+    "high": { "land_relief": 1.25, "roughness": 0.0 }
   },
   "rockiness": {
     "poles": { "flat": 0, "rolling": 0, "rocky": 1 },

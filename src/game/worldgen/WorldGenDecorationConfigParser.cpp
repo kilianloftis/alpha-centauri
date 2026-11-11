@@ -67,6 +67,38 @@ MoistureDecorationConfig_t ParseMoisture_(const nlohmann::json& rJson)
     return config;
 }
 
+ErosiveLevelConfig_t ParseErosiveLevel_(const nlohmann::json& rJson, const char* pLevel)
+{
+    if (!rJson.is_object())
+    {
+        throw std::runtime_error(
+            std::string("world gen decoration erosive.") + pLevel + " must be an object");
+    }
+    if (!rJson.contains("land_relief") || !rJson.contains("roughness"))
+    {
+        throw std::runtime_error(
+            std::string("world gen decoration erosive.") + pLevel
+            + " requires land_relief and roughness");
+    }
+
+    ErosiveLevelConfig_t level;
+    level.landRelief = rJson.at("land_relief").get<float>();
+    level.roughness = rJson.at("roughness").get<float>();
+    if (level.landRelief <= 0.0f)
+    {
+        throw std::runtime_error(
+            std::string("world gen decoration erosive.") + pLevel
+            + ".land_relief must be > 0");
+    }
+    if (level.roughness < 0.0f)
+    {
+        throw std::runtime_error(
+            std::string("world gen decoration erosive.") + pLevel
+            + ".roughness must be >= 0");
+    }
+    return level;
+}
+
 RockinessWeights_t ParseRockinessWeights_(const nlohmann::json& rJson, const char* pContext)
 {
     if (!rJson.is_object() || !rJson.contains("flat") || !rJson.contains("rolling")
@@ -243,6 +275,15 @@ const nlohmann::json& RequireSection_(const nlohmann::json& rJson, const char* p
     return rJson.at(pKey);
 }
 
+ErosiveDecorationConfig_t ParseErosive_(const nlohmann::json& rJson)
+{
+    ErosiveDecorationConfig_t config;
+    config.low = ParseErosiveLevel_(RequireSection_(rJson, "low"), "low");
+    config.average = ParseErosiveLevel_(RequireSection_(rJson, "average"), "average");
+    config.high = ParseErosiveLevel_(RequireSection_(rJson, "high"), "high");
+    return config;
+}
+
 } // namespace
 
 WorldGenDecorationConfig_t WorldGenDecorationConfigParser::ParseConfig(
@@ -258,6 +299,7 @@ WorldGenDecorationConfig_t WorldGenDecorationConfigParser::ParseConfig(
     const nlohmann::json json = nlohmann::json::parse(file);
     WorldGenDecorationConfig_t config;
     config.moisture = ParseMoisture_(RequireSection_(json, "moisture"));
+    config.erosive = ParseErosive_(RequireSection_(json, "erosive"));
     config.rockiness = ParseRockiness_(RequireSection_(json, "rockiness"));
     config.aquifers = ParseAquifers_(RequireSection_(json, "aquifers"));
     config.fungus = ParseFungus_(RequireSection_(json, "fungus"));

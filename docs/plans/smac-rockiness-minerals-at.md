@@ -31,9 +31,8 @@ enum only. `PlaceTileBonuses` can remain after rockiness.
   session seed; stop calling `SampleRockiness` / `RandomFloat_` for this stage.
 - Delete decoration `rockiness` weights (`RockinessDecorationConfig_t`,
   `RockinessWeights_t`, `WeightsForLevel`, `SampleRockiness`) and the
-  `decoration.json` / fixture `rockiness` blocks. `ErosiveForces_t` may remain in map settings
-  but no longer drives rockiness (document; wiring erosive into elevation is a separate
-  follow-up).
+  `decoration.json` / fixture `rockiness` blocks. `ErosiveForces_t` remains in map settings
+  and drives elevation land relief/roughness, not rockiness.
 
 ## Docs
 

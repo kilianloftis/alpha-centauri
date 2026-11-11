@@ -1,6 +1,9 @@
 #pragma once
 
+#include "game/worldgen/MapGenerationConfig.h"
+
 #include <optional>
+#include <stdexcept>
 #include <vector>
 
 namespace ac
@@ -17,6 +20,36 @@ struct MoistureDecorationConfig_t
     int hillMinElevationMeters = 2000;
     int peakMinElevationMeters = 3000;
 };
+
+// Land-side elevation reshape for one ErosiveForces_t level (after the oceanCoverage waterline).
+struct ErosiveLevelConfig_t
+{
+    float landRelief = 1.0f;
+    float roughness = 0.0f;
+};
+
+// Coefficients for Low / Average / High erosive forces. Session enum selects the row.
+struct ErosiveDecorationConfig_t
+{
+    ErosiveLevelConfig_t low{0.75f, 0.02f};
+    ErosiveLevelConfig_t average{1.0f, 0.05f};
+    ErosiveLevelConfig_t high{1.25f, 0.1f};
+};
+
+inline const ErosiveLevelConfig_t& ErosiveLevelFor(const ErosiveDecorationConfig_t& rConfig,
+                                                  ErosiveForces_t forces)
+{
+    switch (forces)
+    {
+    case ErosiveForces_t::Low:
+        return rConfig.low;
+    case ErosiveForces_t::Average:
+        return rConfig.average;
+    case ErosiveForces_t::High:
+        return rConfig.high;
+    }
+    throw std::invalid_argument("Unknown erosive forces value");
+}
 
 // Relative frequencies for Flat / Rolling / Rocky. Parser normalizes to sum to 1.
 struct RockinessWeights_t
@@ -70,10 +103,12 @@ struct TileBonusDecorationConfig_t
     float fraction = 0.04f;
 };
 
-// Post-elevation terrain decoration (moisture, rockiness, aquifers, fungus, tile bonuses).
+// Post-elevation terrain decoration (moisture, rockiness, aquifers, fungus, tile bonuses)
+// plus erosive land-relief coeffs used during elevation.
 struct WorldGenDecorationConfig_t
 {
     MoistureDecorationConfig_t moisture;
+    ErosiveDecorationConfig_t erosive;
     RockinessDecorationConfig_t rockiness;
     AquiferDecorationConfig_t aquifers;
     FungusDecorationConfig_t fungus;

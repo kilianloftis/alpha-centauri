@@ -62,7 +62,9 @@ float WaterThreshold_(const std::vector<float>& rField, float requestedCoverage)
 }
 
 int ElevationFor_(float value, const ElevationScale_t& rScale,
-                  const WorldGenPresetConfig_t& rPreset)
+                  const WorldGenPresetConfig_t& rPreset,
+                  const ErosiveLevelConfig_t& rErosive,
+                  float fineSample)
 {
     if (value < rScale.threshold)
     {
@@ -73,7 +75,32 @@ int ElevationFor_(float value, const ElevationScale_t& rScale,
     }
     const float highest = static_cast<float>(rPreset.maxElevation);
     const float raised = Remap_(value, rScale.threshold, rScale.maxValue, 0.0f, highest);
-    return static_cast<int>(std::lround(raised));
+    const float withRelief = raised * rErosive.landRelief;
+    const float withRoughness = withRelief + rErosive.roughness * fineSample * highest;
+    const float clamped = std::clamp(withRoughness, 0.0f, highest);
+    return static_cast<int>(std::lround(clamped));
+}
+
+struct CylinderSample_t
+{
+    float x = 0.0f;
+    float y = 0.0f;
+    float z = 0.0f;
+};
+
+CylinderSample_t CylinderSampleAt_(int tileX, int tileY, int width, float continentScale)
+{
+    constexpr float kTwoPi = 6.283185307179586f;
+    constexpr float kSqrtHalf = 0.7071067811865476f;
+    const float scale = std::max(continentScale, 0.001f);
+    const float cylinderRadius =
+        (static_cast<float>(width) * kSqrtHalf * scale) / kTwoPi;
+    const float angle = (static_cast<float>(tileX) / static_cast<float>(width)) * kTwoPi;
+    CylinderSample_t sample;
+    sample.x = std::cos(angle) * cylinderRadius;
+    sample.z = std::sin(angle) * cylinderRadius;
+    sample.y = static_cast<float>(tileY) * kSqrtHalf * scale;
+    return sample;
 }
 
 // Nothing on a new world shifts moisture, so each tile's moisture is its rainfall.
@@ -121,7 +148,7 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
     // them; rain follows rivers (SMAC world_climate order); rockiness follows climate so it sees
     // final elevations; supply pods precede bonuses so pods win contested tiles; bonuses stay last
     // among object stamps for their excludes.
-    GenerateElevation_(*pWorld, rConfig, rPreset);
+    GenerateElevation_(*pWorld, rConfig, rPreset, rDecoration.erosive);
     const ImprovementConfig_t& rFungus = rOccupants.Get(std::string(ImprovementIds::k_Fungus));
     PlaceFungus(*pWorld, rDecoration.fungus, fungusCoverageMultiplier, rFungus, m_rng);
     PlaceLandmarks(*pWorld, rLandmarks, rOccupants, m_rng);
@@ -142,7 +169,8 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
 
 void WorldGenerator::GenerateElevation_(WorldMap& rWorld,
                                         const MapGenerationConfig_t& rConfig,
-                                        const WorldGenPresetConfig_t& rPreset)
+                                        const WorldGenPresetConfig_t& rPreset,
+                                        const ErosiveDecorationConfig_t& rErosive)
 {
     // Drawn from m_rng, which the caller seeded: the map is a function of the one resolved
     // session seed, never of rConfig.seed (the request, where 0 means "pick one").
@@ -151,12 +179,24 @@ void WorldGenerator::GenerateElevation_(WorldMap& rWorld,
     const std::vector<float> field = SampleElevationField_(rWorld, noise, rPreset);
     const auto [minIt, maxIt] = std::ranges::minmax_element(field);
     const ElevationScale_t scale{*minIt, WaterThreshold_(field, rConfig.oceanCoverage), *maxIt};
+    const ErosiveLevelConfig_t& rLevel = ErosiveLevelFor(rErosive, rConfig.erosiveForces);
     const int width = rWorld.GetWidth();
+    constexpr float kFineScale = 4.0f;
     for (const auto& pTile : rWorld.GetTiles())
     {
-        const int tileIndex = TileIndex(pTile->GetX(), pTile->GetY(), width);
+        const int x = pTile->GetX();
+        const int y = pTile->GetY();
+        const int tileIndex = TileIndex(x, y, width);
         const float value = field[static_cast<size_t>(tileIndex)];
-        pTile->SetElevation(ElevationFor_(value, scale, rPreset));
+        float fineSample = 0.0f;
+        if (value >= scale.threshold && rLevel.roughness > 0.0f)
+        {
+            const CylinderSample_t sample =
+                CylinderSampleAt_(x, y, width, rPreset.continentScale);
+            fineSample = noise.Sample(sample.x * kFineScale, sample.y * kFineScale,
+                                      sample.z * kFineScale);
+        }
+        pTile->SetElevation(ElevationFor_(value, scale, rPreset, rLevel, fineSample));
     }
 }
 
@@ -167,12 +207,6 @@ std::vector<float> WorldGenerator::SampleElevationField_(
     const int height = rWorld.GetHeight();
     const float invWidth = width > 1 ? 1.0f / static_cast<float>(width - 1) : 0.0f;
     const float invHeight = height > 1 ? 1.0f / static_cast<float>(height - 1) : 0.0f;
-    const float scale = std::max(rPreset.continentScale, 0.001f);
-    // One map unit is √½ lattice lengths; sample on a cylinder so x wraps in noise space.
-    constexpr float kTwoPi = 6.283185307179586f;
-    constexpr float kSqrtHalf = 0.7071067811865476f;
-    const float cylinderRadius =
-        (static_cast<float>(width) * kSqrtHalf * scale) / kTwoPi;
 
     std::vector<float> field(rWorld.GetTiles().size());
     for (const auto& pTile : rWorld.GetTiles())
@@ -181,13 +215,11 @@ std::vector<float> WorldGenerator::SampleElevationField_(
         const int y = pTile->GetY();
         const float nx = static_cast<float>(x) * invWidth * 2.0f - 1.0f;
         const float ny = static_cast<float>(y) * invHeight * 2.0f - 1.0f;
-        const float angle = (static_cast<float>(x) / static_cast<float>(width)) * kTwoPi;
-        const float sampleX = std::cos(angle) * cylinderRadius;
-        const float sampleZ = std::sin(angle) * cylinderRadius;
-        const float sampleY = static_cast<float>(y) * kSqrtHalf * scale;
-        const float sample = rNoise.Sample(sampleX, sampleY, sampleZ);
+        const CylinderSample_t sample =
+            CylinderSampleAt_(x, y, width, rPreset.continentScale);
+        const float noiseSample = rNoise.Sample(sample.x, sample.y, sample.z);
         const size_t index = static_cast<size_t>(TileIndex(x, y, width));
-        field[index] = ApplyLandmassMask_(sample, nx, ny, rPreset);
+        field[index] = ApplyLandmassMask_(noiseSample, nx, ny, rPreset);
     }
     return field;
 }

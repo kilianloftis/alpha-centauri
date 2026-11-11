@@ -46,7 +46,8 @@ private:
 
     void GenerateElevation_(WorldMap& rWorld,
                             const MapGenerationConfig_t& rConfig,
-                            const WorldGenPresetConfig_t& rPreset);
+                            const WorldGenPresetConfig_t& rPreset,
+                            const ErosiveDecorationConfig_t& rErosive);
     void GenerateAquifers_(WorldMap& rWorld, const AquiferDecorationConfig_t& rAquifers,
                            const ImprovementRegistry& rOccupants);
 

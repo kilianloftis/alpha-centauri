@@ -95,6 +95,7 @@ add_executable(effects-tests
     game/TileResourceRestrictionTests.cpp
     game/WorldGeneratorMoistureTests.cpp
     game/WorldGeneratorRockinessTests.cpp
+    game/WorldGeneratorErosiveTests.cpp
     game/RiverGenerationTests.cpp
     game/LandmarkGenerationTests.cpp
     game/FungusGenerationTests.cpp
