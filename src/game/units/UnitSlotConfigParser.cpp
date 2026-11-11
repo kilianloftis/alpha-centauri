@@ -1,9 +1,5 @@
 #include "game/units/UnitSlotConfigParser.h"
-#include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
-#include <magic_enum.hpp>
-#include <nlohmann/json.hpp>
-#include <stdexcept>
 
 namespace ac
 {
@@ -11,36 +7,25 @@ namespace ac
 namespace
 {
 
-SlotColumn_t ParseColumn_(const std::string& rColumn, const std::string& rSlotId)
+UnitSlotConfig_t ParseSlot_(const ConfigReader& rReader)
 {
-    const auto parsed = magic_enum::enum_cast<SlotColumn_t>(rColumn, magic_enum::case_insensitive);
-    if (!parsed)
-    {
-        throw std::runtime_error("Unit slot '" + rSlotId + "': unknown column '" + rColumn
-                                 + "'; expected 'left' or 'right'");
-    }
-    return *parsed;
+    UnitSlotConfig_t slot;
+    slot.id = rReader.NonEmptyString("id");
+    slot.displayName = rReader.String("display_name");
+    slot.componentType = rReader.String("component_type");
+    slot.required = rReader.BoolOr("required", true);
+    slot.column = rReader.Has("column") ? rReader.Enum<SlotColumn_t>("column", "slot column")
+                                        : SlotColumn_t::Left;
+    slot.costModifier = rReader.FloatOr("cost_modifier", 1.0f);
+    slot.requiredTech = rReader.StringOr("required_tech", "");
+    return slot;
 }
 
 } // namespace
 
 std::vector<UnitSlotConfig_t> UnitSlotConfigParser::ParseConfig(const std::string& rConfigPath) const
 {
-    return JsonConfigLoader::LoadFile<UnitSlotConfig_t>(
-        rConfigPath, "unit slot",
-        [](const nlohmann::json& rSlotJson)
-        {
-            UnitSlotConfig_t slot;
-            slot.id            = ConfigFields::ParseId(rSlotJson);
-            slot.displayName   = ConfigFields::ParseName(rSlotJson, slot.id, "display_name");
-            slot.componentType = rSlotJson.at("component_type").get<std::string>();
-            const std::string column = rSlotJson.value("column", std::string("left"));
-            slot.required      = rSlotJson.value("required", true);
-            slot.column        = ParseColumn_(column, slot.id);
-            slot.costModifier  = rSlotJson.value("cost_modifier", 1.0f);
-            slot.requiredTech  = ConfigFields::ParseRequiredTech(rSlotJson);
-            return slot;
-        });
+    return JsonConfigLoader::LoadFile<UnitSlotConfig_t>(rConfigPath, "unit slot", ParseSlot_);
 }
 
 } // namespace ac

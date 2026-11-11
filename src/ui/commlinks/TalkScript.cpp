@@ -643,7 +643,9 @@ TalkScript TalkScript::Load(const std::string& rPath, const TextPack& rText,
 {
     return JsonConfigLoader::LoadObjectFile<TalkScript>(
         rPath, "talk script",
-        [&](const nlohmann::json& rJson) { return Parse_(rJson, rPath, rText, rFactions); });
+        [&](const ConfigReader& rReader) {
+            return Parse_(rReader.Json(), rPath, rText, rFactions);
+        });
 }
 
 TalkScript TalkScript::Parse_(const nlohmann::json& rJson, const std::string& rPath,

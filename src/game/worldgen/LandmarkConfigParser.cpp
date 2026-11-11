@@ -1,9 +1,6 @@
 #include "game/worldgen/LandmarkConfigParser.h"
-
-#include "lib/config/ConfigFields.h"
 #include "lib/config/EnumNames.h"
 #include "lib/config/JsonConfigLoader.h"
-
 #include <algorithm>
 #include <stdexcept>
 #include <unordered_set>
@@ -14,77 +11,55 @@ namespace ac
 namespace
 {
 
-LandmarkSculpt_t ParseSculpt_(const nlohmann::json& rShapeJson, const std::string& landmarkId)
+LandmarkSculpt_t ParseSculpt_(const ConfigReader& rShape)
 {
     LandmarkSculpt_t sculpt;
-    if (!rShapeJson.contains("sculpt"))
+    if (!rShape.Has("sculpt"))
     {
         return sculpt;
     }
 
-    const nlohmann::json& rJson = rShapeJson.at("sculpt");
-    if (!rJson.is_object())
+    const ConfigReader reader = rShape.Object("sculpt");
+    sculpt.peakElevation = reader.IntOr("peak_elevation", sculpt.peakElevation);
+    sculpt.baseElevation = reader.IntOr("base_elevation", sculpt.baseElevation);
+    if (reader.Has("rocky_core_radius"))
     {
-        throw std::runtime_error("Landmark '" + landmarkId + "' sculpt must be an object");
+        sculpt.rockyCoreRadius = static_cast<float>(reader.NumberAtLeast("rocky_core_radius", 0.0));
     }
-
-    sculpt.peakElevation = rJson.value("peak_elevation", sculpt.peakElevation);
-    sculpt.baseElevation = rJson.value("base_elevation", sculpt.baseElevation);
-    sculpt.rockyCoreRadius = rJson.value("rocky_core_radius", sculpt.rockyCoreRadius);
-
     if (sculpt.peakElevation < sculpt.baseElevation)
     {
-        throw std::runtime_error("Landmark '" + landmarkId
-                                 + "' sculpt peak_elevation must be >= base_elevation");
-    }
-    if (sculpt.rockyCoreRadius < 0.0f)
-    {
-        throw std::runtime_error("Landmark '" + landmarkId
-                                 + "' sculpt rocky_core_radius must be >= 0");
+        reader.FailKey("peak_elevation", "must be >= base_elevation");
     }
     return sculpt;
 }
 
-LandmarkShape_t ParseDiskShape_(const nlohmann::json& rJson, const std::string& landmarkId)
+LandmarkShape_t ParseDiskShape_(const ConfigReader& rReader)
 {
     LandmarkShape_t shape;
     shape.kind = LandmarkShapeKind_t::Disk;
-    shape.radius = rJson.at("radius").get<int>();
-    if (shape.radius < 0)
-    {
-        throw std::runtime_error("Landmark '" + landmarkId + "' disk radius must be >= 0");
-    }
+    shape.radius = rReader.IntAtLeast("radius", 0);
     return shape;
 }
 
-LandmarkShape_t ParseRingShape_(const nlohmann::json& rJson, const std::string& landmarkId)
+LandmarkShape_t ParseRingShape_(const ConfigReader& rReader)
 {
     LandmarkShape_t shape;
     shape.kind = LandmarkShapeKind_t::Ring;
-    shape.outerRadius = rJson.at("outer_radius").get<int>();
-    shape.innerRadius = rJson.value("inner_radius", 0);
-    if (shape.outerRadius < 1 || shape.innerRadius < 0
-        || shape.innerRadius >= shape.outerRadius)
+    shape.outerRadius = rReader.IntAtLeast("outer_radius", 1);
+    shape.innerRadius = rReader.Has("inner_radius") ? rReader.IntAtLeast("inner_radius", 0) : 0;
+    if (shape.innerRadius >= shape.outerRadius)
     {
-        throw std::runtime_error(
-            "Landmark '" + landmarkId
-            + "' ring requires 0 <= inner_radius < outer_radius and outer_radius >= 1");
+        rReader.FailKey("inner_radius", "must be < outer_radius");
     }
     return shape;
 }
 
-LandmarkShape_t ParseMaskShape_(const nlohmann::json& rJson, const std::string& landmarkId)
+LandmarkShape_t ParseMaskShape_(const ConfigReader& rReader)
 {
     LandmarkShape_t shape;
     shape.kind = LandmarkShapeKind_t::Mask;
-    if (!rJson.contains("rows") || !rJson.at("rows").is_array() || rJson.at("rows").empty())
-    {
-        throw std::runtime_error("Landmark '" + landmarkId + "' mask requires non-empty 'rows'");
-    }
-    for (const auto& row : rJson.at("rows"))
-    {
-        shape.maskRows.push_back(row.get<std::string>());
-    }
+    rReader.NonEmptyArray("rows");
+    shape.maskRows = rReader.StringArray("rows");
     // All-blank rows expand to no footprint, which placement can only skip in silence.
     const bool bHasCell = std::any_of(
         shape.maskRows.begin(), shape.maskRows.end(), [](const std::string& rRow) {
@@ -92,83 +67,56 @@ LandmarkShape_t ParseMaskShape_(const nlohmann::json& rJson, const std::string& 
         });
     if (!bHasCell)
     {
-        throw std::runtime_error("Landmark '" + landmarkId
-                                 + "' mask rows contain no 'X' footprint cell");
+        rReader.FailKey("rows", "contain no 'X' footprint cell");
     }
     return shape;
 }
 
-LandmarkShape_t ParseSculptorShape_(const nlohmann::json& rJson, const std::string& landmarkId)
+LandmarkShape_t ParseSculptorShape_(const ConfigReader& rReader)
 {
     LandmarkShape_t shape;
     shape.kind = LandmarkShapeKind_t::Sculptor;
-    shape.sculptorId = rJson.at("id").get<std::string>();
-    shape.radius = rJson.value("radius", 4);
-    if (shape.sculptorId.empty())
-    {
-        throw std::runtime_error("Landmark '" + landmarkId + "' sculptor requires 'id'");
-    }
-    if (shape.radius < 1)
-    {
-        throw std::runtime_error("Landmark '" + landmarkId + "' sculptor radius must be >= 1");
-    }
-    shape.sculpt = ParseSculpt_(rJson, landmarkId);
+    shape.sculptorId = rReader.NonEmptyString("id");
+    shape.radius = rReader.Has("radius") ? rReader.IntAtLeast("radius", 1) : 4;
+    shape.sculpt = ParseSculpt_(rReader);
     return shape;
 }
 
-LandmarkShape_t ParseShape_(const nlohmann::json& rJson, const std::string& landmarkId)
+LandmarkShape_t ParseShape_(const ConfigReader& rReader)
 {
-    if (!rJson.is_object() || !rJson.contains("kind"))
-    {
-        throw std::runtime_error("Landmark '" + landmarkId + "' shape requires 'kind'");
-    }
-    const std::string kind = ToLowerAscii(rJson.at("kind").get<std::string>());
+    const std::string kind = ToLowerAscii(rReader.String("kind"));
     if (kind == "disk")
     {
-        return ParseDiskShape_(rJson, landmarkId);
+        return ParseDiskShape_(rReader);
     }
     if (kind == "ring")
     {
-        return ParseRingShape_(rJson, landmarkId);
+        return ParseRingShape_(rReader);
     }
     if (kind == "mask")
     {
-        return ParseMaskShape_(rJson, landmarkId);
+        return ParseMaskShape_(rReader);
     }
     if (kind == "sculptor")
     {
-        return ParseSculptorShape_(rJson, landmarkId);
+        return ParseSculptorShape_(rReader);
     }
-    throw std::runtime_error("Landmark '" + landmarkId + "' unknown shape kind '" + kind + "'");
+    rReader.FailKey("kind", "is not a known shape kind: '" + kind + "'");
 }
 
-LandmarkConfig_t ParseLandmark_(const nlohmann::json& rJson)
+LandmarkConfig_t ParseLandmark_(const ConfigReader& rReader)
 {
     LandmarkConfig_t config;
-    config.id = ConfigFields::ParseId(rJson);
-    config.improvementId = rJson.value("improvement_id", config.id);
-    if (config.improvementId.empty())
-    {
-        throw std::runtime_error("Landmark '" + config.id + "' has empty improvement_id");
-    }
-    config.domain =
-        EnumFromName<LandmarkDomain_t>(rJson.value("domain", "land"), "landmark domain");
-    config.maxCount = rJson.value("max_count", 1);
-    config.minSpacing = rJson.value("min_spacing", 16);
-    config.setFungus = rJson.value("set_fungus", false);
-    if (config.maxCount < 0)
-    {
-        throw std::runtime_error("Landmark '" + config.id + "' max_count must be >= 0");
-    }
-    if (config.minSpacing < 0)
-    {
-        throw std::runtime_error("Landmark '" + config.id + "' min_spacing must be >= 0");
-    }
-    if (!rJson.contains("shape"))
-    {
-        throw std::runtime_error("Landmark '" + config.id + "' missing required 'shape'");
-    }
-    config.shape = ParseShape_(rJson.at("shape"), config.id);
+    config.id = rReader.NonEmptyString("id");
+    config.improvementId = rReader.Has("improvement_id") ? rReader.NonEmptyString("improvement_id")
+                                                         : config.id;
+    config.domain = rReader.Has("domain")
+                        ? rReader.Enum<LandmarkDomain_t>("domain", "landmark domain")
+                        : LandmarkDomain_t::Land;
+    config.maxCount = rReader.Has("max_count") ? rReader.IntAtLeast("max_count", 0) : 1;
+    config.minSpacing = rReader.Has("min_spacing") ? rReader.IntAtLeast("min_spacing", 0) : 16;
+    config.setFungus = rReader.BoolOr("set_fungus", false);
+    config.shape = ParseShape_(rReader.Object("shape"));
     return config;
 }
 
@@ -178,9 +126,8 @@ std::vector<LandmarkConfig_t> LandmarkConfigParser::ParseConfig(
     const std::string& configPath,
     const std::vector<std::string>& rKnownImprovementIds)
 {
-    auto landmarks = JsonConfigLoader::LoadFile<LandmarkConfig_t>(
-        configPath, "landmark",
-        [](const nlohmann::json& rJson) { return ParseLandmark_(rJson); });
+    auto landmarks =
+        JsonConfigLoader::LoadFile<LandmarkConfig_t>(configPath, "landmark", ParseLandmark_);
 
     if (!rKnownImprovementIds.empty())
     {

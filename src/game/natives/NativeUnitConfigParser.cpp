@@ -2,9 +2,8 @@
 
 #include "game/effects/EffectConfigParser.h"
 #include "game/effects/TriggeredEffectParser.h"
-#include "lib/config/ConfigFields.h"
+#include "lib/config/JsonConfigLoader.h"
 
-#include <fstream>
 #include <stdexcept>
 
 namespace ac
@@ -13,85 +12,58 @@ namespace ac
 namespace
 {
 
-NativeFaunaRole_t ParseRole_(const nlohmann::json& rEntry, const std::string& rUnitId)
+std::vector<std::string> ParseRequiresAnyTech_(const ConfigReader& rReader)
 {
-    if (!rEntry.is_string() || rEntry.get<std::string>().empty())
+    std::vector<std::string> techs = rReader.StringArray("requires_any_tech");
+    for (const std::string& rTech : techs)
     {
-        throw std::runtime_error("Native unit '" + rUnitId
-                                 + "' 'fauna_roles' entries must be non-empty strings");
+        if (rTech.empty())
+        {
+            rReader.FailKey("requires_any_tech", "entries must be non-empty strings");
+        }
     }
-    return ParseNativeFaunaRole(rEntry.get<std::string>());
+    return techs;
 }
 
-NativeUnitPlanetConfig_t ParsePlanet_(const nlohmann::json& rJson, const std::string& rUnitId)
+std::vector<NativeFaunaRole_t> ParseFaunaRoles_(const ConfigReader& rReader)
 {
-    const std::string ctx = "Native unit '" + rUnitId + "' planet";
-    ConfigFields::RejectUnknownKeys(
-        rJson,
-        {"fauna_roles", "fauna_weight", "requires_any_tech", "lifecycle", "lifecycle_bonus"},
-        ctx);
+    rReader.Array("fauna_roles");
+    std::vector<NativeFaunaRole_t> roles;
+    for (const std::string& rRole : rReader.StringArray("fauna_roles"))
+    {
+        if (rRole.empty())
+        {
+            rReader.FailKey("fauna_roles", "entries must be non-empty strings");
+        }
+        roles.push_back(ParseNativeFaunaRole(rRole));
+    }
+    return roles;
+}
+
+int ParseFaunaWeight_(const ConfigReader& rReader, const NativeUnitPlanetConfig_t& rPlanet)
+{
+    if (!rPlanet.faunaRoles.empty())
+    {
+        return rReader.IntAtLeast("fauna_weight", 1);
+    }
+    if (rReader.Has("fauna_weight"))
+    {
+        rReader.FailKey("fauna_weight", "is only valid when fauna_roles is non-empty");
+    }
+    return rPlanet.faunaWeight;
+}
+
+NativeUnitPlanetConfig_t ParsePlanet_(const ConfigReader& rReader)
+{
+    rReader.RejectUnknownKeys(
+        {"fauna_roles", "fauna_weight", "requires_any_tech", "lifecycle", "lifecycle_bonus"});
 
     NativeUnitPlanetConfig_t planet;
-    if (!rJson.contains("fauna_roles") || !rJson.at("fauna_roles").is_array())
-    {
-        throw std::runtime_error(ctx + ": 'fauna_roles' must be an array");
-    }
-    for (const nlohmann::json& rRole : rJson.at("fauna_roles"))
-    {
-        planet.faunaRoles.push_back(ParseRole_(rRole, rUnitId));
-    }
-
-    if (!planet.faunaRoles.empty())
-    {
-        if (!rJson.contains("fauna_weight") || !rJson.at("fauna_weight").is_number_integer())
-        {
-            throw std::runtime_error(ctx + ": 'fauna_weight' must be an integer when roles are "
-                                           "non-empty");
-        }
-        planet.faunaWeight = rJson.at("fauna_weight").get<int>();
-        if (planet.faunaWeight <= 0)
-        {
-            throw std::runtime_error(ctx + ": 'fauna_weight' must be > 0");
-        }
-    }
-    else if (rJson.contains("fauna_weight"))
-    {
-        throw std::runtime_error(ctx + ": 'fauna_weight' is only valid when fauna_roles is "
-                                       "non-empty");
-    }
-
-    if (rJson.contains("requires_any_tech"))
-    {
-        const nlohmann::json& rArr = rJson.at("requires_any_tech");
-        if (!rArr.is_array())
-        {
-            throw std::runtime_error(ctx + ": 'requires_any_tech' must be an array");
-        }
-        for (const nlohmann::json& rEntry : rArr)
-        {
-            if (!rEntry.is_string() || rEntry.get<std::string>().empty())
-            {
-                throw std::runtime_error(ctx + ": 'requires_any_tech' entries must be non-empty "
-                                               "strings");
-            }
-            planet.requiresAnyTech.push_back(rEntry.get<std::string>());
-        }
-    }
-
-    if (!rJson.contains("lifecycle") || !rJson.at("lifecycle").is_string())
-    {
-        throw std::runtime_error(ctx + ": 'lifecycle' must be a string");
-    }
-    planet.lifecycle = ParseNativeLifecycleKind(rJson.at("lifecycle").get<std::string>());
-
-    if (rJson.contains("lifecycle_bonus"))
-    {
-        if (!rJson.at("lifecycle_bonus").is_number_integer())
-        {
-            throw std::runtime_error(ctx + ": 'lifecycle_bonus' must be an integer");
-        }
-        planet.lifecycleBonus = rJson.at("lifecycle_bonus").get<int>();
-    }
+    planet.faunaRoles = ParseFaunaRoles_(rReader);
+    planet.faunaWeight = ParseFaunaWeight_(rReader, planet);
+    planet.requiresAnyTech = ParseRequiresAnyTech_(rReader);
+    planet.lifecycle = ParseNativeLifecycleKind(rReader.String("lifecycle"));
+    planet.lifecycleBonus = rReader.IntOr("lifecycle_bonus", planet.lifecycleBonus);
     return planet;
 }
 
@@ -145,62 +117,33 @@ NativeLifecycleKind_t ParseNativeLifecycleKind(const std::string& rKind)
 
 std::vector<NativeUnitConfig_t> NativeUnitConfigParser::ParseConfig(const std::string& rConfigPath)
 {
-    std::ifstream file(rConfigPath);
-    if (!file.is_open())
-    {
-        throw std::runtime_error("Could not open native units '" + rConfigPath + "'");
-    }
-    const nlohmann::json json = nlohmann::json::parse(file);
-    if (!json.is_object())
-    {
-        throw std::runtime_error("native_units root must be an object");
-    }
-    ConfigFields::RejectUnknownKeys(json, {"units"}, "native_units");
-
-    if (!json.contains("units") || !json.at("units").is_array())
-    {
-        throw std::runtime_error("native_units 'units' must be an array");
-    }
-
-    std::vector<NativeUnitConfig_t> units;
-    for (const nlohmann::json& rUnit : json.at("units"))
-    {
-        units.push_back(ParseNativeUnitConfig(rUnit));
-    }
-    return units;
+    return JsonConfigLoader::LoadObjectFile<std::vector<NativeUnitConfig_t>>(
+        rConfigPath, "native units", [](const ConfigReader& rReader) {
+            rReader.RejectUnknownKeys({"units"});
+            std::vector<NativeUnitConfig_t> units;
+            for (const ConfigReader& rUnit : rReader.Objects("units"))
+            {
+                units.push_back(ParseNativeUnitConfig(rUnit));
+            }
+            return units;
+        });
 }
 
-NativeUnitConfig_t NativeUnitConfigParser::ParseNativeUnitConfig(const nlohmann::json& rJson)
+NativeUnitConfig_t NativeUnitConfigParser::ParseNativeUnitConfig(const ConfigReader& rReader)
 {
     NativeUnitConfig_t config;
-    config.id = ConfigFields::ParseId(rJson);
-    config.name = ConfigFields::ParseName(rJson, config.id, "name");
-    if (!rJson.contains("domain"))
-    {
-        throw std::runtime_error("Native unit '" + config.id + "' missing required 'domain'");
-    }
-    config.domain = EffectConfigParser::ParseUnitDomain(rJson.at("domain").get<std::string>());
-    if (!rJson.contains("plan"))
-    {
-        throw std::runtime_error("Native unit '" + config.id + "' missing required 'plan'");
-    }
-    config.plan = ParseUnitPlan(rJson.at("plan").get<std::string>());
-    config.mineralCost = rJson.value("mineral_cost", 0);
+    config.id = rReader.NonEmptyString("id");
+    config.name = rReader.String("name");
+    config.domain = EffectConfigParser::ParseUnitDomain(rReader.String("domain"));
+    config.plan = ParseUnitPlan(rReader.String("plan"));
+    config.mineralCost = rReader.IntOr("mineral_cost", 0);
     config.effects =
-        EffectConfigParser::ParseEffects(rJson, EffectSourceKind_t::NativeUnit, config.id);
+        EffectConfigParser::ParseEffects(rReader.Json(), EffectSourceKind_t::NativeUnit, config.id);
     config.onHoldEffects = TriggeredEffectParser::ParseTriggeredEffects(
-        rJson, "on_hold_effects", config.id);
-    if (rJson.contains("planet"))
+        rReader.Json(), "on_hold_effects", config.id);
+    if (rReader.Has("planet") && !rReader.Json().at("planet").is_null())
     {
-        if (rJson.at("planet").is_null())
-        {
-            return config;
-        }
-        if (!rJson.at("planet").is_object())
-        {
-            throw std::runtime_error("Native unit '" + config.id + "' 'planet' must be an object");
-        }
-        config.planet = ParsePlanet_(rJson.at("planet"), config.id);
+        config.planet = ParsePlanet_(rReader.Object("planet"));
     }
     return config;
 }

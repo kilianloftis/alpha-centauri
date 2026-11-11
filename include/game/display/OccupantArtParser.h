@@ -2,16 +2,14 @@
 
 #include "game/display/OccupantArt.h"
 
-#include <nlohmann/json.hpp>
+#include "lib/config/ConfigReader.h"
+
 #include <optional>
-#include <string>
 
 namespace ac
 {
 
 // The "art" object of one terrain or improvement entry; nullopt when the entry has none.
-// rId names the entry in error messages.
-std::optional<OccupantArt_t> ParseOccupantArt(const nlohmann::json& rEntryJson,
-                                              const std::string& rId);
+std::optional<OccupantArt_t> ParseOccupantArt(const ConfigReader& rEntry);
 
 } // namespace ac

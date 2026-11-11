@@ -474,12 +474,12 @@ TEST_CASE("Production config groups default_scrap under kinds", "[building][scra
 TEST_CASE("A scrap override may clear the formula to deny scrap", "[building][scrap][config]")
 {
     const ScrapOverride_t deny =
-        ScrapConfigParser::ParseOverride(nlohmann::json::parse(R"({"formula": null})"), "test");
+        ScrapConfigParser::ParseOverride(ConfigReader(nlohmann::json::parse(R"({"formula": null})"), "test"));
     CHECK(ScrapOverrideDenies(deny));
     CHECK(deny.formula == "");
 
     CHECK_THROWS_WITH(
-        ScrapConfigParser::ParseOverride(
-            nlohmann::json::parse(R"({"formula": null, "refund_type": "minerals"})"), "test"),
+        ScrapConfigParser::ParseOverride(ConfigReader(
+            nlohmann::json::parse(R"({"formula": null, "refund_type": "minerals"})"), "test")),
         Catch::Matchers::ContainsSubstring("null formula"));
 }

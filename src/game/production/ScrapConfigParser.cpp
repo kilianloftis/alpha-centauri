@@ -1,6 +1,5 @@
 #include "game/production/ScrapConfigParser.h"
 
-#include "lib/config/ConfigFields.h"
 #include <optional>
 #include <stdexcept>
 
@@ -10,28 +9,18 @@ namespace ac
 namespace
 {
 
-[[noreturn]] void Fail_(const std::string& rPath, const std::string& rMessage)
+std::optional<std::string> OptionalString_(const ConfigReader& rReader, const char* pKey)
 {
-    throw std::runtime_error(rPath + " " + rMessage);
-}
-
-std::optional<std::string> OptionalString_(const nlohmann::json& rValue, const std::string& rPath,
-                                           const char* pKey)
-{
-    if (!rValue.contains(pKey))
+    if (!rReader.Has(pKey))
     {
         return std::nullopt;
     }
-    if (!rValue.at(pKey).is_string() || rValue.at(pKey).get<std::string>().empty())
-    {
-        Fail_(rPath, std::string(pKey) + " must be a non-empty string");
-    }
-    return rValue.at(pKey).get<std::string>();
+    return rReader.NonEmptyString(pKey);
 }
 
-std::optional<StatId_t> OptionalRefundType_(const nlohmann::json& rValue, const std::string& rPath)
+std::optional<StatId_t> OptionalRefundType_(const ConfigReader& rReader)
 {
-    const std::optional<std::string> type = OptionalString_(rValue, rPath, "refund_type");
+    const std::optional<std::string> type = OptionalString_(rReader, "refund_type");
     if (!type)
     {
         return std::nullopt;
@@ -43,86 +32,54 @@ std::optional<StatId_t> OptionalRefundType_(const nlohmann::json& rValue, const 
     }
     catch (const std::runtime_error&)
     {
-        Fail_(rPath, "refund_type is not a known scrap refund type");
+        rReader.FailKey("refund_type", "is not a known scrap refund type");
     }
     if (!IsScrapRefundStat(stat))
     {
-        Fail_(rPath, "refund_type is not a creditable scrap payout");
+        rReader.FailKey("refund_type", "is not a creditable scrap payout");
     }
     return stat;
 }
 
 } // namespace
 
-ScrapKindConfig_t ScrapConfigParser::ParseKindConfig(const nlohmann::json& rValue,
-                                                     const std::string& rPath)
+ScrapKindConfig_t ScrapConfigParser::ParseKindConfig(const ConfigReader& rReader)
 {
-    if (!rValue.is_object())
-    {
-        Fail_(rPath, "must be an object with formula, refund_type, and refund_ceiling_percent");
-    }
-    ConfigFields::RejectUnknownKeys(rValue, {"formula", "refund_type", "refund_ceiling_percent"},
-                                    rPath);
+    rReader.RejectUnknownKeys({"formula", "refund_type", "refund_ceiling_percent"});
 
     ScrapKindConfig_t kind;
-    const std::optional<std::string> formula = OptionalString_(rValue, rPath, "formula");
-    if (!formula)
-    {
-        Fail_(rPath, "formula must be a non-empty string");
-    }
-    kind.formula = *formula;
-
-    const std::optional<StatId_t> refundType = OptionalRefundType_(rValue, rPath);
+    kind.formula = rReader.NonEmptyString("formula");
+    const std::optional<StatId_t> refundType = OptionalRefundType_(rReader);
     if (!refundType)
     {
-        Fail_(rPath, "refund_type must be a non-empty string");
+        rReader.FailKey("refund_type", "is required");
     }
     kind.refundType = *refundType;
-
-    if (!rValue.contains("refund_ceiling_percent")
-        || !rValue.at("refund_ceiling_percent").is_number_integer())
-    {
-        Fail_(rPath, "refund_ceiling_percent must be an integer");
-    }
-    kind.refundCeilingPercent = rValue.at("refund_ceiling_percent").get<int>();
-    if (kind.refundCeilingPercent < 0)
-    {
-        Fail_(rPath, "refund_ceiling_percent must be >= 0, got "
-                         + std::to_string(kind.refundCeilingPercent));
-    }
+    kind.refundCeilingPercent = rReader.IntAtLeast("refund_ceiling_percent", 0);
     return kind;
 }
 
-ScrapOverride_t ScrapConfigParser::ParseOverride(const nlohmann::json& rValue,
-                                                 const std::string& rPath)
+ScrapOverride_t ScrapConfigParser::ParseOverride(const ConfigReader& rReader)
 {
-    if (!rValue.is_object())
-    {
-        Fail_(rPath, "must be an object with formula and/or refund_type");
-    }
-    ConfigFields::RejectUnknownKeys(rValue, {"formula", "refund_type"}, rPath);
+    rReader.RejectUnknownKeys({"formula", "refund_type"});
 
     ScrapOverride_t override;
-    if (rValue.contains("formula"))
+    if (rReader.Has("formula") && rReader.Json().at("formula").is_null())
     {
-        const nlohmann::json& rFormula = rValue.at("formula");
-        if (rFormula.is_null())
+        if (rReader.Has("refund_type"))
         {
-            if (rValue.contains("refund_type"))
-            {
-                Fail_(rPath, "a null formula denies scrap; omit refund_type");
-            }
-            override.formula = "";
+            rReader.Fail("a null formula denies scrap; omit refund_type");
         }
-        else
-        {
-            override.formula = OptionalString_(rValue, rPath, "formula");
-        }
+        override.formula = "";
     }
-    override.refundType = OptionalRefundType_(rValue, rPath);
+    else
+    {
+        override.formula = OptionalString_(rReader, "formula");
+    }
+    override.refundType = OptionalRefundType_(rReader);
     if (!override.formula && !override.refundType)
     {
-        Fail_(rPath, "must include formula or refund_type");
+        rReader.Fail("must include formula or refund_type");
     }
     return override;
 }

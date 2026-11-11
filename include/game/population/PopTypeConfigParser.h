@@ -1,7 +1,6 @@
 #pragma once
 
 #include "game/effects/EffectConfig.h"
-#include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
 
@@ -50,9 +49,6 @@ public:
     ~PopTypeConfigParser() = default;
 
     std::vector<PopTypeConfig_t> ParseConfig(const std::string& configPath);
-
-private:
-    PopTypeConfig_t ParsePopTypeConfig(const nlohmann::json& popJson);
 };
 
 } // namespace ac

@@ -1,9 +1,10 @@
 #pragma once
 
+#include "lib/config/ConfigReader.h"
+
 #include <nlohmann/json.hpp>
 #include <algorithm>
 #include <filesystem>
-#include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -12,26 +13,26 @@
 namespace ac
 {
 
-// Loads config files holding an array of entries, parsing each with the caller's function.
+// Loads config files, handing the caller's parse function a ConfigReader that names the file.
 namespace JsonConfigLoader
 {
 
-// Opens a single JSON file expected to contain a top-level array and returns each element
-// parsed through parseEntry. `noun` appears only in log/error text (e.g. "building").
+// The parsed contents of one JSON file. Throws naming the file if it cannot be opened or parsed.
+nlohmann::json ReadFile(const std::string& filePath);
+
+// "<noun> '<id>' in '<path>'" for an entry with a string id, else its index in the file.
+std::string EntryContext(const char* noun, const std::string& filePath,
+                         const nlohmann::json& rEntry, std::size_t index);
+
+// Opens a single JSON file expected to contain a top-level array of objects and returns each
+// element parsed through parseEntry(const ConfigReader&). `noun` names the entries in log and
+// error text (e.g. "building").
 template <typename T, typename ParseFn>
 std::vector<T> LoadFile(const std::string& filePath, const char* noun, ParseFn parseEntry)
 {
     std::cout << "Loading " << noun << " configuration from: " << filePath << "\n";
 
-    std::ifstream configFile(filePath);
-    if (!configFile.is_open())
-    {
-        throw std::runtime_error("Could not open " + filePath);
-    }
-
-    nlohmann::json configJson;
-    configFile >> configJson;
-
+    const nlohmann::json configJson = ReadFile(filePath);
     if (!configJson.is_array())
     {
         throw std::runtime_error("Expected a JSON array of " + std::string(noun)
@@ -39,9 +40,15 @@ std::vector<T> LoadFile(const std::string& filePath, const char* noun, ParseFn p
     }
 
     std::vector<T> configs;
-    for (const auto& rEntryJson : configJson)
+    for (std::size_t i = 0; i < configJson.size(); ++i)
     {
-        configs.push_back(parseEntry(rEntryJson));
+        const nlohmann::json& rEntryJson = configJson.at(i);
+        const std::string context = EntryContext(noun, filePath, rEntryJson, i);
+        if (!rEntryJson.is_object())
+        {
+            throw std::runtime_error(context + " must be an object");
+        }
+        configs.push_back(parseEntry(ConfigReader(rEntryJson, context)));
     }
 
     std::cout << "Loaded " << configs.size() << " " << noun << " configurations\n";
@@ -49,28 +56,20 @@ std::vector<T> LoadFile(const std::string& filePath, const char* noun, ParseFn p
 }
 
 // Opens a single JSON file expected to contain a top-level object and returns it parsed through
-// parseObject. For config types that are one settings block rather than an array of entries.
+// parseObject(const ConfigReader&). For config types that are one settings block rather than an
+// array of entries.
 template <typename T, typename ParseFn>
 T LoadObjectFile(const std::string& filePath, const char* noun, ParseFn parseObject)
 {
     std::cout << "Loading " << noun << " configuration from: " << filePath << "\n";
 
-    std::ifstream configFile(filePath);
-    if (!configFile.is_open())
-    {
-        throw std::runtime_error("Could not open " + filePath);
-    }
-
-    nlohmann::json configJson;
-    configFile >> configJson;
-
+    const nlohmann::json configJson = ReadFile(filePath);
+    const std::string context = std::string(noun) + " config '" + filePath + "'";
     if (!configJson.is_object())
     {
-        throw std::runtime_error("Expected a JSON object of " + std::string(noun)
-                                 + " settings in '" + filePath + "'");
+        throw std::runtime_error(context + " must be a JSON object");
     }
-
-    return parseObject(configJson);
+    return parseObject(ConfigReader(configJson, context));
 }
 
 // LoadFile, or for a directory every *.json in it, sorted by name and concatenated.

@@ -2,14 +2,10 @@
 
 #include "game/effects/EffectConfigParser.h"
 #include "game/effects/EffectEnums.h"
-#include "lib/config/ConfigFields.h"
+#include "lib/config/JsonConfigLoader.h"
 
-#include <nlohmann/json.hpp>
-#include <fstream>
 #include <stdexcept>
 #include <string>
-
-using json = nlohmann::json;
 
 namespace ac
 {
@@ -131,68 +127,44 @@ void ValidateMoraleLevelEffects_(const MoraleConfig_t& rConfig)
     }
 }
 
-std::string RequireEligibilityFormula_(const json& rRoot)
+std::vector<MoraleLevel_t> ParseLevels_(const ConfigReader& rReader)
 {
-    const auto missing = std::runtime_error(
-        "morale_levels.json: 'promotion_eligibility_formula' must be a non-empty string");
-    if (!rRoot.contains("promotion_eligibility_formula")
-        || !rRoot.at("promotion_eligibility_formula").is_string())
-    {
-        throw missing;
-    }
-    std::string formula = rRoot.at("promotion_eligibility_formula").get<std::string>();
-    if (formula.empty())
-    {
-        throw missing;
-    }
-    return formula;
-}
-
-std::vector<MoraleLevel_t> ParseLevels_(const json& rRoot)
-{
-    if (!rRoot.contains("levels") || !rRoot.at("levels").is_array())
-    {
-        throw std::runtime_error("morale_levels.json: expected 'levels' array");
-    }
     std::vector<MoraleLevel_t> levels;
-    for (const json& rLevelJson : rRoot.at("levels"))
+    for (const ConfigReader& rLevelReader : rReader.Objects("levels"))
     {
         MoraleLevel_t level;
-        level.index = rLevelJson.at("index").get<int>();
-        level.conventional = rLevelJson.at("conventional").get<std::string>();
-        level.native = rLevelJson.at("native").get<std::string>();
+        level.index = rLevelReader.Int("index");
+        level.conventional = rLevelReader.String("conventional");
+        level.native = rLevelReader.String("native");
         const std::string sourceId = "morale_level_" + std::to_string(level.index);
         level.effects = EffectConfigParser::ParseEffects(
-            rLevelJson, EffectSourceKind_t::MoraleLevel, sourceId);
+            rLevelReader.Json(), EffectSourceKind_t::MoraleLevel, sourceId);
         levels.push_back(std::move(level));
     }
     return levels;
+}
+
+MoraleConfig_t ParseMorale_(const ConfigReader& rReader)
+{
+    MoraleConfig_t config;
+    config.startingIntrinsic = rReader.IntOr("starting_intrinsic", 1);
+    config.defenseFloorIndex = rReader.IntOr("defense_floor_index", 1);
+    config.percentPerLevel = rReader.Number("percent_per_level");
+    config.baselineIndex = rReader.Int("baseline_index");
+    config.promotionEligibilityFormula = rReader.NonEmptyString("promotion_eligibility_formula");
+    config.levels = ParseLevels_(rReader);
+
+    ValidateContiguousLevels_(config);
+    ValidateMoraleLevelEffects_(config);
+    return config;
 }
 
 } // namespace
 
 MoraleConfig_t MoraleConfigParser::ParseConfig(const std::string& configPath)
 {
-    std::ifstream configFile(configPath);
-    if (!configFile.is_open())
-    {
-        throw std::runtime_error("Could not open " + configPath);
-    }
-
-    json root;
-    configFile >> root;
-
-    MoraleConfig_t config;
-    config.startingIntrinsic = root.value("starting_intrinsic", 1);
-    config.defenseFloorIndex = root.value("defense_floor_index", 1);
-    config.percentPerLevel = EffectConfigParser::RequireNumber(root, "percent_per_level");
-    config.baselineIndex = ConfigFields::RequireInt(root, "baseline_index", "morale_levels.json");
-    config.promotionEligibilityFormula = RequireEligibilityFormula_(root);
-    config.levels = ParseLevels_(root);
-
-    ValidateContiguousLevels_(config);
-    ValidateMoraleLevelEffects_(config);
-    return config;
+    return JsonConfigLoader::LoadObjectFile<MoraleConfig_t>(configPath, "morale levels",
+                                                            ParseMorale_);
 }
 
 } // namespace ac

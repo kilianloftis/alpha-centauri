@@ -1,12 +1,10 @@
 #include "game/faction/FactionConfigParser.h"
 
-#include "lib/config/ConfigFields.h"
+#include "lib/config/JsonConfigLoader.h"
 #include "game/effects/EffectConfigParser.h"
 #include <algorithm>
 #include <filesystem>
-#include <fstream>
 #include <iostream>
-#include <nlohmann/json.hpp>
 #include <stdexcept>
 
 namespace ac
@@ -21,12 +19,94 @@ constexpr const char* k_AIFile = "ai.json";
 constexpr const char* k_EffectsFile = "effects.json";
 constexpr const char* k_BaseNamesFile = "base_names.json";
 
-FactionSpecies_t ParseFactionSpecies_(const std::string& rValue)
+FactionSpecies_t ParseFactionSpecies_(const ConfigReader& rReader)
 {
-    if (rValue == "human")       return FactionSpecies_t::Human;
-    if (rValue == "progenitor")  return FactionSpecies_t::Progenitor;
-    if (rValue == "native_life") return FactionSpecies_t::NativeLife;
-    throw std::runtime_error("identity.json: unknown species '" + rValue + "'");
+    const std::string value = rReader.String("species");
+    if (value == "human")       return FactionSpecies_t::Human;
+    if (value == "progenitor")  return FactionSpecies_t::Progenitor;
+    if (value == "native_life") return FactionSpecies_t::NativeLife;
+    rReader.FailKey("species", "is not a known species: '" + value + "'");
+}
+
+// One file of a faction's directory. The json lives for the whole parse.
+template <typename T, typename ParseFn>
+T ParseFactionFile_(const std::string& rPath, ParseFn parse)
+{
+    const nlohmann::json json = JsonConfigLoader::ReadFile(rPath);
+    return parse(ConfigReader(json, "faction file '" + rPath + "'"));
+}
+
+FactionIdentityConfig ParseIdentity_(const ConfigReader& rReader)
+{
+    FactionIdentityConfig identity;
+    identity.name = rReader.String("name");
+    identity.descriptiveName = rReader.StringOr("descriptive_name", identity.name);
+    identity.noun = rReader.StringOr("noun", identity.name);
+    identity.adjective = rReader.StringOr("adjective", identity.name);
+    identity.participatesInCouncil = rReader.BoolOr("participates_in_council", true);
+    if (rReader.Has("species"))
+    {
+        identity.species = ParseFactionSpecies_(rReader);
+    }
+    return identity;
+}
+
+LeaderConfig ParseLeader_(const ConfigReader& rReader)
+{
+    LeaderConfig leader;
+    leader.name = rReader.String("name");
+    leader.title = rReader.StringOr("title", "");
+    return leader;
+}
+
+AITendenciesConfig ParseAITendencies_(const ConfigReader& rReader)
+{
+    AITendenciesConfig ai;
+    ai.wealth = rReader.BoolOr("wealth", false);
+    ai.power = rReader.BoolOr("power", false);
+    ai.growth = rReader.BoolOr("growth", false);
+    ai.tech = rReader.BoolOr("tech", false);
+    return ai;
+}
+
+std::vector<std::string> ParseBaseNames_(const std::string& rPath)
+{
+    const nlohmann::json names = JsonConfigLoader::ReadFile(rPath);
+    if (!names.is_array())
+    {
+        throw std::runtime_error(rPath + " must be a JSON array of strings");
+    }
+    std::vector<std::string> baseNames;
+    for (const nlohmann::json& rName : names)
+    {
+        if (!rName.is_string())
+        {
+            throw std::runtime_error(rPath + " must be a JSON array of strings");
+        }
+        baseNames.push_back(rName.get<std::string>());
+    }
+    return baseNames;
+}
+
+std::vector<EffectConfig_t> ParseEffects_(const ConfigReader& rReader, const std::string& rId)
+{
+    return EffectConfigParser::ParseEffects(rReader.Json(), EffectSourceKind_t::Faction, rId);
+}
+
+FactionConfig_t ParseFactionDirectory_(const std::string& id, const std::string& dirPath)
+{
+    FactionConfig_t config;
+    config.id = id;
+    config.identity = ParseFactionFile_<FactionIdentityConfig>(dirPath + "/" + k_IdentityFile,
+                                                               ParseIdentity_);
+    config.leader = ParseFactionFile_<LeaderConfig>(dirPath + "/" + k_LeaderFile, ParseLeader_);
+    config.ai = ParseFactionFile_<AITendenciesConfig>(dirPath + "/" + k_AIFile,
+                                                      ParseAITendencies_);
+    config.effects = ParseFactionFile_<std::vector<EffectConfig_t>>(
+        dirPath + "/" + k_EffectsFile,
+        [&id](const ConfigReader& rReader) { return ParseEffects_(rReader, id); });
+    config.flavor.baseNames = ParseBaseNames_(dirPath + "/" + k_BaseNamesFile);
+    return config;
 }
 
 // Sorted, so faction order does not depend on the filesystem.
@@ -69,95 +149,6 @@ std::vector<FactionConfig_t> FactionConfigParser::ParseConfig(const std::string&
 
     std::cout << "Loaded " << configs.size() << " faction configurations\n";
     return configs;
-}
-
-FactionConfig_t FactionConfigParser::ParseFactionDirectory_(const std::string& id,
-                                                           const std::string& dirPath)
-{
-    FactionConfig_t config;
-    config.id = id;
-
-    config.identity = ParseIdentity(ReadRequiredJsonFile(dirPath + "/" + k_IdentityFile), id);
-    config.leader = ParseLeader(ReadRequiredJsonFile(dirPath + "/" + k_LeaderFile));
-    config.ai = ParseAITendencies(ReadRequiredJsonFile(dirPath + "/" + k_AIFile));
-    config.effects = EffectConfigParser::ParseEffects(
-        ReadRequiredJsonFile(dirPath + "/" + k_EffectsFile), EffectSourceKind_t::Faction, config.id);
-    config.flavor.baseNames =
-        ParseBaseNames(ReadRequiredJsonFile(dirPath + "/" + k_BaseNamesFile));
-
-    return config;
-}
-
-FactionIdentityConfig FactionConfigParser::ParseIdentity(const nlohmann::json& j,
-                                                         const std::string& idFallback)
-{
-    FactionIdentityConfig identity;
-    identity.name = ConfigFields::ParseName(j, idFallback, "name");
-    identity.descriptiveName = j.value("descriptive_name", identity.name);
-    identity.noun = j.value("noun", identity.name);
-    identity.adjective = j.value("adjective", identity.name);
-    identity.participatesInCouncil = j.value("participates_in_council", true);
-    if (j.contains("species"))
-    {
-        identity.species = ParseFactionSpecies_(j.at("species").get<std::string>());
-    }
-    return identity;
-}
-
-LeaderConfig FactionConfigParser::ParseLeader(const nlohmann::json& j)
-{
-    LeaderConfig leader;
-    leader.name = j.at("name").get<std::string>();
-    leader.title = j.value("title", std::string());
-    return leader;
-}
-
-AITendenciesConfig FactionConfigParser::ParseAITendencies(const nlohmann::json& j)
-{
-    AITendenciesConfig ai;
-    ai.wealth = j.value("wealth", false);
-    ai.power = j.value("power", false);
-    ai.growth = j.value("growth", false);
-    ai.tech = j.value("tech", false);
-    return ai;
-}
-
-std::vector<std::string> FactionConfigParser::ParseBaseNames(const nlohmann::json& j)
-{
-    if (!j.is_array())
-    {
-        throw std::runtime_error("base_names.json must be a JSON array of strings");
-    }
-
-    std::vector<std::string> names;
-    names.reserve(j.size());
-    for (const auto& rEntry : j)
-    {
-        names.push_back(rEntry.get<std::string>());
-    }
-    return names;
-}
-
-nlohmann::json FactionConfigParser::ReadJsonFile(const std::string& filePath)
-{
-    std::ifstream file(filePath);
-    if (!file.is_open())
-    {
-        throw std::runtime_error("Could not open " + filePath);
-    }
-
-    nlohmann::json json;
-    file >> json;
-    return json;
-}
-
-nlohmann::json FactionConfigParser::ReadRequiredJsonFile(const std::string& filePath)
-{
-    if (!std::filesystem::exists(filePath))
-    {
-        throw std::runtime_error("Required faction config file missing: " + filePath);
-    }
-    return ReadJsonFile(filePath);
 }
 
 } // namespace ac

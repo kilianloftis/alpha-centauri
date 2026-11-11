@@ -3,7 +3,6 @@
 #include "game/map/TerrainConfig.h"
 #include "game/map/Tile.h"
 #include "game/movement/MovementConstants.h"
-#include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
 #include "lib/Rational.h"
 #include "game/effects/ActiveEffect.h"
@@ -36,29 +35,22 @@ constexpr std::string_view k_BuildableTag = "buildable";
 
 // Ensures the rational is non-negative and lands on a whole number of move fragments.
 // Done at parse so hot-path move-cost code never converts rationals.
-int ParseMoveCostFragments_(const Rational_t& rCost, std::string_view field, std::string_view id)
+int ParseMoveCostFragments_(const ConfigReader& rReader, const char* pKey)
 {
-    auto wrap = [&](const std::string& message) {
-        throw std::runtime_error(
-            "Improvement '" + std::string(id) + "' field '" + std::string(field) + "': " + message);
-    };
-
-    if (rCost.numerator < 0 || rCost.denominator <= 0)
+    const Rational_t cost = rReader.Rational(pKey);
+    if (cost.numerator < 0)
     {
-        wrap("move cost must be non-negative");
+        rReader.FailKey(pKey, "must be non-negative");
     }
-
     try
     {
-        return rCost.ScaledInt(MovementConstants_t::k_moveFragmentsPerPoint);
+        return cost.ScaledInt(MovementConstants_t::k_moveFragmentsPerPoint);
     }
-    catch (const std::exception& e)
+    catch (const std::exception& rError)
     {
-        wrap(e.what());
-        return 0; // unreachable
+        rReader.FailKey(pKey, rError.what());
     }
 }
-
 
 using TagIndex_t = std::unordered_map<std::string, std::vector<std::string>>;
 
@@ -195,41 +187,29 @@ void RequireKnownReferences_(const std::vector<ImprovementConfig_t>& rConfigs)
     }
 }
 
-void RejectProjectFields_(const nlohmann::json& rJson, const std::string& rId)
+void RejectProjectFields_(const ConfigReader& rReader)
 {
     for (const char* pField : {"turns_required", "energy_cost", "required_tech"})
     {
-        if (rJson.contains(pField))
+        if (rReader.Has(pField))
         {
-            throw std::runtime_error(
-                "Terrain feature '" + rId + "': '" + pField
-                + "' belongs on a terrain operation, not on a terrain feature");
+            rReader.FailKey(pField, "belongs on a terrain operation, not on a terrain feature");
         }
     }
 }
 
 // Absent when turns_required is 0: nothing a former can build.
-std::optional<FormerProject_t> ParseFormerProject_(const nlohmann::json& rJson,
-                                                   const std::string& rId)
+std::optional<FormerProject_t> ParseFormerProject_(const ConfigReader& rReader)
 {
     FormerProject_t project;
-    project.turnsRequired = rJson.value("turns_required", 0);
-    if (project.turnsRequired < 0)
-    {
-        throw std::runtime_error("Improvement '" + rId + "': 'turns_required' must be >= 0");
-    }
-    project.energyCost = rJson.value("energy_cost", 0);
-    if (project.energyCost < 0)
-    {
-        throw std::runtime_error("Improvement '" + rId + "': 'energy_cost' must be >= 0");
-    }
-    project.requiredTech = ConfigFields::ParseRequiredTech(rJson);
+    project.turnsRequired =
+        rReader.Has("turns_required") ? rReader.IntAtLeast("turns_required", 0) : 0;
+    project.energyCost = rReader.Has("energy_cost") ? rReader.IntAtLeast("energy_cost", 0) : 0;
+    project.requiredTech = rReader.StringOr("required_tech", "");
     if (project.turnsRequired == 0 && (project.energyCost != 0 || !project.requiredTech.empty()))
     {
-        throw std::runtime_error(
-            "Improvement '" + rId
-            + "': 'energy_cost' / 'required_tech' need a 'turns_required' > 0, or no former "
-              "can ever build it");
+        rReader.Fail("'energy_cost' / 'required_tech' need a 'turns_required' > 0, or no former "
+                     "can ever build it");
     }
     if (project.turnsRequired == 0)
     {
@@ -238,25 +218,13 @@ std::optional<FormerProject_t> ParseFormerProject_(const nlohmann::json& rJson,
     return project;
 }
 
-std::optional<ImprovementDomain_t> ParseImprovementDomain_(const nlohmann::json& rJson,
-                                                           const std::string& rId)
+std::optional<ImprovementDomain_t> ParseImprovementDomain_(const ConfigReader& rReader)
 {
-    if (!rJson.contains("domain") || rJson.at("domain").is_null())
+    if (!rReader.Has("domain") || rReader.Json().at("domain").is_null())
     {
         return std::nullopt;
     }
-    if (!rJson.at("domain").is_string())
-    {
-        throw std::runtime_error("Improvement '" + rId + "': 'domain' must be a string");
-    }
-    const std::string domain = rJson.at("domain").get<std::string>();
-    const auto parsed =
-        magic_enum::enum_cast<ImprovementDomain_t>(domain, magic_enum::case_insensitive);
-    if (!parsed)
-    {
-        throw std::runtime_error("Improvement '" + rId + "': unknown domain '" + domain + "'");
-    }
-    return *parsed;
+    return rReader.Enum<ImprovementDomain_t>("domain", "improvement domain");
 }
 
 } // namespace
@@ -269,9 +237,8 @@ bool IsBuildable(const ImprovementConfig_t& rConfig)
 std::vector<ImprovementConfig_t> ParseImprovementsUnexpanded(const std::string& rConfigPath)
 {
     return JsonConfigLoader::LoadPath<ImprovementConfig_t>(
-        rConfigPath, "improvement",
-        [](const nlohmann::json& rJson) {
-            return ParseImprovementBody(rJson, OccupantPlacement_t::Improvement);
+        rConfigPath, "improvement", [](const ConfigReader& rReader) {
+            return ParseImprovementBody(rReader, OccupantPlacement_t::Improvement);
         });
 }
 
@@ -330,40 +297,39 @@ int ResolveVisionRadius_(const ImprovementConfig_t& rConfig)
     return sight;
 }
 
-ImprovementConfig_t ParseImprovementBody(const nlohmann::json& rImprovementJson,
+ImprovementConfig_t ParseImprovementBody(const ConfigReader& rReader,
                                          OccupantPlacement_t placement)
 {
     ImprovementConfig_t config;
-    config.id = ConfigFields::ParseId(rImprovementJson);
-    config.name = ConfigFields::ParseName(rImprovementJson, config.id, "name");
-    config.description = rImprovementJson.value("description", "");
+    config.id = rReader.NonEmptyString("id");
+    config.name = rReader.String("name");
+    config.description = rReader.StringOr("description", "");
     config.placement = placement;
     if (placement == OccupantPlacement_t::Terrain)
     {
-        RejectProjectFields_(rImprovementJson, config.id);
+        RejectProjectFields_(rReader);
     }
     else
     {
-        config.project = ParseFormerProject_(rImprovementJson, config.id);
+        config.project = ParseFormerProject_(rReader);
     }
-    config.ownedByTerritory = rImprovementJson.value("owned_by_territory", false);
-    config.frequency = rImprovementJson.value("frequency", 0);
-    config.art = ParseOccupantArt(rImprovementJson, config.id);
-    config.tags = ConfigFields::ParseStringArray(rImprovementJson, "tags");
-    config.domain = ParseImprovementDomain_(rImprovementJson, config.id);
-    config.excludes = ConfigFields::ParseStringArray(rImprovementJson, "excludes");
-    config.suppressYieldSources =
-        ConfigFields::ParseStringArray(rImprovementJson, "suppress_yield_sources");
-    config.suppressTerrain = ConfigFields::ParseStringArray(rImprovementJson, "suppress_terrain");
-    config.terminatesRiver = rImprovementJson.value("terminates_river", false);
-    if (rImprovementJson.contains("move_cost"))
+    config.ownedByTerritory = rReader.BoolOr("owned_by_territory", false);
+    config.frequency = rReader.IntOr("frequency", 0);
+    config.art = ParseOccupantArt(rReader);
+    config.tags = rReader.StringArray("tags");
+    config.domain = ParseImprovementDomain_(rReader);
+    config.excludes = rReader.StringArray("excludes");
+    config.suppressYieldSources = rReader.StringArray("suppress_yield_sources");
+    config.suppressTerrain = rReader.StringArray("suppress_terrain");
+    config.terminatesRiver = rReader.BoolOr("terminates_river", false);
+    if (rReader.Has("move_cost"))
     {
-        const Rational_t cost = Rational_t::ParseJson(rImprovementJson.at("move_cost"));
-        config.moveCostFragments = ParseMoveCostFragments_(cost, "move_cost", config.id);
+        config.moveCostFragments = ParseMoveCostFragments_(rReader, "move_cost");
     }
-    config.effects = EffectConfigParser::ParseEffects(rImprovementJson, EffectSourceKind_t::Improvement, config.id);
+    config.effects = EffectConfigParser::ParseEffects(rReader.Json(),
+                                                      EffectSourceKind_t::Improvement, config.id);
     config.onVisitEffects = TriggeredEffectParser::ParseTriggeredEffects(
-        rImprovementJson, "on_visit_effects", config.id);
+        rReader.Json(), "on_visit_effects", config.id);
     config.visionRadius = ResolveVisionRadius_(config);
     return config;
 }

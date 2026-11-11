@@ -2,7 +2,6 @@
 
 #include "game/map/MapRulesConfig.h"
 #include "game/worldgen/WorldGenPresetConfig.h"
-#include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
 
@@ -24,10 +23,6 @@ public:
     // Copies the preset's elevation range onto rRules after the same check.
     static void ApplyElevationRange(MapRulesConfig_t& rRules,
                                     const WorldGenPresetConfig_t& rPreset);
-
-private:
-    WorldGenPresetConfig_t ParsePresetConfig_(const nlohmann::json& presetJson);
-    WorldGenPreset_t ParseType_(const std::string& typeStr) const;
 };
 
 } // namespace ac

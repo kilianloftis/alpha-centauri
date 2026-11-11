@@ -5,10 +5,8 @@
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/MapOccupantLoad.h"
 #include "game/map/TerrainOperationRegistry.h"
-#include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
 
-#include <magic_enum.hpp>
 #include <stdexcept>
 #include <unordered_set>
 
@@ -18,98 +16,52 @@ namespace ac
 namespace
 {
 
-const nlohmann::json& RequireArray_(const nlohmann::json& rRoot, const char* pKey,
-                                    const std::string& rPath)
+std::vector<ImprovementConfig_t> ParseFeatures_(const ConfigReader& rReader)
 {
-    if (!rRoot.contains(pKey) || !rRoot.at(pKey).is_array())
-    {
-        throw std::runtime_error("Terrain config '" + rPath + "': expected a '" + pKey
-                                 + "' array");
-    }
-    return rRoot.at(pKey);
-}
-
-std::vector<ImprovementConfig_t> ParseFeatures_(const nlohmann::json& rRoot,
-                                                const std::string& rPath)
-{
-    const nlohmann::json& rFeatures = RequireArray_(rRoot, "features", rPath);
     std::vector<ImprovementConfig_t> configs;
-    configs.reserve(rFeatures.size());
-    for (const nlohmann::json& rEntry : rFeatures)
+    for (const ConfigReader& rEntry : rReader.Objects("features"))
     {
         configs.push_back(ParseImprovementBody(rEntry, OccupantPlacement_t::Terrain));
     }
     return configs;
 }
 
-template <typename TEnum>
-TEnum ParseEnumField_(const nlohmann::json& rJson, const char* pField, TEnum fallback,
-                      const std::string& rId)
-{
-    if (!rJson.contains(pField))
-    {
-        return fallback;
-    }
-    if (!rJson.at(pField).is_string())
-    {
-        throw std::runtime_error("Terrain operation '" + rId + "': '" + pField
-                                 + "' must be a string");
-    }
-    const std::string value = rJson.at(pField).get<std::string>();
-    const auto parsed = magic_enum::enum_cast<TEnum>(value, magic_enum::case_insensitive);
-    if (!parsed)
-    {
-        throw std::runtime_error("Terrain operation '" + rId + "': unknown " + pField + " '"
-                                 + value + "'");
-    }
-    return *parsed;
-}
-
-TerrainOperationConfig_t ParseOperation_(const nlohmann::json& rJson)
+TerrainOperationConfig_t ParseOperation_(const ConfigReader& rReader)
 {
     TerrainOperationConfig_t config;
-    config.id = ConfigFields::ParseId(rJson);
-    config.name = ConfigFields::ParseName(rJson, config.id, "name");
-    config.energyCostSource = ParseEnumField_(rJson, "energy_cost_source",
-                                              EnergyCostSource_t::Flat, config.id);
-    config.formerDomain =
-        ParseEnumField_(rJson, "former_domain", FormerDomainRule_t::MatchesTile, config.id);
+    config.id = rReader.NonEmptyString("id");
+    config.name = rReader.String("name");
+    config.energyCostSource =
+        rReader.Has("energy_cost_source")
+            ? rReader.Enum<EnergyCostSource_t>("energy_cost_source", "energy_cost_source")
+            : EnergyCostSource_t::Flat;
+    config.formerDomain = rReader.Has("former_domain")
+                              ? rReader.Enum<FormerDomainRule_t>("former_domain", "former_domain")
+                              : FormerDomainRule_t::MatchesTile;
     config.onCompleteEffects = TriggeredEffectParser::ParseTriggeredEffects(
-        rJson, "on_complete_effects", config.id);
+        rReader.Json(), "on_complete_effects", config.id);
     if (config.onCompleteEffects.empty())
     {
-        throw std::runtime_error("Terrain operation '" + config.id
-                                 + "': 'on_complete_effects' must name at least one effect, or "
-                                   "the project can never do anything");
+        rReader.FailKey("on_complete_effects",
+                        "must name at least one effect, or the project can never do anything");
     }
-    config.project.turnsRequired = rJson.value("turns_required", 0);
-    if (config.project.turnsRequired <= 0)
-    {
-        throw std::runtime_error("Terrain operation '" + config.id
-                                 + "': 'turns_required' must be > 0");
-    }
-    config.project.energyCost = rJson.value("energy_cost", 0);
-    if (config.project.energyCost < 0)
-    {
-        throw std::runtime_error("Terrain operation '" + config.id
-                                 + "': 'energy_cost' must be >= 0");
-    }
-    config.project.requiredTech = ConfigFields::ParseRequiredTech(rJson);
+    config.project.turnsRequired = rReader.IntAtLeast("turns_required", 1);
+    config.project.energyCost =
+        rReader.Has("energy_cost") ? rReader.IntAtLeast("energy_cost", 0) : 0;
+    config.project.requiredTech = rReader.StringOr("required_tech", "");
     return config;
 }
 
-std::vector<TerrainOperationConfig_t> ParseOperations_(const nlohmann::json& rRoot,
-                                                       const std::string& rPath)
+std::vector<TerrainOperationConfig_t> ParseOperations_(const ConfigReader& rReader)
 {
-    const nlohmann::json& rOperations = RequireArray_(rRoot, "operations", rPath);
     std::vector<TerrainOperationConfig_t> configs;
     std::unordered_set<std::string> seen;
-    for (const nlohmann::json& rEntry : rOperations)
+    for (const ConfigReader& rEntry : rReader.Objects("operations"))
     {
         TerrainOperationConfig_t config = ParseOperation_(rEntry);
         if (!seen.insert(config.id).second)
         {
-            throw std::runtime_error("Duplicate terrain operation '" + config.id + "'");
+            rReader.FailKey("operations", "repeats terrain operation '" + config.id + "'");
         }
         configs.push_back(std::move(config));
     }
@@ -121,12 +73,10 @@ std::vector<TerrainOperationConfig_t> ParseOperations_(const nlohmann::json& rRo
 TerrainFile_t ParseTerrainFile(const std::string& configPath)
 {
     return JsonConfigLoader::LoadObjectFile<TerrainFile_t>(
-        configPath, "terrain",
-        [&configPath](const nlohmann::json& rRoot)
-        {
+        configPath, "terrain", [](const ConfigReader& rReader) {
             TerrainFile_t file;
-            file.features = ParseFeatures_(rRoot, configPath);
-            file.operations = ParseOperations_(rRoot, configPath);
+            file.features = ParseFeatures_(rReader);
+            file.operations = ParseOperations_(rReader);
             return file;
         });
 }
@@ -155,8 +105,7 @@ std::vector<TerrainOperationConfig_t> TerrainOperationConfigParser::ParseConfig(
     const std::string& configPath)
 {
     return JsonConfigLoader::LoadObjectFile<std::vector<TerrainOperationConfig_t>>(
-        configPath, "terrain operation",
-        [&configPath](const nlohmann::json& rRoot) { return ParseOperations_(rRoot, configPath); });
+        configPath, "terrain operation", ParseOperations_);
 }
 
 } // namespace ac

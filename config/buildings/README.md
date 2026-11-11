@@ -81,7 +81,7 @@ Each entry in `effects` describes a single gameplay effect applied when the buil
 | `Intercept` | Pre-combat intercept (`parameters.chance`, optional `cooldown_turns`, `chance_of_destruction_on_fail`; requires `condition`) |
 | `Scramble` | Unit may scramble to become the combat defender (`parameters.range`; requires `condition` on the attacker) |
 
-`amount`/`value` accept either a JSON number or a numeric string. `op` is one of `Add`, `AddPercent` (amount in percent points, e.g. `25` = +25%), `MultiplyGeometric` (factor form, e.g. `0.5`), `MaxClamp`, `MinClamp` — defaults to `Add`.
+`amount`/`value` accept a JSON number, a numeric string, or a fraction string such as `"1/3"`. `op` is one of `Add`, `AddPercent` (amount in percent points, e.g. `25` = +25%), `MultiplyGeometric` (factor form, e.g. `0.5`), `MaxClamp`, `MinClamp` — defaults to `Add`.
 
 Any effect may carry an optional top-level `condition` object making it situational, e.g. a combat bonus that only applies against certain targets:
 

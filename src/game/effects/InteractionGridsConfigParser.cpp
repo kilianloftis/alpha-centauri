@@ -1,49 +1,35 @@
 #include "game/effects/InteractionGridsConfigParser.h"
-
 #include "game/effects/EffectConfigParser.h"
+#include "lib/config/JsonConfigLoader.h"
 
-#include <fstream>
-#include <nlohmann/json.hpp>
-#include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace ac
 {
 namespace
 {
 
-InteractionCell_t ParseCell_(const nlohmann::json& rValue, const std::string& path)
+InteractionCell_t ParseCell_(const ConfigReader& rRow, const char* pCol)
 {
-    if (!rValue.is_string())
-    {
-        throw std::runtime_error("interaction_grids " + path + " must be a string");
-    }
-    const std::string s = rValue.get<std::string>();
-    if (s == "allow")
+    const std::string cell = rRow.String(pCol);
+    if (cell == "allow")
     {
         return InteractionCell_t::Allow;
     }
-    if (s == "deny")
+    if (cell == "deny")
     {
         return InteractionCell_t::Deny;
     }
-    throw std::runtime_error("interaction_grids " + path + ": unknown cell '" + s + "'");
+    rRow.FailKey(pCol, "is not a known cell: '" + cell + "' (expected allow or deny)");
 }
 
-void RequireAxes_(const nlohmann::json& rGrid, const char* pGridName, const char* pA,
-                  const char* pB)
+void RequireAxes_(const ConfigReader& rGrid, const char* pA, const char* pB)
 {
-    if (!rGrid.contains("axes") || !rGrid.at("axes").is_array()
-        || rGrid.at("axes").size() != 2)
+    const std::vector<std::string> axes = rGrid.StringArray("axes");
+    if (axes.size() != 2 || axes[0] != pA || axes[1] != pB)
     {
-        throw std::runtime_error(std::string("interaction_grids '") + pGridName
-                                 + "' requires axes [a, b]");
-    }
-    if (rGrid.at("axes")[0].get<std::string>() != pA
-        || rGrid.at("axes")[1].get<std::string>() != pB)
-    {
-        throw std::runtime_error(std::string("interaction_grids '") + pGridName
-                                 + "' axes must be [\"" + pA + "\", \"" + pB + "\"]");
+        rGrid.FailKey("axes", std::string("must be [\"") + pA + "\", \"" + pB + "\"]");
     }
 }
 
@@ -94,51 +80,46 @@ inline constexpr InteractionFooting_t k_Footings[] = {InteractionFooting_t::Land
 // index function are passed in. Adding a grid means adding a call, not another parser.
 template <std::size_t ColCount, typename ColEnum, std::size_t ColN, typename KeyFn,
           typename IndexFn>
-void ParseGrid_(const nlohmann::json& rCells,
+void ParseGrid_(const ConfigReader& rCells,
                 std::array<std::array<InteractionCell_t, ColCount>, k_UnitDomainCount>& rOut,
-                const char* pGridName, const ColEnum (&rCols)[ColN], KeyFn colKey,
-                IndexFn colIndex)
+                const ColEnum (&rCols)[ColN], KeyFn colKey, IndexFn colIndex)
 {
     for (UnitDomain_t row : k_Domains)
     {
-        const char* pRow = DomainKey_(row);
-        if (!rCells.contains(pRow) || !rCells.at(pRow).is_object())
-        {
-            throw std::runtime_error(std::string("interaction_grids '") + pGridName
-                                     + "' missing row '" + pRow + "'");
-        }
-        const nlohmann::json& rRow = rCells.at(pRow);
+        const ConfigReader rowReader = rCells.Object(DomainKey_(row));
         for (ColEnum col : rCols)
         {
-            const char* pCol = colKey(col);
-            if (!rRow.contains(pCol))
-            {
-                throw std::runtime_error(std::string("interaction_grids '") + pGridName
-                                         + "' missing cell " + pRow + "/" + pCol);
-            }
-            rOut[UnitDomainIndex(row)][colIndex(col)] =
-                ParseCell_(rRow.at(pCol), std::string(pGridName) + "." + pRow + "." + pCol);
+            rOut[UnitDomainIndex(row)][colIndex(col)] = ParseCell_(rowReader, colKey(col));
         }
     }
 }
 
 // Validates the grid block's shape and hands back its "cells" object.
-const nlohmann::json& RequireGrid_(const nlohmann::json& rJson, const char* pGridName,
-                                   const char* pA, const char* pB)
+ConfigReader RequireGrid_(const ConfigReader& rReader, const char* pGridName, const char* pA,
+                          const char* pB)
 {
-    if (!rJson.contains(pGridName) || !rJson.at(pGridName).is_object())
-    {
-        throw std::runtime_error(std::string("interaction_grids missing object '") + pGridName
-                                 + "'");
-    }
-    const nlohmann::json& rGrid = rJson.at(pGridName);
-    RequireAxes_(rGrid, pGridName, pA, pB);
-    if (!rGrid.contains("cells") || !rGrid.at("cells").is_object())
-    {
-        throw std::runtime_error(std::string("interaction_grids '") + pGridName
-                                 + "' missing object 'cells'");
-    }
-    return rGrid.at("cells");
+    const ConfigReader grid = rReader.Object(pGridName);
+    RequireAxes_(grid, pA, pB);
+    return grid.Object("cells");
+}
+
+InteractionGridsConfig_t ParseGrids_(const ConfigReader& rReader)
+{
+    InteractionGridsConfig_t config;
+
+    ParseGrid_(RequireGrid_(rReader, "enter", "actor_domain", "surface"), config.enter,
+               k_Surfaces, SurfaceKey_, SurfaceIndex);
+
+    ParseGrid_(RequireGrid_(rReader, "attack_tile", "actor_domain", "footing"),
+               config.attackTile, k_Footings, FootingKey_, FootingIndex);
+
+    ParseGrid_(RequireGrid_(rReader, "attack_unit", "actor_domain", "target_domain"),
+               config.attackUnit, k_Domains, DomainKey_, UnitDomainIndex);
+
+    ParseGrid_(RequireGrid_(rReader, "zoc", "actor_domain", "target_domain"), config.zoc,
+               k_Domains, DomainKey_, UnitDomainIndex);
+
+    return config;
 }
 
 } // namespace
@@ -146,28 +127,8 @@ const nlohmann::json& RequireGrid_(const nlohmann::json& rJson, const char* pGri
 InteractionGridsConfig_t InteractionGridsConfigParser::ParseConfig(
     const std::string& configPath) const
 {
-    std::ifstream file(configPath);
-    if (!file.is_open())
-    {
-        throw std::runtime_error("Could not open interaction grids '" + configPath + "'");
-    }
-
-    const nlohmann::json json = nlohmann::json::parse(file);
-    InteractionGridsConfig_t config;
-
-    ParseGrid_(RequireGrid_(json, "enter", "actor_domain", "surface"), config.enter, "enter",
-               k_Surfaces, SurfaceKey_, SurfaceIndex);
-
-    ParseGrid_(RequireGrid_(json, "attack_tile", "actor_domain", "footing"), config.attackTile,
-               "attack_tile", k_Footings, FootingKey_, FootingIndex);
-
-    ParseGrid_(RequireGrid_(json, "attack_unit", "actor_domain", "target_domain"),
-               config.attackUnit, "attack_unit", k_Domains, DomainKey_, UnitDomainIndex);
-
-    ParseGrid_(RequireGrid_(json, "zoc", "actor_domain", "target_domain"), config.zoc, "zoc",
-               k_Domains, DomainKey_, UnitDomainIndex);
-
-    return config;
+    return JsonConfigLoader::LoadObjectFile<InteractionGridsConfig_t>(
+        configPath, "interaction grids", ParseGrids_);
 }
 
 } // namespace ac

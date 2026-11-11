@@ -1,11 +1,8 @@
 #include "game/map/MapRulesConfigParser.h"
 
-#include "game/effects/EffectConfigParser.h"
+#include "lib/config/JsonConfigLoader.h"
 
 #include <cmath>
-#include <fstream>
-#include <nlohmann/json.hpp>
-#include <stdexcept>
 #include <string>
 
 namespace ac
@@ -14,97 +11,80 @@ namespace ac
 namespace
 {
 
-int RequireWholeMeters_(const nlohmann::json& rJson, const char* pKey)
+int RequireWholeMeters_(const ConfigReader& rReader, const char* pKey)
 {
-    const double value = EffectConfigParser::RequireNumber(rJson, pKey);
+    const double value = rReader.Number(pKey);
     if (value != std::floor(value))
     {
-        throw std::runtime_error(std::string("map_rules '") + pKey
-                                 + "' must be a whole number of meters");
+        rReader.FailKey(pKey, "must be a whole number of meters");
     }
     return static_cast<int>(value);
 }
 
-int RequireCount_(const nlohmann::json& rJson, const char* pKey)
+void RequireBelow_(const ConfigReader& rReader, const char* pKey, int value, const char* pBoundKey,
+                   int bound)
 {
-    if (!rJson.contains(pKey) || !rJson.at(pKey).is_number_integer())
+    if (value >= bound)
     {
-        throw std::runtime_error(std::string("map_rules '") + pKey + "' must be an integer");
+        rReader.FailKey(pKey, std::string("must be < '") + pBoundKey + "', got "
+                                  + std::to_string(value) + " >= " + std::to_string(bound));
     }
-    return rJson.at(pKey).get<int>();
 }
 
-void ValidateElevationRules_(const MapRulesConfig_t& rConfig)
+void RequireAtLeast_(const ConfigReader& rReader, const char* pKey, int value,
+                     const char* pBoundKey, int bound)
 {
-    if (rConfig.oceanShelfMeters >= rConfig.oceanLevelMeters)
+    if (value < bound)
     {
-        throw std::runtime_error(
-            "map_rules 'ocean_shelf_meters' must be < 'ocean_level_meters', got "
-            + std::to_string(rConfig.oceanShelfMeters) + " >= "
-            + std::to_string(rConfig.oceanLevelMeters));
+        rReader.FailKey(pKey, std::string("must be >= '") + pBoundKey + "', got "
+                                  + std::to_string(value) + " < " + std::to_string(bound));
     }
-    if (rConfig.levelMinMeters <= 0)
+}
+
+void ValidateElevationRules_(const ConfigReader& rReader, const MapRulesConfig_t& rConfig)
+{
+    RequireBelow_(rReader, "ocean_shelf_meters", rConfig.oceanShelfMeters, "ocean_level_meters",
+                  rConfig.oceanLevelMeters);
+    RequireAtLeast_(rReader, "level_max_meters", rConfig.levelMaxMeters, "level_min_meters",
+                    rConfig.levelMinMeters);
+    RequireAtLeast_(rReader, "spread_altitude_limit_meters", rConfig.spreadAltitudeLimitMeters,
+                    "ocean_level_meters", rConfig.oceanLevelMeters);
+}
+
+int RequirePositiveMeters_(const ConfigReader& rReader, const char* pKey)
+{
+    const int value = RequireWholeMeters_(rReader, pKey);
+    if (value <= 0)
     {
-        throw std::runtime_error("map_rules 'level_min_meters' must be > 0, got "
-                                 + std::to_string(rConfig.levelMinMeters));
+        rReader.FailKey(pKey, "must be > 0, got " + std::to_string(value));
     }
-    if (rConfig.levelMaxMeters < rConfig.levelMinMeters)
-    {
-        throw std::runtime_error(
-            "map_rules 'level_max_meters' must be >= 'level_min_meters', got "
-            + std::to_string(rConfig.levelMaxMeters) + " < "
-            + std::to_string(rConfig.levelMinMeters));
-    }
-    if (rConfig.maxAdjacentDifferenceMeters <= 0)
-    {
-        throw std::runtime_error(
-            "map_rules 'max_adjacent_difference_meters' must be > 0, got "
-            + std::to_string(rConfig.maxAdjacentDifferenceMeters));
-    }
-    if (rConfig.referenceLevelMeters <= 0)
-    {
-        throw std::runtime_error("map_rules 'reference_level_meters' must be > 0, got "
-                                 + std::to_string(rConfig.referenceLevelMeters));
-    }
-    if (rConfig.spreadAltitudeLimitMeters < rConfig.oceanLevelMeters)
-    {
-        throw std::runtime_error(
-            "map_rules 'spread_altitude_limit_meters' must be >= 'ocean_level_meters', got "
-            + std::to_string(rConfig.spreadAltitudeLimitMeters) + " < "
-            + std::to_string(rConfig.oceanLevelMeters));
-    }
-    if (rConfig.missingHeadquartersDistance < 1)
-    {
-        throw std::runtime_error("map_rules 'missing_headquarters_distance' must be >= 1, got "
-                                 + std::to_string(rConfig.missingHeadquartersDistance));
-    }
+    return value;
+}
+
+MapRulesConfig_t ParseMapRules_(const ConfigReader& rReader)
+{
+    MapRulesConfig_t config;
+    config.oceanLevelMeters = RequireWholeMeters_(rReader, "ocean_level_meters");
+    config.oceanShelfMeters = RequireWholeMeters_(rReader, "ocean_shelf_meters");
+    config.levelMinMeters = RequirePositiveMeters_(rReader, "level_min_meters");
+    config.levelMaxMeters = RequireWholeMeters_(rReader, "level_max_meters");
+    config.maxAdjacentDifferenceMeters =
+        RequirePositiveMeters_(rReader, "max_adjacent_difference_meters");
+    config.referenceLevelMeters = RequirePositiveMeters_(rReader, "reference_level_meters");
+    config.spreadAltitudeLimitMeters =
+        RequireWholeMeters_(rReader, "spread_altitude_limit_meters");
+    config.missingHeadquartersDistance = rReader.IntAtLeast("missing_headquarters_distance", 1);
+
+    ValidateElevationRules_(rReader, config);
+    return config;
 }
 
 } // namespace
 
 MapRulesConfig_t MapRulesConfigParser::ParseConfig(const std::string& configPath)
 {
-    std::ifstream file(configPath);
-    if (!file.is_open())
-    {
-        throw std::runtime_error("Could not open map rules '" + configPath + "'");
-    }
-
-    const nlohmann::json json = nlohmann::json::parse(file);
-
-    MapRulesConfig_t config;
-    config.oceanLevelMeters = RequireWholeMeters_(json, "ocean_level_meters");
-    config.oceanShelfMeters = RequireWholeMeters_(json, "ocean_shelf_meters");
-    config.levelMinMeters = RequireWholeMeters_(json, "level_min_meters");
-    config.levelMaxMeters = RequireWholeMeters_(json, "level_max_meters");
-    config.maxAdjacentDifferenceMeters = RequireWholeMeters_(json, "max_adjacent_difference_meters");
-    config.referenceLevelMeters = RequireWholeMeters_(json, "reference_level_meters");
-    config.spreadAltitudeLimitMeters =
-        RequireWholeMeters_(json, "spread_altitude_limit_meters");
-    config.missingHeadquartersDistance = RequireCount_(json, "missing_headquarters_distance");
-
-    ValidateElevationRules_(config);
-    return config;
+    return JsonConfigLoader::LoadObjectFile<MapRulesConfig_t>(configPath, "map rules",
+                                                              ParseMapRules_);
 }
 
 } // namespace ac

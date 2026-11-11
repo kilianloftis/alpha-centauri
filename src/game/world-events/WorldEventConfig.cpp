@@ -1,13 +1,9 @@
 #include "game/world-events/WorldEventConfig.h"
 
-#include "lib/config/ConfigFields.h"
 #include "game/effects/EffectConfigParser.h"
 #include "game/effects/TriggeredEffectParser.h"
 #include "lib/config/JsonConfigLoader.h"
 
-#include <nlohmann/json.hpp>
-
-#include <stdexcept>
 #include <unordered_set>
 
 namespace ac
@@ -16,97 +12,56 @@ namespace ac
 namespace
 {
 
-const nlohmann::json& RequireKey_(const nlohmann::json& rJson, const char* pKey,
-                                  const std::string& rContext)
+WorldEventCycle_t ParseTrigger_(const ConfigReader& rReader)
 {
-    if (!rJson.contains(pKey))
+    rReader.RejectUnknownKeys({"kind", "cycle_years", "duration_years", "start_year_offset"});
+    if (rReader.String("kind") != "Cycle")
     {
-        throw std::runtime_error(rContext + ": missing required '" + pKey + "'");
-    }
-    return rJson.at(pKey);
-}
-
-WorldEventCycle_t ParseTrigger_(const nlohmann::json& rJson, const std::string& rContext)
-{
-    const std::string ctx = rContext + " trigger";
-    if (!rJson.is_object())
-    {
-        throw std::runtime_error(ctx + " must be an object");
-    }
-    ConfigFields::RejectUnknownKeys(rJson, {"kind", "cycle_years", "duration_years", "start_year_offset"},
-                       ctx);
-    const nlohmann::json& rKind = RequireKey_(rJson, "kind", ctx);
-    if (!rKind.is_string() || rKind.get<std::string>() != "Cycle")
-    {
-        throw std::runtime_error(ctx + ": 'kind' must be \"Cycle\"");
+        rReader.FailKey("kind", "must be \"Cycle\"");
     }
     WorldEventCycle_t cycle;
-    cycle.cycleYears = ConfigFields::RequireIntAtLeast(rJson, "cycle_years", 1, ctx);
-    cycle.durationYears = ConfigFields::RequireIntAtLeast(rJson, "duration_years", 1, ctx);
-    cycle.startYearOffset = ConfigFields::RequireIntAtLeast(rJson, "start_year_offset", 0, ctx);
+    cycle.cycleYears = rReader.IntAtLeast("cycle_years", 1);
+    cycle.durationYears = rReader.IntAtLeast("duration_years", 1);
+    cycle.startYearOffset = rReader.IntAtLeast("start_year_offset", 0);
     if (cycle.durationYears > cycle.cycleYears)
     {
-        throw std::runtime_error(ctx + ": 'duration_years' must not exceed 'cycle_years'");
+        rReader.FailKey("duration_years", "must not exceed 'cycle_years'");
     }
     return cycle;
 }
 
-WorldEventConfig_t ParseEvent_(const nlohmann::json& rJson, const std::string& rContext)
+WorldEventConfig_t ParseEvent_(const ConfigReader& rReader)
 {
-    if (!rJson.is_object())
-    {
-        throw std::runtime_error(rContext + ": event entry must be an object");
-    }
-    ConfigFields::RejectUnknownKeys(rJson,
-                       {"id", "name", "trigger", "effects", "on_start_effects", "on_end_effects"},
-                       rContext + " event");
-    const nlohmann::json& rId = RequireKey_(rJson, "id", rContext);
-    if (!rId.is_string() || rId.get<std::string>().empty())
-    {
-        throw std::runtime_error(rContext + ": event 'id' must be a non-empty string");
-    }
+    rReader.RejectUnknownKeys(
+        {"id", "name", "trigger", "effects", "on_start_effects", "on_end_effects"});
     WorldEventConfig_t event;
-    event.id = rId.get<std::string>();
-    const std::string ctx = rContext + " event '" + event.id + "'";
-    const nlohmann::json& rName = RequireKey_(rJson, "name", ctx);
-    if (!rName.is_string())
-    {
-        throw std::runtime_error(ctx + ": 'name' must be a string");
-    }
-    event.name = rName.get<std::string>();
-    event.cycle = ParseTrigger_(RequireKey_(rJson, "trigger", ctx), ctx);
+    event.id = rReader.NonEmptyString("id");
+    event.name = rReader.String("name");
+    event.cycle = ParseTrigger_(rReader.Object("trigger"));
     for (const char* pList : {"effects", "on_start_effects", "on_end_effects"})
     {
-        if (!RequireKey_(rJson, pList, ctx).is_array())
-        {
-            throw std::runtime_error(ctx + ": '" + pList + "' must be an array");
-        }
+        rReader.Array(pList);
     }
-    event.effects =
-        EffectConfigParser::ParseEffects(rJson, EffectSourceKind_t::WorldEvent, event.id);
+    event.effects = EffectConfigParser::ParseEffects(rReader.Json(), EffectSourceKind_t::WorldEvent,
+                                                     event.id);
     event.onStartEffects =
-        TriggeredEffectParser::ParseTriggeredEffects(rJson, "on_start_effects", event.id);
+        TriggeredEffectParser::ParseTriggeredEffects(rReader.Json(), "on_start_effects", event.id);
     event.onEndEffects =
-        TriggeredEffectParser::ParseTriggeredEffects(rJson, "on_end_effects", event.id);
+        TriggeredEffectParser::ParseTriggeredEffects(rReader.Json(), "on_end_effects", event.id);
     return event;
 }
 
-WorldEventsConfig_t ParseWorldEvents_(const nlohmann::json& rJson, const std::string& rCtx)
+WorldEventsConfig_t ParseWorldEvents_(const ConfigReader& rReader)
 {
-    ConfigFields::RejectUnknownKeys(rJson, {"events"}, rCtx);
-    const nlohmann::json& rEvents = RequireKey_(rJson, "events", rCtx);
-    if (!rEvents.is_array())
-    {
-        throw std::runtime_error(rCtx + ": 'events' must be an array");
-    }
+    rReader.RejectUnknownKeys({"events"});
     WorldEventsConfig_t config;
     std::unordered_set<std::string> seenIds;
-    for (const nlohmann::json& rEventJson : rEvents)
+    for (const ConfigReader& rEventReader : rReader.Objects("events"))
     {
-        WorldEventConfig_t event = ParseEvent_(rEventJson, rCtx);
+        WorldEventConfig_t event = ParseEvent_(rEventReader);
         if (!seenIds.insert(event.id).second)
         {
-            throw std::runtime_error(rCtx + ": duplicate event id '" + event.id + "'");
+            rReader.FailKey("events", "has duplicate event id '" + event.id + "'");
         }
         config.events.push_back(std::move(event));
     }
@@ -117,10 +72,8 @@ WorldEventsConfig_t ParseWorldEvents_(const nlohmann::json& rJson, const std::st
 
 WorldEventsConfig_t WorldEventsConfigParser::ParseConfig(const std::string& rConfigPath)
 {
-    return JsonConfigLoader::LoadObjectFile<WorldEventsConfig_t>(
-        rConfigPath, "world events", [&rConfigPath](const nlohmann::json& rJson) {
-            return ParseWorldEvents_(rJson, "World events config '" + rConfigPath + "'");
-        });
+    return JsonConfigLoader::LoadObjectFile<WorldEventsConfig_t>(rConfigPath, "world events",
+                                                                 ParseWorldEvents_);
 }
 
 bool IsWorldEventActive(const WorldEventCycle_t& rCycle, int yearsSinceFirstPlayable)

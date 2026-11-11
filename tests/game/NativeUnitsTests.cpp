@@ -272,7 +272,6 @@ TEST_CASE("Sea Lurk is concealed on Water via deep_pressure", "[native][visibili
 
 TEST_CASE("native_life is the RuleFlag on the design", "[native][parser]")
 {
-    NativeUnitConfigParser parser;
     const nlohmann::json marked = nlohmann::json::parse(R"({
         "id": "Marked",
         "name": "Marked",
@@ -283,7 +282,9 @@ TEST_CASE("native_life is the RuleFlag on the design", "[native][parser]")
               "parameters": { "flag": "native_life" } }
         ]
     })");
-    const NativeDesign markedDesign(parser.ParseNativeUnitConfig(marked));
+    const NativeUnitConfig_t markedConfig =
+        NativeUnitConfigParser::ParseNativeUnitConfig(ConfigReader(marked, "test"));
+    const NativeDesign markedDesign(markedConfig);
     CHECK(markedDesign.IsNativeLife());
 
     const nlohmann::json plain = nlohmann::json::parse(R"({
@@ -292,7 +293,9 @@ TEST_CASE("native_life is the RuleFlag on the design", "[native][parser]")
         "domain": "land",
         "plan": "combat"
     })");
-    const NativeDesign plainDesign(parser.ParseNativeUnitConfig(plain));
+    const NativeUnitConfig_t plainConfig =
+        NativeUnitConfigParser::ParseNativeUnitConfig(ConfigReader(plain, "test"));
+    const NativeDesign plainDesign(plainConfig);
     CHECK_FALSE(plainDesign.IsNativeLife());
 }
 
@@ -304,9 +307,8 @@ TEST_CASE("A native states its plan, as alpha.txt's predefined units do", "[nati
     CHECK(RequireNative_(rFaction, "Mind_Worm").GetPlan() == UnitPlan_t::Combat);
     CHECK(RequireNative_(rFaction, "Isle_of_the_Deep").GetPlan() == UnitPlan_t::NavalTransport);
 
-    NativeUnitConfigParser parser;
-    CHECK_THROWS(parser.ParseNativeUnitConfig(nlohmann::json::parse(
-        R"({ "id": "Planless", "name": "Planless", "domain": "land" })")));
+    CHECK_THROWS(NativeUnitConfigParser::ParseNativeUnitConfig(ConfigReader(nlohmann::json::parse(
+        R"({ "id": "Planless", "name": "Planless", "domain": "land" })"), "test")));
 }
 
 TEST_CASE("Command Center and Aerospace Complex do not raise native starting XP",
@@ -347,8 +349,7 @@ TEST_CASE("Command Center and Aerospace Complex do not raise native starting XP"
 
 TEST_CASE("Centauri Preserve grants +1 starting XP only to native life", "[native][xp]")
 {
-    NativeUnitConfigParser parser;
-    const NativeDesign quietDesign(parser.ParseNativeUnitConfig(nlohmann::json::parse(R"({
+    const nlohmann::json quietJson = nlohmann::json::parse(R"({
         "id": "Quiet_Form",
         "name": "Quiet Form",
         "domain": "land",
@@ -357,7 +358,10 @@ TEST_CASE("Centauri Preserve grants +1 starting XP only to native life", "[nativ
             { "type": "RuleFlag", "scope": "ThisUnit",
               "parameters": { "flag": "native_life" } }
         ]
-    })")));
+    })");
+    const NativeUnitConfig_t quietConfig =
+        NativeUnitConfigParser::ParseNativeUnitConfig(ConfigReader(quietJson, "test"));
+    const NativeDesign quietDesign(quietConfig);
     NativeUnitConfig_t plainConfig;
     plainConfig.id = "Plain_Form";
     plainConfig.name = "Plain Form";

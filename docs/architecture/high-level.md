@@ -385,6 +385,14 @@ Every file and class is one kind. The kind says what the code may read, change a
 - **Caches** memoise a view derived from state (`FactionEffectsPool`, `BaseEffectsCache`, `BaseEcology`). They own no save data.
 - **Coordinators** are the turn stages.
 - **Definitions** are `*Config_t`, `*ConfigParser`, `*Registry` and the validators.
+  - A parser loads its file through `lib/config`: `JsonConfigLoader` opens JSON and hands the
+    parse function a `ConfigReader`, whose every error names the file or entry and the key's path
+    (`'kinds.building.hurry.formula'`; array entries by id, `'operations[Dance].turns_required'`).
+    `LuaConfigLoader` runs a formula script and reads its formulas. Parsers keep only their
+    domain's own checks.
+  - Every non-integer number field reads through `ConfigReader::Number` / `Float`, so it accepts a
+    JSON number, a decimal string, or a fraction string such as `"1/3"`. Integer fields require
+    JSON integers; exact ratios use `ConfigReader::Rational`.
 - **The effects system** (`effects/`) follows the same split: resolving effects is rules, and dispatching triggered effects is mutations.
 - **UI copy** is not a game kind. Titles, bodies and labels are formatted in `src/ui/`. The game
   reports what happened (ids, enums, amounts) on `PlayerInteraction_t` arms; `InteractionPresenter`

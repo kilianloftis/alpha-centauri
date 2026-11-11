@@ -199,7 +199,9 @@ void TextPack::LoadScript_(const std::filesystem::path& rPath)
     std::map<std::string, ScriptEntry_t> entries =
         JsonConfigLoader::LoadObjectFile<std::map<std::string, ScriptEntry_t>>(
             rPath.string(), "script text",
-            [&context](const nlohmann::json& rJson) { return ParseScript_(rJson, context); });
+            [&context](const ConfigReader& rReader) {
+                return ParseScript_(rReader.Json(), context);
+            });
     m_entries.merge(entries);
 }
 
@@ -208,7 +210,9 @@ void TextPack::LoadLabels_(const std::filesystem::path& rPath)
     const std::string context = "Labels '" + rPath.string() + "'";
     std::map<int, std::string> labels = JsonConfigLoader::LoadObjectFile<std::map<int, std::string>>(
         rPath.string(), "label text",
-        [&context](const nlohmann::json& rJson) { return ParseLabels_(rJson, context); });
+        [&context](const ConfigReader& rReader) {
+            return ParseLabels_(rReader.Json(), context);
+        });
     m_labels.merge(labels);
 }
 
@@ -230,7 +234,9 @@ void TextPack::LoadVocabularies_(const std::filesystem::path& rDirectory)
             rFile.stem().string(),
             JsonConfigLoader::LoadObjectFile<FactionVocabulary_t>(
                 rFile.string(), "faction vocabulary",
-                [&context](const nlohmann::json& rJson) { return ParseVocabulary_(rJson, context); }));
+                [&context](const ConfigReader& rReader) {
+                    return ParseVocabulary_(rReader.Json(), context);
+                }));
     }
 }
 

@@ -1,36 +1,15 @@
 #include "game/research/TechCostConfig.h"
-#include "lib/LuaRuntime.h"
-
-#include <stdexcept>
+#include "lib/config/LuaConfigLoader.h"
 
 namespace ac
 {
 
 TechCostConfig_t TechCostConfigParser::ParseConfig(const std::string& scriptPath, LuaRuntime& rLua)
 {
+    const sol::table table = LuaConfigLoader::RunScript(rLua, scriptPath, "tech cost");
     TechCostConfig_t config;
-
-    sol::state& lua = rLua.GetState();
-
-    sol::protected_function_result result =
-        lua.safe_script_file(scriptPath, sol::script_pass_on_error);
-
-    if (!result.valid())
-    {
-        const sol::error err = result;
-        throw std::runtime_error("Failed to load tech cost script '" + scriptPath + "': "
-                                 + err.what());
-    }
-
-    sol::table tbl = result;
-
-    config.costFormula = tbl.get_or("cost_formula", std::string(""));
-    if (config.costFormula.empty())
-    {
-        throw std::runtime_error("tech cost script '" + scriptPath
-                                 + "' must set cost_formula to a non-empty Lua expression");
-    }
-
+    config.costFormula =
+        LuaConfigLoader::RequireFormula(table, "cost_formula", scriptPath, "tech cost");
     return config;
 }
 

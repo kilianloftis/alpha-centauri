@@ -2,7 +2,7 @@
 
 #include "game/natives/NativeUnitConfig.h"
 
-#include <nlohmann/json.hpp>
+#include "lib/config/ConfigReader.h"
 #include <string>
 #include <vector>
 
@@ -16,7 +16,7 @@ public:
     ~NativeUnitConfigParser() = default;
 
     std::vector<NativeUnitConfig_t> ParseConfig(const std::string& rConfigPath);
-    NativeUnitConfig_t ParseNativeUnitConfig(const nlohmann::json& rJson);
+    static NativeUnitConfig_t ParseNativeUnitConfig(const ConfigReader& rReader);
 };
 
 } // namespace ac

@@ -1,75 +1,55 @@
 #include "game/population/PopTypeConfigParser.h"
-#include "lib/config/ConfigFields.h"
-#include "lib/config/EnumNames.h"
 #include "lib/config/JsonConfigLoader.h"
 #include "game/effects/EffectConfigParser.h"
-#include <nlohmann/json.hpp>
-#include <stdexcept>
 
 namespace ac
 {
 
-std::vector<PopTypeConfig_t> PopTypeConfigParser::ParseConfig(const std::string& configPath)
-{
-    return JsonConfigLoader::LoadFile<PopTypeConfig_t>(
-        configPath, "pop type",
-        [this](const nlohmann::json& rJson) { return ParsePopTypeConfig(rJson); });
-}
-
 namespace
 {
 
-char ParseDisplayGlyph_(const nlohmann::json& rJson, const std::string& rId)
+char ParseDisplayGlyph_(const ConfigReader& rReader)
 {
-    if (!rJson.contains("display_glyph"))
-    {
-        throw std::runtime_error("Pop type '" + rId + "': missing required field 'display_glyph'");
-    }
-    const std::string glyph = rJson.at("display_glyph").get<std::string>();
+    const std::string glyph = rReader.String("display_glyph");
     if (glyph.size() != 1)
     {
-        throw std::runtime_error("Pop type '" + rId
-                                 + "': display_glyph must be exactly one character, got '" + glyph
-                                 + "'");
+        rReader.FailKey("display_glyph", "must be exactly one character, got '" + glyph + "'");
     }
     return glyph[0];
 }
 
-} // namespace
-
-PopTypeConfig_t PopTypeConfigParser::ParsePopTypeConfig(const nlohmann::json& popJson)
+PopTypeConfig_t ParsePopType_(const ConfigReader& rReader)
 {
     PopTypeConfig_t config;
-    config.id = ConfigFields::ParseId(popJson);
-    config.name = ConfigFields::ParseName(popJson, config.id, "name");
-    config.displayGlyph = ParseDisplayGlyph_(popJson, config.id);
-    config.bIsDefault         = popJson.value("is_default",          false);
-    config.bCanWorkTile       = popJson.value("can_work_tile",       false);
-    config.bPlayerAssignable  = popJson.value("player_assignable",   false);
-    config.requiredTech          = ConfigFields::ParseRequiredTech(popJson);
-    config.fallbackPopTypeId     = popJson.value("fallback_pop_type",       "");
-    config.obsoletes             = ConfigFields::ParseStringArray(popJson, "obsoletes");
-    config.effects               = EffectConfigParser::ParseEffects(popJson, EffectSourceKind_t::PopType, config.id);
+    config.id = rReader.NonEmptyString("id");
+    config.name = rReader.String("name");
+    config.displayGlyph = ParseDisplayGlyph_(rReader);
+    config.bIsDefault = rReader.BoolOr("is_default", false);
+    config.bCanWorkTile = rReader.BoolOr("can_work_tile", false);
+    config.bPlayerAssignable = rReader.BoolOr("player_assignable", false);
+    config.requiredTech = rReader.StringOr("required_tech", "");
+    config.fallbackPopTypeId = rReader.StringOr("fallback_pop_type", "");
+    config.obsoletes = rReader.StringArray("obsoletes");
+    config.effects = EffectConfigParser::ParseEffects(rReader.Json(), EffectSourceKind_t::PopType,
+                                                      config.id);
 
-    config.psychToPromote = popJson.value("psych_to_promote", 0);
-    config.promotesToId   = popJson.value("promotes_to", "");
+    config.psychToPromote = rReader.Has("psych_to_promote")
+                                ? rReader.IntAtLeast("psych_to_promote", 0)
+                                : 0;
+    config.promotesToId = rReader.StringOr("promotes_to", "");
     if (config.promotesToId.empty() != (config.psychToPromote == 0))
     {
-        throw std::runtime_error(
-            "Pop type '" + config.id + "': psych_to_promote and promotes_to must be set together");
+        rReader.Fail("psych_to_promote and promotes_to must be set together");
     }
-    if (config.psychToPromote < 0)
-    {
-        throw std::runtime_error("Pop type '" + config.id + "': psych_to_promote must be >= 0");
-    }
-
-    config.droneWeight = popJson.value("drone_weight", 0);
-    if (config.droneWeight < 0)
-    {
-        throw std::runtime_error("Pop type '" + config.id + "': drone_weight must be >= 0");
-    }
-
+    config.droneWeight = rReader.Has("drone_weight") ? rReader.IntAtLeast("drone_weight", 0) : 0;
     return config;
+}
+
+} // namespace
+
+std::vector<PopTypeConfig_t> PopTypeConfigParser::ParseConfig(const std::string& configPath)
+{
+    return JsonConfigLoader::LoadFile<PopTypeConfig_t>(configPath, "pop type", ParsePopType_);
 }
 
 } // namespace ac

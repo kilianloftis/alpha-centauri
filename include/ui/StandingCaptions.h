@@ -2,7 +2,7 @@
 
 #include "game/diplomacy/DiplomaticStatus.h"
 
-#include <nlohmann/json_fwd.hpp>
+#include "lib/config/ConfigReader.h"
 
 #include <string>
 #include <vector>
@@ -37,13 +37,11 @@ private:
     StandingCaptions(std::vector<Band_t> moods, std::vector<Band_t> repute,
                      int vendettaMoodFloor);
 
-    static StandingCaptions Parse_(const nlohmann::json& rJson, const std::string& rConfigPath,
+    static StandingCaptions Parse_(const ConfigReader& rReader,
                                    const DiplomacyConfig_t& rDiplomacy);
-    static std::vector<Band_t> ParseBands_(const nlohmann::json& rJson, const std::string& rKey,
-                                           const std::string& rMinKey, int max,
-                                           const std::string& rContext);
-    static Band_t ParseBand_(const nlohmann::json& rEntry, const std::string& rMinKey,
-                             const std::string& rContext);
+    static std::vector<Band_t> ParseBands_(const ConfigReader& rReader, const std::string& rKey,
+                                           const std::string& rMinKey, int max);
+    static Band_t ParseBand_(const ConfigReader& rEntry, const std::string& rMinKey);
     // Bands rise from 0 to at most the stored maximum, so every one can be shown.
     static void RequireReachable_(const std::vector<Band_t>& rBands, int max,
                                   const std::string& rContext);

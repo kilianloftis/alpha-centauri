@@ -1,6 +1,6 @@
 #include "game/GameSettings.h"
 
-#include "lib/config/ConfigFields.h"
+#include "lib/config/ConfigReader.h"
 
 #include <magic_enum.hpp>
 #include <nlohmann/json.hpp>
@@ -74,7 +74,8 @@ void LoadMapGeneration_(const nlohmann::json& rJson, MapGenerationConfig_t& rCon
     const nlohmann::json& rMap = *pSection;
     rConfig.width = rMap.value("width", rConfig.width);
     rConfig.height = rMap.value("height", rConfig.height);
-    rConfig.oceanCoverage = rMap.value("ocean_coverage", rConfig.oceanCoverage);
+    const ConfigReader mapReader(rMap, "Game settings '" + rPath + "' map_generation");
+    rConfig.oceanCoverage = mapReader.FloatOr("ocean_coverage", rConfig.oceanCoverage);
     if (rMap.contains("erosive_forces"))
     {
         rConfig.erosiveForces = ParseErosiveForces(rMap.at("erosive_forces").get<std::string>());
@@ -103,8 +104,8 @@ void LoadGraphics_(const nlohmann::json& rJson, GraphicsConfig_t& rConfig,
     if (pSection->contains("font_paths"))
     {
         // A player naming a font wants that font, so the list is replaced, not appended to.
-        rConfig.fontPaths =
-            ConfigFields::ParseStringArray(*pSection, "font_paths");
+        const ConfigReader graphicsReader(*pSection, "Game settings '" + rPath + "' graphics");
+        rConfig.fontPaths = graphicsReader.StringArray("font_paths");
     }
 
     if (rConfig.windowWidth == 0 || rConfig.windowHeight == 0)

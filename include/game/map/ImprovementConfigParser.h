@@ -3,7 +3,7 @@
 #include "game/effects/EffectConfig.h"
 #include "game/effects/TriggeredEffect.h"
 #include "game/display/OccupantArt.h"
-#include <nlohmann/json.hpp>
+#include "lib/config/ConfigReader.h"
 #include <optional>
 #include <string>
 #include <string_view>
@@ -88,7 +88,7 @@ void ExpandFeatureTagReferences(std::vector<ImprovementConfig_t>& rConfigs);
 
 // One occupant object. A terrain entry rejects construction fields; those belong on a
 // terrain operation.
-ImprovementConfig_t ParseImprovementBody(const nlohmann::json& rImprovementJson,
+ImprovementConfig_t ParseImprovementBody(const ConfigReader& rReader,
                                          OccupantPlacement_t placement);
 
 // Parse improvements and the already-parsed terrain occupants (see ParseTerrainFile) into one

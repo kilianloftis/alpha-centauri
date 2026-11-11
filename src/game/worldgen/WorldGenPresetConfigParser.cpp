@@ -1,8 +1,5 @@
 #include "game/worldgen/WorldGenPresetConfigParser.h"
-#include "lib/config/ConfigFields.h"
-#include "lib/config/EnumNames.h"
 #include "lib/config/JsonConfigLoader.h"
-
 #include <stdexcept>
 #include <string>
 
@@ -12,14 +9,47 @@ namespace ac
 namespace
 {
 
-int RequirePresetMeters_(const nlohmann::json& rJson, const char* pKey, const std::string& rPresetId)
+void ParseNoise_(const ConfigReader& rReader, WorldGenPresetConfig_t& rConfig)
 {
-    if (!rJson.contains(pKey) || !rJson.at(pKey).is_number_integer())
+    rConfig.frequency = rReader.FloatOr("frequency", rConfig.frequency);
+    if (rReader.Has("octaves"))
     {
-        throw std::runtime_error("World gen preset '" + rPresetId + "' requires integer '"
-                                 + pKey + "'");
+        rConfig.octaves = rReader.IntAtLeast("octaves", 1);
     }
-    return rJson.at(pKey).get<int>();
+    rConfig.lacunarity = rReader.FloatOr("lacunarity", rConfig.lacunarity);
+    rConfig.gain = rReader.FloatOr("gain", rConfig.gain);
+}
+
+void ParseLandmass_(const ConfigReader& rReader, WorldGenPresetConfig_t& rConfig)
+{
+    rConfig.continentScale = rReader.FloatOr("continent_scale", rConfig.continentScale);
+    rConfig.centerBias = rReader.FloatOr("center_bias", rConfig.centerBias);
+    rConfig.edgeFalloff = rReader.FloatOr("edge_falloff", rConfig.edgeFalloff);
+    if (rReader.Has("ocean_depth_exponent"))
+    {
+        rConfig.oceanDepthExponent =
+            static_cast<float>(rReader.NumberAbove("ocean_depth_exponent", 0.0));
+    }
+}
+
+WorldGenPresetConfig_t ParsePreset_(const ConfigReader& rReader)
+{
+    WorldGenPresetConfig_t config;
+    config.id = rReader.NonEmptyString("id");
+    config.name = rReader.String("name");
+    // Case-insensitive, matching every other enum-valued config field.
+    config.type = rReader.Enum<WorldGenPreset_t>("type", "world gen preset type");
+    ParseNoise_(rReader, config);
+    ParseLandmass_(rReader, config);
+    config.minElevation = rReader.Int("min_elevation");
+    config.maxElevation = rReader.Int("max_elevation");
+    if (config.minElevation >= config.maxElevation)
+    {
+        rReader.FailKey("min_elevation", "must be < max_elevation, got "
+                                             + std::to_string(config.minElevation) + " >= "
+                                             + std::to_string(config.maxElevation));
+    }
+    return config;
 }
 
 } // namespace
@@ -27,51 +57,8 @@ int RequirePresetMeters_(const nlohmann::json& rJson, const char* pKey, const st
 std::vector<WorldGenPresetConfig_t> WorldGenPresetConfigParser::ParseConfig(
     const std::string& configPath)
 {
-    return JsonConfigLoader::LoadFile<WorldGenPresetConfig_t>(
-        configPath, "world gen preset",
-        [this](const nlohmann::json& rJson) { return ParsePresetConfig_(rJson); });
-}
-
-WorldGenPresetConfig_t WorldGenPresetConfigParser::ParsePresetConfig_(
-    const nlohmann::json& presetJson)
-{
-    WorldGenPresetConfig_t config;
-    config.id = ConfigFields::ParseId(presetJson);
-    config.name = ConfigFields::ParseName(presetJson, config.id, "name");
-    config.type = ParseType_(presetJson.at("type").get<std::string>());
-
-    config.frequency = presetJson.value("frequency", config.frequency);
-    config.octaves = presetJson.value("octaves", config.octaves);
-    config.lacunarity = presetJson.value("lacunarity", config.lacunarity);
-    config.gain = presetJson.value("gain", config.gain);
-
-    config.continentScale = presetJson.value("continent_scale", config.continentScale);
-    config.centerBias = presetJson.value("center_bias", config.centerBias);
-    config.edgeFalloff = presetJson.value("edge_falloff", config.edgeFalloff);
-    config.oceanDepthExponent =
-        presetJson.value("ocean_depth_exponent", config.oceanDepthExponent);
-    if (config.oceanDepthExponent <= 0.0f)
-    {
-        throw std::runtime_error("World gen preset '" + config.id
-                                 + "' ocean_depth_exponent must be positive");
-    }
-
-    config.minElevation = RequirePresetMeters_(presetJson, "min_elevation", config.id);
-    config.maxElevation = RequirePresetMeters_(presetJson, "max_elevation", config.id);
-    if (config.minElevation >= config.maxElevation)
-    {
-        throw std::runtime_error("World gen preset '" + config.id
-                                 + "' min_elevation must be < max_elevation, got "
-                                 + std::to_string(config.minElevation) + " >= "
-                                 + std::to_string(config.maxElevation));
-    }
-
-    if (config.octaves < 1)
-    {
-        throw std::runtime_error("World gen preset '" + config.id
-                                 + "' has invalid octaves (must be >= 1)");
-    }
-    return config;
+    return JsonConfigLoader::LoadFile<WorldGenPresetConfig_t>(configPath, "world gen preset",
+                                                              ParsePreset_);
 }
 
 void WorldGenPresetConfigParser::ValidateAgainstMapRules(
@@ -117,12 +104,6 @@ void WorldGenPresetConfigParser::ApplyElevationRange(MapRulesConfig_t& rRules,
     ValidateAgainstMapRules(rPreset, rRules);
     rRules.minElevationMeters = rPreset.minElevation;
     rRules.maxElevationMeters = rPreset.maxElevation;
-}
-
-WorldGenPreset_t WorldGenPresetConfigParser::ParseType_(const std::string& typeStr) const
-{
-    // Case-insensitive, matching every other enum-valued config field.
-    return EnumFromName<WorldGenPreset_t>(typeStr, "world gen preset type");
 }
 
 } // namespace ac

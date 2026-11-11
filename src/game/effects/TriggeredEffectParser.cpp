@@ -2,11 +2,12 @@
 
 #include "game/effects/EffectConfigParser.h"
 #include "lib/Rational.h"
-#include "lib/config/ConfigFields.h"
+#include "lib/config/ConfigReader.h"
 #include "lib/config/EnumNames.h"
 
 #include <magic_enum.hpp>
 
+#include <algorithm>
 #include <functional>
 #include <stdexcept>
 #include <unordered_map>
@@ -20,55 +21,40 @@ namespace TriggeredEffectParser
 namespace
 {
 
-using ParseFn_ = std::function<void(const nlohmann::json&, TriggeredEffectConfig_t&)>;
+using ParseFn_ = std::function<void(const ConfigReader&, TriggeredEffectConfig_t&)>;
 
-int ParsePositiveInt_(const nlohmann::json& parameters, const char* pKey, const char* pType)
+std::vector<std::string> RequireNonEmptyStringArray_(const ConfigReader& rParams,
+                                                     const char* pKey)
 {
-    if (!parameters.contains(pKey) || !parameters.at(pKey).is_number_integer())
+    rParams.NonEmptyArray(pKey);
+    std::vector<std::string> values = rParams.StringArray(pKey);
+    if (std::ranges::contains(values, std::string()))
     {
-        throw std::runtime_error(std::string(pType) + " '" + pKey + "' must be an integer");
+        rParams.FailKey(pKey, "entries must be non-empty strings");
     }
-    const int value = parameters.at(pKey).get<int>();
-    if (value < 1)
-    {
-        throw std::runtime_error(std::string(pType) + " '" + pKey + "' must be >= 1");
-    }
-    return value;
+    return values;
 }
 
-void ParseAddBuilding_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseAddBuilding_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
-    const std::string buildingId = parameters.value("building_id", "");
-    if (buildingId.empty())
-    {
-        throw std::runtime_error("AddBuilding requires a non-empty 'building_id'");
-    }
-    rEffect.effect = AddBuildingEffect_t{buildingId};
+    rEffect.effect = AddBuildingEffect_t{rParams.NonEmptyString("building_id")};
 }
 
-void ParseGrantTech_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseGrantTech_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
-    ConfigFields::RejectUnknownKeys(parameters, {"tech_id"}, "GrantTech");
+    rParams.RejectUnknownKeys({"tech_id"});
     GrantTechEffect_t grant;
-    if (parameters.contains("tech_id"))
+    if (rParams.Has("tech_id"))
     {
-        if (!parameters.at("tech_id").is_string())
-        {
-            throw std::runtime_error("GrantTech 'tech_id' must be a string");
-        }
-        grant.techId = parameters.at("tech_id").get<std::string>();
-        if (grant.techId->empty())
-        {
-            throw std::runtime_error("GrantTech 'tech_id' must be non-empty");
-        }
+        grant.techId = rParams.NonEmptyString("tech_id");
     }
     rEffect.effect = grant;
 }
 
-void ParseGrantUnit_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseGrantUnit_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
-    const bool bHasComponents = parameters.contains("component_ids");
-    const bool bHasDesignId = parameters.contains("design_id");
+    const bool bHasComponents = rParams.Has("component_ids");
+    const bool bHasDesignId = rParams.Has("design_id");
     if (bHasComponents == bHasDesignId)
     {
         throw std::runtime_error(
@@ -77,41 +63,20 @@ void ParseGrantUnit_(const nlohmann::json& parameters, TriggeredEffectConfig_t& 
     GrantUnitEffect_t grant;
     if (bHasComponents)
     {
-        if (!parameters.at("component_ids").is_array() || parameters.at("component_ids").empty())
-        {
-            throw std::runtime_error("GrantUnit 'component_ids' must be a non-empty array");
-        }
-        for (const auto& rId : parameters.at("component_ids"))
-        {
-            if (!rId.is_string() || rId.get<std::string>().empty())
-            {
-                throw std::runtime_error(
-                    "GrantUnit 'component_ids' entries must be non-empty strings");
-            }
-            grant.componentIds.push_back(rId.get<std::string>());
-        }
+        grant.componentIds = RequireNonEmptyStringArray_(rParams, "component_ids");
     }
     else
     {
-        if (!parameters.at("design_id").is_string()
-            || parameters.at("design_id").get<std::string>().empty())
-        {
-            throw std::runtime_error("GrantUnit 'design_id' must be a non-empty string");
-        }
-        grant.designId = parameters.at("design_id").get<std::string>();
+        grant.designId = rParams.NonEmptyString("design_id");
     }
-    grant.count = static_cast<int>(EffectConfigParser::ParseNumber(parameters, "count", 1.0));
-    if (grant.count < 1)
-    {
-        throw std::runtime_error("GrantUnit 'count' must be >= 1");
-    }
+    grant.count = rParams.Has("count") ? rParams.IntAtLeast("count", 1) : 1;
     rEffect.effect = grant;
 }
 
-void ParseGrantEnergy_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseGrantEnergy_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
-    const bool bHasAmount = parameters.contains("amount");
-    const bool bHasFormula = parameters.contains("formula");
+    const bool bHasAmount = rParams.Has("amount");
+    const bool bHasFormula = rParams.Has("formula");
     if (bHasAmount == bHasFormula)
     {
         throw std::runtime_error("GrantEnergy requires exactly one of 'amount' or 'formula'");
@@ -119,164 +84,106 @@ void ParseGrantEnergy_(const nlohmann::json& parameters, TriggeredEffectConfig_t
     GrantEnergyEffect_t grant;
     if (bHasAmount)
     {
-        const int amount = static_cast<int>(EffectConfigParser::RequireNumber(parameters, "amount"));
-        if (amount < 0)
-        {
-            throw std::runtime_error("GrantEnergy 'amount' must be >= 0");
-        }
-        grant.amount = amount;
+        grant.amount = rParams.IntAtLeast("amount", 0);
     }
     else
     {
-        if (!parameters.at("formula").is_string() || parameters.at("formula").get<std::string>().empty())
-        {
-            throw std::runtime_error("GrantEnergy 'formula' must be a non-empty string");
-        }
-        grant.formula = parameters.at("formula").get<std::string>();
+        grant.formula = rParams.NonEmptyString("formula");
     }
     rEffect.effect = grant;
 }
 
-void ParseAddOccupant_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseAddOccupant_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
-    const std::string improvementId = parameters.value("improvement_id", "");
-    if (improvementId.empty())
-    {
-        throw std::runtime_error("AddOccupant requires a non-empty 'improvement_id'");
-    }
-    rEffect.effect = AddOccupantEffect_t{improvementId};
+    rEffect.effect = AddOccupantEffect_t{rParams.NonEmptyString("improvement_id")};
 }
 
-void ParseRevealMap_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseRevealMap_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
     RevealMapEffect_t reveal;
-    reveal.radius = static_cast<int>(EffectConfigParser::RequireNumber(parameters, "radius"));
-    if (reveal.radius < 0)
-    {
-        throw std::runtime_error("RevealMap 'radius' must be >= 0");
-    }
+    reveal.radius = rParams.IntAtLeast("radius", 0);
     rEffect.effect = reveal;
 }
 
-void ParseTeleportUnit_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseTeleportUnit_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
     TeleportUnitEffect_t teleport;
-    teleport.minDistance =
-        static_cast<int>(EffectConfigParser::RequireNumber(parameters, "min_distance"));
-    teleport.maxDistance =
-        static_cast<int>(EffectConfigParser::RequireNumber(parameters, "max_distance"));
-    if (teleport.minDistance < 0 || teleport.maxDistance < teleport.minDistance)
-    {
-        throw std::runtime_error(
-            "TeleportUnit requires 0 <= min_distance <= max_distance");
-    }
+    teleport.minDistance = rParams.IntAtLeast("min_distance", 0);
+    teleport.maxDistance = rParams.IntAtLeast("max_distance", teleport.minDistance);
     rEffect.effect = teleport;
 }
 
-void ParseFinishProduction_(const nlohmann::json&, TriggeredEffectConfig_t& rEffect)
+void ParseFinishProduction_(const ConfigReader&, TriggeredEffectConfig_t& rEffect)
 {
     rEffect.effect = FinishProductionEffect_t{};
 }
 
-void ParseCloneUnit_(const nlohmann::json&, TriggeredEffectConfig_t& rEffect)
+void ParseCloneUnit_(const ConfigReader&, TriggeredEffectConfig_t& rEffect)
 {
     rEffect.effect = CloneUnitEffect_t{};
 }
 
-void ParseGrantCommlink_(const nlohmann::json&, TriggeredEffectConfig_t& rEffect)
+void ParseGrantCommlink_(const ConfigReader&, TriggeredEffectConfig_t& rEffect)
 {
     rEffect.effect = GrantCommlinkEffect_t{};
 }
 
-std::vector<std::string> RequireNonEmptyStringArray_(const nlohmann::json& parameters,
-                                                     const char* pKey, const char* pType)
-{
-    if (!parameters.contains(pKey) || !parameters.at(pKey).is_array()
-        || parameters.at(pKey).empty())
-    {
-        throw std::runtime_error(std::string(pType) + " requires a non-empty '" + pKey
-                                 + "' array");
-    }
-    std::vector<std::string> values;
-    for (const auto& rEntry : parameters.at(pKey))
-    {
-        if (!rEntry.is_string() || rEntry.get<std::string>().empty())
-        {
-            throw std::runtime_error(std::string(pType) + " '" + pKey
-                                     + "' entries must be non-empty strings");
-        }
-        values.push_back(rEntry.get<std::string>());
-    }
-    return values;
-}
-
-void ParseSpawnNative_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseSpawnNative_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
     SpawnNativeEffect_t spawn;
-    spawn.nativeId = parameters.value("native_id", "");
-    if (spawn.nativeId.empty())
-    {
-        throw std::runtime_error("SpawnNative requires a non-empty 'native_id'");
-    }
-    if (parameters.contains("cargo_ids"))
+    spawn.nativeId = rParams.NonEmptyString("native_id");
+    if (rParams.Has("cargo_ids"))
     {
         spawn.cargoIds =
-            RequireNonEmptyStringArray_(parameters, "cargo_ids", "SpawnNative");
+            RequireNonEmptyStringArray_(rParams, "cargo_ids");
     }
     rEffect.effect = spawn;
 }
 
-std::vector<Rational_t> RequireChanceArray_(const nlohmann::json& parameters, const char* pType)
+std::vector<Rational_t> RequireChanceArray_(const ConfigReader& rParams)
 {
-    if (!parameters.contains("chance") || !parameters.at("chance").is_array()
-        || parameters.at("chance").empty())
-    {
-        throw std::runtime_error(std::string(pType) + " requires a non-empty 'chance' array");
-    }
     std::vector<Rational_t> chances;
-    for (const auto& rEntry : parameters.at("chance"))
+    for (const auto& rEntry : rParams.NonEmptyArray("chance"))
     {
         const Rational_t chance = Rational_t::ParseJson(rEntry);
         if (chance.numerator < 0)
         {
-            throw std::runtime_error(std::string(pType) + " 'chance' numerator must be >= 0");
+            rParams.FailKey("chance", "numerators must be >= 0");
         }
         chances.push_back(chance);
     }
     return chances;
 }
 
-void ParseTerraformCluster_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseTerraformCluster_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
     TerraformClusterEffect_t cluster;
-    cluster.improvementIds =
-        RequireNonEmptyStringArray_(parameters, "improvement_ids", "TerraformCluster");
-    cluster.chance = RequireChanceArray_(parameters, "TerraformCluster");
+    cluster.improvementIds = RequireNonEmptyStringArray_(rParams, "improvement_ids");
+    cluster.chance = RequireChanceArray_(rParams);
     rEffect.effect = cluster;
 }
 
-void ParseAddRandomOccupant_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseAddRandomOccupant_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
     AddRandomOccupantEffect_t add;
-    add.improvementIds =
-        RequireNonEmptyStringArray_(parameters, "improvement_ids", "AddRandomOccupant");
+    add.improvementIds = RequireNonEmptyStringArray_(rParams, "improvement_ids");
     rEffect.effect = add;
 }
 // TODO: We may need to refactor this concept once we add Supply Pods
-void ParseGrantResource_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseGrantResource_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
     GrantResourceEffect_t grant;
-    grant.resource = ParseStatId(parameters.value("resource", ""));
+    grant.resource = ParseStatId(rParams.StringOr("resource", ""));
     if (grant.resource != StatId_t::Minerals && grant.resource != StatId_t::Nutrients)
     {
         throw std::runtime_error(
             "GrantResource 'resource' must be minerals or nutrients (energy treasury uses "
             "GrantEnergy)");
     }
-    grant.amount = static_cast<int>(EffectConfigParser::RequireNumber(parameters, "amount"));
-    if (parameters.contains("stat"))
+    grant.amount = rParams.Int("amount");
+    if (rParams.Has("stat"))
     {
-        const StatId_t modifier = ParseStatId(parameters.at("stat").get<std::string>());
+        const StatId_t modifier = ParseStatId(rParams.String("stat"));
         if (DomainFor(modifier) != ResolveDomain_t::Base)
         {
             throw std::runtime_error(
@@ -287,57 +194,49 @@ void ParseGrantResource_(const nlohmann::json& parameters, TriggeredEffectConfig
     rEffect.effect = grant;
 }
 
-void ParseWorldParameter_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseWorldParameter_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
     WorldParameterEffect_t world;
-    world.parameter = ParseWorldParameterId(parameters.value("parameter", ""));
-    world.amount = static_cast<int>(EffectConfigParser::RequireNumber(parameters, "amount"));
+    world.parameter = ParseWorldParameterId(rParams.StringOr("parameter", ""));
+    world.amount = rParams.Int("amount");
     rEffect.effect = world;
 }
 
-void ParseSetInfiltration_(const nlohmann::json& /*parameters*/, TriggeredEffectConfig_t& rEffect)
+void ParseSetInfiltration_(const ConfigReader& /*rParams*/, TriggeredEffectConfig_t& rEffect)
 {
     rEffect.effect = SetInfiltrationEffect_t{};
 }
 
-void ParseModifyPopulation_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseModifyPopulation_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
     ModifyPopulationEffect_t modify;
-    modify.amount = static_cast<int>(EffectConfigParser::RequireNumber(parameters, "amount"));
-    modify.op = EffectConfigParser::ParseModifierOp(parameters.value("op", "Add"));
+    modify.amount = rParams.Int("amount");
+    modify.op = EffectConfigParser::ParseModifierOp(rParams.StringOr("op", "Add"));
     if (modify.op != ModifierOp_t::Add && modify.op != ModifierOp_t::AddPercent)
     {
         throw std::runtime_error("ModifyPopulation op must be Add or AddPercent");
     }
-    modify.minSize = static_cast<int>(EffectConfigParser::ParseNumber(parameters, "min_size", 0.0));
-    if (modify.minSize < 0)
-    {
-        throw std::runtime_error("ModifyPopulation 'min_size' must be >= 0");
-    }
+    modify.minSize = rParams.Has("min_size") ? rParams.IntAtLeast("min_size", 0) : 0;
     rEffect.effect = modify;
 }
 
-void ParseGrantXp_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseGrantXp_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
     GrantXpEffect_t grant;
-    grant.amount = static_cast<int>(EffectConfigParser::RequireNumber(parameters, "amount"));
-    grant.op = EffectConfigParser::ParseModifierOp(parameters.value("op", "Add"));
-    if (parameters.contains("remove_host_chance"))
+    grant.amount = rParams.Int("amount");
+    grant.op = EffectConfigParser::ParseModifierOp(rParams.StringOr("op", "Add"));
+    if (rParams.Has("remove_host_chance"))
     {
-        grant.removeHostChance = Rational_t::ParseJson(parameters.at("remove_host_chance"));
-        if (grant.removeHostChance->denominator <= 0)
-        {
-            throw std::runtime_error("GrantXp 'remove_host_chance' denominator must be positive");
-        }
+        grant.removeHostChance = rParams.Rational("remove_host_chance");
     }
     rEffect.effect = grant;
 }
 
-void ParseRestoreHitPoints_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseRestoreHitPoints_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
     RestoreHitPointsEffect_t restore;
-    restore.amount = static_cast<int>(EffectConfigParser::RequireNumber(parameters, "amount"));
-    const std::string opStr = parameters.value("op", "Add");
+    restore.amount = rParams.Int("amount");
+    const std::string opStr = rParams.StringOr("op", "Add");
     const auto op =
         magic_enum::enum_cast<RestoreHitPointsOp_t>(opStr, magic_enum::case_insensitive);
     if (!op.has_value())
@@ -349,39 +248,29 @@ void ParseRestoreHitPoints_(const nlohmann::json& parameters, TriggeredEffectCon
     rEffect.effect = restore;
 }
 
-void ParseDestroyFacility_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseDestroyFacility_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
-    const auto requireBool = [&parameters](const char* key)
-    {
-        if (!parameters.contains(key) || !parameters.at(key).is_boolean())
-        {
-            throw std::runtime_error(std::string("DestroyFacility '") + key
-                                     + "' must be a boolean");
-        }
-        return parameters.at(key).get<bool>();
-    };
-
     DestroyFacilityEffect_t destroy;
-    destroy.count = ParsePositiveInt_(parameters, "count", "DestroyFacility");
-    destroy.exclusions.excludeHq = requireBool("exclude_hq");
-    destroy.exclusions.excludeSecretProjects = requireBool("exclude_secret_projects");
+    destroy.count = rParams.IntAtLeast("count", 1);
+    destroy.exclusions.excludeHq = rParams.Bool("exclude_hq");
+    destroy.exclusions.excludeSecretProjects = rParams.Bool("exclude_secret_projects");
     rEffect.effect = destroy;
 }
 
-void ParseRebel_(const nlohmann::json& /*parameters*/, TriggeredEffectConfig_t& rEffect)
+void ParseRebel_(const ConfigReader& /*rParams*/, TriggeredEffectConfig_t& rEffect)
 {
     rEffect.effect = RebelEffect_t{};
 }
 
-void ParseDestroyUnit_(const nlohmann::json& /*parameters*/, TriggeredEffectConfig_t& rEffect)
+void ParseDestroyUnit_(const ConfigReader& /*rParams*/, TriggeredEffectConfig_t& rEffect)
 {
     rEffect.effect = DestroyUnitEffect_t{};
 }
 
-void ParseEarthquake_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseEarthquake_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
-    const bool bHasLevels = parameters.contains("levels");
-    const bool bHasStat = parameters.contains("levels_stat");
+    const bool bHasLevels = rParams.Has("levels");
+    const bool bHasStat = rParams.Has("levels_stat");
     if (bHasLevels == bHasStat)
     {
         throw std::runtime_error(
@@ -392,19 +281,11 @@ void ParseEarthquake_(const nlohmann::json& parameters, TriggeredEffectConfig_t&
     EarthquakeEffect_t quake;
     if (bHasLevels)
     {
-        quake.levels = static_cast<int>(EffectConfigParser::RequireNumber(parameters, "levels"));
-        if (quake.levels < 1)
-        {
-            throw std::runtime_error("Earthquake 'levels' must be >= 1");
-        }
+        quake.levels = rParams.IntAtLeast("levels", 1);
     }
     else
     {
-        if (!parameters.at("levels_stat").is_string())
-        {
-            throw std::runtime_error("Earthquake 'levels_stat' must be a string");
-        }
-        const StatId_t stat = ParseStatId(parameters.at("levels_stat").get<std::string>());
+        const StatId_t stat = ParseStatId(rParams.String("levels_stat"));
         if (DomainFor(stat) != ResolveDomain_t::Unit)
         {
             throw std::runtime_error(
@@ -416,25 +297,15 @@ void ParseEarthquake_(const nlohmann::json& parameters, TriggeredEffectConfig_t&
     rEffect.effect = quake;
 }
 
-void ParseSetTerrainFeature_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseSetTerrainFeature_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
-    if (!parameters.contains("feature") || !parameters.at("feature").is_string()
-        || parameters.at("feature").get<std::string>().empty())
-    {
-        throw std::runtime_error(
-            "SetTerrainFeature requires a non-empty 'feature' terrain occupant id");
-    }
-    if (parameters.contains("present") && !parameters.at("present").is_boolean())
-    {
-        throw std::runtime_error("SetTerrainFeature 'present' must be a boolean");
-    }
-    rEffect.effect = SetTerrainFeatureEffect_t{parameters.at("feature").get<std::string>(),
-                                              parameters.value("present", true)};
+    rEffect.effect = SetTerrainFeatureEffect_t{rParams.NonEmptyString("feature"),
+                                              rParams.BoolOr("present", true)};
 }
 
-void ParseStepRockiness_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseStepRockiness_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
-    const int steps = static_cast<int>(EffectConfigParser::RequireNumber(parameters, "steps"));
+    const int steps = rParams.Int("steps");
     if (steps == 0)
     {
         throw std::runtime_error("StepRockiness 'steps' must be non-zero: negative smooths "
@@ -443,68 +314,47 @@ void ParseStepRockiness_(const nlohmann::json& parameters, TriggeredEffectConfig
     rEffect.effect = StepRockinessEffect_t{steps};
 }
 
-void ParseElevationChange_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseElevationChange_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
-    if (!parameters.contains("direction") || !parameters.at("direction").is_string())
-    {
-        throw std::runtime_error("ElevationChange requires a 'direction' of 'raise' or 'lower'");
-    }
-    const std::string direction = parameters.at("direction").get<std::string>();
+    const std::string direction = rParams.String("direction");
     if (direction != "raise" && direction != "lower")
     {
-        throw std::runtime_error("ElevationChange 'direction' must be 'raise' or 'lower', not '"
-                                 + direction + "'");
+        rParams.FailKey("direction", "must be 'raise' or 'lower', not '" + direction + "'");
     }
     rEffect.effect = ElevationChangeEffect_t{direction == "raise"};
 }
 
 // Severities are a closed enum, so an unknown name fails here rather than at a later lookup.
-void ParseCommitAtrocity_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseCommitAtrocity_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
-    if (!parameters.contains("severity") || !parameters.at("severity").is_string())
-    {
-        throw std::runtime_error("CommitAtrocity requires a string 'severity'");
-    }
-    const std::string severity = parameters.at("severity").get<std::string>();
-    if (severity.empty())
-    {
-        throw std::runtime_error("CommitAtrocity 'severity' must not be empty");
-    }
     CommitAtrocityEffect_t committed;
-    committed.severity = EnumFromName<AtrocitySeverityId_t>(severity, "atrocity severity");
+    committed.severity = rParams.Enum<AtrocitySeverityId_t>("severity", "atrocity severity");
     rEffect.effect = committed;
 }
 
-void ParseRecordMindControl_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseRecordMindControl_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
-    rEffect.effect =
-        RecordMindControlEffect_t{ParsePositiveInt_(parameters, "weight", "RecordMindControl")};
+    rEffect.effect = RecordMindControlEffect_t{rParams.IntAtLeast("weight", 1)};
 }
 
-void ParseGrantCleanMinerals_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseGrantCleanMinerals_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
     GrantCleanMineralsEffect_t grant;
-    grant.amount = ParsePositiveInt_(parameters, "amount", "GrantCleanMinerals");
-    if (!parameters.contains("requires_first_bloom")
-        || !parameters.at("requires_first_bloom").is_boolean())
-    {
-        throw std::runtime_error("GrantCleanMinerals 'requires_first_bloom' must be a boolean");
-    }
-    grant.bRequiresFirstBloom = parameters.at("requires_first_bloom").get<bool>();
+    grant.amount = rParams.IntAtLeast("amount", 1);
+    grant.bRequiresFirstBloom = rParams.Bool("requires_first_bloom");
     rEffect.effect = grant;
 }
 
-void ParseAddVirtualMinerals_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseAddVirtualMinerals_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
-    rEffect.effect =
-        AddVirtualMineralsEffect_t{ParsePositiveInt_(parameters, "amount", "AddVirtualMinerals")};
+    rEffect.effect = AddVirtualMineralsEffect_t{rParams.IntAtLeast("amount", 1)};
 }
 
-void ParseFungalBloom_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseFungalBloom_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
-    const bool bHasTiles = parameters.contains("tiles");
-    const bool bHasStat = parameters.contains("tiles_stat");
-    const bool bHasChance = parameters.contains("chance");
+    const bool bHasTiles = rParams.Has("tiles");
+    const bool bHasStat = rParams.Has("tiles_stat");
+    const bool bHasChance = rParams.Has("chance");
     const int modeCount = static_cast<int>(bHasTiles) + static_cast<int>(bHasStat)
                           + static_cast<int>(bHasChance);
     if (modeCount != 1)
@@ -517,19 +367,11 @@ void ParseFungalBloom_(const nlohmann::json& parameters, TriggeredEffectConfig_t
     FungalBloomEffect_t bloom;
     if (bHasTiles)
     {
-        bloom.tiles = static_cast<int>(EffectConfigParser::RequireNumber(parameters, "tiles"));
-        if (bloom.tiles < 1)
-        {
-            throw std::runtime_error("FungalBloom 'tiles' must be >= 1");
-        }
+        bloom.tiles = rParams.IntAtLeast("tiles", 1);
     }
     else if (bHasStat)
     {
-        if (!parameters.at("tiles_stat").is_string())
-        {
-            throw std::runtime_error("FungalBloom 'tiles_stat' must be a string");
-        }
-        const StatId_t stat = ParseStatId(parameters.at("tiles_stat").get<std::string>());
+        const StatId_t stat = ParseStatId(rParams.String("tiles_stat"));
         if (DomainFor(stat) != ResolveDomain_t::Unit)
         {
             throw std::runtime_error(
@@ -540,15 +382,15 @@ void ParseFungalBloom_(const nlohmann::json& parameters, TriggeredEffectConfig_t
     }
     else
     {
-        bloom.chance = RequireChanceArray_(parameters, "FungalBloom");
+        bloom.chance = RequireChanceArray_(rParams);
     }
     rEffect.effect = bloom;
 }
 
-void ParseExplosion_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+void ParseExplosion_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEffect)
 {
-    const bool bHasRadius = parameters.contains("radius");
-    const bool bHasStat = parameters.contains("radius_stat");
+    const bool bHasRadius = rParams.Has("radius");
+    const bool bHasStat = rParams.Has("radius_stat");
     if (bHasRadius == bHasStat)
     {
         throw std::runtime_error(
@@ -559,20 +401,11 @@ void ParseExplosion_(const nlohmann::json& parameters, TriggeredEffectConfig_t& 
     ExplosionEffect_t explosion;
     if (bHasRadius)
     {
-        explosion.radius =
-            static_cast<int>(EffectConfigParser::RequireNumber(parameters, "radius"));
-        if (explosion.radius < 1)
-        {
-            throw std::runtime_error("Explosion 'radius' must be >= 1");
-        }
+        explosion.radius = rParams.IntAtLeast("radius", 1);
     }
     else
     {
-        if (!parameters.at("radius_stat").is_string())
-        {
-            throw std::runtime_error("Explosion 'radius_stat' must be a string");
-        }
-        const StatId_t stat = ParseStatId(parameters.at("radius_stat").get<std::string>());
+        const StatId_t stat = ParseStatId(rParams.String("radius_stat"));
         if (DomainFor(stat) != ResolveDomain_t::Unit)
         {
             throw std::runtime_error(
@@ -725,8 +558,8 @@ TriggeredEffectConfig_t ParseTriggeredEffectConfig(const nlohmann::json& effectJ
     }
     RejectContinuousOnlyKeys_(effectJson, typeStr, rListName);
 
-    const auto& parameters = effectJson.value("parameters", nlohmann::json::object());
-    rParseParameters(parameters, effect);
+    const nlohmann::json parameters = effectJson.value("parameters", nlohmann::json::object());
+    rParseParameters(ConfigReader(parameters, typeStr + " parameters"), effect);
     return effect;
 }
 

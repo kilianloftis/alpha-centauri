@@ -1,16 +1,13 @@
 #include "game/natives/NativeLifeConfig.h"
 
 #include "game/effects/EffectConfigParser.h"
-#include "lib/LuaRuntime.h"
-#include "lib/config/ConfigFields.h"
+#include "lib/config/ConfigSets.h"
 #include "lib/config/JsonConfigLoader.h"
-
-#include <nlohmann/json.hpp>
+#include "lib/config/LuaConfigLoader.h"
 
 #include <cmath>
 #include <stdexcept>
 #include <string>
-#include <unordered_set>
 #include <vector>
 
 namespace ac
@@ -19,137 +16,78 @@ namespace ac
 namespace
 {
 
-int RequireWholeCount_(const nlohmann::json& rJson, const char* pKey, const std::string& rCtx)
+constexpr const char* k_ScriptNoun = "native life";
+
+int RequireWholeCount_(const ConfigReader& rReader, const char* pKey)
 {
-    if (!rJson.contains(pKey))
-    {
-        throw std::runtime_error(rCtx + ": missing required '" + pKey + "'");
-    }
-    const double value = EffectConfigParser::RequireNumber(rJson, pKey);
+    const double value = rReader.Number(pKey);
     if (value != std::floor(value))
     {
-        throw std::runtime_error(rCtx + ": '" + pKey + "' must be a whole number");
+        rReader.FailKey(pKey, "must be a whole number");
     }
     return static_cast<int>(value);
 }
 
-int RequireNonNegativeInt_(const nlohmann::json& rJson, const char* pKey, const std::string& rCtx)
+int RequireNonNegativeInt_(const ConfigReader& rReader, const char* pKey)
 {
-    const int value = RequireWholeCount_(rJson, pKey, rCtx);
+    const int value = RequireWholeCount_(rReader, pKey);
     if (value < 0)
     {
-        throw std::runtime_error(rCtx + ": '" + pKey + "' must be >= 0, got "
-                                 + std::to_string(value));
+        rReader.FailKey(pKey, "must be >= 0, got " + std::to_string(value));
     }
     return value;
 }
 
-std::array<int, 6> RequireLifecycleThresholds_(const nlohmann::json& rJson,
-                                               const std::string& rCtx)
+void RequireNotBelow_(const ConfigReader& rReader, const char* pKey, int value,
+                      const char* pFloorKey, int floor)
 {
-    if (!rJson.contains("planet_lifecycle_turn_thresholds")
-        || !rJson.at("planet_lifecycle_turn_thresholds").is_array())
+    if (value < floor)
     {
-        throw std::runtime_error(rCtx
-                                 + ": 'planet_lifecycle_turn_thresholds' must be an array of 6 "
-                                   "integers");
+        rReader.FailKey(pKey, std::string("must be >= '") + pFloorKey + "'");
     }
-    const nlohmann::json& rArr = rJson.at("planet_lifecycle_turn_thresholds");
+}
+
+std::array<int, 6> RequireLifecycleThresholds_(const ConfigReader& rReader)
+{
+    const char* pKey = "planet_lifecycle_turn_thresholds";
+    const nlohmann::json& rArr = rReader.Array(pKey);
     if (rArr.size() != 6)
     {
-        throw std::runtime_error(
-            rCtx + ": 'planet_lifecycle_turn_thresholds' must have exactly 6 entries");
+        rReader.FailKey(pKey, "must have exactly 6 entries");
     }
     std::array<int, 6> thresholds{};
     for (size_t i = 0; i < 6; ++i)
     {
-        if (!rArr.at(i).is_number_integer())
+        if (!rArr.at(i).is_number_integer() || rArr.at(i).get<int>() < 0)
         {
-            throw std::runtime_error(rCtx
-                                     + ": 'planet_lifecycle_turn_thresholds' entries must be "
-                                       "integers");
+            rReader.FailKey(pKey, "entries must be integers >= 0");
         }
-        const int value = rArr.at(i).get<int>();
-        if (value < 0)
-        {
-            throw std::runtime_error(
-                rCtx + ": 'planet_lifecycle_turn_thresholds' entries must be >= 0");
-        }
-        thresholds[i] = value;
+        thresholds[i] = rArr.at(i).get<int>();
     }
     return thresholds;
 }
 
-NativeLifeLevel_t ParseLevel_(const nlohmann::json& rJson)
+NativeLifeLevel_t ParseLevel_(const ConfigReader& rReader)
 {
-    if (!rJson.is_object())
-    {
-        throw std::runtime_error("native life level entry must be a JSON object");
-    }
-    ConfigFields::RejectUnknownKeys(
-        rJson, {"id", "name", "fauna_forms", "fungus_coverage_multiplier", "effects"},
-        "native life level");
-    if (!rJson.contains("id") || !rJson.at("id").is_string()
-        || rJson.at("id").get<std::string>().empty())
-    {
-        throw std::runtime_error("native life level missing non-empty string 'id'");
-    }
+    rReader.RejectUnknownKeys({"id", "name", "fauna_forms", "fungus_coverage_multiplier",
+                               "effects"});
     NativeLifeLevel_t level;
-    level.id = rJson.at("id").get<std::string>();
-    const std::string ctx = "native life level '" + level.id + "'";
-    if (!rJson.contains("name") || !rJson.at("name").is_string())
-    {
-        throw std::runtime_error(ctx + ": 'name' must be a string");
-    }
-    level.name = rJson.at("name").get<std::string>();
-    if (!rJson.contains("fauna_forms") || !rJson.at("fauna_forms").is_number_integer())
-    {
-        throw std::runtime_error(ctx + ": 'fauna_forms' must be an integer");
-    }
-    level.faunaForms = rJson.at("fauna_forms").get<int>();
-    if (level.faunaForms < 0 || level.faunaForms > 2)
-    {
-        throw std::runtime_error(ctx + ": 'fauna_forms' must be 0..2");
-    }
-    if (!rJson.contains("fungus_coverage_multiplier")
-        || !rJson.at("fungus_coverage_multiplier").is_number())
-    {
-        throw std::runtime_error(ctx + ": 'fungus_coverage_multiplier' must be a number");
-    }
-    level.fungusCoverageMultiplier = rJson.at("fungus_coverage_multiplier").get<float>();
-    if (level.fungusCoverageMultiplier < 0.0f)
-    {
-        throw std::runtime_error(ctx + ": 'fungus_coverage_multiplier' must be >= 0");
-    }
-    if (!rJson.contains("effects") || !rJson.at("effects").is_array())
-    {
-        throw std::runtime_error(ctx + ": 'effects' must be an array");
-    }
-    level.effects =
-        EffectConfigParser::ParseEffects(rJson, EffectSourceKind_t::NativeLifeLevel, level.id);
+    level.id = rReader.NonEmptyString("id");
+    level.name = rReader.String("name");
+    level.faunaForms = rReader.IntInRange("fauna_forms", 0, 2);
+    level.fungusCoverageMultiplier =
+        static_cast<float>(rReader.NumberAtLeast("fungus_coverage_multiplier", 0.0));
+    rReader.Array("effects");
+    level.effects = EffectConfigParser::ParseEffects(rReader.Json(),
+                                                     EffectSourceKind_t::NativeLifeLevel, level.id);
     return level;
 }
 
 void LoadFormulas_(const std::string& rFormulaPath, LuaRuntime& rLua, NativeLifeConfig_t& rConfig)
 {
-    sol::protected_function_result result =
-        rLua.GetState().safe_script_file(rFormulaPath, sol::script_pass_on_error);
-    if (!result.valid())
-    {
-        const sol::error err = result;
-        throw std::runtime_error("Failed to load native life script '" + rFormulaPath + "': "
-                                 + err.what());
-    }
-    sol::table table = result;
-    auto requireFormula = [&](const char* pKey) -> std::string
-    {
-        std::string formula = table.get_or(pKey, std::string(""));
-        if (formula.empty())
-        {
-            throw std::runtime_error("native life script '" + rFormulaPath + "' must set " + pKey
-                                     + " to a non-empty Lua expression");
-        }
-        return formula;
+    const sol::table table = LuaConfigLoader::RunScript(rLua, rFormulaPath, k_ScriptNoun);
+    const auto requireFormula = [&](const char* pKey) {
+        return LuaConfigLoader::RequireFormula(table, pKey, rFormulaPath, k_ScriptNoun);
     };
     rConfig.boatPeriodFormula = requireFormula("boat_period_formula");
     rConfig.earlyLimitThresholdFormula = requireFormula("early_limit_threshold_formula");
@@ -158,9 +96,9 @@ void LoadFormulas_(const std::string& rFormulaPath, LuaRuntime& rLua, NativeLife
     rConfig.swarmYearThresholdFormula = requireFormula("swarm_year_threshold_formula");
 }
 
-NativeLifeConfig_t ParseNativeLifeJson_(const nlohmann::json& rJson, const std::string& rCtx)
+NativeLifeConfig_t ParseNativeLifeJson_(const ConfigReader& rReader)
 {
-    static const std::vector<std::string> known = {
+    rReader.RejectUnknownKeys({
         "fungal_bloom_native_lifeforms_min",
         "fungal_bloom_native_lifeforms_max",
         "planet_lifecycle_turn_thresholds",
@@ -169,62 +107,27 @@ NativeLifeConfig_t ParseNativeLifeJson_(const nlohmann::json& rJson, const std::
         "boat_empty_ocean_min_region_tiles",
         "default",
         "levels",
-    };
-    ConfigFields::RejectUnknownKeys(rJson, known, rCtx);
+    });
 
     NativeLifeConfig_t config;
     config.fungalBloomNativeLifeformsMin =
-        RequireWholeCount_(rJson, "fungal_bloom_native_lifeforms_min", rCtx);
+        RequireNonNegativeInt_(rReader, "fungal_bloom_native_lifeforms_min");
     config.fungalBloomNativeLifeformsMax =
-        RequireWholeCount_(rJson, "fungal_bloom_native_lifeforms_max", rCtx);
-    if (config.fungalBloomNativeLifeformsMin < 0)
-    {
-        throw std::runtime_error(rCtx + ": 'fungal_bloom_native_lifeforms_min' must be >= 0");
-    }
-    if (config.fungalBloomNativeLifeformsMax < config.fungalBloomNativeLifeformsMin)
-    {
-        throw std::runtime_error(
-            rCtx + ": 'fungal_bloom_native_lifeforms_max' must be >= "
-                   "'fungal_bloom_native_lifeforms_min'");
-    }
-    config.planetLifecycleTurnThresholds = RequireLifecycleThresholds_(rJson, rCtx);
-    config.ambushNearBaseMinDist =
-        RequireNonNegativeInt_(rJson, "ambush_near_base_min_dist", rCtx);
-    config.ambushNearBaseMaxDist =
-        RequireNonNegativeInt_(rJson, "ambush_near_base_max_dist", rCtx);
-    if (config.ambushNearBaseMaxDist < config.ambushNearBaseMinDist)
-    {
-        throw std::runtime_error(
-            rCtx + ": 'ambush_near_base_max_dist' must be >= 'ambush_near_base_min_dist'");
-    }
+        RequireWholeCount_(rReader, "fungal_bloom_native_lifeforms_max");
+    RequireNotBelow_(rReader, "fungal_bloom_native_lifeforms_max",
+                     config.fungalBloomNativeLifeformsMax, "fungal_bloom_native_lifeforms_min",
+                     config.fungalBloomNativeLifeformsMin);
+    config.planetLifecycleTurnThresholds = RequireLifecycleThresholds_(rReader);
+    config.ambushNearBaseMinDist = RequireNonNegativeInt_(rReader, "ambush_near_base_min_dist");
+    config.ambushNearBaseMaxDist = RequireNonNegativeInt_(rReader, "ambush_near_base_max_dist");
+    RequireNotBelow_(rReader, "ambush_near_base_max_dist", config.ambushNearBaseMaxDist,
+                     "ambush_near_base_min_dist", config.ambushNearBaseMinDist);
     config.boatEmptyOceanMinRegionTiles =
-        RequireNonNegativeInt_(rJson, "boat_empty_ocean_min_region_tiles", rCtx);
-    // Level set only — do not call ParseLevelSet (it rejects sibling session keys).
-    if (!rJson.contains("default") || !rJson.at("default").is_string()
-        || rJson.at("default").get<std::string>().empty())
-    {
-        throw std::runtime_error(rCtx + ": 'default' must be a non-empty string");
-    }
-    if (!rJson.contains("levels") || !rJson.at("levels").is_array() || rJson.at("levels").empty())
-    {
-        throw std::runtime_error(rCtx + ": 'levels' must be a non-empty array");
-    }
-    config.defaultId = rJson.at("default").get<std::string>();
-    std::unordered_set<std::string> seenIds;
-    for (const nlohmann::json& rLevelJson : rJson.at("levels"))
-    {
-        NativeLifeLevel_t level = ParseLevel_(rLevelJson);
-        if (!seenIds.insert(level.id).second)
-        {
-            throw std::runtime_error(rCtx + ": duplicate level id '" + level.id + "'");
-        }
-        config.levels.push_back(std::move(level));
-    }
-    if (!seenIds.contains(config.defaultId))
-    {
-        throw std::runtime_error(rCtx + ": default '" + config.defaultId
-                                 + "' does not match any level id");
-    }
+        RequireNonNegativeInt_(rReader, "boat_empty_ocean_min_region_tiles");
+    ConfigFields::LevelSet_t<NativeLifeLevel_t> set =
+        ConfigFields::ParseLevelSet<NativeLifeLevel_t>(rReader, ParseLevel_);
+    config.defaultId = std::move(set.defaultId);
+    config.levels = std::move(set.levels);
     return config;
 }
 
@@ -257,9 +160,7 @@ NativeLifeConfig_t NativeLifeConfigParser::ParseConfig(const std::string& rConfi
                                                        LuaRuntime& rLua)
 {
     NativeLifeConfig_t config = JsonConfigLoader::LoadObjectFile<NativeLifeConfig_t>(
-        rConfigPath, "native life", [&rConfigPath](const nlohmann::json& rJson) {
-            return ParseNativeLifeJson_(rJson, "Native life config '" + rConfigPath + "'");
-        });
+        rConfigPath, "native life", ParseNativeLifeJson_);
     LoadFormulas_(rFormulaPath, rLua, config);
     return config;
 }

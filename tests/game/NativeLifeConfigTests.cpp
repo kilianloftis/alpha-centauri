@@ -104,26 +104,26 @@ TEST_CASE("NativeLifeConfigParser rejects bad configs", "[ecology][native-life][
     CHECK_THROWS_WITH(Parse_("{" + SessionKeys_() + R"( "default": "rare", "levels": [
         { "id": "rare", "name": "Rare", "fauna_forms": 0, "fungus_coverage_multiplier": 0,
           "effects": [], "x": 1 } ] })"),
-                      ContainsSubstring("'x'"));
+                      ContainsSubstring("'levels[rare].x'"));
 }
 
 TEST_CASE("NativeLifeConfigParser requires every level key", "[ecology][native-life][parser]")
 {
     CHECK_THROWS_WITH(Parse_("{" + SessionKeys_() + R"( "default": "rare", "levels": [
         { "name": "Rare", "fauna_forms": 0, "fungus_coverage_multiplier": 0, "effects": [] } ] })"),
-                      ContainsSubstring("'id'"));
+                      ContainsSubstring("'levels[0].id'"));
     CHECK_THROWS_WITH(Parse_("{" + SessionKeys_() + R"( "default": "rare", "levels": [
         { "id": "rare", "fauna_forms": 0, "fungus_coverage_multiplier": 0, "effects": [] } ] })"),
-                      ContainsSubstring("'name'"));
+                      ContainsSubstring("'levels[rare].name'"));
     CHECK_THROWS_WITH(Parse_("{" + SessionKeys_() + R"( "default": "rare", "levels": [
         { "id": "rare", "name": "Rare", "fungus_coverage_multiplier": 0, "effects": [] } ] })"),
-                      ContainsSubstring("'fauna_forms'"));
+                      ContainsSubstring("'levels[rare].fauna_forms'"));
     CHECK_THROWS_WITH(Parse_("{" + SessionKeys_() + R"( "default": "rare", "levels": [
         { "id": "rare", "name": "Rare", "fauna_forms": 0, "effects": [] } ] })"),
-                      ContainsSubstring("'fungus_coverage_multiplier'"));
+                      ContainsSubstring("'levels[rare].fungus_coverage_multiplier'"));
     CHECK_THROWS_WITH(Parse_("{" + SessionKeys_() + R"( "default": "rare", "levels": [
         { "id": "rare", "name": "Rare", "fauna_forms": 0, "fungus_coverage_multiplier": 0 } ] })"),
-                      ContainsSubstring("'effects'"));
+                      ContainsSubstring("'levels[rare].effects'"));
 }
 
 TEST_CASE("NativeLifeConfigParser rejects an inverted fungal lifeform range",

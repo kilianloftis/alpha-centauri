@@ -213,37 +213,6 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
     CHECK_THROWS(ParseSocialRatingId("karma"));
 }
 
-TEST_CASE("ParseNumber: accepts numbers, numeric strings, and rationals", "[effects][parser]")
-{
-    const json params = {
-        {"as_number", 2.5},
-        {"as_int", 3},
-        {"as_string", "4.5"},
-        {"as_rational", "1/3"},
-        {"bad", true},
-        {"junk", "2abc"},
-        {"bad_rational", "1/0"},
-    };
-
-    CHECK(EffectConfigParser::ParseNumber(params, "as_number", 0.0) == Approx(2.5));
-    CHECK(EffectConfigParser::ParseNumber(params, "as_int", 0.0) == Approx(3.0));
-    CHECK(EffectConfigParser::ParseNumber(params, "as_string", 0.0) == Approx(4.5));
-    CHECK(EffectConfigParser::ParseNumber(params, "as_rational", 0.0) == Approx(1.0 / 3.0));
-    CHECK(EffectConfigParser::ParseNumber(params, "missing", 7.0) == Approx(7.0));
-    CHECK_THROWS(EffectConfigParser::ParseNumber(params, "bad", 0.0));
-    CHECK_THROWS(EffectConfigParser::ParseNumber(params, "bad_rational", 0.0));
-
-    try
-    {
-        EffectConfigParser::ParseNumber(params, "junk", 0.0);
-        FAIL("expected trailing junk to throw");
-    }
-    catch (const std::runtime_error& e)
-    {
-        CHECK(std::string(e.what()).find("junk") != std::string::npos);
-    }
-}
-
 TEST_CASE("ParseEffectConfig: StatModifier with explicit fields", "[effects][parser]")
 {
     const json effectJson = json::parse(R"({

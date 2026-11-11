@@ -1,35 +1,22 @@
 #include "game/effects/TileYieldRulesConfigParser.h"
 
 #include "game/effects/EffectConfigParser.h"
-
-#include <fstream>
-#include <nlohmann/json.hpp>
-#include <stdexcept>
+#include "lib/config/JsonConfigLoader.h"
 
 namespace ac
 {
 
 TileYieldRulesConfig_t TileYieldRulesConfigParser::ParseConfig(const std::string& configPath)
 {
-    std::ifstream file(configPath);
-    if (!file.is_open())
-    {
-        throw std::runtime_error("Could not open tile yield rules '" + configPath + "'");
-    }
-
-    const nlohmann::json json = nlohmann::json::parse(file);
-
-    TileYieldRulesConfig_t config;
-    config.elevationEnergyStepMeters =
-        static_cast<int>(EffectConfigParser::RequireNumber(json, "elevation_energy_step_meters"));
-    if (config.elevationEnergyStepMeters <= 0)
-    {
-        throw std::runtime_error("tile_yield_rules 'elevation_energy_step_meters' must be > 0, got "
-                                 + std::to_string(config.elevationEnergyStepMeters));
-    }
-    config.effects = EffectConfigParser::ParseEffects(
-        json, EffectSourceKind_t::TileYieldRules, "tile_yield_rules");
-    return config;
+    return JsonConfigLoader::LoadObjectFile<TileYieldRulesConfig_t>(
+        configPath, "tile yield rules", [](const ConfigReader& rReader) {
+            TileYieldRulesConfig_t config;
+            config.elevationEnergyStepMeters =
+                rReader.IntAtLeast("elevation_energy_step_meters", 1);
+            config.effects = EffectConfigParser::ParseEffects(
+                rReader.Json(), EffectSourceKind_t::TileYieldRules, "tile_yield_rules");
+            return config;
+        });
 }
 
 } // namespace ac

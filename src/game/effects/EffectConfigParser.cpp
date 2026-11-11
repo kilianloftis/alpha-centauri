@@ -1,5 +1,6 @@
 #include "game/effects/EffectConfigParser.h"
 
+#include "lib/config/ConfigReader.h"
 #include "lib/config/EnumNames.h"
 #include "game/effects/TriggeredEffectParser.h"
 #include "game/movement/MovementConstants.h"
@@ -8,6 +9,7 @@
 #include <magic_enum.hpp>
 #include <cmath>
 #include <cstddef>
+#include <algorithm>
 #include <map>
 #include <stdexcept>
 #include <string>
@@ -326,18 +328,14 @@ void ValidateAmountSourceLegality_(const StatModifierEffect_t& rMod,
     }
 }
 
-void ParseGrantBuilding_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
+void ParseGrantBuilding_(const ConfigReader& rParams, EffectConfig_t& rEffect)
 {
     GrantBuildingEffect_t grantBuilding;
-    grantBuilding.buildingId = parameters.value("building_id", "");
-    if (grantBuilding.buildingId.empty())
-    {
-        throw std::runtime_error("GrantBuilding effect missing required 'building_id'");
-    }
+    grantBuilding.buildingId = rParams.NonEmptyString("building_id");
     rEffect.effect = grantBuilding;
 }
 
-void ParseInfiltration_(const nlohmann::json& /*parameters*/, EffectConfig_t& rEffect)
+void ParseInfiltration_(const ConfigReader& /*rParams*/, EffectConfig_t& rEffect)
 {
     RequireScope_(
         rEffect.scope,
@@ -387,30 +385,34 @@ std::map<int, double> ParseAmountMap_(const nlohmann::json& rAmounts)
             throw std::runtime_error(
                 "StatModifier amount_source amounts keys must be integers, got '" + rKey + "'");
         }
-        amounts[key] = rValue.get<double>();
+        try
+        {
+            amounts[key] = ConfigReader::NumberFromJson(rValue);
+        }
+        catch (const std::runtime_error& rError)
+        {
+            throw std::runtime_error("StatModifier amount_source amounts '" + rKey + "' "
+                                     + rError.what());
+        }
     }
     return amounts;
 }
 
 // move_cost is a MaxClamp in move fragments, authored as a rational number of move points.
-double ParseMoveCostAmount_(const nlohmann::json& parameters, ModifierOp_t op)
+double ParseMoveCostAmount_(const ConfigReader& rParams, ModifierOp_t op)
 {
     if (op != ModifierOp_t::MaxClamp)
     {
         throw std::runtime_error("StatModifier move_cost requires op MaxClamp");
     }
-    if (parameters.contains("amount_source"))
+    if (rParams.Has("amount_source"))
     {
         throw std::runtime_error("StatModifier move_cost does not accept amount_source");
     }
-    if (!parameters.contains("amount"))
+    const Rational_t cost = rParams.Rational("amount");
+    if (cost.numerator < 0)
     {
-        throw std::runtime_error("StatModifier move_cost requires 'amount'");
-    }
-    const Rational_t cost = Rational_t::ParseJson(parameters.at("amount"));
-    if (cost.numerator < 0 || cost.denominator <= 0)
-    {
-        throw std::runtime_error("StatModifier move_cost amount must be non-negative");
+        rParams.FailKey("amount", "must be non-negative");
     }
     try
     {
@@ -425,11 +427,11 @@ double ParseMoveCostAmount_(const nlohmann::json& parameters, ModifierOp_t op)
 
 // Any op: the source computes the amount and ApplyModifierStack is op-agnostic. The legality
 // checks are what constrain it.
-void ParseAmountSourceFields_(const nlohmann::json& parameters, const EffectConfig_t& rEffect,
+void ParseAmountSourceFields_(const ConfigReader& rParams, const EffectConfig_t& rEffect,
                               StatModifierEffect_t& rModifier)
 {
-    rModifier.amountSource = ParseAmountSource(parameters.at("amount_source"));
-    if (rModifier.amountSource->amounts && parameters.contains("amount"))
+    rModifier.amountSource = ParseAmountSource(rParams.Json().at("amount_source"));
+    if (rModifier.amountSource->amounts && rParams.Has("amount"))
     {
         throw std::runtime_error(
             "StatModifier amount_source amounts cannot be combined with 'amount'");
@@ -437,18 +439,18 @@ void ParseAmountSourceFields_(const nlohmann::json& parameters, const EffectConf
     if (!rModifier.amountSource->amounts)
     {
         // amount is the per-source scale when amount_source is set (default 1).
-        rModifier.amount = ParseNumber(parameters, "amount", 1.0);
+        rModifier.amount = rParams.NumberOr("amount", 1.0);
     }
-    ValidateAmountSourceLegality_(rModifier, rEffect, parameters.value("stat", ""));
+    ValidateAmountSourceLegality_(rModifier, rEffect, rParams.StringOr("stat", ""));
 }
 
 // Selectors resolve only during tile yield, so a selector on any other stat would never apply,
 // and tile-yield resolution supplies only a tile subject, so it never combines with an
 // amount_source.
-std::optional<TileSelector_t> ParseModifierSelector_(const nlohmann::json& parameters,
+std::optional<TileSelector_t> ParseModifierSelector_(const ConfigReader& rParams,
                                                      const StatModifierEffect_t& rModifier)
 {
-    if (!parameters.contains("selector"))
+    if (!rParams.Has("selector"))
     {
         return std::nullopt;
     }
@@ -456,13 +458,13 @@ std::optional<TileSelector_t> ParseModifierSelector_(const nlohmann::json& param
     {
         throw std::runtime_error(
             "StatModifier 'selector' is only valid on tile resource "
-            "stats (nutrients/minerals/energy), got '" + parameters.value("stat", "") + "'");
+            "stats (nutrients/minerals/energy), got '" + rParams.StringOr("stat", "") + "'");
     }
     if (rModifier.amountSource)
     {
         throw std::runtime_error("StatModifier 'selector' cannot be combined with 'amount_source'");
     }
-    return ParseTileSelector(parameters.at("selector"));
+    return ParseTileSelector(rParams.Json().at("selector"));
 }
 
 // MaxClamp / MinClamp on tile resources must carry a selector so they apply per-tile (via
@@ -479,14 +481,14 @@ void RequireTileClampSelector_(const StatModifierEffect_t& rModifier)
     }
 }
 
-bool ParseBypassClamp_(const nlohmann::json& parameters, const StatModifierEffect_t& rModifier)
+bool ParseBypassClamp_(const ConfigReader& rParams, const StatModifierEffect_t& rModifier)
 {
-    const bool bBypassClamp = parameters.value("bypass_clamp", false);
+    const bool bBypassClamp = rParams.BoolOr("bypass_clamp", false);
     if (bBypassClamp && !IsTileResourceStat_(rModifier.stat))
     {
         throw std::runtime_error(
             "StatModifier 'bypass_clamp' is only valid on tile resource "
-            "stats (nutrients/minerals/energy), got '" + parameters.value("stat", "") + "'");
+            "stats (nutrients/minerals/energy), got '" + rParams.StringOr("stat", "") + "'");
     }
     if (bBypassClamp && rModifier.op != ModifierOp_t::Add)
     {
@@ -505,49 +507,39 @@ void RequireBombardFloorOp_(const StatModifierEffect_t& rModifier)
     }
 }
 
-void ParseStatModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
+void ParseStatModifier_(const ConfigReader& rParams, EffectConfig_t& rEffect)
 {
     StatModifierEffect_t statModifier;
-    statModifier.stat = ParseStatId(parameters.value("stat", ""));
-    statModifier.op = ParseModifierOp(parameters.value("op", "Add"));
+    statModifier.stat = ParseStatId(rParams.StringOr("stat", ""));
+    statModifier.op = ParseModifierOp(rParams.StringOr("op", "Add"));
     if (statModifier.stat == StatId_t::MoveCost)
     {
-        statModifier.amount = ParseMoveCostAmount_(parameters, statModifier.op);
+        statModifier.amount = ParseMoveCostAmount_(rParams, statModifier.op);
     }
-    else if (parameters.contains("amount_source"))
+    else if (rParams.Has("amount_source"))
     {
-        ParseAmountSourceFields_(parameters, rEffect, statModifier);
+        ParseAmountSourceFields_(rParams, rEffect, statModifier);
     }
     else
     {
-        statModifier.amount = ParseNumber(parameters, "amount", 0.0);
+        statModifier.amount = rParams.NumberOr("amount", 0.0);
     }
-    statModifier.selector = ParseModifierSelector_(parameters, statModifier);
+    statModifier.selector = ParseModifierSelector_(rParams, statModifier);
     RequireTileClampSelector_(statModifier);
-    statModifier.bypassClamp = ParseBypassClamp_(parameters, statModifier);
+    statModifier.bypassClamp = ParseBypassClamp_(rParams, statModifier);
     RequireBombardFloorOp_(statModifier);
     rEffect.effect = statModifier;
 }
 
-void ParseRuleFlag_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
+void ParseRuleFlag_(const ConfigReader& rParams, EffectConfig_t& rEffect)
 {
     RuleFlagEffect_t ruleFlag;
-    const std::string flagStr = parameters.value("flag", "");
-    if (flagStr.empty())
-    {
-        throw std::runtime_error("RuleFlag effect missing required 'flag'");
-    }
-    ruleFlag.flag = ParseRuleFlagId(flagStr);
+    ruleFlag.flag = ParseRuleFlagId(rParams.NonEmptyString("flag"));
     if (ruleFlag.flag == RuleFlagId_t::Harbors)
     {
-        const std::string domainStr = parameters.value("domain", "");
-        if (domainStr.empty())
-        {
-            throw std::runtime_error("RuleFlag 'harbors' requires a 'domain' string");
-        }
-        ruleFlag.domain = ParseUnitDomain(domainStr);
+        ruleFlag.domain = ParseUnitDomain(rParams.NonEmptyString("domain"));
     }
-    else if (parameters.contains("domain"))
+    else if (rParams.Has("domain"))
     {
         throw std::runtime_error(
             "RuleFlag 'domain' is only valid with flag 'harbors'");
@@ -555,53 +547,30 @@ void ParseRuleFlag_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
     rEffect.effect = ruleFlag;
 }
 
-// A required string field of an override effect; pEffect names the effect in the error.
-std::string RequireOverrideString_(const nlohmann::json& parameters, const char* pKey,
-                                   const char* pEffect)
-{
-    const std::string value = parameters.value(pKey, "");
-    if (value.empty())
-    {
-        throw std::runtime_error(std::string(pEffect) + " missing required '" + pKey + "'");
-    }
-    return value;
-}
-
 // An optional enumerator-named string field of InteractionOverride.
 template <typename Enum_t>
-std::optional<Enum_t> OptionalOverrideEnum_(const nlohmann::json& parameters, const char* pKey)
+std::optional<Enum_t> OptionalOverrideEnum_(const ConfigReader& rParams, const char* pKey)
 {
-    if (!parameters.contains(pKey))
+    if (!rParams.Has(pKey))
     {
         return std::nullopt;
     }
-    if (!parameters.at(pKey).is_string())
-    {
-        throw std::runtime_error(std::string("InteractionOverride '") + pKey
-                                 + "' must be a string");
-    }
-    return EnumFromName<Enum_t>(parameters.at(pKey).get<std::string>(),
-                                std::string("InteractionOverride ") + pKey);
+    return rParams.Enum<Enum_t>(pKey, pKey);
 }
 
-std::optional<UnitDomain_t> OptionalOverrideDomain_(const nlohmann::json& parameters,
+std::optional<UnitDomain_t> OptionalOverrideDomain_(const ConfigReader& rParams,
                                                     const char* pKey)
 {
-    if (!parameters.contains(pKey))
+    if (!rParams.Has(pKey))
     {
         return std::nullopt;
     }
-    if (!parameters.at(pKey).is_string())
-    {
-        throw std::runtime_error(std::string("InteractionOverride '") + pKey
-                                 + "' must be a string");
-    }
-    return ParseUnitDomain(parameters.at(pKey).get<std::string>());
+    return ParseUnitDomain(rParams.String(pKey));
 }
 
-InteractionGridId_t ParseOverrideGrid_(const nlohmann::json& parameters)
+InteractionGridId_t ParseOverrideGrid_(const ConfigReader& rParams)
 {
-    const std::string grid = RequireOverrideString_(parameters, "grid", "InteractionOverride");
+    const std::string grid = rParams.NonEmptyString("grid");
     for (const auto& [rName, id] : k_InteractionGridNames)
     {
         if (rName == grid)
@@ -647,7 +616,7 @@ void RequireGridAxes_(const InteractionOverrideEffect_t& rOverride)
     }
 }
 
-void ParseInteractionOverride_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
+void ParseInteractionOverride_(const ConfigReader& rParams, EffectConfig_t& rEffect)
 {
     if (rEffect.scope != EffectScope_t::ThisUnit
         && rEffect.scope != EffectScope_t::FactionUnits)
@@ -657,54 +626,38 @@ void ParseInteractionOverride_(const nlohmann::json& parameters, EffectConfig_t&
     }
 
     InteractionOverrideEffect_t overrideFx;
-    overrideFx.grid = ParseOverrideGrid_(parameters);
+    overrideFx.grid = ParseOverrideGrid_(rParams);
     // Either polarity is legal; resolve skips overrides that restate the stock cell (non-default
     // only), so first-match order among overrides never matters.
-    overrideFx.cell =
-        EnumFromName<InteractionCell_t>(RequireOverrideString_(parameters, "cell",
-                                                               "InteractionOverride"),
-                                        "InteractionOverride cell");
-    overrideFx.actorDomain = OptionalOverrideDomain_(parameters, "actor_domain");
-    overrideFx.surface = OptionalOverrideEnum_<InteractionSurface_t>(parameters, "surface");
-    overrideFx.footing = OptionalOverrideEnum_<InteractionFooting_t>(parameters, "footing");
-    overrideFx.targetDomain = OptionalOverrideDomain_(parameters, "target_domain");
+    overrideFx.cell = rParams.Enum<InteractionCell_t>("cell", "InteractionOverride cell");
+    overrideFx.actorDomain = OptionalOverrideDomain_(rParams, "actor_domain");
+    overrideFx.surface = OptionalOverrideEnum_<InteractionSurface_t>(rParams, "surface");
+    overrideFx.footing = OptionalOverrideEnum_<InteractionFooting_t>(rParams, "footing");
+    overrideFx.targetDomain = OptionalOverrideDomain_(rParams, "target_domain");
     RequireGridAxes_(overrideFx);
     rEffect.effect = overrideFx;
 }
 
-void ParseForbiddenSocialPolicy_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
+void ParseForbiddenSocialPolicy_(const ConfigReader& rParams, EffectConfig_t& rEffect)
 {
     ForbiddenSocialPolicyEffect_t forbidden;
-    forbidden.policy = parameters.value("policy", "");
-    if (forbidden.policy.empty())
-    {
-        throw std::runtime_error("ForbiddenSocialPolicy effect missing required 'policy'");
-    }
+    forbidden.policy = rParams.NonEmptyString("policy");
     rEffect.effect = forbidden;
 }
 
-void ParseSocialPolicyImpunity_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
+void ParseSocialPolicyImpunity_(const ConfigReader& rParams, EffectConfig_t& rEffect)
 {
     SocialPolicyImpunityEffect_t impunity;
-    impunity.policy = parameters.value("policy", "");
-    if (impunity.policy.empty())
-    {
-        throw std::runtime_error("SocialPolicyImpunity effect missing required 'policy'");
-    }
+    impunity.policy = rParams.NonEmptyString("policy");
     rEffect.effect = impunity;
 }
 
-void ParseSocialRatingModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
+void ParseSocialRatingModifier_(const ConfigReader& rParams, EffectConfig_t& rEffect)
 {
     SocialRatingModifierEffect_t ratingMod;
-    const std::string ratingStr = parameters.value("rating", "");
-    if (ratingStr.empty())
-    {
-        throw std::runtime_error("SocialRatingModifier effect missing required 'rating'");
-    }
-    ratingMod.rating = ParseSocialRatingId(ratingStr);
-    ratingMod.amount = static_cast<int>(ParseNumber(parameters, "amount", 0.0));
-    ratingMod.op = ParseModifierOp(parameters.value("op", "Add"));
+    ratingMod.rating = ParseSocialRatingId(rParams.NonEmptyString("rating"));
+    ratingMod.amount = rParams.IntOr("amount", 0);
+    ratingMod.op = ParseModifierOp(rParams.StringOr("op", "Add"));
     if (ratingMod.op != ModifierOp_t::Add && ratingMod.op != ModifierOp_t::MinClamp
         && ratingMod.op != ModifierOp_t::MaxClamp)
     {
@@ -714,133 +667,85 @@ void ParseSocialRatingModifier_(const nlohmann::json& parameters, EffectConfig_t
     rEffect.effect = ratingMod;
 }
 
-void ParseConceal_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
+void ParseConceal_(const ConfigReader& rParams, EffectConfig_t& rEffect)
 {
     ConcealEffect_t conceal;
-    conceal.channel = parameters.value("channel", "");
-    if (conceal.channel.empty())
-    {
-        throw std::runtime_error("Conceal effect missing required 'channel'");
-    }
+    conceal.channel = rParams.NonEmptyString("channel");
     rEffect.effect = conceal;
 }
 
-void ParseDetect_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
+void ParseDetect_(const ConfigReader& rParams, EffectConfig_t& rEffect)
 {
     DetectEffect_t detect;
-    detect.channel = parameters.value("channel", "");
-    if (detect.channel.empty())
-    {
-        throw std::runtime_error("Detect effect missing required 'channel'");
-    }
+    detect.channel = rParams.NonEmptyString("channel");
     rEffect.effect = detect;
 }
 
-void ParseOrbitalAttack_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
+int ParseDestructionChance_(const ConfigReader& rParams)
+{
+    const char* pKey = "chance_of_destruction_on_fail";
+    return rParams.Has(pKey) ? rParams.IntInRange(pKey, 0, 100) : 0;
+}
+
+void ParseOrbitalAttack_(const ConfigReader& rParams, EffectConfig_t& rEffect)
 {
     RequireScope_(
         rEffect.scope,
         {EffectScope_t::FactionGlobal, EffectScope_t::AllOwnerBases},
         "OrbitalAttack requires scope FactionGlobal or AllOwnerBases");
     OrbitalAttackEffect_t orbitalAttack;
-    orbitalAttack.chance = static_cast<int>(RequireNumber(parameters, "chance"));
-    if (orbitalAttack.chance < 0 || orbitalAttack.chance > 100)
-    {
-        throw std::runtime_error("OrbitalAttack 'chance' must be in [0, 100]");
-    }
-    orbitalAttack.cooldownTurns = static_cast<int>(RequireNumber(parameters, "cooldown_turns"));
-    if (orbitalAttack.cooldownTurns < 0)
-    {
-        throw std::runtime_error("OrbitalAttack 'cooldown_turns' must be >= 0");
-    }
-    orbitalAttack.chanceOfDestructionOnFail =
-        static_cast<int>(ParseNumber(parameters, "chance_of_destruction_on_fail", 0.0));
-    if (orbitalAttack.chanceOfDestructionOnFail < 0
-        || orbitalAttack.chanceOfDestructionOnFail > 100)
-    {
-        throw std::runtime_error(
-            "OrbitalAttack 'chance_of_destruction_on_fail' must be in [0, 100]");
-    }
+    orbitalAttack.chance = rParams.IntInRange("chance", 0, 100);
+    orbitalAttack.cooldownTurns = rParams.IntAtLeast("cooldown_turns", 0);
+    orbitalAttack.chanceOfDestructionOnFail = ParseDestructionChance_(rParams);
     rEffect.effect = orbitalAttack;
 }
 
-void ParseIntercept_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
+void ParseIntercept_(const ConfigReader& rParams, EffectConfig_t& rEffect)
 {
     if (!rEffect.condition)
     {
         throw std::runtime_error("Intercept requires a condition");
     }
     InterceptEffect_t intercept;
-    intercept.chance = static_cast<int>(RequireNumber(parameters, "chance"));
-    if (intercept.chance < 0 || intercept.chance > 100)
+    intercept.chance = rParams.IntInRange("chance", 0, 100);
+    if (rParams.Has("cooldown_turns"))
     {
-        throw std::runtime_error("Intercept 'chance' must be in [0, 100]");
+        intercept.cooldownTurns = rParams.IntAtLeast("cooldown_turns", 0);
     }
-    if (parameters.contains("cooldown_turns"))
-    {
-        intercept.cooldownTurns = static_cast<int>(RequireNumber(parameters, "cooldown_turns"));
-        if (intercept.cooldownTurns < 0)
-        {
-            throw std::runtime_error("Intercept 'cooldown_turns' must be >= 0");
-        }
-    }
-    intercept.chanceOfDestructionOnFail =
-        static_cast<int>(ParseNumber(parameters, "chance_of_destruction_on_fail", 0.0));
-    if (intercept.chanceOfDestructionOnFail < 0 || intercept.chanceOfDestructionOnFail > 100)
-    {
-        throw std::runtime_error(
-            "Intercept 'chance_of_destruction_on_fail' must be in [0, 100]");
-    }
+    intercept.chanceOfDestructionOnFail = ParseDestructionChance_(rParams);
     rEffect.effect = intercept;
 }
 
-void ParseScramble_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
+void ParseScramble_(const ConfigReader& rParams, EffectConfig_t& rEffect)
 {
     if (!rEffect.condition)
     {
         throw std::runtime_error("Scramble requires a condition");
     }
     ScrambleEffect_t scramble;
-    scramble.range = static_cast<int>(RequireNumber(parameters, "range"));
-    if (scramble.range <= 0)
-    {
-        throw std::runtime_error("Scramble 'range' must be > 0");
-    }
+    scramble.range = rParams.IntAtLeast("range", 1);
     rEffect.effect = scramble;
 }
 
-std::vector<UnitDomain_t> ParseCarries_(const nlohmann::json& parameters)
+std::vector<UnitDomain_t> ParseCarries_(const ConfigReader& rParams)
 {
     std::vector<UnitDomain_t> carries;
-    if (!parameters.contains("carries"))
+    for (const std::string& rDomain : rParams.StringArray("carries"))
     {
-        return carries;
-    }
-    if (!parameters.at("carries").is_array())
-    {
-        throw std::runtime_error("TransportParams 'carries' must be an array");
-    }
-    for (const auto& rDomainJson : parameters.at("carries"))
-    {
-        if (!rDomainJson.is_string())
-        {
-            throw std::runtime_error("TransportParams carries entries must be strings");
-        }
-        const std::string domain = rDomainJson.get<std::string>();
-        carries.push_back(ParseUnitDomain(domain));
+        carries.push_back(ParseUnitDomain(rDomain));
     }
     return carries;
 }
 
-void ParseTransportParams_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
+void ParseTransportParams_(const ConfigReader& rParams, EffectConfig_t& rEffect)
 {
     RequireScope_(
         rEffect.scope,
         {EffectScope_t::ThisUnit},
         "TransportParams requires scope ThisUnit");
     TransportParamsEffect_t transport;
-    transport.carries = ParseCarries_(parameters);
-    transport.requiresHarbor = parameters.value("requires_harbor", false);
+    transport.carries = ParseCarries_(rParams);
+    transport.requiresHarbor = rParams.BoolOr("requires_harbor", false);
     if (transport.carries.empty() && !transport.requiresHarbor)
     {
         throw std::runtime_error(
@@ -849,41 +754,29 @@ void ParseTransportParams_(const nlohmann::json& parameters, EffectConfig_t& rEf
     rEffect.effect = transport;
 }
 
-InteractionCell_t ParseCoexistenceCell_(const nlohmann::json& parameters)
+InteractionCell_t ParseCoexistenceCell_(const ConfigReader& rParams)
 {
-    const std::string cell = RequireOverrideString_(parameters, "cell", "CoexistenceOverride");
-    return EnumFromName<InteractionCell_t>(cell, "CoexistenceOverride cell");
+    return rParams.Enum<InteractionCell_t>("cell", "CoexistenceOverride cell");
 }
 
 // One or two occupant ids. Two names the exact pair; one wild-cards the other side.
 // Zero would wild-card both and switch coexistence off wholesale, so it is rejected.
-std::vector<std::string> ParseCoexistenceOccupants_(const nlohmann::json& parameters)
+std::vector<std::string> ParseCoexistenceOccupants_(const ConfigReader& rParams)
 {
-    if (!parameters.contains("occupants") || !parameters.at("occupants").is_array())
+    rParams.Array("occupants");
+    std::vector<std::string> ids = rParams.StringArray("occupants");
+    if (ids.empty() || ids.size() > 2)
     {
-        throw std::runtime_error("CoexistenceOverride needs an 'occupants' array of one or "
-                                 "two occupant ids");
+        rParams.FailKey("occupants", "must name one or two ids, not " + std::to_string(ids.size()));
     }
-    const nlohmann::json& rOccupants = parameters.at("occupants");
-    if (rOccupants.empty() || rOccupants.size() > 2)
+    if (std::ranges::contains(ids, std::string()))
     {
-        throw std::runtime_error("CoexistenceOverride 'occupants' must name one or two ids, not "
-                                 + std::to_string(rOccupants.size()));
-    }
-    std::vector<std::string> ids;
-    for (const nlohmann::json& rEntry : rOccupants)
-    {
-        if (!rEntry.is_string() || rEntry.get<std::string>().empty())
-        {
-            throw std::runtime_error("CoexistenceOverride 'occupants' entries must be "
-                                     "non-empty occupant ids");
-        }
-        ids.push_back(rEntry.get<std::string>());
+        rParams.FailKey("occupants", "entries must be non-empty occupant ids");
     }
     return ids;
 }
 
-void ParseCoexistenceOverride_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
+void ParseCoexistenceOverride_(const ConfigReader& rParams, EffectConfig_t& rEffect)
 {
     if (rEffect.scope != EffectScope_t::ThisUnit
         && rEffect.scope != EffectScope_t::FactionUnits)
@@ -892,8 +785,8 @@ void ParseCoexistenceOverride_(const nlohmann::json& parameters, EffectConfig_t&
             "CoexistenceOverride scope must be ThisUnit or FactionUnits");
     }
     CoexistenceOverrideEffect_t overrideFx;
-    overrideFx.cell = ParseCoexistenceCell_(parameters);
-    const std::vector<std::string> ids = ParseCoexistenceOccupants_(parameters);
+    overrideFx.cell = ParseCoexistenceCell_(rParams);
+    const std::vector<std::string> ids = ParseCoexistenceOccupants_(rParams);
     overrideFx.firstId = ids.front();
     if (ids.size() == 2)
     {
@@ -902,7 +795,7 @@ void ParseCoexistenceOverride_(const nlohmann::json& parameters, EffectConfig_t&
     rEffect.effect = overrideFx;
 }
 
-using ParseEffectFn_ = void (*)(const nlohmann::json& parameters, EffectConfig_t& rEffect);
+using ParseEffectFn_ = void (*)(const ConfigReader& rParams, EffectConfig_t& rEffect);
 
 const std::unordered_map<std::string, ParseEffectFn_>& EffectTypeParsers_()
 {
@@ -1026,69 +919,6 @@ EffectScope_t ParseEffectScope(const std::string& rScope)
         throw std::runtime_error("Unknown effect scope: '" + rScope + "'");
     }
     return *scope;
-}
-
-double ParseNumber(const nlohmann::json& parameters, const std::string& key, double defaultValue)
-{
-    const auto it = parameters.find(key);
-    if (it == parameters.end())
-    {
-        return defaultValue;
-    }
-    if (it->is_number())
-    {
-        return it->get<double>();
-    }
-    if (it->is_string())
-    {
-        const std::string& rStr = it->get_ref<const std::string&>();
-        // Fraction strings ("1/3") stay exact until converted to double for the modifier stack.
-        if (rStr.find('/') != std::string::npos)
-        {
-            try
-            {
-                const Rational_t rational = Rational_t::Parse(rStr);
-                return static_cast<double>(rational.numerator)
-                    / static_cast<double>(rational.denominator);
-            }
-            catch (const std::exception& e)
-            {
-                throw std::runtime_error("Invalid rational string for parameter '" + key
-                                         + "': " + e.what());
-            }
-        }
-        try
-        {
-            std::size_t idx = 0;
-            const double value = std::stod(rStr, &idx);
-            if (idx != rStr.size())
-            {
-                throw std::runtime_error(
-                    "Invalid numeric string for parameter '" + key
-                    + "': trailing characters");
-            }
-            return value;
-        }
-        catch (const std::invalid_argument&)
-        {
-            throw std::runtime_error("Invalid numeric string for parameter '" + key + "'");
-        }
-        catch (const std::out_of_range&)
-        {
-            throw std::runtime_error(
-                "Numeric string out of range for parameter '" + key + "'");
-        }
-    }
-    throw std::runtime_error("Expected a number or numeric string for parameter '" + key + "'");
-}
-
-double RequireNumber(const nlohmann::json& parameters, const std::string& key)
-{
-    if (!parameters.contains(key))
-    {
-        throw std::runtime_error("Missing required parameter '" + key + "'");
-    }
-    return ParseNumber(parameters, key, 0.0);
 }
 
 namespace
@@ -1470,7 +1300,7 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
             "(on_complete_effects / on_enter_effects / on_visit_effects / …), not 'effects'");
     }
     const std::string scopeStr = effectJson.at("scope").get<std::string>();
-    const auto& parameters = effectJson.value("parameters", nlohmann::json::object());
+    const nlohmann::json parameters = effectJson.value("parameters", nlohmann::json::object());
 
     effect.scope = ParseEffectScope(scopeStr);
     ParseReach_(effectJson, effect);
@@ -1494,7 +1324,7 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
     {
         throw std::runtime_error("Unknown effect type: '" + typeStr + "'");
     }
-    it->second(parameters, effect);
+    it->second(ConfigReader(parameters, typeStr + " parameters"), effect);
 
     return effect;
 }

@@ -233,8 +233,8 @@ HotkeyConfig HotkeyConfig::Load(const std::string& rConfigPath,
 {
     return JsonConfigLoader::LoadObjectFile<HotkeyConfig>(
         rConfigPath, "hotkey",
-        [&rConfigPath, &rImprovements, &rOperations](const nlohmann::json& rJson) {
-            return Parse_(rJson, rConfigPath, rImprovements, rOperations);
+        [&rConfigPath, &rImprovements, &rOperations](const ConfigReader& rReader) {
+            return Parse_(rReader.Json(), rConfigPath, rImprovements, rOperations);
         });
 }
 

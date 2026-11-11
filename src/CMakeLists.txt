@@ -127,6 +127,9 @@ add_library(ac-core STATIC
     lib/EventBus.cpp
     lib/LuaRuntime.cpp
     lib/config/ConfigFields.cpp
+    lib/config/ConfigReader.cpp
+    lib/config/JsonConfigLoader.cpp
+    lib/config/LuaConfigLoader.cpp
     game/EventBridge.cpp
     game/PlayerInteractionQueue.cpp
     game/effects/ActiveEffect.cpp

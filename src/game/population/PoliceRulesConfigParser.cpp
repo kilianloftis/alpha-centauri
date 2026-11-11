@@ -1,25 +1,19 @@
 #include "game/population/PoliceRulesConfigParser.h"
 
 #include "game/effects/EffectConfigParser.h"
-
-#include <fstream>
-#include <nlohmann/json.hpp>
-#include <stdexcept>
+#include "lib/config/JsonConfigLoader.h"
 
 namespace ac
 {
 
 std::vector<EffectConfig_t> PoliceRulesConfigParser::ParseConfig(const std::string& configPath)
 {
-    std::ifstream file(configPath);
-    if (!file.is_open())
-    {
-        throw std::runtime_error("Could not open police rules '" + configPath + "'");
-    }
-
-    const nlohmann::json json = nlohmann::json::parse(file);
-    return EffectConfigParser::ParseEffects(
-        json, EffectSourceKind_t::PoliceRules, "police_rules");
+    return JsonConfigLoader::LoadObjectFile<std::vector<EffectConfig_t>>(
+        configPath, "police rules", [](const ConfigReader& rReader) {
+            return EffectConfigParser::ParseEffects(rReader.Json(),
+                                                    EffectSourceKind_t::PoliceRules,
+                                                    "police_rules");
+        });
 }
 
 } // namespace ac

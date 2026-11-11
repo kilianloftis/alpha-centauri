@@ -88,8 +88,7 @@ TEST_CASE("FactionConfigParser throws when required files are missing", "[factio
     }
     catch (const std::runtime_error& e)
     {
-        CHECK(std::string(e.what()) == "Required faction config file missing: "
-                                       + (factionDir / "identity.json").string());
+        CHECK(std::string(e.what()) == "Could not open " + (factionDir / "identity.json").string());
     }
 
     std::ofstream(factionDir / "identity.json") << R"({"name": "Broken"})";
@@ -101,8 +100,7 @@ TEST_CASE("FactionConfigParser throws when required files are missing", "[factio
     }
     catch (const std::runtime_error& e)
     {
-        CHECK(std::string(e.what()) == "Required faction config file missing: "
-                                       + (factionDir / "leader.json").string());
+        CHECK(std::string(e.what()) == "Could not open " + (factionDir / "leader.json").string());
     }
 
     std::filesystem::remove_all(tempDir);

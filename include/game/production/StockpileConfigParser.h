@@ -1,7 +1,6 @@
 #pragma once
 
 #include "game/production/StockpileConfig.h"
-#include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
 
@@ -15,9 +14,6 @@ public:
     ~StockpileConfigParser() = default;
 
     std::vector<StockpileConfig_t> ParseConfig(const std::string& configPath);
-
-private:
-    StockpileConfig_t ParseStockpileConfig_(const nlohmann::json& stockpileJson);
 };
 
 } // namespace ac

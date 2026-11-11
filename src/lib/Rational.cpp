@@ -1,5 +1,6 @@
 #include "lib/Rational.h"
 
+#include <charconv>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -21,6 +22,20 @@ int RequirePositiveDenominator_(int denominator)
         throw std::runtime_error("Rational denominator must be positive");
     }
     return denominator;
+}
+
+// The whole of rPart, so "0.5" or "1/3x" is an error and not a truncated value.
+int ParseWholeInt_(const std::string& rPart, const std::string& rText)
+{
+    int value = 0;
+    const char* pEnd = rPart.data() + rPart.size();
+    const auto [pParsed, error] = std::from_chars(rPart.data(), pEnd, value);
+    if (rPart.empty() || error != std::errc() || pParsed != pEnd)
+    {
+        throw std::runtime_error("Expected an integer or a fraction like \"1/3\", got '" + rText
+                                 + "'");
+    }
+    return value;
 }
 
 int RequireFitsInt_(int64_t scaled, const Rational_t& rRational, int scale)
@@ -47,11 +62,11 @@ Rational_t Rational_t::Parse(const std::string& rText)
     const auto slash = rText.find('/');
     if (slash == std::string::npos)
     {
-        return FromInt(std::stoi(rText));
+        return FromInt(ParseWholeInt_(rText, rText));
     }
 
-    const int numerator = std::stoi(rText.substr(0, slash));
-    const int rawDenominator = std::stoi(rText.substr(slash + 1));
+    const int numerator = ParseWholeInt_(rText.substr(0, slash), rText);
+    const int rawDenominator = ParseWholeInt_(rText.substr(slash + 1), rText);
     const int denominator = RequirePositiveDenominator_(rawDenominator);
     return Rational_t{numerator, denominator};
 }
