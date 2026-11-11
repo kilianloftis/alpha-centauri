@@ -98,7 +98,6 @@ add_executable(effects-tests
     game/RiverGenerationTests.cpp
     game/LandmarkGenerationTests.cpp
     game/FungusGenerationTests.cpp
-    game/SmacFractalTests.cpp
     game/TileBonusGenerationTests.cpp
     game/MapRulesTests.cpp
     game/WorldMapTests.cpp

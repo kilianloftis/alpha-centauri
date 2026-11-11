@@ -48,7 +48,8 @@ WorldGenDecorationConfig_t DecorationWithRivers_()
 {
     WorldGenDecorationConfig_t decoration;
     decoration.aquifers.fraction = 0.05f;
-    decoration.fungus.bandStarts.clear();
+    decoration.fungus.coverage = 0.0f;
+    decoration.fungus.poleRowChance = 0.0f;
     decoration.tileBonuses.fraction = 0.0f;
     return decoration;
 }
@@ -210,7 +211,8 @@ TEST_CASE("Aquifers cover the fraction of tiles the Aquifer entry can occupy",
     actest::WorldFixture world;
     WorldGenDecorationConfig_t decoration;
     decoration.aquifers.fraction = 1.0f;
-    decoration.fungus.bandStarts.clear();
+    decoration.fungus.coverage = 0.0f;
+    decoration.fungus.poleRowChance = 0.0f;
     decoration.tileBonuses.fraction = 0.0f;
 
     WorldGenerator generator;

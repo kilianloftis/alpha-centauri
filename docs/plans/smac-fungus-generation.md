@@ -5,6 +5,10 @@ or narrowed by the planet's native life setting. SMAC's maps then show their spe
 fungus at SMAC's density (15%, 30% and 45% of tiles for rare, average and abundant native
 life).
 
+> Historical plan. Shipping fungus now uses coverage / cluster_scale_tiles / fill and native
+> life `fungus_coverage_multiplier` ([map-system.md](../architecture/map-system.md)); this
+> document still describes vanilla SMAC fractal bands.
+
 ## Context
 
 ### What SMAC does

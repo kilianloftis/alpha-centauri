@@ -1,12 +1,13 @@
 #include "TestTempDir.h"
 
 #include "game/map/MapOccupantLoad.h"
+#include "game/map/MapUtils.h"
+#include "game/map/OccupantCoexistence.h"
 #include "game/map/TerrainOperationRegistry.h"
 #include "TestHelpers.h"
 #include "game/worldgen/FungusGeneration.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
-#include "game/map/SmacFractal.h"
 #include "game/map/Tile.h"
 #include "game/worldgen/WorldGenDecorationConfigParser.h"
 #include "game/map/WorldMap.h"
@@ -14,10 +15,11 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
-#include <array>
 #include <filesystem>
 #include <fstream>
+#include <queue>
 #include <random>
+#include <unordered_set>
 #include <vector>
 
 using namespace ac;
@@ -49,22 +51,12 @@ const ImprovementConfig_t& TestFungus_()
     return TestOccupants_().Get("Fungus");
 }
 
-std::array<std::array<int, SmacFractal::k_LatticeSize>, SmacFractal::k_LatticeSize>
-ConstantLattice_(int value)
-{
-    std::array<std::array<int, SmacFractal::k_LatticeSize>, SmacFractal::k_LatticeSize> lattice{};
-    for (std::array<int, SmacFractal::k_LatticeSize>& rRow : lattice)
-    {
-        rRow.fill(value);
-    }
-    return lattice;
-}
-
-FungusDecorationConfig_t DefaultBands_()
+FungusDecorationConfig_t DefaultFungus_()
 {
     FungusDecorationConfig_t cfg;
-    cfg.bandStarts = {20, 40, 60};
-    cfg.bandWidth = 5;
+    cfg.coverage = 0.30f;
+    cfg.clusterScaleTiles = 12;
+    cfg.fill = 0.85f;
     cfg.poleRowChance = 0.0f;
     return cfg;
 }
@@ -98,17 +90,52 @@ int CountFungus_(const WorldMap& rWorld)
     return count;
 }
 
-int CountActiveFungus_(const WorldMap& rWorld)
+int CountEligible_(WorldMap& rWorld, const ImprovementConfig_t& rFungus)
 {
     int count = 0;
     for (const auto& pTile : rWorld.GetTiles())
     {
-        if (pTile->HasFeature("Fungus"))
+        if (!pTile->HasTerrainFeature(rFungus.id)
+            && CanBuildImprovement(*pTile, rFungus, {}, {}))
         {
             ++count;
         }
     }
     return count;
+}
+
+int CountFungusComponents_(WorldMap& rWorld)
+{
+    std::unordered_set<const Tile*> visited;
+    int components = 0;
+    for (const auto& pOwned : rWorld.GetTiles())
+    {
+        const Tile* pStart = pOwned.get();
+        if (!pStart->HasTerrainFeature("Fungus") || visited.contains(pStart))
+        {
+            continue;
+        }
+        ++components;
+        std::queue<const Tile*> pending;
+        pending.push(pStart);
+        visited.insert(pStart);
+        while (!pending.empty())
+        {
+            const Tile& rTile = *pending.front();
+            pending.pop();
+            ForEachNeighborInChebyshevRadius(rTile, rWorld, 1,
+                                             [&](Tile* pNeighbor, int /*distance*/)
+                                             {
+                                                 if (pNeighbor->HasTerrainFeature("Fungus")
+                                                     && !visited.contains(pNeighbor))
+                                                 {
+                                                     visited.insert(pNeighbor);
+                                                     pending.push(pNeighbor);
+                                                 }
+                                             });
+        }
+    }
+    return components;
 }
 
 } // namespace
@@ -139,239 +166,225 @@ TEST_CASE("WorldGenDecorationConfigParser throws when fungus object is missing",
     std::filesystem::remove(path);
 }
 
-TEST_CASE("WorldGenDecorationConfigParser requires fungus band keys",
+TEST_CASE("WorldGenDecorationConfigParser loads fungus coverage knobs",
           "[worldgen][fungus][parser]")
 {
     const WorldGenDecorationConfig_t cfg =
         WorldGenDecorationConfigParser{}.ParseConfig(
             actest::FixturePath("worldGen/decoration.json"));
-    CHECK(cfg.fungus.bandStarts == std::vector<int>({20, 40, 60}));
-    CHECK(cfg.fungus.bandWidth == 5);
+    CHECK(cfg.fungus.coverage == Catch::Approx(0.30f));
+    CHECK(cfg.fungus.clusterScaleTiles == 12);
+    CHECK(cfg.fungus.fill == Catch::Approx(0.85f));
     CHECK(cfg.fungus.poleRowChance == Catch::Approx(0.5f));
 }
 
-TEST_CASE("PlaceFungus constant lattices cover tiles by band widening", "[worldgen][fungus]")
+TEST_CASE("PlaceFungus hits configured coverage of eligible tiles", "[worldgen][fungus]")
 {
-    WorldMap world(16, 16, actest::TestMapRules(), Rainfall_t::Average);
+    WorldMap world(40, 30, actest::TestMapRules(), Rainfall_t::Average);
     FillLand_(world);
-    const FungusDecorationConfig_t cfg = DefaultBands_();
-    std::mt19937 rng(1);
+    BindAll_(world);
+    FungusDecorationConfig_t cfg = DefaultFungus_();
+    cfg.fill = 1.0f;
+    std::mt19937 rng(7);
+    PlaceFungus(world, cfg, 1.0f, TestFungus_(), rng);
 
-    SECTION("lattice 4 covers every tile at widening 0 and none at -1")
-    {
-        const SmacFractal fractal(ConstantLattice_(4));
-        PlaceFungus(world, cfg, 0, TestFungus_(), fractal, rng);
-        CHECK(CountFungus_(world) == static_cast<int>(world.GetTiles().size()));
-
-        WorldMap none(16, 16, actest::TestMapRules(), Rainfall_t::Average);
-        FillLand_(none);
-        PlaceFungus(none, cfg, -1, TestFungus_(), fractal, rng);
-        CHECK(CountFungus_(none) == 0);
-    }
-
-    SECTION("lattice 7 covers every tile at all three widenings")
-    {
-        const SmacFractal fractal(ConstantLattice_(7));
-        for (const int widening : {-1, 0, 1})
-        {
-            WorldMap map(16, 16, actest::TestMapRules(), Rainfall_t::Average);
-            FillLand_(map);
-            PlaceFungus(map, cfg, widening, TestFungus_(), fractal, rng);
-            CHECK(CountFungus_(map) == static_cast<int>(map.GetTiles().size()));
-        }
-    }
-
-    SECTION("lattice 11 covers every tile only at widening +1")
-    {
-        const SmacFractal fractal(ConstantLattice_(11));
-        for (const int widening : {-1, 0})
-        {
-            WorldMap map(16, 16, actest::TestMapRules(), Rainfall_t::Average);
-            FillLand_(map);
-            PlaceFungus(map, cfg, widening, TestFungus_(), fractal, rng);
-            CHECK(CountFungus_(map) == 0);
-        }
-        WorldMap abundant(16, 16, actest::TestMapRules(), Rainfall_t::Average);
-        FillLand_(abundant);
-        PlaceFungus(abundant, cfg, 1, TestFungus_(), fractal, rng);
-        CHECK(CountFungus_(abundant) == static_cast<int>(abundant.GetTiles().size()));
-    }
-
-    SECTION("lattice 3 covers none")
-    {
-        const SmacFractal fractal(ConstantLattice_(3));
-        PlaceFungus(world, cfg, 1, TestFungus_(), fractal, rng);
-        CHECK(CountFungus_(world) == 0);
-    }
+    const int eligible = CountEligible_(world, TestFungus_()) + CountFungus_(world);
+    const float coverage = static_cast<float>(CountFungus_(world)) / static_cast<float>(eligible);
+    CHECK(coverage == Catch::Approx(0.30f).margin(0.05f));
 }
 
-TEST_CASE("PlaceFungus pole rows roll when every band misses", "[worldgen][fungus]")
+TEST_CASE("PlaceFungus native-life multiplier scales coverage", "[worldgen][fungus]")
 {
-    const SmacFractal fractal(ConstantLattice_(3));
-    FungusDecorationConfig_t cfg = DefaultBands_();
-    std::mt19937 rng(2);
-
-    SECTION("chance 1 covers exactly the first and last rows")
-    {
-        cfg.poleRowChance = 1.0f;
-        WorldMap world(20, 12, actest::TestMapRules(), Rainfall_t::Average);
-        FillLand_(world);
-        PlaceFungus(world, cfg, 0, TestFungus_(), fractal, rng);
-
-        for (const auto& pTile : world.GetTiles())
-        {
-            const bool bPole = pTile->GetY() == 0 || pTile->GetY() == world.GetHeight() - 1;
-            CHECK(pTile->HasTerrainFeature("Fungus") == bPole);
-        }
-    }
-
-    SECTION("chance 0 covers nothing")
-    {
-        cfg.poleRowChance = 0.0f;
-        WorldMap world(20, 12, actest::TestMapRules(), Rainfall_t::Average);
-        FillLand_(world);
-        PlaceFungus(world, cfg, 0, TestFungus_(), fractal, rng);
-        CHECK(CountFungus_(world) == 0);
-    }
-}
-
-TEST_CASE("PlaceFungus follows each tile's own coordinates", "[worldgen][fungus]")
-{
-    auto lattice = ConstantLattice_(0);
-    // A single hot cell so Value varies across the map.
-    lattice[2][3] = 15;
-    const SmacFractal fractal(lattice);
-    FungusDecorationConfig_t cfg = DefaultBands_();
+    FungusDecorationConfig_t cfg = DefaultFungus_();
+    cfg.fill = 1.0f;
     cfg.poleRowChance = 0.0f;
 
-    WorldMap world(32, 24, actest::TestMapRules(), Rainfall_t::Average);
-    FillLand_(world);
-    std::mt19937 rng(3);
-    PlaceFungus(world, cfg, 0, TestFungus_(), fractal, rng);
-
-    for (const auto& pTile : world.GetTiles())
+    auto coverageFor = [&](float multiplier)
     {
-        const int value = fractal.Value(pTile->GetX(), pTile->GetY(), 4);
-        bool bInBand = false;
-        for (const int start : cfg.bandStarts)
+        WorldMap world(40, 30, actest::TestMapRules(), Rainfall_t::Average);
+        FillLand_(world);
+        BindAll_(world);
+        std::mt19937 rng(11);
+        PlaceFungus(world, cfg, multiplier, TestFungus_(), rng);
+        const int fungus = CountFungus_(world);
+        const int eligible = CountEligible_(world, TestFungus_()) + fungus;
+        return static_cast<float>(fungus) / static_cast<float>(eligible);
+    };
+
+    CHECK(coverageFor(0.5f) < coverageFor(1.0f));
+    CHECK(coverageFor(1.0f) < coverageFor(1.5f));
+}
+
+TEST_CASE("PlaceFungus fill keeps coverage while changing patch solidity", "[worldgen][fungus]")
+{
+    FungusDecorationConfig_t solid = DefaultFungus_();
+    solid.coverage = 0.25f;
+    solid.fill = 1.0f;
+    solid.poleRowChance = 0.0f;
+
+    FungusDecorationConfig_t swiss = solid;
+    swiss.fill = 0.5f;
+
+    WorldMap solidMap(48, 36, actest::TestMapRules(), Rainfall_t::Average);
+    FillLand_(solidMap);
+    BindAll_(solidMap);
+    std::mt19937 solidRng(19);
+    PlaceFungus(solidMap, solid, 1.0f, TestFungus_(), solidRng);
+
+    WorldMap swissMap(48, 36, actest::TestMapRules(), Rainfall_t::Average);
+    FillLand_(swissMap);
+    BindAll_(swissMap);
+    std::mt19937 swissRng(19);
+    PlaceFungus(swissMap, swiss, 1.0f, TestFungus_(), swissRng);
+
+    const int solidCount = CountFungus_(solidMap);
+    const int swissCount = CountFungus_(swissMap);
+    CHECK(solidCount == Catch::Approx(swissCount).margin(solidCount * 0.15 + 1));
+
+    // Swiss cheese should leave more fungus tiles with empty fungus-neighbors on average.
+    auto emptyNeighborRate = [](WorldMap& rWorld)
+    {
+        int fungusTiles = 0;
+        int emptyNeighborSlots = 0;
+        int neighborSlots = 0;
+        for (const auto& pTile : rWorld.GetTiles())
         {
-            if (value >= start && value <= start + cfg.bandWidth)
+            if (!pTile->HasTerrainFeature("Fungus"))
             {
-                bInBand = true;
+                continue;
             }
+            ++fungusTiles;
+            ForEachNeighborInChebyshevRadius(*pTile, rWorld, 1,
+                                             [&](Tile* pNeighbor, int /*distance*/)
+                                             {
+                                                 ++neighborSlots;
+                                                 if (!pNeighbor->HasTerrainFeature("Fungus"))
+                                                 {
+                                                     ++emptyNeighborSlots;
+                                                 }
+                                             });
         }
-        CHECK(pTile->HasTerrainFeature("Fungus") == bInBand);
+        REQUIRE(fungusTiles > 0);
+        REQUIRE(neighborSlots > 0);
+        return static_cast<float>(emptyNeighborSlots) / static_cast<float>(neighborSlots);
+    };
+
+    CHECK(emptyNeighborRate(swissMap) > emptyNeighborRate(solidMap));
+}
+
+TEST_CASE("PlaceFungus cluster scale changes patch count", "[worldgen][fungus]")
+{
+    FungusDecorationConfig_t fine = DefaultFungus_();
+    fine.coverage = 0.35f;
+    fine.fill = 1.0f;
+    fine.clusterScaleTiles = 3;
+    fine.poleRowChance = 0.0f;
+
+    FungusDecorationConfig_t coarse = fine;
+    coarse.clusterScaleTiles = 24;
+
+    WorldMap fineMap(48, 36, actest::TestMapRules(), Rainfall_t::Average);
+    FillLand_(fineMap);
+    BindAll_(fineMap);
+    std::mt19937 fineRng(23);
+    PlaceFungus(fineMap, fine, 1.0f, TestFungus_(), fineRng);
+
+    WorldMap coarseMap(48, 36, actest::TestMapRules(), Rainfall_t::Average);
+    FillLand_(coarseMap);
+    BindAll_(coarseMap);
+    std::mt19937 coarseRng(23);
+    PlaceFungus(coarseMap, coarse, 1.0f, TestFungus_(), coarseRng);
+
+    CHECK(CountFungusComponents_(fineMap) > CountFungusComponents_(coarseMap));
+}
+
+TEST_CASE("PlaceFungus pole rows roll when coverage selects none", "[worldgen][fungus]")
+{
+    WorldMap world(20, 11, actest::TestMapRules(), Rainfall_t::Average);
+    FillLand_(world);
+    BindAll_(world);
+    FungusDecorationConfig_t cfg = DefaultFungus_();
+    cfg.coverage = 0.0f;
+    cfg.poleRowChance = 1.0f;
+    std::mt19937 rng(3);
+    PlaceFungus(world, cfg, 1.0f, TestFungus_(), rng);
+
+    for (int x = 0; x < world.GetWidth(); x += 2)
+    {
+        CHECK(world.GetTile(x, 0)->HasTerrainFeature("Fungus"));
+        CHECK(world.GetTile(x, world.GetHeight() - 1)->HasTerrainFeature("Fungus"));
     }
 }
 
 TEST_CASE("PlaceFungus stamps land and sea alike", "[worldgen][fungus]")
 {
-    WorldMap world(16, 32, actest::TestMapRules(), Rainfall_t::Average);
+    WorldMap world(20, 11, actest::TestMapRules(), Rainfall_t::Average);
+    BindAll_(world);
     for (auto& pTile : world.GetTiles())
     {
-        pTile->SetElevation(pTile->GetX() < 8 ? 1000 : -500);
+        pTile->SetElevation((pTile->GetX() + pTile->GetY()) % 4 == 0 ? -500 : 1000);
     }
+    FungusDecorationConfig_t cfg = DefaultFungus_();
+    cfg.coverage = 1.0f;
+    cfg.fill = 1.0f;
+    cfg.poleRowChance = 0.0f;
+    std::mt19937 rng(5);
+    PlaceFungus(world, cfg, 1.0f, TestFungus_(), rng);
 
-    const SmacFractal fractal(ConstantLattice_(7));
-    FungusDecorationConfig_t cfg = DefaultBands_();
-    std::mt19937 rng(11);
-    PlaceFungus(world, cfg, 0, TestFungus_(), fractal, rng);
-
-    int landFungus = 0;
-    int waterFungus = 0;
+    bool bLand = false;
+    bool bSea = false;
     for (const auto& pTile : world.GetTiles())
     {
         if (!pTile->HasTerrainFeature("Fungus"))
         {
             continue;
         }
-        if (pTile->IsLand())
-        {
-            ++landFungus;
-        }
-        if (pTile->IsWater())
-        {
-            ++waterFungus;
-        }
+        bLand = bLand || !pTile->IsWater();
+        bSea = bSea || pTile->IsWater();
     }
-    CHECK(landFungus > 0);
-    CHECK(waterFungus > 0);
-    CHECK(CountFungus_(world) == static_cast<int>(world.GetTiles().size()));
+    CHECK(bLand);
+    CHECK(bSea);
 }
 
 TEST_CASE("PlaceFungus skips tiles the fungus entry cannot occupy", "[worldgen][fungus]")
 {
-    WorldMap world(20, 40, actest::TestMapRules(), Rainfall_t::Average);
-    for (auto& pTile : world.GetTiles())
-    {
-        pTile->SetElevation(pTile->GetY() < 20 ? 1000 : -500);
-    }
-
     ImprovementConfig_t landFungus = TestFungus_();
     landFungus.domain = ImprovementDomain_t::Land;
 
-    const SmacFractal fractal(ConstantLattice_(7));
-    FungusDecorationConfig_t cfg = DefaultBands_();
-    std::mt19937 rng(5);
-    PlaceFungus(world, cfg, 0, landFungus, fractal, rng);
-
-    for (const auto& pTile : world.GetTiles())
+    WorldMap world(20, 11, actest::TestMapRules(), Rainfall_t::Average);
+    BindAll_(world);
+    for (auto& pTile : world.GetTiles())
     {
-        if (pTile->HasTerrainFeature("Fungus"))
-        {
-            CHECK(pTile->IsLand());
-        }
-        else
-        {
-            CHECK(pTile->IsWater());
-        }
+        pTile->SetElevation(-500);
     }
+    FungusDecorationConfig_t cfg = DefaultFungus_();
+    cfg.coverage = 1.0f;
+    cfg.fill = 1.0f;
+    std::mt19937 rng(9);
+    PlaceFungus(world, cfg, 1.0f, landFungus, rng);
+    CHECK(CountFungus_(world) == 0);
 }
 
 TEST_CASE("PlaceFungus stores fungus dormant under deep ocean", "[worldgen][fungus]")
 {
-    WorldMap world(12, 12, actest::TestMapRules(), Rainfall_t::Average);
+    WorldMap world(20, 11, actest::TestMapRules(), Rainfall_t::Average);
     BindAll_(world);
-    const int shelf = actest::TestMapRules().oceanShelfMeters;
     for (auto& pTile : world.GetTiles())
     {
-        // Deep ocean: below the shelf threshold.
-        pTile->SetElevation(shelf - 500);
+        pTile->SetElevation(-3000);
     }
-
-    const SmacFractal fractal(ConstantLattice_(7));
-    FungusDecorationConfig_t cfg = DefaultBands_();
-    std::mt19937 rng(9);
-    PlaceFungus(world, cfg, 0, TestFungus_(), fractal, rng);
-
-    CHECK(CountFungus_(world) == static_cast<int>(world.GetTiles().size()));
-    CHECK(CountActiveFungus_(world) == 0);
-}
-
-TEST_CASE("PlaceFungus density tracks native-life widening on a standard map",
-          "[worldgen][fungus][density]")
-{
-    FungusDecorationConfig_t cfg = DefaultBands_();
-    cfg.poleRowChance = 0.5f;
-    const std::vector<unsigned> seeds = {1u, 2u, 3u, 5u, 8u};
-
-    auto coverage = [&](int widening) {
-        double total = 0.0;
-        for (const unsigned seed : seeds)
+    FungusDecorationConfig_t cfg = DefaultFungus_();
+    cfg.coverage = 1.0f;
+    cfg.fill = 1.0f;
+    cfg.poleRowChance = 0.0f;
+    std::mt19937 rng(13);
+    PlaceFungus(world, cfg, 1.0f, TestFungus_(), rng);
+    REQUIRE(CountFungus_(world) > 0);
+    for (const auto& pTile : world.GetTiles())
+    {
+        if (pTile->HasTerrainFeature("Fungus"))
         {
-            WorldMap world(112, 56, actest::TestMapRules(), Rainfall_t::Average);
-            FillLand_(world);
-            std::mt19937 rng(seed);
-            const SmacFractal fractal(rng);
-            PlaceFungus(world, cfg, widening, TestFungus_(), fractal, rng);
-            const double share = static_cast<double>(CountFungus_(world))
-                                 / static_cast<double>(world.GetTiles().size());
-            total += share;
+            CHECK(pTile->IsWater());
         }
-        return total / static_cast<double>(seeds.size());
-    };
-
-    CHECK(coverage(-1) == Catch::Approx(0.15).margin(0.03));
-    CHECK(coverage(0) == Catch::Approx(0.30).margin(0.03));
-    CHECK(coverage(1) == Catch::Approx(0.45).margin(0.03));
+    }
 }

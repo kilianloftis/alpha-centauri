@@ -53,13 +53,13 @@ struct AquiferDecorationConfig_t
     float fraction = 0.02f;
 };
 
-// Fungus bands (docs/thinker/smac-world-generation.md). A tile gets fungus when its fractal
-// value lies in [start − widening, start + band_width + 2 · widening] for any start; pole rows
-// may also roll.
+// World-gen fungus: coverage of eligible tiles, patch size, and in-patch fill; pole rows may
+// also roll. Native life scales coverage via fungus_coverage_multiplier.
 struct FungusDecorationConfig_t
 {
-    std::vector<int> bandStarts{20, 40, 60};
-    int bandWidth = 5;
+    float coverage = 0.30f;
+    int clusterScaleTiles = 12;
+    float fill = 0.85f;
     float poleRowChance = 0.5f;
 };
 

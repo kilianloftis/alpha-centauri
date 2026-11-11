@@ -54,9 +54,7 @@ TEST_CASE("WorldGenDecorationConfigParser throws when aquifers object is missing
     "bands": [ { "flat": 1, "rolling": 0, "rocky": 0 } ]
   },
   "fungus": {
-    "band_starts": [20, 40, 60],
-    "band_width": 5,
-    "pole_row_chance": 0.5
+    "coverage": 0.3, "cluster_scale_tiles": 12, "fill": 0.85, "pole_row_chance": 0.5
   },
   "tile_bonuses": { "fraction": 0.01 }
 })" << '\n';

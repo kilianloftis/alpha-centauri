@@ -2,10 +2,10 @@
 
 Stock map build order, the fungus fractal, and rockiness (`minerals_at`), reverse-engineered
 from `terranx.exe` (GOG build, image base `0x400000`) with Thinker's names
-(`induktio/thinker`, `engine.cpp`). Our fungus port is `SmacFractal` / `PlaceFungus`. Our
-rockiness stage keeps the same pipeline slot as `world_rocky` but uses configurable
-elevation-weight bands in `decoration.json` (`PlaceRockiness`), not a bit-identical
-`minerals_at` port — see [map-system.md](../architecture/map-system.md).
+(`induktio/thinker`, `engine.cpp`). Our generator keeps the same pipeline slots as SMAC for
+fungus and rockiness, but uses player-facing knobs in `decoration.json` (`PlaceFungus`
+coverage / cluster scale / fill; `PlaceRockiness` elevation-weight bands), not bit-identical
+ports of the fractal bands or `minerals_at` — see [map-system.md](../architecture/map-system.md).
 
 ## `world_build` stage order (`0x5C86E0`)
 

@@ -76,7 +76,7 @@ TEST_CASE("WorldGenDecorationConfigParser throws when rockiness object is missin
   },
   "aquifers": { "fraction": 0.01 },
   "fungus": {
-    "band_starts": [20, 40, 60], "band_width": 5, "pole_row_chance": 0.5
+    "coverage": 0.3, "cluster_scale_tiles": 12, "fill": 0.85, "pole_row_chance": 0.5
   },
   "tile_bonuses": { "fraction": 0.01 }
 })" << '\n';
@@ -104,7 +104,7 @@ TEST_CASE("WorldGenDecorationConfigParser requires poles weights", "[worldgen][r
   },
   "aquifers": { "fraction": 0.01 },
   "fungus": {
-    "band_starts": [20, 40, 60], "band_width": 5, "pole_row_chance": 0.5
+    "coverage": 0.3, "cluster_scale_tiles": 12, "fill": 0.85, "pole_row_chance": 0.5
   },
   "tile_bonuses": { "fraction": 0.01 }
 })" << '\n';
@@ -136,7 +136,7 @@ TEST_CASE("WorldGenDecorationConfigParser requires max on non-final bands only",
   },
   "aquifers": { "fraction": 0.01 },
   "fungus": {
-    "band_starts": [20, 40, 60], "band_width": 5, "pole_row_chance": 0.5
+    "coverage": 0.3, "cluster_scale_tiles": 12, "fill": 0.85, "pole_row_chance": 0.5
   },
   "tile_bonuses": { "fraction": 0.01 }
 })" << '\n';
@@ -162,7 +162,7 @@ TEST_CASE("WorldGenDecorationConfigParser requires max on non-final bands only",
   },
   "aquifers": { "fraction": 0.01 },
   "fungus": {
-    "band_starts": [20, 40, 60], "band_width": 5, "pole_row_chance": 0.5
+    "coverage": 0.3, "cluster_scale_tiles": 12, "fill": 0.85, "pole_row_chance": 0.5
   },
   "tile_bonuses": { "fraction": 0.01 }
 })" << '\n';
@@ -193,7 +193,7 @@ TEST_CASE("WorldGenDecorationConfigParser requires strictly increasing band maxe
   },
   "aquifers": { "fraction": 0.01 },
   "fungus": {
-    "band_starts": [20, 40, 60], "band_width": 5, "pole_row_chance": 0.5
+    "coverage": 0.3, "cluster_scale_tiles": 12, "fill": 0.85, "pole_row_chance": 0.5
   },
   "tile_bonuses": { "fraction": 0.01 }
 })" << '\n';

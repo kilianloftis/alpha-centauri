@@ -1,6 +1,5 @@
 #pragma once
 
-#include "game/map/SmacFractal.h"
 #include "game/worldgen/WorldGenDecorationConfig.h"
 
 #include <random>
@@ -11,10 +10,9 @@ namespace ac
 class WorldMap;
 struct ImprovementConfig_t;
 
-// Place xenofungus from fractal bands, widened by the session's native life setting
-// (docs/thinker/smac-world-generation.md).
-void PlaceFungus(WorldMap& rWorld, const FungusDecorationConfig_t& rConfig, int bandWidening,
-                 const ImprovementConfig_t& rFungus, const SmacFractal& rFractal,
+// Place xenofungus from coverage / cluster scale / fill, scaled by native-life multiplier.
+void PlaceFungus(WorldMap& rWorld, const FungusDecorationConfig_t& rConfig,
+                 float coverageMultiplier, const ImprovementConfig_t& rFungus,
                  std::mt19937& rRng);
 
 } // namespace ac

@@ -14,7 +14,6 @@
 #include "game/map/RiverGeneration.h"
 #include "game/map/MapUtils.h"
 #include "game/worldgen/RockinessGeneration.h"
-#include "game/map/SmacFractal.h"
 
 
 #include <algorithm>
@@ -95,7 +94,7 @@ WorldGenerator::~WorldGenerator() = default;
 std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& rConfig,
                                                    const WorldGenPresetConfig_t& rPreset,
                                                    const WorldGenDecorationConfig_t& rDecoration,
-                                                   int fungusBandWidening,
+                                                   float fungusCoverageMultiplier,
                                                    const std::vector<LandmarkConfig_t>& rLandmarks,
                                                    const ImprovementRegistry& rOccupants,
                                                    const MapRulesConfig_t& rMapRules,
@@ -124,8 +123,7 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
     // among object stamps for their excludes.
     GenerateElevation_(*pWorld, rConfig, rPreset);
     const ImprovementConfig_t& rFungus = rOccupants.Get(std::string(ImprovementIds::k_Fungus));
-    const SmacFractal fungusFractal(m_rng);
-    PlaceFungus(*pWorld, rDecoration.fungus, fungusBandWidening, rFungus, fungusFractal, m_rng);
+    PlaceFungus(*pWorld, rDecoration.fungus, fungusCoverageMultiplier, rFungus, m_rng);
     PlaceLandmarks(*pWorld, rLandmarks, rOccupants, m_rng);
     // TODO: take a closer look at pod gen configuration
     if (!bNoUnityScattering)

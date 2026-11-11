@@ -487,7 +487,7 @@ void Engine::GenerateWorld_()
     auto pSupplyPods = std::make_unique<SupplyPodIndex>();
     std::unique_ptr<WorldMap> pWorld =
         worldGen.Generate(rWorldConfig, rPreset, *m_gameDataContext->worldGenDecorationConfig,
-                          rNativeLife.fungusBandWidening,
+                          rNativeLife.fungusCoverageMultiplier,
                           m_gameDataContext->worldGenLandmarks,
                           *m_gameDataContext->improvementRegistry,
                           m_gameDataContext->mapRules,

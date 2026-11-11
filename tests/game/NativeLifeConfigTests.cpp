@@ -7,6 +7,7 @@
 #include "game/natives/PlanetFaunaCalculator.h"
 #include "lib/LuaRuntime.h"
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
@@ -57,7 +58,7 @@ std::string SessionKeys_()
 std::string Level_(const std::string& rId)
 {
     return R"({ "id": ")" + rId + R"(", "name": ")" + rId
-           + R"(", "fauna_forms": 0, "fungus_band_widening": 0, "effects": [] })";
+           + R"(", "fauna_forms": 0, "fungus_coverage_multiplier": 0, "effects": [] })";
 }
 
 } // namespace
@@ -76,9 +77,9 @@ TEST_CASE("NativeLifeConfigParser reads levels and resolves the session level",
     CHECK(config.fungalBloomNativeLifeformsMin == 1);
     CHECK(config.ambushNearBaseMaxDist == 5);
     CHECK(config.boatEmptyOceanMinRegionTiles == 50);
-    CHECK(config.RequireForSession("rare").fungusBandWidening == -1);
-    CHECK(config.RequireForSession("normal").fungusBandWidening == 0);
-    CHECK(config.RequireForSession("abundant").fungusBandWidening == 1);
+    CHECK(config.RequireForSession("rare").fungusCoverageMultiplier == Catch::Approx(0.5f));
+    CHECK(config.RequireForSession("normal").fungusCoverageMultiplier == Catch::Approx(1.0f));
+    CHECK(config.RequireForSession("abundant").fungusCoverageMultiplier == Catch::Approx(1.5f));
 
     const PlanetFaunaCalculator calc(config, lua);
     CHECK(calc.BoatPeriod(1) == 8);
@@ -101,7 +102,7 @@ TEST_CASE("NativeLifeConfigParser rejects bad configs", "[ecology][native-life][
                              + Level_("rare") + ", " + Level_("rare") + " ] }"),
                       ContainsSubstring("duplicate"));
     CHECK_THROWS_WITH(Parse_("{" + SessionKeys_() + R"( "default": "rare", "levels": [
-        { "id": "rare", "name": "Rare", "fauna_forms": 0, "fungus_band_widening": 0,
+        { "id": "rare", "name": "Rare", "fauna_forms": 0, "fungus_coverage_multiplier": 0,
           "effects": [], "x": 1 } ] })"),
                       ContainsSubstring("'x'"));
 }
@@ -109,19 +110,19 @@ TEST_CASE("NativeLifeConfigParser rejects bad configs", "[ecology][native-life][
 TEST_CASE("NativeLifeConfigParser requires every level key", "[ecology][native-life][parser]")
 {
     CHECK_THROWS_WITH(Parse_("{" + SessionKeys_() + R"( "default": "rare", "levels": [
-        { "name": "Rare", "fauna_forms": 0, "fungus_band_widening": 0, "effects": [] } ] })"),
+        { "name": "Rare", "fauna_forms": 0, "fungus_coverage_multiplier": 0, "effects": [] } ] })"),
                       ContainsSubstring("'id'"));
     CHECK_THROWS_WITH(Parse_("{" + SessionKeys_() + R"( "default": "rare", "levels": [
-        { "id": "rare", "fauna_forms": 0, "fungus_band_widening": 0, "effects": [] } ] })"),
+        { "id": "rare", "fauna_forms": 0, "fungus_coverage_multiplier": 0, "effects": [] } ] })"),
                       ContainsSubstring("'name'"));
     CHECK_THROWS_WITH(Parse_("{" + SessionKeys_() + R"( "default": "rare", "levels": [
-        { "id": "rare", "name": "Rare", "fungus_band_widening": 0, "effects": [] } ] })"),
+        { "id": "rare", "name": "Rare", "fungus_coverage_multiplier": 0, "effects": [] } ] })"),
                       ContainsSubstring("'fauna_forms'"));
     CHECK_THROWS_WITH(Parse_("{" + SessionKeys_() + R"( "default": "rare", "levels": [
         { "id": "rare", "name": "Rare", "fauna_forms": 0, "effects": [] } ] })"),
-                      ContainsSubstring("'fungus_band_widening'"));
+                      ContainsSubstring("'fungus_coverage_multiplier'"));
     CHECK_THROWS_WITH(Parse_("{" + SessionKeys_() + R"( "default": "rare", "levels": [
-        { "id": "rare", "name": "Rare", "fauna_forms": 0, "fungus_band_widening": 0 } ] })"),
+        { "id": "rare", "name": "Rare", "fauna_forms": 0, "fungus_coverage_multiplier": 0 } ] })"),
                       ContainsSubstring("'effects'"));
 }
 
@@ -137,7 +138,7 @@ TEST_CASE("NativeLifeConfigParser rejects an inverted fungal lifeform range",
   "boat_empty_ocean_min_region_tiles": 50,
   "default": "rare",
   "levels": [ { "id": "rare", "name": "Rare", "fauna_forms": 0,
-                "fungus_band_widening": 0, "effects": [] } ]
+                "fungus_coverage_multiplier": 0, "effects": [] } ]
 })"),
                       ContainsSubstring("fungal_bloom_native_lifeforms_max"));
 }

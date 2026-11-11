@@ -20,8 +20,9 @@
     "fraction": 0.02
   },
   "fungus": {
-    "band_starts": [20, 40, 60],
-    "band_width": 5,
+    "coverage": 0.30,
+    "cluster_scale_tiles": 12,
+    "fill": 0.85,
     "pole_row_chance": 0.5
   },
   "tile_bonuses": {

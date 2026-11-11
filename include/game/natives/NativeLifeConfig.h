@@ -19,9 +19,8 @@ struct NativeLifeLevel_t
     // Rare/normal/abundant → 0/1/2. Feeds Planet fauna formulas
     // (docs/thinker/terranx-map.md, Native life scaling).
     int faunaForms = 0;
-    // Widens world-gen fungus bands: rare −1, normal 0, abundant +1
-    // (docs/thinker/smac-world-generation.md).
-    int fungusBandWidening = 0;
+    // Scales decoration fungus coverage: rare 0.5, normal 1.0, abundant 1.5.
+    float fungusCoverageMultiplier = 1.0f;
     std::vector<EffectConfig_t> effects;
 };
 

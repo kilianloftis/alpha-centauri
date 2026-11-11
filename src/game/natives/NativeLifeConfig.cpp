@@ -87,7 +87,7 @@ NativeLifeLevel_t ParseLevel_(const nlohmann::json& rJson)
         throw std::runtime_error("native life level entry must be a JSON object");
     }
     ConfigFields::RejectUnknownKeys(
-        rJson, {"id", "name", "fauna_forms", "fungus_band_widening", "effects"},
+        rJson, {"id", "name", "fauna_forms", "fungus_coverage_multiplier", "effects"},
         "native life level");
     if (!rJson.contains("id") || !rJson.at("id").is_string()
         || rJson.at("id").get<std::string>().empty())
@@ -111,12 +111,16 @@ NativeLifeLevel_t ParseLevel_(const nlohmann::json& rJson)
     {
         throw std::runtime_error(ctx + ": 'fauna_forms' must be 0..2");
     }
-    if (!rJson.contains("fungus_band_widening")
-        || !rJson.at("fungus_band_widening").is_number_integer())
+    if (!rJson.contains("fungus_coverage_multiplier")
+        || !rJson.at("fungus_coverage_multiplier").is_number())
     {
-        throw std::runtime_error(ctx + ": 'fungus_band_widening' must be an integer");
+        throw std::runtime_error(ctx + ": 'fungus_coverage_multiplier' must be a number");
     }
-    level.fungusBandWidening = rJson.at("fungus_band_widening").get<int>();
+    level.fungusCoverageMultiplier = rJson.at("fungus_coverage_multiplier").get<float>();
+    if (level.fungusCoverageMultiplier < 0.0f)
+    {
+        throw std::runtime_error(ctx + ": 'fungus_coverage_multiplier' must be >= 0");
+    }
     if (!rJson.contains("effects") || !rJson.at("effects").is_array())
     {
         throw std::runtime_error(ctx + ": 'effects' must be an array");

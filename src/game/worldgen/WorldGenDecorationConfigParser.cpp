@@ -179,53 +179,39 @@ AquiferDecorationConfig_t ParseAquifers_(const nlohmann::json& rJson)
     return config;
 }
 
+float RequireUnitInterval_(const nlohmann::json& rJson, const char* pKey, const char* pContext)
+{
+    if (!rJson.contains(pKey))
+    {
+        throw std::runtime_error(
+            std::string("world gen decoration ") + pContext + " missing required field '" + pKey
+            + "'");
+    }
+    const float value = rJson.at(pKey).get<float>();
+    if (value < 0.0f || value > 1.0f)
+    {
+        throw std::runtime_error(
+            std::string("world gen decoration ") + pContext + "." + pKey + " must be in [0, 1]");
+    }
+    return value;
+}
+
 FungusDecorationConfig_t ParseFungus_(const nlohmann::json& rJson)
 {
     FungusDecorationConfig_t config;
-    if (!rJson.contains("band_starts") || !rJson.at("band_starts").is_array()
-        || rJson.at("band_starts").empty())
+    config.coverage = RequireUnitInterval_(rJson, "coverage", "fungus");
+    config.fill = RequireUnitInterval_(rJson, "fill", "fungus");
+    config.poleRowChance = RequireUnitInterval_(rJson, "pole_row_chance", "fungus");
+    if (!rJson.contains("cluster_scale_tiles"))
     {
         throw std::runtime_error(
-            "world gen decoration fungus.band_starts must be a non-empty array");
+            "world gen decoration fungus missing required field 'cluster_scale_tiles'");
     }
-    if (!rJson.contains("band_width"))
+    config.clusterScaleTiles = rJson.at("cluster_scale_tiles").get<int>();
+    if (config.clusterScaleTiles < 1)
     {
         throw std::runtime_error(
-            "world gen decoration fungus missing required field 'band_width'");
-    }
-    if (!rJson.contains("pole_row_chance"))
-    {
-        throw std::runtime_error(
-            "world gen decoration fungus missing required field 'pole_row_chance'");
-    }
-
-    config.bandStarts.clear();
-    for (const nlohmann::json& rStart : rJson.at("band_starts"))
-    {
-        if (!rStart.is_number_integer())
-        {
-            throw std::runtime_error(
-                "world gen decoration fungus.band_starts entries must be integers");
-        }
-        const int start = rStart.get<int>();
-        if (start < 0 || start > 100)
-        {
-            throw std::runtime_error(
-                "world gen decoration fungus.band_starts entries must be in [0, 100]");
-        }
-        config.bandStarts.push_back(start);
-    }
-    config.bandWidth = rJson.at("band_width").get<int>();
-    if (config.bandWidth < 0)
-    {
-        throw std::runtime_error(
-            "world gen decoration fungus.band_width must be >= 0");
-    }
-    config.poleRowChance = rJson.at("pole_row_chance").get<float>();
-    if (config.poleRowChance < 0.0f || config.poleRowChance > 1.0f)
-    {
-        throw std::runtime_error(
-            "world gen decoration fungus.pole_row_chance must be in [0, 1]");
+            "world gen decoration fungus.cluster_scale_tiles must be >= 1");
     }
     return config;
 }
