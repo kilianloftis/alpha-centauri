@@ -13,6 +13,7 @@
 #include "game/research/ResearchManager.h"
 #include "game/research/TechRegistry.h"
 #include "ui/text/TextPack.h"
+#include "lib/RandomRoll.h"
 
 #include <algorithm>
 #include <stdexcept>
@@ -129,8 +130,7 @@ void TalkConversation::Follow_(const TalkOutcome_t& rOutcome)
 // SMAC appends random(n) to the label; the script lists the variants instead.
 std::string TalkConversation::Say_(const std::vector<TalkTextRef_t>& rLines)
 {
-    std::uniform_int_distribution<std::size_t> pick(0, rLines.size() - 1);
-    return m_bindings.Text(rLines[pick(m_rng)]);
+    return m_bindings.Text(rLines[PickUniformIndex(rLines.size(), m_rng)]);
 }
 
 bool TalkConversation::Offers_(DiplomaticActionKind_t kind) const

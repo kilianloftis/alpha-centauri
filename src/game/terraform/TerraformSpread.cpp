@@ -5,6 +5,7 @@
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/terraform/TerraformRules.h"
+#include "lib/RandomRoll.h"
 
 #include <optional>
 #include <stdexcept>
@@ -42,11 +43,10 @@ void SpreadTerraformImprovements(WorldMap& rWorldMap, TileEffectsContext& rTileE
 
     const int tileCount = static_cast<int>(tiles.size());
     const int attempts = TerraformSpreadGrowthAttempts(tileCount, turnIndex);
-    std::uniform_int_distribution<int> dist(0, tileCount - 1);
 
     for (int iter = 0; iter < attempts; ++iter)
     {
-        Tile* pTile = tiles[static_cast<size_t>(dist(rRng))].get();
+        Tile* pTile = tiles[PickUniformIndex(tiles.size(), rRng)].get();
         if (!pTile)
         {
             continue;

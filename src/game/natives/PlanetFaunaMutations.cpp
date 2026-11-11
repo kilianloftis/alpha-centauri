@@ -22,6 +22,8 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitManager.h"
 #include "game/units/UnitOrigin.h"
+#include "lib/RandomRoll.h"
+#include "lib/WeightedPick.h"
 
 #include <algorithm>
 #include <limits>
@@ -68,30 +70,14 @@ Unit& SpawnOnTile_(Faction& rPlanet, const IDesign& rDesign, Tile& rTile, GameSt
 const NativeUnitConfig_t* WeightedPick_(const std::vector<const NativeUnitConfig_t*>& rCandidates,
                                         std::mt19937& rRng)
 {
-    if (rCandidates.empty())
+    const auto picked = PickWeightedIndex(
+        rCandidates.size(),
+        [&](std::size_t i) { return rCandidates[i]->planet->faunaWeight; }, rRng);
+    if (!picked)
     {
         return nullptr;
     }
-    int total = 0;
-    for (const NativeUnitConfig_t* pConfig : rCandidates)
-    {
-        total += pConfig->planet->faunaWeight;
-    }
-    if (total <= 0)
-    {
-        return nullptr;
-    }
-    std::uniform_int_distribution<int> dist(0, total - 1);
-    int roll = dist(rRng);
-    for (const NativeUnitConfig_t* pConfig : rCandidates)
-    {
-        roll -= pConfig->planet->faunaWeight;
-        if (roll < 0)
-        {
-            return pConfig;
-        }
-    }
-    return rCandidates.back();
+    return rCandidates[*picked];
 }
 
 const NativeUnitConfig_t* PickByRole_(NativeFaunaRole_t role, const Tile* pDomainTile,
@@ -107,8 +93,7 @@ Tile* PickRandomTile_(WorldMap& rMap, std::mt19937& rRng)
     {
         return nullptr;
     }
-    std::uniform_int_distribution<size_t> dist(0, tiles.size() - 1);
-    return tiles[dist(rRng)].get();
+    return tiles[PickUniformIndex(tiles.size(), rRng)].get();
 }
 
 Tile* FindBoatSpawnTile_(WorldMap& rMap, std::mt19937& rRng)
@@ -310,8 +295,7 @@ void RunSwarmSpawn_(Faction& rPlanet, const PlanetFaunaCalculator& rCalc, int fa
             {
                 return;
             }
-            std::uniform_int_distribution<int> coin(0, 1);
-            if (coin(rRng) == 0)
+            if (!RollPercent(50, rRng))
             {
                 return;
             }

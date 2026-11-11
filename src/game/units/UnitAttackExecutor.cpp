@@ -214,8 +214,7 @@ std::vector<CombatResult_t> UnitAttackExecutor::FireStrikes_(Unit& rAttacker,
 std::string UnitAttackExecutor::DestroyRandomImprovement_(
     const Tile& rTile, const std::vector<std::string>& rCandidates)
 {
-    std::uniform_int_distribution<size_t> pick(0, rCandidates.size() - 1);
-    const std::string id = rCandidates[pick(m_rRng)];
+    const std::string id = rCandidates[PickUniformIndex(rCandidates.size(), m_rRng)];
     m_rTileEffects.RemoveOccupantWithEffects(m_rWorldMap.MutableTile(rTile), id);
     return id;
 }

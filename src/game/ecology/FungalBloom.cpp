@@ -16,11 +16,11 @@
 #include "game/natives/NativeLifeConfig.h"
 #include "game/natives/NativeUnitRegistry.h"
 #include "game/units/Military.h"
+#include "lib/RandomRoll.h"
 #include "lib/Rational.h"
 
 #include <algorithm>
 #include <optional>
-#include <random>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -62,8 +62,7 @@ void SpawnRandomLifeform_(Faction& rPlanet, const NativeUnitRegistry& rNatives, 
                           std::mt19937& rRng, GameState& rGameState)
 {
     const std::vector<const NativeUnitConfig_t*> eligible = EligibleLifeforms(rTile, rNatives);
-    std::uniform_int_distribution<size_t> designDist(0, eligible.size() - 1);
-    const NativeUnitConfig_t& rConfig = *eligible[designDist(rRng)];
+    const NativeUnitConfig_t& rConfig = *eligible[PickUniformIndex(eligible.size(), rRng)];
     const IDesign* pDesign = rPlanet.GetMilitary().GetDesign(rConfig.id);
     if (!pDesign)
     {
@@ -84,10 +83,9 @@ int PlaceLifeforms_(Faction& rPlanet, const NativeUnitRegistry& rNatives,
     {
         return 0;
     }
-    std::uniform_int_distribution<size_t> tileDist(0, habitable.size() - 1);
     for (int n = 0; n < lifeformCount; ++n)
     {
-        Tile& rTile = *habitable[tileDist(rRng)];
+        Tile& rTile = *habitable[PickUniformIndex(habitable.size(), rRng)];
         SpawnRandomLifeform_(rPlanet, rNatives, rTile, rRng, rGameState);
     }
     return lifeformCount;
@@ -127,9 +125,8 @@ int RollLifeformCount_(const NativeLifeConfig_t& rLife, std::mt19937& rRng)
     {
         throw std::logic_error("ApplyFungalBloom: native lifeform range is invalid");
     }
-    std::uniform_int_distribution<int> countDist(rLife.fungalBloomNativeLifeformsMin,
-                                                 rLife.fungalBloomNativeLifeformsMax);
-    return countDist(rRng);
+    return RollInclusive(rLife.fungalBloomNativeLifeformsMin,
+                         rLife.fungalBloomNativeLifeformsMax, rRng);
 }
 
 FungalBloomResult_t ApplySelectedBloom_(WorldMap& rWorldMap, std::vector<Tile*> selected,

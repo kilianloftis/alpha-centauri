@@ -129,8 +129,7 @@ std::optional<TechId> PickTechToGrant_(TriggeredEffectContext_t& rCtx, const Fac
     {
         return std::nullopt;
     }
-    std::uniform_int_distribution<std::size_t> dist(0, available.size() - 1);
-    const std::size_t picked = dist(rCtx.Rng());
+    const std::size_t picked = PickUniformIndex(available.size(), rCtx.Rng());
     return available[picked]->id;
 }
 
@@ -456,8 +455,7 @@ bool TeleportUnit_(TriggeredEffectContext_t& rCtx, const TeleportUnitEffect_t& r
     {
         return false;
     }
-    std::uniform_int_distribution<std::size_t> pick(0, candidates.size() - 1);
-    Tile& rDest = *candidates[pick(rCtx.Rng())];
+    Tile& rDest = *candidates[PickUniformIndex(candidates.size(), rCtx.Rng())];
     rWorldMap.GetUnitPositions().MoveUnit(*rCtx.pUnit, rDest);
     rCtx.pTile = &rDest;
     rOut.push_back(UnitTeleported_t{TileCoord_t{rDest.GetX(), rDest.GetY()}});
@@ -533,8 +531,7 @@ bool GrantCommlink_(TriggeredEffectContext_t& rCtx, Faction& rFaction,
     {
         return false;
     }
-    std::uniform_int_distribution<std::size_t> pick(0, candidates.size() - 1);
-    Faction& rContact = *candidates[pick(rCtx.Rng())];
+    Faction& rContact = *candidates[PickUniformIndex(candidates.size(), rCtx.Rng())];
     rLedger.SetKnown(visitorId, rContact.GetFactionId(), true);
     const FactionConfig_t& rDef = rContact.GetDefinition();
     rOut.push_back(CommlinkGranted_t{rDef.leader.title, rDef.leader.name, rDef.identity.name});
@@ -605,8 +602,8 @@ void LoadSpawnedTransportCargo_(Faction& rPlanet, Unit& rHull, Tile& rTile,
     }
     while (FreeCargoSlots(rHull) > 0)
     {
-        std::uniform_int_distribution<std::size_t> pick(0, rCargoIds.size() - 1);
-        const IDesign* pCargo = rPlanet.GetMilitary().GetDesign(rCargoIds[pick(rRng)]);
+        const IDesign* pCargo = rPlanet.GetMilitary().GetDesign(
+            rCargoIds[PickUniformIndex(rCargoIds.size(), rRng)]);
         if (!pCargo)
         {
             break;
@@ -641,8 +638,7 @@ bool SpawnNative_(TriggeredEffectContext_t& rCtx, const SpawnNativeEffect_t& rSp
     {
         return false;
     }
-    std::uniform_int_distribution<std::size_t> pick(0, candidates.size() - 1);
-    Tile& rSpawnTile = *candidates[pick(rCtx.Rng())];
+    Tile& rSpawnTile = *candidates[PickUniformIndex(candidates.size(), rCtx.Rng())];
     Unit& rSpawned =
         SpawnNativeUnit_(*pPlanet, *pDesign, rSpawnTile, rCtx.rGameState);
     LoadSpawnedTransportCargo_(*pPlanet, rSpawned, rSpawnTile, rSpawn.cargoIds,
@@ -681,8 +677,8 @@ bool TerraformCluster_(TriggeredEffectContext_t& rCtx, const TerraformClusterEff
         return false;
     }
     WorldMap& rWorldMap = rCtx.rGameState.GetWorldMap();
-    std::uniform_int_distribution<std::size_t> pick(0, rCluster.improvementIds.size() - 1);
-    const std::string& rChosenId = rCluster.improvementIds[pick(rCtx.Rng())];
+    const std::string& rChosenId =
+        rCluster.improvementIds[PickUniformIndex(rCluster.improvementIds.size(), rCtx.Rng())];
     const bool bAlsoRoad = rChosenId == "Mine";
     PlaceCluster_(rCtx.rGameState, *rCtx.pTile, rWorldMap, rChosenId, bAlsoRoad, rCluster.chance,
                   rCtx.Rng());
@@ -720,8 +716,8 @@ bool AddRandomOccupant_(TriggeredEffectContext_t& rCtx, const AddRandomOccupantE
     {
         return false;
     }
-    std::uniform_int_distribution<std::size_t> pick(0, candidates.size() - 1);
-    const ImprovementConfig_t& rBonus = *candidates[pick(rCtx.Rng())];
+    const ImprovementConfig_t& rBonus =
+        *candidates[PickUniformIndex(candidates.size(), rCtx.Rng())];
     rCtx.rGameState.GetTileEffects().AddOccupantWithEffects(*rCtx.pTile, rBonus.id);
     rOut.push_back(OccupantAdded_t{rBonus.id});
     return true;

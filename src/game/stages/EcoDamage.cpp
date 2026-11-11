@@ -14,6 +14,7 @@
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "lib/EventBus.h"
+#include "lib/RandomRoll.h"
 #include "game/ecology/EcologyLedger.h"
 
 #include <algorithm>
@@ -51,8 +52,7 @@ StageResult_t EcoDamage::ExecuteImpl(GameState& rGameState, Faction& rFaction)
 // Rolls the base's fungal pop chance and, on a hit, pops one of its workable tiles.
 void EcoDamage::MaybePopFungus_(GameState& rGameState, BaseManager& rBase, std::mt19937& rRng)
 {
-    const int chance = FungalPopChance(rBase);
-    if (chance <= 0 || std::uniform_int_distribution<int>(0, 99)(rRng) >= chance)
+    if (!RollPercent(FungalPopChance(rBase), rRng))
     {
         return;
     }
@@ -70,8 +70,7 @@ Tile* EcoDamage::PickPopTile_(GameState& rGameState, const BaseManager& rBase,
     {
         return nullptr;
     }
-    std::uniform_int_distribution<std::size_t> pick(0, candidates.size() - 1);
-    const Tile& rPicked = *candidates[pick(rRng)];
+    const Tile& rPicked = *candidates[PickUniformIndex(candidates.size(), rRng)];
     return rGameState.GetWorldMap().GetTile(rPicked.GetX(), rPicked.GetY());
 }
 

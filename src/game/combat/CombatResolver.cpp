@@ -203,10 +203,9 @@ std::optional<CombatResolver::FightEnd_t> CombatResolver::ChooseWithdrawal_(
     {
         return std::nullopt;
     }
-    std::uniform_int_distribution<size_t> pick(0, retreats.size() - 1);
     return FightEnd_t{.kind = FightEndKind_t::Withdrawal,
                       .withdrawingSide = rCandidate.side,
-                      .pRetreatTile = retreats[pick(m_rRng)]};
+                      .pRetreatTile = retreats[PickUniformIndex(retreats.size(), m_rRng)]};
 }
 
 bool CombatResolver::BoardingRollWon_(const Unit& rAttacker, const Unit& rDefender, int damage,
@@ -283,12 +282,7 @@ void CombatResolver::RemoveLosers_(Unit& rAttacker, Unit& rDefender, CombatResul
 
 int CombatResolver::Roll_(int strength) const
 {
-    if (strength <= 0)
-    {
-        return 0;
-    }
-    std::uniform_int_distribution<int> dist(0, strength - 1);
-    return dist(m_rRng);
+    return RollExclusiveMax(strength, m_rRng);
 }
 
 CombatRound_t CombatResolver::RollRound_(const CombatResult_t& rResult) const

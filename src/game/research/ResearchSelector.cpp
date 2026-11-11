@@ -2,8 +2,8 @@
 
 #include "game/research/ResearchManager.h"
 #include "game/research/ResearchRules.h"
+#include "lib/RandomRoll.h"
 
-#include <random>
 #include <stdexcept>
 
 namespace ac
@@ -109,8 +109,7 @@ bool ResearchSelector::IsTechInSelectedCategory_(const TechConfig_t& rConfig) co
 
 const TechConfig_t* ResearchSelector::PickRandom_(const std::vector<const TechConfig_t*>& rCandidates) const
 {
-    std::uniform_int_distribution<size_t> dist(0, rCandidates.size() - 1);
-    return rCandidates[dist(m_rng)];
+    return rCandidates[PickUniformIndex(rCandidates.size(), m_rng)];
 }
 
 } // namespace ac

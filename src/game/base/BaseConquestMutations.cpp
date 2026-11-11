@@ -149,9 +149,8 @@ void DestroyCaptureFacilities_(BaseManager& rBase, const CaptureOutcome_t& rOutc
     {
         return;
     }
-    std::uniform_int_distribution<int> countDist(rOutcome.minFacilitiesDestroyed,
-                                                 rOutcome.maxFacilitiesDestroyed);
-    const int toDestroy = countDist(rRng);
+    const int toDestroy = RollInclusive(rOutcome.minFacilitiesDestroyed,
+                                        rOutcome.maxFacilitiesDestroyed, rRng);
     rResult.facilitiesDestroyed =
         DestroyRandomFacilities_(rBase, rOutcome.facilityCandidates, toDestroy, rRng);
 }

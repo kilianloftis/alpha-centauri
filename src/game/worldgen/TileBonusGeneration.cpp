@@ -5,6 +5,7 @@
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "lib/WeightedPick.h"
 
 #include <algorithm>
 #include <cmath>
@@ -38,7 +39,6 @@ const ImprovementConfig_t* PickWeightedBonus_(
     const std::vector<const ImprovementConfig_t*>& rBonuses,
     std::mt19937& rRng)
 {
-    int totalWeight = 0;
     std::vector<const ImprovementConfig_t*> eligible;
     eligible.reserve(rBonuses.size());
 
@@ -47,25 +47,16 @@ const ImprovementConfig_t* PickWeightedBonus_(
         if (pBonus && CanPlaceBonus_(rTile, *pBonus))
         {
             eligible.push_back(pBonus);
-            totalWeight += pBonus->frequency;
         }
     }
-    if (eligible.empty() || totalWeight <= 0)
+
+    const auto picked = PickWeightedIndex(
+        eligible.size(), [&](std::size_t i) { return eligible[i]->frequency; }, rRng);
+    if (!picked)
     {
         return nullptr;
     }
-
-    std::uniform_int_distribution<int> pick(1, totalWeight);
-    int roll = pick(rRng);
-    for (const ImprovementConfig_t* pBonus : eligible)
-    {
-        roll -= pBonus->frequency;
-        if (roll <= 0)
-        {
-            return pBonus;
-        }
-    }
-    return eligible.back();
+    return eligible[*picked];
 }
 
 // Optional terrain with a placement weight.

@@ -7,6 +7,7 @@
 #include "game/map/WorldMap.h"
 #include "game/terraform/SurfaceOccupancy.h"
 #include "game/terraform/TerraformRules.h"
+#include "lib/RandomRoll.h"
 
 #include <optional>
 #include <span>
@@ -76,8 +77,7 @@ int RollLevelMeters(std::mt19937& rRng, const MapRulesConfig_t& rRules)
     {
         throw std::logic_error("RollLevelMeters: level meter range is invalid");
     }
-    std::uniform_int_distribution<int> distribution(rRules.levelMinMeters, rRules.levelMaxMeters);
-    return distribution(rRng);
+    return RollInclusive(rRules.levelMinMeters, rRules.levelMaxMeters, rRng);
 }
 
 std::optional<std::vector<MoistureChange_t>> ApplyElevationDelta(

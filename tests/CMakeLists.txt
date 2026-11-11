@@ -185,6 +185,8 @@ add_executable(effects-tests
     lib/ConfigLibraryTests.cpp
     lib/EventBusTests.cpp
     lib/PlatformEventQueueTests.cpp
+    lib/WeightedPickTests.cpp
+    lib/RandomRollTests.cpp
 )
 
 target_link_libraries(effects-tests PRIVATE ac-core ac-ui ac-turn-stages Catch2::Catch2WithMain)

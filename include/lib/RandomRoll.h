@@ -2,6 +2,8 @@
 
 #include "lib/Rational.h"
 
+#include <cstddef>
+#include <limits>
 #include <random>
 #include <stdexcept>
 
@@ -16,6 +18,35 @@ inline int RollExclusiveMax(int exclusiveMax, std::mt19937& rRng)
         return 0;
     }
     std::uniform_int_distribution<int> dist(0, exclusiveMax - 1);
+    return dist(rRng);
+}
+
+// Uniform index in [0, count). count must be positive and fit in int.
+inline std::size_t PickUniformIndex(std::size_t count, std::mt19937& rRng)
+{
+    if (count == 0)
+    {
+        throw std::runtime_error("PickUniformIndex: count must be positive");
+    }
+    if (count > static_cast<std::size_t>(std::numeric_limits<int>::max()))
+    {
+        throw std::runtime_error("PickUniformIndex: count exceeds int range");
+    }
+    return static_cast<std::size_t>(RollExclusiveMax(static_cast<int>(count), rRng));
+}
+
+// Inclusive integer in [minInclusive, maxInclusive]. Equal bounds skip the RNG.
+inline int RollInclusive(int minInclusive, int maxInclusive, std::mt19937& rRng)
+{
+    if (maxInclusive < minInclusive)
+    {
+        throw std::runtime_error("RollInclusive: max must be >= min");
+    }
+    if (minInclusive == maxInclusive)
+    {
+        return minInclusive;
+    }
+    std::uniform_int_distribution<int> dist(minInclusive, maxInclusive);
     return dist(rRng);
 }
 

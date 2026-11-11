@@ -1,5 +1,7 @@
 #include "game/faction/FactionFlavor.h"
 
+#include "lib/RandomRoll.h"
+
 #include <sstream>
 
 namespace ac
@@ -27,8 +29,7 @@ std::string FactionFlavor::PickBaseName()
 
     if (!available.empty())
     {
-        std::uniform_int_distribution<size_t> dist(0, available.size() - 1);
-        const std::string& rChosen = *available[dist(m_rng)];
+        const std::string& rChosen = *available[PickUniformIndex(available.size(), m_rng)];
         m_usedBaseNames.insert(rChosen);
         return rChosen;
     }

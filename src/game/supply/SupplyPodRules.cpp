@@ -5,6 +5,7 @@
 #include "game/supply/SupplyPodIndex.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDomain.h"
+#include "lib/WeightedPick.h"
 
 #include <stdexcept>
 #include <vector>
@@ -22,31 +23,6 @@ bool EventEligible_(const SupplyPodEventConfig_t& rEvent, int turn)
         return false;
     }
     return turn >= rEvent.filters.minTurn;
-}
-
-const SupplyPodEventConfig_t* WeightedPick_(
-    const std::vector<const SupplyPodEventConfig_t*>& rEligible, std::mt19937& rRng)
-{
-    int totalWeight = 0;
-    for (const SupplyPodEventConfig_t* pEvent : rEligible)
-    {
-        totalWeight += pEvent->weight;
-    }
-    if (totalWeight <= 0)
-    {
-        return nullptr;
-    }
-    std::uniform_int_distribution<int> pick(1, totalWeight);
-    int roll = pick(rRng);
-    for (const SupplyPodEventConfig_t* pEvent : rEligible)
-    {
-        roll -= pEvent->weight;
-        if (roll <= 0)
-        {
-            return pEvent;
-        }
-    }
-    return rEligible.back();
 }
 
 SupplyPodEventPick_t EmptyPick_(const SupplyPodEventGroupConfig_t& rEventGroup)
@@ -97,12 +73,14 @@ SupplyPodEventPick_t PickEvent(const SupplyPodEventGroupConfig_t& rEventGroup, i
             eligible.push_back(&rEvent);
         }
     }
-    const SupplyPodEventConfig_t* pEvent = WeightedPick_(eligible, rRng);
-    if (!pEvent)
+    const auto picked = PickWeightedIndex(
+        eligible.size(), [&](std::size_t i) { return eligible[i]->weight; }, rRng);
+    if (!picked)
     {
         return EmptyPick_(rEventGroup);
     }
-    return SupplyPodEventPick_t{pEvent->id, &pEvent->notice, pEvent};
+    const SupplyPodEventConfig_t& rEvent = *eligible[*picked];
+    return SupplyPodEventPick_t{rEvent.id, &rEvent.notice, &rEvent};
 }
 
 } // namespace ac
