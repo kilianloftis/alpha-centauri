@@ -985,6 +985,15 @@ TEST_CASE("ParseEffectConfig: conditions", "[effects][parser][condition]")
         CHECK(std::holds_alternative<IsInCombat_t>(
             EffectConfigParser::ParseCondition(json::parse(R"({ "kind": "IsInCombat" })"))
                 .AsVariant()));
+
+        const Condition_t effective = EffectConfigParser::ParseCondition(json::parse(R"({
+            "kind": "EffectiveMorale", "op": "Le", "value": 3
+        })"));
+        const auto* pEffective = std::get_if<EffectiveMorale_t>(&effective.AsVariant());
+        REQUIRE(pEffective);
+        CHECK(pEffective->op == CompareOp_t::Le);
+        CHECK(pEffective->value == 3);
+        CHECK(ConditionNeedsSituationalContext(effective));
     }
 
     SECTION("IsHeadquarters condition")

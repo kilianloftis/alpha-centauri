@@ -170,8 +170,10 @@ enum class StatId_t
     // Extra morale levels after the rank word; the name does not change. Attack and defence rows
     // split on IsDefending.
     MoraleExtra,
-    // Post-combat promotion probability (RawScaled from D/(A+D)). Not resolved during combat.
-    PromotionChance,
+    // Post-combat promotion eligibility (RawScaled from favor/(A+D)). Not resolved during combat.
+    PromotionEligibilityChance,
+    // Post-combat promotion success multiplier (RawScaled, seed 1). Product with eligibility.
+    PromotionSuccessChance,
 
     // Population growth rate modifier (AddPercent, base = 100%)
     GrowthRate,
@@ -396,7 +398,8 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::EcoTerraformScale:
         case StatId_t::GiftSizeThreshold:
         case StatId_t::CollateralSusceptibility: return StatKind_t::PureMultiplier;
-        case StatId_t::PromotionChance:
+        case StatId_t::PromotionEligibilityChance:
+        case StatId_t::PromotionSuccessChance:
         case StatId_t::GrowthRate:
         case StatId_t::MoistureTier:
         case StatId_t::FacilityEnergyUpkeep:
@@ -537,7 +540,8 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::GarrisonProbeMultiplier:
         case StatId_t::MoraleRank:
         case StatId_t::MoraleExtra:
-        case StatId_t::PromotionChance: return ResolveDomain_t::Unit;
+        case StatId_t::PromotionEligibilityChance:
+        case StatId_t::PromotionSuccessChance: return ResolveDomain_t::Unit;
 
         case StatId_t::MoistureTier:
         case StatId_t::TileDefense:
@@ -616,7 +620,8 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "starting_minerals")       return StatId_t::StartingMinerals;
     if (rStat == "morale_rank")             return StatId_t::MoraleRank;
     if (rStat == "morale_extra")            return StatId_t::MoraleExtra;
-    if (rStat == "promotion_chance")        return StatId_t::PromotionChance;
+    if (rStat == "promotion_eligibility_chance") return StatId_t::PromotionEligibilityChance;
+    if (rStat == "promotion_success_chance") return StatId_t::PromotionSuccessChance;
     if (rStat == "growth_rate")             return StatId_t::GrowthRate;
     if (rStat == "starting_size")           return StatId_t::StartingSize;
     if (rStat == "max_base_size")           return StatId_t::MaxBaseSize;
@@ -929,7 +934,7 @@ enum class ModifierOp_t
     MinClamp,
 };
 
-// Live integer vs a bound. Numeric conditions share this (`SocialRating_t` today).
+// Live integer vs a bound. Numeric conditions share this (`SocialRating_t`, `EffectiveMorale_t`).
 enum class CompareOp_t
 {
     Eq,

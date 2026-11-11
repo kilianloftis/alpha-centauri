@@ -3,7 +3,7 @@
   "defense_floor_index": 1,
   "percent_per_level": 12.5,
   "baseline_index": 2,
-  "promotion_seed_formula": "(attack_strength + defense_strength) > 0 and defense_strength / (attack_strength + defense_strength) or 0",
+  "promotion_eligibility_formula": "(our_strength + their_strength) > 0 and their_strength / (our_strength + their_strength) or 0",
   "levels": [
     {
       "index": 0,
@@ -11,7 +11,7 @@
       "native": "Hatchling",
       "effects": [
         { "type": "StatModifier", "scope": "ThisUnit",
-          "parameters": { "stat": "promotion_chance", "amount": 1, "op": "MinClamp" } },
+          "parameters": { "stat": "promotion_eligibility_chance", "amount": 1, "op": "MinClamp" } },
         { "type": "StatModifier", "scope": "ThisUnit",
           "parameters": { "stat": "planet_pearls", "amount": 1, "op": "MultiplyGeometric" } }
       ]
@@ -22,7 +22,7 @@
       "native": "Larval Mass",
       "effects": [
         { "type": "StatModifier", "scope": "ThisUnit",
-          "parameters": { "stat": "promotion_chance", "amount": 1, "op": "MinClamp" } },
+          "parameters": { "stat": "promotion_eligibility_chance", "amount": 1, "op": "MinClamp" } },
         { "type": "StatModifier", "scope": "ThisUnit",
           "parameters": { "stat": "planet_pearls", "amount": 2, "op": "MultiplyGeometric" } }
       ]
@@ -42,7 +42,7 @@
       "native": "Boil",
       "effects": [
         { "type": "StatModifier", "scope": "ThisUnit",
-          "parameters": { "stat": "promotion_chance", "amount": 0.5, "op": "MultiplyGeometric" } },
+          "parameters": { "stat": "promotion_success_chance", "amount": 0.5, "op": "MultiplyGeometric" } },
         { "type": "StatModifier", "scope": "ThisUnit",
           "parameters": { "stat": "planet_pearls", "amount": 4, "op": "MultiplyGeometric" } }
       ]
@@ -53,7 +53,7 @@
       "native": "Mature Boil",
       "effects": [
         { "type": "StatModifier", "scope": "ThisUnit",
-          "parameters": { "stat": "promotion_chance", "amount": 0.5, "op": "MultiplyGeometric" } },
+          "parameters": { "stat": "promotion_success_chance", "amount": 0.5, "op": "MultiplyGeometric" } },
         { "type": "StatModifier", "scope": "ThisUnit",
           "parameters": { "stat": "planet_pearls", "amount": 5, "op": "MultiplyGeometric" } }
       ]
@@ -64,7 +64,7 @@
       "native": "Great Boil",
       "effects": [
         { "type": "StatModifier", "scope": "ThisUnit",
-          "parameters": { "stat": "promotion_chance", "amount": 0.5, "op": "MultiplyGeometric" } },
+          "parameters": { "stat": "promotion_success_chance", "amount": 0.5, "op": "MultiplyGeometric" } },
         { "type": "StatModifier", "scope": "ThisUnit",
           "parameters": { "stat": "planet_pearls", "amount": 6, "op": "MultiplyGeometric" } }
       ]
@@ -74,6 +74,8 @@
       "conventional": "Elite",
       "native": "Demon Boil",
       "effects": [
+        { "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "promotion_eligibility_chance", "amount": 0, "op": "MaxClamp" } },
         { "type": "StatModifier", "scope": "ThisUnit",
           "parameters": { "stat": "planet_pearls", "amount": 7, "op": "MultiplyGeometric" } }
       ]

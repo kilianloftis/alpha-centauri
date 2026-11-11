@@ -100,6 +100,30 @@ At the population limit it checks Hab Complex and Habitation Dome directly with 
 
 ## Unit morale
 
+### Combat promotion (`promote` `0x5062B0`, outer gate `0x50A29E`–`0x50A42A`)
+
+After a fight in which one side dies, the survivor may promote. Artifact kills skip the
+attacker's roll (`cmp cl, 0xC` / `je` past `promote` at `0x50A296`). Gates use
+`morale_veh` (effective morale), not raw `VEH.morale` alone; a success still does
+`VEH.morale++`. `combat_rand(n)` is `game_rand() % n` when `n > 1`, else 0.
+
+**Outer gate** (whether to call `promote`):
+
+- Attacker alive: if `morale_veh` ≤ Green (1), call `promote`; else
+  `combat_rand(A+D) ≤ D` then `promote`. A/D are the post-fight rescaled strengths.
+- Defender alive: if `morale_veh` ≤ Green, call `promote`; else if
+  `combat_rand(A+D) ≤ A`, call `promote`; else if the battle tile has a base
+  (`base_id ≥ 0`) and `morale_veh` &lt; Veteran (4), still call `promote`. So on-base
+  Disciplined/Hardened always reach `promote`; Veteran+ on base only via the A-roll.
+
+**Inner `promote`:** stop if raw `VEH.morale` ≥ Elite or `morale_veh` ≥ Elite. If
+`morale_veh` ≤ Disciplined (2), bump. Else bump only when `combat_rand(2) == 0`.
+
+Ours multiplies eligibility × success into one continuous chance (same rates; not the
+same RNG path). Eligibility seed is `their/(our+their)` from the survivor's point of
+view. On-base defender eligibility MinClamp 1 when effective morale ≤ Hardened is a
+Base `ThisTile` effect.
+
 ### `morale_veh` (`0x5C0E40`)
 
 Does not add High Morale. Combat units are `VEH.morale` plus SE Morale / `rule_morale` /

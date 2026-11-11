@@ -1234,6 +1234,20 @@ Condition_t ParseSocialRatingCondition_(const nlohmann::json& rJson)
     return SocialRating_t{ParseSocialRatingId(rating), *op, rJson.at("value").get<int>()};
 }
 
+Condition_t ParseEffectiveMoraleCondition_(const nlohmann::json& rJson)
+{
+    const auto op = magic_enum::enum_cast<CompareOp_t>(rJson.value("op", ""));
+    if (!op.has_value())
+    {
+        throw std::runtime_error("EffectiveMorale condition 'op' must be Eq, Le, or Ge");
+    }
+    if (!rJson.contains("value") || !rJson.at("value").is_number_integer())
+    {
+        throw std::runtime_error("EffectiveMorale condition requires an integer 'value'");
+    }
+    return EffectiveMorale_t{*op, rJson.at("value").get<int>()};
+}
+
 Condition_t ParseTargetTileHasCondition_(const nlohmann::json& rJson)
 {
     const std::string featureId = RequireConditionString_(rJson, "value", "TargetTileHas");
@@ -1256,6 +1270,7 @@ const std::unordered_map<std::string, ParseConditionFn_>& ConditionParsers_()
         {"SubjectIsOnOriginBase",
          [](const nlohmann::json&) -> Condition_t { return SubjectIsOnOriginBase_t{}; }},
         {"SocialRating", ParseSocialRatingCondition_},
+        {"EffectiveMorale", ParseEffectiveMoraleCondition_},
         {"OriginBaseHasBuilding",
          [](const nlohmann::json& rJson) -> Condition_t {
              const std::string what = "OriginBaseHasBuilding";

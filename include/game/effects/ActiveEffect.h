@@ -149,7 +149,8 @@ inline EffectContext_t ActiveEffectContext(const ActiveEffect_t& rEffect, Effect
     return ctx;
 }
 
-// Post-combat promotion uses MoraleConfig_t::promotionSeedFormula (Lua), not amount_source.
+// Post-combat promotion seeds eligibility from MoraleConfig_t::promotionEligibilityFormula
+// (Lua) and success from 1.0, then live/level modifiers; not amount_source.
 
 // One overload per subject: a new AmountSource_t adds a case only to its subject's overload.
 // Dispatch routes every source to its own subject, so the others keep `default:`.

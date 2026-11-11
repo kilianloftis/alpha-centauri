@@ -89,7 +89,8 @@ void ValidateMoraleStatOp_(const StatModifierEffect_t& rMod, int levelIndex)
         case StatId_t::Defense:
             FailLevel_(levelIndex,
                        "attack/defense combat scale is percent_per_level, not a level effect");
-        case StatId_t::PromotionChance:
+        case StatId_t::PromotionEligibilityChance:
+        case StatId_t::PromotionSuccessChance:
             switch (rMod.op)
             {
                 case ModifierOp_t::MinClamp:
@@ -97,8 +98,8 @@ void ValidateMoraleStatOp_(const StatModifierEffect_t& rMod, int levelIndex)
                 case ModifierOp_t::MaxClamp:
                     return;
                 default:
-                    FailLevel_(levelIndex, "promotion_chance effects must use MinClamp, "
-                                           "MultiplyGeometric, or MaxClamp");
+                    FailLevel_(levelIndex, "promotion eligibility/success effects must use "
+                                           "MinClamp, MultiplyGeometric, or MaxClamp");
             }
         case StatId_t::PlanetPearls:
             if (rMod.op != ModifierOp_t::MultiplyGeometric)
@@ -107,8 +108,9 @@ void ValidateMoraleStatOp_(const StatModifierEffect_t& rMod, int levelIndex)
             }
             return;
         default:
-            FailLevel_(levelIndex, "stat is not allowed on morale levels (use promotion_chance "
-                                   "or planet_pearls)");
+            FailLevel_(levelIndex,
+                       "stat is not allowed on morale levels (use promotion_eligibility_chance, "
+                       "promotion_success_chance, or planet_pearls)");
     }
 }
 
@@ -129,16 +131,16 @@ void ValidateMoraleLevelEffects_(const MoraleConfig_t& rConfig)
     }
 }
 
-std::string RequireFormula_(const json& rRoot)
+std::string RequireEligibilityFormula_(const json& rRoot)
 {
     const auto missing = std::runtime_error(
-        "morale_levels.json: 'promotion_seed_formula' must be a non-empty string");
-    if (!rRoot.contains("promotion_seed_formula")
-        || !rRoot.at("promotion_seed_formula").is_string())
+        "morale_levels.json: 'promotion_eligibility_formula' must be a non-empty string");
+    if (!rRoot.contains("promotion_eligibility_formula")
+        || !rRoot.at("promotion_eligibility_formula").is_string())
     {
         throw missing;
     }
-    std::string formula = rRoot.at("promotion_seed_formula").get<std::string>();
+    std::string formula = rRoot.at("promotion_eligibility_formula").get<std::string>();
     if (formula.empty())
     {
         throw missing;
@@ -185,7 +187,7 @@ MoraleConfig_t MoraleConfigParser::ParseConfig(const std::string& configPath)
     config.defenseFloorIndex = root.value("defense_floor_index", 1);
     config.percentPerLevel = EffectConfigParser::RequireNumber(root, "percent_per_level");
     config.baselineIndex = ConfigFields::RequireInt(root, "baseline_index", "morale_levels.json");
-    config.promotionSeedFormula = RequireFormula_(root);
+    config.promotionEligibilityFormula = RequireEligibilityFormula_(root);
     config.levels = ParseLevels_(root);
 
     ValidateContiguousLevels_(config);

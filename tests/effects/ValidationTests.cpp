@@ -225,7 +225,8 @@ static_assert(KindFor(StatId_t::GarrisonProbeMultiplier) == StatKind_t::Additive
 static_assert(DomainFor(StatId_t::GarrisonProbeMultiplier) == ResolveDomain_t::Unit);
 static_assert(DomainFor(StatId_t::PlagueDamageScale) == ResolveDomain_t::Base);
 static_assert(KindFor(StatId_t::MoraleExtra) == StatKind_t::Additive);
-static_assert(KindFor(StatId_t::PromotionChance) == StatKind_t::RawScaled);
+static_assert(KindFor(StatId_t::PromotionEligibilityChance) == StatKind_t::RawScaled);
+static_assert(KindFor(StatId_t::PromotionSuccessChance) == StatKind_t::RawScaled);
 static_assert(KindFor(StatId_t::GrowthRate) == StatKind_t::RawScaled);
 static_assert(KindFor(StatId_t::StartingSize) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::MaxBaseSize) == StatKind_t::Additive);

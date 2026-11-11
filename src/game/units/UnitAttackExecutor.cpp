@@ -105,7 +105,13 @@ void UnitAttackExecutor::ApplyFightAftermath_(Unit& rAttacker, Unit& rDefender,
     if (const std::optional<CombatSide_t> survivor = PromotionCandidate(rResult))
     {
         Unit& rSurvivor = *survivor == CombatSide_t::Attacker ? rAttacker : rDefender;
-        TryPromote(rSurvivor, rResult.attackStrength, rResult.defenseStrength, m_rMorale, m_rRng);
+        EffectContext_t promoteCtx;
+        promoteCtx.pUnit = &rSurvivor;
+        promoteCtx.targetTile = &rBattleTile;
+        promoteCtx.combatRole = *survivor == CombatSide_t::Attacker ? CombatRole_t::Attacker
+                                                                   : CombatRole_t::Defender;
+        TryPromote(rSurvivor, *survivor, rResult.attackStrength, rResult.defenseStrength, m_rMorale,
+                   promoteCtx, m_rRng);
     }
     m_rWorld.ApplyFightConsequences(rAttacker, rBattleTile, rResult);
 }

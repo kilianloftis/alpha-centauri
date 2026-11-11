@@ -13,8 +13,9 @@ struct MoraleLevel_t
     int index = 0;
     std::string conventional;
     std::string native;
-    // promotion_chance and planet_pearls stack modifiers for this intrinsic level.
-    // Combat Attack/Defense scale is MoraleConfig_t::percentPerLevel, not a row effect.
+    // Level modifiers for promotion_* and planet_pearls when they differ from identity
+    // (e.g. Green MinClamp eligibility, Hardened ×0.5 success). Combat Attack/Defense
+    // scale is MoraleConfig_t::percentPerLevel.
     std::vector<EffectConfig_t> effects;
 };
 
@@ -25,9 +26,8 @@ struct MoraleConfig_t
     // Combat AddPercent = (combatLevel - baselineIndex) * percentPerLevel.
     double percentPerLevel = 0.0;
     int baselineIndex = 0;
-    // Lua seed for promotion_chance ApplyModifierStack. Vars: attack_strength, defense_strength
-    // (final post-combat weapon and armor strengths from the kill).
-    std::string promotionSeedFormula;
+    // Lua seed for StatId PromotionEligibilityChance. Vars: our_strength, their_strength.
+    std::string promotionEligibilityFormula;
     std::vector<MoraleLevel_t> levels;
 
     int MinLevel() const;

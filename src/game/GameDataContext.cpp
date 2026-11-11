@@ -173,12 +173,12 @@ void ValidateCompositionPopTypes_(const GameDataContext& rData)
 void CheckPromotionFormulaEvaluates_(const GameDataContext& rData)
 {
     const std::unordered_map<std::string, double> kSmokeCases[] = {
-        {{"attack_strength", 1.0}, {"defense_strength", 1.0}},
-        {{"attack_strength", 0.0}, {"defense_strength", 0.0}},
+        {{"our_strength", 1.0}, {"their_strength", 1.0}},
+        {{"our_strength", 0.0}, {"their_strength", 0.0}},
     };
     for (const auto& vars : kSmokeCases)
     {
-        (void)rData.luaRuntime->EvalDouble(rData.moraleConfig->promotionSeedFormula, vars);
+        (void)rData.luaRuntime->EvalDouble(rData.moraleConfig->promotionEligibilityFormula, vars);
     }
 }
 

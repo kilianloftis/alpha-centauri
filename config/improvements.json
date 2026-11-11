@@ -931,6 +931,22 @@
       {
         "type": "StatModifier",
         "scope": "ThisTile",
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            { "kind": "IsDefending" },
+            { "kind": "EffectiveMorale", "op": "Le", "value": 3 }
+          ]
+        },
+        "parameters": {
+          "stat": "promotion_eligibility_chance",
+          "amount": 1,
+          "op": "MinClamp"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
         "parameters": {
           "stat": "tile_defense",
           "amount": 100,

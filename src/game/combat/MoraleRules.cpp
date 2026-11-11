@@ -7,6 +7,9 @@
 #include "game/units/Unit.h"
 
 #include <algorithm>
+#include <span>
+#include <stdexcept>
+#include <string>
 
 namespace ac
 {
@@ -60,6 +63,41 @@ std::optional<CombatSide_t> PromotionCandidate(const CombatResult_t& rResult)
 bool KillEarnsPromotion(const Unit& rDefeated)
 {
     return !ResolveFlag(rDefeated, RuleFlagId_t::CapturedOnDefeat);
+}
+
+double CombatPromotionChance(const Unit& rUnit, CombatSide_t side, int attackStrength,
+                             int defenseStrength, const MoraleCalculator& rMorale,
+                             const EffectContext_t& rCtx)
+{
+    const MoraleConfig_t& rConfig = rMorale.GetConfig();
+    if (rUnit.GetXp() >= rConfig.MaxLevel())
+    {
+        return 0.0;
+    }
+    const int effective = EffectiveMoraleLevel(rUnit, rCtx, rMorale);
+    if (effective >= rConfig.MaxLevel())
+    {
+        return 0.0;
+    }
+    const MoraleLevel_t* pLevel = rConfig.FindLevel(effective);
+    if (!pLevel)
+    {
+        throw std::runtime_error("No morale level found for effective morale "
+                                 + std::to_string(effective));
+    }
+    const int ourStrength =
+        side == CombatSide_t::Attacker ? attackStrength : defenseStrength;
+    const int theirStrength =
+        side == CombatSide_t::Attacker ? defenseStrength : attackStrength;
+    const double eligibilitySeed =
+        rMorale.PromotionEligibilitySeed(ourStrength, theirStrength);
+    const std::span<const EffectConfig_t> levelEffects = pLevel->effects;
+    const double eligibility = ResolveCombatUnitMultiplicativeStat(
+        rUnit, StatId_t::PromotionEligibilityChance, eligibilitySeed, rCtx, levelEffects);
+    // Success seed is identity; Hardened+ ×0.5 and live modifiers come from effects.
+    const double success = ResolveCombatUnitMultiplicativeStat(
+        rUnit, StatId_t::PromotionSuccessChance, 1.0, rCtx, levelEffects);
+    return eligibility * success;
 }
 
 const std::string& MoraleDisplayName(const Unit& rUnit, const EffectContext_t& rCtx,

@@ -31,6 +31,7 @@
 #include "game/effects/TileYieldRulesConfig.h"
 #include "game/natives/NativeRules.h"
 #include "game/combat/MoraleCalculator.h"
+#include "game/combat/MoraleRules.h"
 #include <magic_enum.hpp>
 #include <algorithm>
 #include <cmath>
@@ -624,6 +625,17 @@ struct ConditionEvaluator_
         return CompareSatisfied(rating, rRating.op, rRating.value);
     }
 
+    bool operator()(const EffectiveMorale_t& rMorale) const
+    {
+        if (ctx.pUnit == nullptr)
+        {
+            return false;
+        }
+        const MoraleCalculator& rCalc = *CurrentGameState().GetGameData().moraleCalculator;
+        const int level = EffectiveMoraleLevel(*ctx.pUnit, ctx, rCalc);
+        return CompareSatisfied(level, rMorale.op, rMorale.value);
+    }
+
     bool operator()(const OriginBaseHasBuilding_t& rHas) const
     {
         if (pOriginBase == nullptr)
@@ -844,6 +856,7 @@ bool ConditionNeedsSituationalContext(const Condition_t& rCondition)
                                || std::is_same_v<T, OriginBaseIsHomeBase_t>
                                || std::is_same_v<T, SubjectIsOnOriginBase_t>
                                || std::is_same_v<T, SocialRating_t>
+                               || std::is_same_v<T, EffectiveMorale_t>
                                || std::is_same_v<T, OriginBaseHasBuilding_t>
                                || std::is_same_v<T, AttackerIsEmbarked_t>
                                || std::is_same_v<T, HasAirdroppedThisTurn_t>
@@ -1007,6 +1020,21 @@ void AppendGlobalScopeEffects(const std::vector<ActiveEffect_t>& rPool, ResolveD
 namespace
 {
 
+void AppendStandingTileUnitEffects_(const Unit& rUnit, std::vector<ActiveEffect_t>& rOut)
+{
+    // ThisTile unit-domain modifiers on the tile the unit occupies (e.g. Base promotion
+    // eligibility). Tile-domain stats and rule flags stay on tile resolvers.
+    for (ActiveEffect_t& rEffect : CollectTileEffects(rUnit.GetTile()))
+    {
+        const StatModifierEffect_t* pMod =
+            std::get_if<StatModifierEffect_t>(&rEffect.config->effect);
+        if (pMod && DomainFor(pMod->stat) == ResolveDomain_t::Unit)
+        {
+            rOut.push_back(std::move(rEffect));
+        }
+    }
+}
+
 std::vector<ActiveEffect_t> GatherUnitEffects_(const Unit& rUnit)
 {
     std::vector<ActiveEffect_t> effects = rUnit.GetDesign().CollectEffects();
@@ -1016,6 +1044,7 @@ std::vector<ActiveEffect_t> GatherUnitEffects_(const Unit& rUnit)
     AppendGlobalScopeEffects(rPool, ResolveDomain_t::Unit, effects);
     const auto& rGrants = rUnit.GetProductionGrants();
     effects.insert(effects.end(), rGrants.begin(), rGrants.end());
+    AppendStandingTileUnitEffects_(rUnit, effects);
     return effects;
 }
 

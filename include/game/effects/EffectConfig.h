@@ -302,6 +302,14 @@ struct SocialRating_t
     int value = 0;
 };
 
+// True when EffectiveMoraleLevel(pUnit) satisfies CompareOp_t against value.
+// Fail closed if pUnit is absent. Needs a live game (morale calculator from GameData).
+struct EffectiveMorale_t
+{
+    CompareOp_t op = CompareOp_t::Eq;
+    int value = 0;
+};
+
 // True when the effect's originBase has a constructed copy of buildingId, matching bPresent.
 // Distinct from BaseHasBuilding (EffectContext_t::pBase). Fail closed if originBase is absent.
 struct OriginBaseHasBuilding_t
@@ -452,7 +460,7 @@ struct GiftKind_t
 
 using ConditionVariant_t = std::variant<TargetTileHas_t, AllOf_t, AnyOf_t, IsDefending_t,
                                         IsInCombat_t, OriginBaseIsHomeBase_t, SubjectIsOnOriginBase_t,
-                                        SocialRating_t, OriginBaseHasBuilding_t,
+                                        SocialRating_t, EffectiveMorale_t, OriginBaseHasBuilding_t,
                                         AttackerIsEmbarked_t, HasAirdroppedThisTurn_t,
                                         AttackerDomain_t, DefenderDomain_t,
                                         DefenderIsNativeLife_t, IsHeadquarters_t,

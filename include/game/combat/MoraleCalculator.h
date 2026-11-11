@@ -2,7 +2,6 @@
 
 #include "game/combat/MoraleConfig.h"
 
-#include <span>
 #include <string>
 
 namespace ac
@@ -17,7 +16,7 @@ enum class MoraleLifecycle_t
 };
 
 // Morale / XP rank formulas over the game-wide MoraleConfig_t. Combat Attack/Defense
-// scale is CombatAddPercent; named rows keep promotion_chance and planet_pearls.
+// scale is CombatAddPercent; named rows keep promotion eligibility/success and planet_pearls.
 class MoraleCalculator
 {
 public:
@@ -37,16 +36,12 @@ public:
 
     const std::string& DisplayName(int level, MoraleLifecycle_t lifecycle) const;
 
-    // Uses the intrinsic level's effects, not the SE-shifted effective level.
-    double PromotionChance(int xp, int attackStrength, int defenseStrength) const;
+    // Root promotion_eligibility_formula Lua from the survivor's point of view.
+    double PromotionEligibilitySeed(int ourStrength, int theirStrength) const;
 
 private:
     const MoraleConfig_t& m_rConfig;
     LuaRuntime& m_rLua;
 };
-
-// Stack intrinsic-level promotion_chance modifiers on a Lua-computed seed (MoraleCalculator only).
-double ResolvePromotionChanceFromLevel(double seed,
-                                       std::span<const EffectConfig_t> levelEffects);
 
 } // namespace ac

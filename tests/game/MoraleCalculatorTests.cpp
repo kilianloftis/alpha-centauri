@@ -43,49 +43,19 @@ TEST_CASE("MoraleConfigParser loads SMAC defaults", "[morale][config]")
     CHECK(config.defenseFloorIndex == 1);
     CHECK(config.percentPerLevel == Catch::Approx(12.5));
     CHECK(config.baselineIndex == 2);
-    CHECK(config.promotionSeedFormula
-          == "(attack_strength + defense_strength) > 0 and defense_strength / "
-             "(attack_strength + defense_strength) or 0");
+    CHECK(config.promotionEligibilityFormula
+          == "(our_strength + their_strength) > 0 and their_strength / "
+             "(our_strength + their_strength) or 0");
     CHECK(config.levels.size() == 7);
     CHECK(config.levels[4].conventional == "Veteran");
     CHECK(config.levels[4].native == "Mature Boil");
     REQUIRE(config.levels[4].effects.size() == 2);
-    const auto* pPromote =
+    const auto* pSuccess =
         std::get_if<StatModifierEffect_t>(&config.levels[4].effects[0].effect);
-    REQUIRE(pPromote);
-    CHECK(pPromote->stat == StatId_t::PromotionChance);
-    CHECK(pPromote->op == ModifierOp_t::MultiplyGeometric);
-    CHECK(pPromote->amount == Catch::Approx(0.5));
-}
-
-TEST_CASE("ResolvePromotionChanceFromLevel: D/(A+D) with level promotion_chance effects",
-          "[morale][promotion]")
-{
-    const MoraleConfig_t config =
-        MoraleConfigParser{}.ParseConfig(FixturePath("morale_levels.json"));
-    LuaRuntime lua;
-
-    const auto seed = [&](int attack, int defense) {
-        return lua.EvalDouble(config.promotionSeedFormula,
-                              {{"attack_strength",  static_cast<double>(attack)},
-                               {"defense_strength", static_cast<double>(defense)}});
-    };
-
-    // Green: MinClamp 1 → always 100% regardless of fight balance.
-    CHECK(ResolvePromotionChanceFromLevel(seed(100, 0), config.levels[1].effects)
-          == Catch::Approx(1.0));
-
-    // Disciplined: seed D/(A+D) only.
-    CHECK(ResolvePromotionChanceFromLevel(seed(30, 70), config.levels[2].effects)
-          == Catch::Approx(0.7));
-    CHECK(ResolvePromotionChanceFromLevel(seed(0, 0), config.levels[2].effects)
-          == Catch::Approx(0.0));
-
-    // Commando (3–5 band): D/(A+D)/2 (seed ≤ 1, so MaxClamp 1 would never bind).
-    CHECK(ResolvePromotionChanceFromLevel(seed(30, 70), config.levels[5].effects)
-          == Catch::Approx(0.35));
-    CHECK(ResolvePromotionChanceFromLevel(seed(0, 100), config.levels[5].effects)
-          == Catch::Approx(0.5));
+    REQUIRE(pSuccess);
+    CHECK(pSuccess->stat == StatId_t::PromotionSuccessChance);
+    CHECK(pSuccess->op == ModifierOp_t::MultiplyGeometric);
+    CHECK(pSuccess->amount == Catch::Approx(0.5));
 }
 
 TEST_CASE("MoraleConfigParser rejects invalid level effects", "[morale][config]")
@@ -94,7 +64,7 @@ TEST_CASE("MoraleConfigParser rejects invalid level effects", "[morale][config]"
       "defense_floor_index": 0,
       "percent_per_level": 12.5,
       "baseline_index": 0,
-      "promotion_seed_formula": "0",
+      "promotion_eligibility_formula": "0",
       "levels": [{
         "index": 0, "conventional": "X", "native": "Y",
         "effects": [{
@@ -111,7 +81,7 @@ TEST_CASE("MoraleConfigParser requires percent_per_level and baseline_index", "[
 {
     const actest::TempConfigFile config("ac_morale_missing_scale.json", R"({
       "defense_floor_index": 0,
-      "promotion_seed_formula": "0",
+      "promotion_eligibility_formula": "0",
       "levels": [{
         "index": 0, "conventional": "X", "native": "Y",
         "effects": []
@@ -415,6 +385,86 @@ TEST_CASE("morale_rank carries a Unit-domain amount_source without a caller-stam
     CHECK(EffectiveMoraleLevel(unit, ctx, morale) == noBases + 2);
 }
 
+TEST_CASE("CombatPromotionChance: attacker eligibility × success by effective morale",
+          "[morale][promotion]")
+{
+    FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
+    const MoraleCalculator& morale = fixture.morale();
+    EffectContext_t ctx;
+    ctx.pUnit = &unit;
+    ctx.targetTile = &unit.GetTile();
+    ctx.combatRole = CombatRole_t::Attacker;
+
+    unit.SetXp(1);
+    CHECK(CombatPromotionChance(unit, CombatSide_t::Attacker, 100, 0, morale, ctx)
+          == Catch::Approx(1.0));
+    CHECK(CombatPromotionChance(unit, CombatSide_t::Attacker, 30, 70, morale, ctx)
+          == Catch::Approx(1.0));
+
+    unit.SetXp(2);
+    CHECK(CombatPromotionChance(unit, CombatSide_t::Attacker, 30, 70, morale, ctx)
+          == Catch::Approx(0.7));
+    CHECK(CombatPromotionChance(unit, CombatSide_t::Defender, 30, 70, morale, ctx)
+          == Catch::Approx(0.3));
+
+    unit.SetXp(5);
+    CHECK(CombatPromotionChance(unit, CombatSide_t::Attacker, 30, 70, morale, ctx)
+          == Catch::Approx(0.35));
+    CHECK(CombatPromotionChance(unit, CombatSide_t::Attacker, 0, 100, morale, ctx)
+          == Catch::Approx(0.5));
+
+    unit.SetXp(6);
+    CHECK(CombatPromotionChance(unit, CombatSide_t::Attacker, 100, 100, morale, ctx)
+          == Catch::Approx(0.0));
+}
+
+TEST_CASE("CombatPromotionChance: on-base defender MinClamps eligibility at Hardened or below",
+          "[morale][promotion]")
+{
+    FactionFixture fixture;
+    FillLand(fixture.map);
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"}, &base);
+    const MoraleCalculator& morale = fixture.morale();
+    EffectContext_t defCtx;
+    defCtx.pUnit = &unit;
+    defCtx.targetTile = &unit.GetTile();
+    defCtx.combatRole = CombatRole_t::Defender;
+
+    unit.SetXp(2);
+    CHECK(CombatPromotionChance(unit, CombatSide_t::Defender, 30, 70, morale, defCtx)
+          == Catch::Approx(1.0));
+
+    unit.SetXp(3);
+    CHECK(CombatPromotionChance(unit, CombatSide_t::Defender, 30, 70, morale, defCtx)
+          == Catch::Approx(0.5));
+
+    unit.SetXp(4);
+    CHECK(CombatPromotionChance(unit, CombatSide_t::Defender, 30, 70, morale, defCtx)
+          == Catch::Approx(0.15));
+}
+
+TEST_CASE("CombatPromotionChance: field Hardened defender uses A/(A+D) × success",
+          "[morale][promotion]")
+{
+    FactionFixture fixture;
+    FillLand(fixture.map);
+    Faction& faction = fixture.MakeFaction();
+    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
+    unit.SetXp(3);
+    const MoraleCalculator& morale = fixture.morale();
+    EffectContext_t defCtx;
+    defCtx.pUnit = &unit;
+    defCtx.targetTile = &unit.GetTile();
+    defCtx.combatRole = CombatRole_t::Defender;
+
+    CHECK(CombatPromotionChance(unit, CombatSide_t::Defender, 30, 70, morale, defCtx)
+          == Catch::Approx(0.15));
+}
+
 TEST_CASE("Promotion: Green always promotes; Elite never", "[morale][promotion]")
 {
     FactionFixture fixture;
@@ -422,13 +472,17 @@ TEST_CASE("Promotion: Green always promotes; Elite never", "[morale][promotion]"
     Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
     const MoraleCalculator& morale = fixture.morale();
     std::mt19937 rng(1);
+    EffectContext_t ctx;
+    ctx.pUnit = &unit;
+    ctx.targetTile = &unit.GetTile();
+    ctx.combatRole = CombatRole_t::Attacker;
 
     unit.SetXp(1);
-    CHECK(TryPromote(unit, 100, 100, morale, rng));
+    CHECK(TryPromote(unit, CombatSide_t::Attacker, 100, 100, morale, ctx, rng));
     CHECK(unit.GetXp() == 2);
 
     unit.SetXp(6);
-    CHECK_FALSE(TryPromote(unit, 100, 100, morale, rng));
+    CHECK_FALSE(TryPromote(unit, CombatSide_t::Attacker, 100, 100, morale, ctx, rng));
     CHECK(unit.GetXp() == 6);
 }
 
@@ -451,9 +505,9 @@ TEST_CASE("MoraleCalculator value methods read the configured levels", "[morale]
     CHECK(morale.CombatAddPercent(4) == Catch::Approx(25.0));
     CHECK(morale.CombatAddPercent(7) == Catch::Approx(62.5));
 
-    // Green always promotes; Elite has no level above it.
-    CHECK(morale.PromotionChance(1, 100, 100) == Catch::Approx(1.0));
-    CHECK(morale.PromotionChance(6, 100, 100) == 0.0);
+    CHECK(morale.PromotionEligibilitySeed(0, 100) == Catch::Approx(1.0));
+    CHECK(morale.PromotionEligibilitySeed(30, 70) == Catch::Approx(0.7));
+    CHECK(morale.PromotionEligibilitySeed(70, 30) == Catch::Approx(0.3));
 }
 
 TEST_CASE("TryAttack promotes survivor after a kill", "[morale][promotion]")

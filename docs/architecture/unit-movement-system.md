@@ -256,8 +256,11 @@ multiplies the resolved attack rating by that leftover fraction of a point; a fu
 or more leaves attack strength unchanged. The post-combat spend (`SpendAttack`, UnitMutations) is `AttackMoveFragments`: one
 point, or the rest of the turn when `AttackingEndsTurn`, bombarding, or destroying an
 enhancement. After a fight or a
-duel, `UnitAttackExecutor` applies stack collateral when the defender died, then rolls promotion
-for the survivor `PromotionCandidate` names; a strike never promotes.
+duel, `UnitAttackExecutor` applies stack collateral when the defender died, then
+`TryPromote` on the survivor `PromotionCandidate` names (`CombatPromotionChance`:
+eligibility × success from effective morale, `our_strength`/`their_strength`, and live
+effects);
+a strike never promotes.
 
 **Destroy Enhancement.** `D` on a combat unit (`IsCombatUnit`) or Former (`terraform` flag)
 opens a picker of `DestroyEnhancementOptions` on the unit's tile: every non-Base improvement

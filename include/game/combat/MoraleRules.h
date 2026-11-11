@@ -29,6 +29,12 @@ std::optional<CombatSide_t> PromotionCandidate(const CombatResult_t& rResult);
 // False for a captured_on_defeat unit (terranx-map.md "Alien artifacts").
 bool KillEarnsPromotion(const Unit& rDefeated);
 
+// Eligibility × success for the survivor. Uses effective morale; rCtx needs combatRole and
+// targetTile (battle tile) so WorldGlobal base MinClamp and IsDefending can apply.
+double CombatPromotionChance(const Unit& rUnit, CombatSide_t side, int attackStrength,
+                             int defenseStrength, const MoraleCalculator& rMorale,
+                             const EffectContext_t& rCtx);
+
 // Rank word: stated level with combatRole None (SE and home Crèche; not riot or extras).
 const std::string& MoraleDisplayName(const Unit& rUnit, const EffectContext_t& rCtx,
                                      const MoraleCalculator& rMorale);
