@@ -33,9 +33,13 @@ When a question is "what does SMAC do", answer it from the binary, not from the 
 - **Thinker is a lead, not the source.** Its `mod_*` functions follow the original flow but
   change some behaviour, marked `// Fix:`, and config options change more. Confirm every
   conclusion in the disassembly. Note where Thinker differs.
-- **Check the map first.** [`docs/thinker/terranx-map.md`](docs/thinker/terranx-map.md) records
-  what has already been confirmed, with addresses. Add to it whenever you confirm something.
-  Record the address, what the code does, and where Thinker differs.
+- **Check the map first.** [`docs/thinker/terranx-map.md`](docs/thinker/terranx-map.md) and
+  topic files under `docs/thinker/` record what has already been confirmed, with addresses.
+  Add to them whenever you confirm something. Record the address, what the code does, and
+  where Thinker differs.
+- **Addresses and symbols stay in the thinker docs.** Code comments may cite a thinker path
+  and section name. They must not paste `0x…` addresses or SMAC / Thinker symbol names
+  (`world_fungus`, `MapNativeLifeForms`, …). See `coding-guidelines.mdc` on comments.
 - **Branch direction is easy to misread.** A flipped `jl` / `jge` reads plausibly and tests
   written from the same reading won't catch it. For a rule that selects art, say which cell the
   extreme inputs should pick and confirm it from the art and an in-game screenshot.

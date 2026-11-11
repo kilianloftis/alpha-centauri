@@ -1,16 +1,11 @@
 #include "game/worldgen/FungusGeneration.h"
 
 #include "game/map/ImprovementConfigParser.h"
-#include "game/map/MapUtils.h"
 #include "game/map/OccupantCoexistence.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 
-#include <algorithm>
-#include <cmath>
-#include <string_view>
-#include <unordered_set>
-#include <vector>
+#include <random>
 
 namespace ac
 {
@@ -18,22 +13,7 @@ namespace ac
 namespace
 {
 
-// Skew uniform[min, max] toward the small end: size = min + floor(span * u^skew).
-// skew 1 → uniform; higher → more mass near min.
-int SamplePatchSize_(int min, int max, float skew, std::mt19937& rRng)
-{
-    if (min >= max)
-    {
-        return min;
-    }
-
-    std::uniform_real_distribution<float> unit(0.0f, 1.0f);
-    const float u = unit(rRng);
-    const float t = std::pow(u, skew);
-    const int span = max - min + 1;
-    const int size = min + static_cast<int>(t * static_cast<float>(span));
-    return std::min(max, size);
-}
+constexpr int k_FungusFineShift = 4;
 
 bool IsEligible_(const Tile& rTile, const ImprovementConfig_t& rFungus)
 {
@@ -44,157 +24,65 @@ bool IsEligible_(const Tile& rTile, const ImprovementConfig_t& rFungus)
     return CanBuildImprovement(rTile, rFungus, {}, {});
 }
 
-// True if rTile orthogonally touches fungus outside the current patch (would coalesce).
-bool TouchesForeignFungus_(const Tile& rTile, WorldMap& rWorld,
-                           const std::unordered_set<const Tile*>& rPatch,
-                           std::string_view fungusId)
+bool InAnyBand_(int value, const FungusDecorationConfig_t& rConfig, int widening)
 {
-    bool touches = false;
-    ForEachOrthogonalNeighbor(rTile, rWorld, [&](const Tile* pNeighbor)
+    for (const int start : rConfig.bandStarts)
     {
-        if (pNeighbor && pNeighbor->HasTerrainFeature(fungusId) && rPatch.count(pNeighbor) == 0)
+        const int lo = start - widening;
+        const int hi = start + rConfig.bandWidth + 2 * widening;
+        if (value >= lo && value <= hi)
         {
-            touches = true;
+            return true;
         }
-    });
-    return touches;
+    }
+    return false;
 }
 
-// Swap-removes so the draw stays O(1); frontier order carries no meaning.
-Tile* TakeRandom_(std::vector<Tile*>& rFrontier, std::mt19937& rRng)
+bool PoleRowRoll_(const Tile& rTile, int mapHeight, float chance, std::mt19937& rRng)
 {
-    std::uniform_int_distribution<size_t> pick(0, rFrontier.size() - 1);
-    const size_t index = pick(rRng);
-    Tile* pTaken = rFrontier[index];
-    rFrontier[index] = rFrontier.back();
-    rFrontier.pop_back();
-    return pTaken;
-}
-
-int GrowPatch_(WorldMap& rWorld, Tile& rSeed, int targetSize,
-               const ImprovementConfig_t& rFungus, std::mt19937& rRng)
-{
-    if (targetSize <= 0 || !IsEligible_(rSeed, rFungus)
-        || TouchesForeignFungus_(rSeed, rWorld, /*empty patch=*/{}, rFungus.id))
+    if (rTile.GetY() != 0 && rTile.GetY() != mapHeight - 1)
     {
-        return 0;
+        return false;
     }
-
-    std::unordered_set<const Tile*> patch;
-    rSeed.AddTerrainFeature(rFungus);
-    patch.insert(&rSeed);
-    int placed = 1;
-    if (placed >= targetSize)
+    if (chance <= 0.0f)
     {
-        return placed;
+        return false;
     }
-
-    // At most one frontier slot per tile, however many patch members reach it, so every draw
-    // is a distinct candidate.
-    std::unordered_set<const Tile*> enqueued{&rSeed};
-    std::vector<Tile*> frontier;
-    auto enqueue = [&](Tile* pNeighbor) {
-        if (IsEligible_(*pNeighbor, rFungus)
-            && !TouchesForeignFungus_(*pNeighbor, rWorld, patch, rFungus.id)
-            && enqueued.insert(pNeighbor).second)
-        {
-            frontier.push_back(pNeighbor);
-        }
-    };
-
-    ForEachOrthogonalNeighbor(rSeed, rWorld, enqueue);
-
-    while (placed < targetSize && !frontier.empty())
+    if (chance >= 1.0f)
     {
-        Tile* pNext = TakeRandom_(frontier, rRng);
-        if (!pNext || !IsEligible_(*pNext, rFungus)
-            || TouchesForeignFungus_(*pNext, rWorld, patch, rFungus.id))
-        {
-            continue;
-        }
-
-        pNext->AddTerrainFeature(rFungus);
-        patch.insert(pNext);
-        ++placed;
-
-        ForEachOrthogonalNeighbor(*pNext, rWorld, enqueue);
+        return true;
     }
-
-    return placed;
-}
-
-std::vector<Tile*> EligibleTiles_(WorldMap& rWorld, const ImprovementConfig_t& rFungus)
-{
-    std::vector<Tile*> candidates;
-    for (auto& pTile : rWorld.GetTiles())
-    {
-        if (pTile && IsEligible_(*pTile, rFungus))
-        {
-            candidates.push_back(pTile.get());
-        }
-    }
-    return candidates;
-}
-
-void PlacePatches_(WorldMap& rWorld,
-                   float fraction,
-                   int minPatch,
-                   int maxPatch,
-                   float sizeSkew,
-                   const ImprovementConfig_t& rFungus,
-                   std::mt19937& rRng)
-{
-    if (fraction <= 0.0f || maxPatch < 1)
-    {
-        return;
-    }
-
-    std::vector<Tile*> candidates = EligibleTiles_(rWorld, rFungus);
-    if (candidates.empty())
-    {
-        return;
-    }
-
-    const float share = fraction * static_cast<float>(candidates.size());
-    const int targetTotal = static_cast<int>(std::lround(share));
-    if (targetTotal <= 0)
-    {
-        return;
-    }
-
-    const int patchMin = std::max(1, minPatch);
-    const int patchMax = std::max(patchMin, maxPatch);
-
-    std::shuffle(candidates.begin(), candidates.end(), rRng);
-    size_t candidateIndex = 0;
-    int remaining = targetTotal;
-
-    while (remaining > 0 && candidateIndex < candidates.size())
-    {
-        Tile* pSeed = candidates[candidateIndex++];
-        if (!pSeed || !IsEligible_(*pSeed, rFungus)
-            || TouchesForeignFungus_(*pSeed, rWorld, /*empty=*/{}, rFungus.id))
-        {
-            continue;
-        }
-
-        const int desired = std::min(
-            remaining, SamplePatchSize_(patchMin, patchMax, sizeSkew, rRng));
-        const int grown = GrowPatch_(rWorld, *pSeed, desired, rFungus, rRng);
-        remaining -= grown;
-    }
+    std::uniform_real_distribution<float> unit(0.0f, 1.0f);
+    return unit(rRng) < chance;
 }
 
 } // namespace
 
-void PlaceFungus(WorldMap& rWorld, const FungusDecorationConfig_t& rConfig,
-                 const ImprovementConfig_t& rFungus, std::mt19937& rRng)
+void PlaceFungus(WorldMap& rWorld, const FungusDecorationConfig_t& rConfig, int bandWidening,
+                 const ImprovementConfig_t& rFungus, const SmacFractal& rFractal,
+                 std::mt19937& rRng)
 {
-    const int minPatch = std::max(1, rConfig.minPatchTiles);
-    const int maxPatch = std::max(minPatch, rConfig.maxPatchTiles);
+    if (rConfig.bandStarts.empty())
+    {
+        return;
+    }
 
-    PlacePatches_(rWorld, rConfig.fraction, minPatch, maxPatch, rConfig.patchSizeSkew, rFungus,
-                  rRng);
+    const int height = rWorld.GetHeight();
+    for (const std::unique_ptr<Tile>& pTile : rWorld.GetTiles())
+    {
+        Tile& rTile = *pTile;
+        if (!IsEligible_(rTile, rFungus))
+        {
+            continue;
+        }
+
+        const int value = rFractal.Value(rTile.GetX(), rTile.GetY(), k_FungusFineShift);
+        if (InAnyBand_(value, rConfig, bandWidening)
+            || PoleRowRoll_(rTile, height, rConfig.poleRowChance, rRng))
+        {
+            rTile.AddTerrainFeature(rFungus);
+        }
+    }
 }
 
 } // namespace ac

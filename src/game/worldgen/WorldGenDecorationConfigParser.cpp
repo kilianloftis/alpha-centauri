@@ -148,35 +148,50 @@ AquiferDecorationConfig_t ParseAquifers_(const nlohmann::json& rJson)
 FungusDecorationConfig_t ParseFungus_(const nlohmann::json& rJson)
 {
     FungusDecorationConfig_t config;
-    if (!rJson.contains("fraction"))
+    if (!rJson.contains("band_starts") || !rJson.at("band_starts").is_array()
+        || rJson.at("band_starts").empty())
     {
         throw std::runtime_error(
-            "world gen decoration fungus missing required field 'fraction'");
+            "world gen decoration fungus.band_starts must be a non-empty array");
     }
-    config.fraction = rJson.at("fraction").get<float>();
-    config.minPatchTiles = rJson.value("min_patch_tiles", config.minPatchTiles);
-    config.maxPatchTiles = rJson.value("max_patch_tiles", config.maxPatchTiles);
-    config.patchSizeSkew = rJson.value("patch_size_skew", config.patchSizeSkew);
+    if (!rJson.contains("band_width"))
+    {
+        throw std::runtime_error(
+            "world gen decoration fungus missing required field 'band_width'");
+    }
+    if (!rJson.contains("pole_row_chance"))
+    {
+        throw std::runtime_error(
+            "world gen decoration fungus missing required field 'pole_row_chance'");
+    }
 
-    if (config.fraction < 0.0f || config.fraction > 1.0f)
+    config.bandStarts.clear();
+    for (const nlohmann::json& rStart : rJson.at("band_starts"))
     {
-        throw std::runtime_error(
-            "world gen decoration fungus.fraction must be in [0, 1]");
+        if (!rStart.is_number_integer())
+        {
+            throw std::runtime_error(
+                "world gen decoration fungus.band_starts entries must be integers");
+        }
+        const int start = rStart.get<int>();
+        if (start < 0 || start > 100)
+        {
+            throw std::runtime_error(
+                "world gen decoration fungus.band_starts entries must be in [0, 100]");
+        }
+        config.bandStarts.push_back(start);
     }
-    if (config.minPatchTiles < 1)
+    config.bandWidth = rJson.at("band_width").get<int>();
+    if (config.bandWidth < 0)
     {
         throw std::runtime_error(
-            "world gen decoration fungus.min_patch_tiles must be >= 1");
+            "world gen decoration fungus.band_width must be >= 0");
     }
-    if (config.maxPatchTiles < config.minPatchTiles)
+    config.poleRowChance = rJson.at("pole_row_chance").get<float>();
+    if (config.poleRowChance < 0.0f || config.poleRowChance > 1.0f)
     {
         throw std::runtime_error(
-            "world gen decoration fungus.max_patch_tiles must be >= min_patch_tiles");
-    }
-    if (config.patchSizeSkew < 1.0f)
-    {
-        throw std::runtime_error(
-            "world gen decoration fungus.patch_size_skew must be >= 1");
+            "world gen decoration fungus.pole_row_chance must be in [0, 1]");
     }
     return config;
 }

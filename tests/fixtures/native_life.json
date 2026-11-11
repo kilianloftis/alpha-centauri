@@ -28,7 +28,8 @@
           }
         }
       ],
-      "fauna_forms": 0
+      "fauna_forms": 0,
+      "fungus_band_widening": -1
     },
     {
       "id": "normal",
@@ -44,7 +45,8 @@
           }
         }
       ],
-      "fauna_forms": 1
+      "fauna_forms": 1,
+      "fungus_band_widening": 0
     },
     {
       "id": "abundant",
@@ -60,7 +62,8 @@
           }
         }
       ],
-      "fauna_forms": 2
+      "fauna_forms": 2,
+      "fungus_band_widening": 1
     }
   ]
 }

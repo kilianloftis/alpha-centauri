@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 namespace ac
 {
 
@@ -38,15 +40,14 @@ struct AquiferDecorationConfig_t
     float fraction = 0.02f;
 };
 
-// Fungus patches grow orthogonally to min + floor((max-min+1) * u^patchSizeSkew) tiles;
-// skew 1 is uniform.
+// Fungus bands (docs/thinker/smac-world-generation.md). A tile gets fungus when its fractal
+// value lies in [start − widening, start + band_width + 2 · widening] for any start; pole rows
+// may also roll.
 struct FungusDecorationConfig_t
 {
-    // Target fraction of tiles the fungus entry can occupy (CanBuildImprovement).
-    float fraction = 0.08f;
-    int minPatchTiles = 1;
-    int maxPatchTiles = 16;
-    float patchSizeSkew = 4.0f;   // >= 1; higher weights the small end of the range
+    std::vector<int> bandStarts{20, 40, 60};
+    int bandWidth = 5;
+    float poleRowChance = 0.5f;
 };
 
 // Frequency-weighted tile bonuses (Nutrients/Minerals/Energy/Monolith, …).

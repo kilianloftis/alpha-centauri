@@ -266,6 +266,7 @@ add_library(ac-core STATIC
     game/map/WorldMap.cpp
     game/map/RegionRules.cpp
     game/map/RegionCache.cpp
+    game/map/SmacFractal.cpp
     game/worldgen/WorldGenerator.cpp
     game/stages/CustomTurnStage.cpp
     lib/Rational.cpp

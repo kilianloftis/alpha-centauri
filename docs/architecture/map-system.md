@@ -184,7 +184,7 @@ Territory overlap between factions is broken by lattice crow-flies distance (`p�
 ```mermaid
 graph LR
     Elevation[Elevation<br/>FBM noise + landmass mask] --> Rockiness[Rockiness<br/>erosive-forces weights]
-    Rockiness --> Fungus[Fungus patches]
+    Rockiness --> Fungus[Fungus<br/>SMAC fractal bands]
     Fungus --> Landmarks[Landmarks<br/>stamp + sculpt]
     Landmarks --> SupplyPods[Supply pods<br/>global + wreckage]
     SupplyPods --> Rivers[Aquifers + RecomputeRivers]
@@ -197,7 +197,7 @@ graph LR
 - **Supply pods after landmarks, before bonuses**: `Supply_Pod` (`config/terrain.json`, `frequency: 0`) is placed by `PlaceGlobalSupplyPods` / `PlaceWreckageSupplyPods` from each `event_groups` entry in `config/supply_pods.json` (`placement.domain` filters eligible tiles). Placement stamps the event group's `id` into `SupplyPodIndex`; open resolves the table from that stamp, not the tile's current surface. Earlier landmarks win contested tiles; pods then beat later bonuses / random Monoliths via mutual `excludes`. `GameRulesConfig_t::noUnityScattering` skips global and wreckage scatter. Start-ring pods (`PlaceStartSupplyPods`) land when factions found, after world gen.
 - **Bonuses last**: landmarks exclude `@resource_bonus`, so bonuses must be placed against a tile set that already has its landmarks (and pods).
 - **Rain after rivers**: `RecomputeRainfall` ports SMAC's `world_rainfall`, which reads rivers and landmarks, so it runs after both, as in `world_climate`. It writes base moisture; on a new world each tile's moisture is then its base.
-- **Fungus before landmarks**: `PlaceFungus` covers `decoration.json`'s `fungus.fraction` of the tiles the fungus entry can occupy, land and water in one pool. It reads neither rivers nor moisture, and `TheRuins` sets fungus on its own footprint.
+- **Fungus before landmarks**: `PlaceFungus` marks tiles whose SMAC lattice-fractal value falls in `decoration.json`'s fungus bands, widened by the session's native life `fungus_band_widening` (rare −1, normal 0, abundant +1). Land and sea alike; deep ocean keeps the fungus dormant via `suppress_terrain`. It reads neither rivers nor moisture, and `TheRuins` sets fungus on its own footprint. See [smac-world-generation.md](../thinker/smac-world-generation.md).
 - **Aquifers**: `GenerateAquifers_` covers `aquifers.fraction` of the tiles the Aquifer entry can occupy. The shipping entry's `domain` is land, so water tiles stay out of that pool.
 - **Rivers are a fixed point**: re-running `RecomputeRivers` on a finished world changes nothing. `WorldGenPipelineTests` pins this as the invariant of a correct order.
 - **One seed**: the caller (composition root) resolves one session seed and passes it in; every stage draws from `m_rng`. `MapGenerationConfig_t::seed` is the *request* (`0` = pick one), never re-read during generation — otherwise the seed reported for a session could not reproduce it.

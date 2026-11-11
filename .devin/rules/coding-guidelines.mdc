@@ -35,8 +35,10 @@ unless a change touches it. A change that breaks one is not finished.
    `// like StockpileId_t`) — match neighboring silence instead (`using FooId_t = std::string`
    ships bare when its neighbors do). History belongs in the commit message; subsystem design
    belongs in `docs/architecture/`; confirmed SMAC behavior belongs in
-   `docs/thinker/terranx-map.md`, which a one-line comment can cite. A change that makes a
-   comment wrong or redundant fixes or deletes it.
+   `docs/thinker/` (usually `terranx-map.md` or a topic file there), which a one-line comment
+   can cite by path and section. Never put binary addresses (`0x…`) or SMAC / Thinker symbol
+   names (`world_fungus`, `MapNativeLifeForms`, `BIT_FUNGUS`, …) in code comments — those stay
+   in the thinker doc. A change that makes a comment wrong or redundant fixes or deletes it.
 3. **No guards for cases that cannot happen.** Do not null-check a reference, or a pointer the code
    already guarantees. Do not re-check what a parser validated at load. A pointer that must not be
    null throws; never `continue` or `return` past it silently. A parser requires every key whose

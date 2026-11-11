@@ -16,8 +16,12 @@ struct NativeLifeLevel_t
 {
     std::string id;
     std::string name;
-    // SMAC MapNativeLifeForms (rare/normal/abundant → 0/1/2). Feeds Planet fauna formulas.
+    // Rare/normal/abundant → 0/1/2. Feeds Planet fauna formulas
+    // (docs/thinker/terranx-map.md, Native life scaling).
     int faunaForms = 0;
+    // Widens world-gen fungus bands: rare −1, normal 0, abundant +1
+    // (docs/thinker/smac-world-generation.md).
+    int fungusBandWidening = 0;
     std::vector<EffectConfig_t> effects;
 };
 

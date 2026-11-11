@@ -86,9 +86,6 @@ lighting get their own plan once SMAC's landmark placement is reverse-engineered
     their art like every other object.
 - **Map content.** `decoration.json` takes SMAC's world-builder amounts at average settings
   (`alphax.txt` `#WORLDBUILDER`, placement as in Thinker's `mapgen.cpp`):
-  - `fungus.fraction` 0.29: SMAC marks tiles whose noise falls in three bands, widened by the
-    native-life setting, which covers 14%, 29% and 44% of tiles for rare, average and
-    abundant life.
   - `aquifers.fraction` 0.02: SMAC seeds `tiles · (4 − ocean) · (16 + 16 · cloud) / 9600`
     river sources, 1% of tiles or about 2% of land at average ocean and clouds. On a 200 × 150
     pangea that gives rivers on 12% of land.
@@ -106,7 +103,7 @@ lighting get their own plan once SMAC's landmark placement is reverse-engineered
    sprites; `RenderObjects` / `Render` take the nutrient yield.
 6. `WorldDisplay`: pass the yield lookup; drop the sensor and Monolith markers and their
    style keys.
-7. `decoration.json`: SMAC's fungus and river-source fractions.
+7. `decoration.json`: SMAC's river-source fraction (fungus bands are in `smac-fungus-generation.md`).
 8. Tests:
    - seat at the corner mean;
    - link cells for each direction, tube over road, hubs, base tiles;

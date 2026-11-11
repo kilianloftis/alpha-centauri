@@ -481,10 +481,13 @@ void Engine::GenerateWorld_()
     const MapGenerationConfig_t& rWorldConfig = m_pSettings->GetMapGeneration();
     const WorldGenPresetConfig_t& rPreset =
         m_gameDataContext->worldGenPresetRegistry->Get(rWorldConfig.presetId);
+    const NativeLifeLevel_t& rNativeLife = m_gameDataContext->nativeLifeConfig->RequireForSession(
+        m_pSettings->GetGameRules().nativeLifeLevelId);
     WorldGenerator worldGen;
     auto pSupplyPods = std::make_unique<SupplyPodIndex>();
     std::unique_ptr<WorldMap> pWorld =
         worldGen.Generate(rWorldConfig, rPreset, *m_gameDataContext->worldGenDecorationConfig,
+                          rNativeLife.fungusBandWidening,
                           m_gameDataContext->worldGenLandmarks,
                           *m_gameDataContext->improvementRegistry,
                           m_gameDataContext->mapRules,
