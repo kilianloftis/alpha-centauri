@@ -1,10 +1,8 @@
 #include "game/worldgen/WorldGenDecorationConfigParser.h"
-#include "game/worldgen/MapGenerationConfig.h"
-#include "lib/config/EnumNames.h"
 
-#include <magic_enum.hpp>
 #include <fstream>
 #include <nlohmann/json.hpp>
+#include <optional>
 #include <stdexcept>
 #include <string>
 
@@ -69,26 +67,32 @@ MoistureDecorationConfig_t ParseMoisture_(const nlohmann::json& rJson)
     return config;
 }
 
-RockinessWeights_t ParseRockinessWeights_(const nlohmann::json& rJson, const char* levelName)
+RockinessWeights_t ParseRockinessWeights_(const nlohmann::json& rJson, const char* pContext)
 {
+    if (!rJson.is_object() || !rJson.contains("flat") || !rJson.contains("rolling")
+        || !rJson.contains("rocky"))
+    {
+        throw std::runtime_error(
+            std::string("world gen decoration ") + pContext
+            + " must be an object with flat, rolling, and rocky");
+    }
+
     RockinessWeights_t weights;
-    weights.flat = rJson.value("flat", weights.flat);
-    weights.rolling = rJson.value("rolling", weights.rolling);
-    weights.rocky = rJson.value("rocky", weights.rocky);
+    weights.flat = rJson.at("flat").get<float>();
+    weights.rolling = rJson.at("rolling").get<float>();
+    weights.rocky = rJson.at("rocky").get<float>();
 
     if (weights.flat < 0.0f || weights.rolling < 0.0f || weights.rocky < 0.0f)
     {
         throw std::runtime_error(
-            std::string("world gen decoration rockiness.") + levelName
-            + " weights must be >= 0");
+            std::string("world gen decoration ") + pContext + " weights must be >= 0");
     }
 
     const float total = weights.flat + weights.rolling + weights.rocky;
     if (total <= 0.0f)
     {
         throw std::runtime_error(
-            std::string("world gen decoration rockiness.") + levelName
-            + " weights must sum to > 0");
+            std::string("world gen decoration ") + pContext + " weights must sum to > 0");
     }
 
     weights.flat /= total;
@@ -97,34 +101,64 @@ RockinessWeights_t ParseRockinessWeights_(const nlohmann::json& rJson, const cha
     return weights;
 }
 
-RockinessWeights_t& WeightsSlot_(RockinessDecorationConfig_t& rConfig, ErosiveForces_t level)
-{
-    switch (level)
-    {
-    case ErosiveForces_t::Low:
-        return rConfig.low;
-    case ErosiveForces_t::Average:
-        return rConfig.average;
-    case ErosiveForces_t::High:
-        return rConfig.high;
-    }
-    throw std::runtime_error("Unknown erosive forces level");
-}
-
 RockinessDecorationConfig_t ParseRockiness_(const nlohmann::json& rJson)
 {
-    RockinessDecorationConfig_t config;
-    for (const ErosiveForces_t level : magic_enum::enum_values<ErosiveForces_t>())
+    if (!rJson.contains("poles") || !rJson.contains("bands") || !rJson.at("bands").is_array()
+        || rJson.at("bands").empty())
     {
-        const std::string key = EnumToLowerName(level);
-        if (!rJson.contains(key))
+        throw std::runtime_error(
+            "world gen decoration rockiness requires poles and a non-empty bands array");
+    }
+
+    RockinessDecorationConfig_t config;
+    config.poles = ParseRockinessWeights_(rJson.at("poles"), "rockiness.poles");
+    config.bands.clear();
+
+    const nlohmann::json& rBands = rJson.at("bands");
+    const size_t bandCount = rBands.size();
+    std::optional<int> previousMax;
+    for (size_t i = 0; i < bandCount; ++i)
+    {
+        const nlohmann::json& rBand = rBands.at(i);
+        if (!rBand.is_object())
+        {
+            throw std::runtime_error("world gen decoration rockiness.bands entries must be objects");
+        }
+
+        const bool bLast = (i + 1 == bandCount);
+        const bool bHasMax = rBand.contains("max_elevation_above_ocean_meters");
+        if (bLast && bHasMax)
         {
             throw std::runtime_error(
-                "world gen decoration rockiness missing required level '" + key + "'");
+                "world gen decoration rockiness.bands last entry must omit "
+                "max_elevation_above_ocean_meters");
         }
-        WeightsSlot_(config, level) =
-            ParseRockinessWeights_(rJson.at(key), key.c_str());
+        if (!bLast && !bHasMax)
+        {
+            throw std::runtime_error(
+                "world gen decoration rockiness.bands non-final entries require "
+                "max_elevation_above_ocean_meters");
+        }
+
+        RockinessBand_t band;
+        if (bHasMax)
+        {
+            const int maxElevation = rBand.at("max_elevation_above_ocean_meters").get<int>();
+            if (previousMax.has_value() && maxElevation <= *previousMax)
+            {
+                throw std::runtime_error(
+                    "world gen decoration rockiness.bands max_elevation_above_ocean_meters "
+                    "must be strictly increasing");
+            }
+            band.maxElevationAboveOceanMeters = maxElevation;
+            previousMax = maxElevation;
+        }
+
+        const std::string weightContext = "rockiness.bands[" + std::to_string(i) + "]";
+        band.weights = ParseRockinessWeights_(rBand, weightContext.c_str());
+        config.bands.push_back(band);
     }
+
     return config;
 }
 

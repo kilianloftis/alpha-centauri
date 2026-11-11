@@ -183,13 +183,13 @@ Territory overlap between factions is broken by lattice crow-flies distance (`p�
 
 ```mermaid
 graph LR
-    Elevation[Elevation<br/>FBM noise + landmass mask] --> Rockiness[Rockiness<br/>erosive-forces weights]
-    Rockiness --> Fungus[Fungus<br/>SMAC fractal bands]
+    Elevation[Elevation<br/>FBM noise + landmass mask] --> Fungus[Fungus<br/>SMAC fractal bands]
     Fungus --> Landmarks[Landmarks<br/>stamp + sculpt]
     Landmarks --> SupplyPods[Supply pods<br/>global + wreckage]
     SupplyPods --> Rivers[Aquifers + RecomputeRivers]
     Rivers --> Rainfall[RecomputeRainfall<br/>base moisture]
-    Rainfall --> Bonuses[Tile bonuses]
+    Rainfall --> Rockiness[Rockiness<br/>elevation-weight bands]
+    Rockiness --> Bonuses[Tile bonuses]
 ```
 
 - **Ocean depth**: water takes how far below the waterline its noise sits (0–1), raised to the preset's `ocean_depth_exponent`, as a share of `min_elevation`. Below 1 the sea deepens quickly off the coast, so the shelf (above `ocean_shelf_meters`) stays a coastal band and the open sea renders as SMAC's deep blue; the shipping presets use 0.6.
@@ -197,10 +197,11 @@ graph LR
 - **Supply pods after landmarks, before bonuses**: `Supply_Pod` (`config/terrain.json`, `frequency: 0`) is placed by `PlaceGlobalSupplyPods` / `PlaceWreckageSupplyPods` from each `event_groups` entry in `config/supply_pods.json` (`placement.domain` filters eligible tiles). Placement stamps the event group's `id` into `SupplyPodIndex`; open resolves the table from that stamp, not the tile's current surface. Earlier landmarks win contested tiles; pods then beat later bonuses / random Monoliths via mutual `excludes`. `GameRulesConfig_t::noUnityScattering` skips global and wreckage scatter. Start-ring pods (`PlaceStartSupplyPods`) land when factions found, after world gen.
 - **Bonuses last**: landmarks exclude `@resource_bonus`, so bonuses must be placed against a tile set that already has its landmarks (and pods).
 - **Rain after rivers**: `RecomputeRainfall` ports SMAC's `world_rainfall`, which reads rivers and landmarks, so it runs after both, as in `world_climate`. It writes base moisture; on a new world each tile's moisture is then its base.
-- **Fungus before landmarks**: `PlaceFungus` marks tiles whose SMAC lattice-fractal value falls in `decoration.json`'s fungus bands, widened by the session's native life `fungus_band_widening` (rare −1, normal 0, abundant +1). Land and sea alike; deep ocean keeps the fungus dormant via `suppress_terrain`. It reads neither rivers nor moisture, and `TheRuins` sets fungus on its own footprint. See [smac-world-generation.md](../thinker/smac-world-generation.md).
+- **Fungus before landmarks**: `PlaceFungus` marks tiles whose SMAC lattice-fractal value falls in `decoration.json`'s fungus bands, widened by the session's native life `fungus_band_widening` (rare −1, normal 0, abundant +1). Land and sea alike; deep ocean keeps the fungus dormant via `suppress_terrain`. It reads neither rivers, moisture, nor rockiness, and `TheRuins` sets fungus on its own footprint. See [smac-world-generation.md](../thinker/smac-world-generation.md).
+- **Rockiness after climate**: `PlaceRockiness` draws Flat / Rolling / Rocky from `decoration.json` elevation-weight bands (and a separate pole-row weight triple). It runs after landmarks and rainfall so sculpted peaks see their final elevation. Vanilla SMAC uses `minerals_at` instead; see [smac-world-generation.md](../thinker/smac-world-generation.md). `ErosiveForces_t` remains a map-settings knob but does not drive this stage.
 - **Aquifers**: `GenerateAquifers_` covers `aquifers.fraction` of the tiles the Aquifer entry can occupy. The shipping entry's `domain` is land, so water tiles stay out of that pool.
 - **Rivers are a fixed point**: re-running `RecomputeRivers` on a finished world changes nothing. `WorldGenPipelineTests` pins this as the invariant of a correct order.
-- **One seed**: the caller (composition root) resolves one session seed and passes it in; every stage draws from `m_rng`. `MapGenerationConfig_t::seed` is the *request* (`0` = pick one), never re-read during generation — otherwise the seed reported for a session could not reproduce it.
+- **One seed**: the caller (composition root) resolves one session seed and passes it in; every stage that draws randomness uses `m_rng` (including rockiness weight draws). `MapGenerationConfig_t::seed` is the *request* (`0` = pick one), never re-read during generation — otherwise the seed reported for a session could not reproduce it.
 
 ### Climate in play
 

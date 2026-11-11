@@ -254,6 +254,7 @@ add_library(ac-core STATIC
     game/worldgen/LandmarkConfigParser.cpp
     game/worldgen/LandmarkGeneration.cpp
     game/worldgen/FungusGeneration.cpp
+    game/worldgen/RockinessGeneration.cpp
     game/ecology/FungalBloom.cpp
     game/combat/ExplosionMutations.cpp
     game/combat/ExplosionRules.cpp

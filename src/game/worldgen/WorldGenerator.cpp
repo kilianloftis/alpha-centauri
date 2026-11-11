@@ -16,6 +16,7 @@
 #include "game/worldgen/RockinessGeneration.h"
 #include "game/map/SmacFractal.h"
 
+
 #include <algorithm>
 #include <string>
 #include <chrono>
@@ -118,10 +119,10 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
     }
 
     // Landmarks are the last stage to change elevation or stamp terminates_river, so rivers follow
-    // them; rain follows rivers (SMAC world_climate order); supply pods precede bonuses so pods
-    // win contested tiles; bonuses stay last among object stamps for their excludes.
+    // them; rain follows rivers (SMAC world_climate order); rockiness follows climate so it sees
+    // final elevations; supply pods precede bonuses so pods win contested tiles; bonuses stay last
+    // among object stamps for their excludes.
     GenerateElevation_(*pWorld, rConfig, rPreset);
-    GenerateRockiness_(*pWorld, rConfig.erosiveForces, rDecoration.rockiness);
     const ImprovementConfig_t& rFungus = rOccupants.Get(std::string(ImprovementIds::k_Fungus));
     const SmacFractal fungusFractal(m_rng);
     PlaceFungus(*pWorld, rDecoration.fungus, fungusBandWidening, rFungus, fungusFractal, m_rng);
@@ -135,6 +136,7 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
     GenerateAquifers_(*pWorld, rDecoration.aquifers, rOccupants);
     moisture_gen::RecomputeRainfall(*pWorld, rDecoration.moisture);
     ApplyBaseMoisture_(*pWorld);
+    PlaceRockiness(*pWorld, rDecoration.rockiness, m_rng);
     PlaceTileBonuses(*pWorld, rDecoration.tileBonuses, rOccupants, m_rng);
 
     return pWorld;
@@ -233,21 +235,6 @@ float WorldGenerator::ApplyLandmassMask_(float noiseValue,
     return value;
 }
 
-void WorldGenerator::GenerateRockiness_(WorldMap& rWorld,
-                                        ErosiveForces_t erosiveForces,
-                                        const RockinessDecorationConfig_t& rRockiness)
-{
-    using namespace rockiness_gen;
-
-    const RockinessWeights_t& rWeights = WeightsForLevel(rRockiness, erosiveForces);
-
-    for (const auto& pTile : rWorld.GetTiles())
-    {
-        const Rockiness_t rockiness = SampleRockiness(rWeights, RandomFloat_());
-        pTile->SetRockiness(rockiness);
-    }
-}
-
 void WorldGenerator::GenerateAquifers_(WorldMap& rWorld,
                                        const AquiferDecorationConfig_t& rAquifers,
                                        const ImprovementRegistry& rOccupants)
@@ -275,12 +262,6 @@ void WorldGenerator::GenerateAquifers_(WorldMap& rWorld,
     }
 
     RecomputeRivers(rWorld);
-}
-
-float WorldGenerator::RandomFloat_()
-{
-    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
-    return dist(m_rng);
 }
 
 } // namespace ac

@@ -1,57 +1,23 @@
 #pragma once
 
-#include "game/worldgen/MapGenerationConfig.h"
 #include "game/map/Tile.h"
+#include "game/map/WorldMap.h"
 #include "game/worldgen/WorldGenDecorationConfig.h"
 
-#include <algorithm>
-#include <stdexcept>
+#include <random>
 
 namespace ac
 {
-namespace rockiness_gen
-{
 
-inline const RockinessWeights_t& WeightsForLevel(const RockinessDecorationConfig_t& rConfig,
-                                                 ErosiveForces_t level)
-{
-    switch (level)
-    {
-    case ErosiveForces_t::Low:
-        return rConfig.low;
-    case ErosiveForces_t::Average:
-        return rConfig.average;
-    case ErosiveForces_t::High:
-        return rConfig.high;
-    }
-    throw std::runtime_error("Unknown erosive forces level");
-}
+// Band whose half-open elevation range owns elevationAboveOcean (last band is unbounded above).
+const RockinessBand_t& BandForElevation(const RockinessDecorationConfig_t& rConfig,
+                                        int elevationAboveOcean);
 
-// u in [0, 1). Weights are expected non-negative; zero-sum throws.
-inline Rockiness_t SampleRockiness(const RockinessWeights_t& rWeights, float u)
-{
-    u = std::clamp(u, 0.0f, 1.0f);
-    const float flat = std::max(0.0f, rWeights.flat);
-    const float rolling = std::max(0.0f, rWeights.rolling);
-    const float rocky = std::max(0.0f, rWeights.rocky);
-    const float total = flat + rolling + rocky;
-    if (total <= 0.0f)
-    {
-        throw std::runtime_error("Invalid rockiness weights");
-    }
+// u in [0, 1). Weights are expected non-negative after parse normalization; zero-sum throws.
+Rockiness_t SampleRockiness(const RockinessWeights_t& rWeights, float u);
 
-    const float flatEnd = flat / total;
-    const float rollingEnd = flatEnd + rolling / total;
-    if (u < flatEnd)
-    {
-        return Rockiness_t::Flat;
-    }
-    if (u < rollingEnd)
-    {
-        return Rockiness_t::Rolling;
-    }
-    return Rockiness_t::Rocky;
-}
+// Staggered scan: pole rows sample poles weights; others sample BandForElevation.
+void PlaceRockiness(WorldMap& rWorld, const RockinessDecorationConfig_t& rConfig,
+                    std::mt19937& rRng);
 
-} // namespace rockiness_gen
 } // namespace ac

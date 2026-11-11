@@ -7,21 +7,14 @@
     "peak_min_elevation_meters": 3000
   },
   "rockiness": {
-    "low": {
-      "flat": 0.45,
-      "rolling": 0.35,
-      "rocky": 0.2
-    },
-    "average": {
-      "flat": 0.55,
-      "rolling": 0.35,
-      "rocky": 0.1
-    },
-    "high": {
-      "flat": 0.7,
-      "rolling": 0.25,
-      "rocky": 0.05
-    }
+    "poles": { "flat": 0.0, "rolling": 0.0, "rocky": 1.0 },
+    "bands": [
+      { "max_elevation_above_ocean_meters": 0, "flat": 0.55, "rolling": 0.35, "rocky": 0.1 },
+      { "max_elevation_above_ocean_meters": 1000, "flat": 0.5, "rolling": 0.35, "rocky": 0.15 },
+      { "max_elevation_above_ocean_meters": 2000, "flat": 0.4, "rolling": 0.4, "rocky": 0.2 },
+      { "max_elevation_above_ocean_meters": 3000, "flat": 0.3, "rolling": 0.4, "rocky": 0.3 },
+      { "flat": 0.2, "rolling": 0.35, "rocky": 0.45 }
+    ]
   },
   "aquifers": {
     "fraction": 0.02

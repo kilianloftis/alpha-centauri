@@ -46,9 +46,6 @@ private:
     void GenerateElevation_(WorldMap& rWorld,
                             const MapGenerationConfig_t& rConfig,
                             const WorldGenPresetConfig_t& rPreset);
-    void GenerateRockiness_(WorldMap& rWorld,
-                            ErosiveForces_t erosiveForces,
-                            const RockinessDecorationConfig_t& rRockiness);
     void GenerateAquifers_(WorldMap& rWorld, const AquiferDecorationConfig_t& rAquifers,
                            const ImprovementRegistry& rOccupants);
 
@@ -59,8 +56,6 @@ private:
                              float nx,
                              float ny,
                              const WorldGenPresetConfig_t& rPreset) const;
-
-    float RandomFloat_();
 };
 
 } // namespace ac

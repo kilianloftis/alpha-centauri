@@ -11,6 +11,8 @@ life).
 
 `world_build` (`0x5C86E0`) runs `world_fungus` (`0x5C3440`) after the continents, erosion,
 shorelines, temperature and river sources, and before the landmarks and `world_rocky`.
+Rockiness is a later stage ([smac-rockiness-minerals-at.md](smac-rockiness-minerals-at.md));
+fungus does not wait on it and does not filter by rocky tiles.
 
 - **Fractal** (`0x5C1E20` fills it, `0x5C1F20` samples it). A 16 × 16 lattice of random values
   0–15 that wraps on both axes, one cell every 256 units. `Sample(x, y)`:

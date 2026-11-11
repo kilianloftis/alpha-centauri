@@ -5,8 +5,7 @@
 namespace ac
 {
 
-// Hardcoded new-game menu options for rockiness frequency.
-// Higher erosion → flatter terrain (classic SMAC). Weights live in decoration.json.
+// Classic SMAC erosive-forces menu setting on the session's map knobs.
 enum class ErosiveForces_t
 {
     Low,

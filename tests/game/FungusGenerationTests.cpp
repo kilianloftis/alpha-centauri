@@ -125,9 +125,8 @@ TEST_CASE("WorldGenDecorationConfigParser throws when fungus object is missing",
     "hill_min_elevation_meters": 2000, "peak_min_elevation_meters": 3000
   },
   "rockiness": {
-    "low": { "flat": 0.5, "rolling": 0.3, "rocky": 0.2 },
-    "average": { "flat": 0.5, "rolling": 0.3, "rocky": 0.2 },
-    "high": { "flat": 0.5, "rolling": 0.3, "rocky": 0.2 }
+    "poles": { "flat": 0, "rolling": 0, "rocky": 1 },
+    "bands": [ { "flat": 1, "rolling": 0, "rocky": 0 } ]
   },
   "aquifers": { "fraction": 0.01 },
   "tile_bonuses": { "fraction": 0.01 }
