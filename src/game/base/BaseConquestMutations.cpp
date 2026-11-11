@@ -142,17 +142,34 @@ int DestroyRandomFacilities_(BaseManager& rBase,
     return destroyed;
 }
 
+// SMAC capture_base always clears these after the random facility loss.
+constexpr const char* k_CaptureWipeBuildingIds_[] = {"Recreation_Commons", "Recycling_Tanks"};
+
+int DestroyIfPresent_(BaseManager& rBase, const BuildingId_t& buildingId)
+{
+    BuildingManager& rBuildings = rBase.GetBuildingManager();
+    if (!rBuildings.HasBuilding(buildingId))
+    {
+        return 0;
+    }
+    rBuildings.DestroyBuilding(buildingId);
+    return 1;
+}
+
 void DestroyCaptureFacilities_(BaseManager& rBase, const CaptureOutcome_t& rOutcome,
                                std::mt19937& rRng, BaseConquestResult_t& rResult)
 {
-    if (rOutcome.facilityCandidates.empty())
+    if (!rOutcome.bRollCaptureFacilityLoss)
     {
         return;
     }
-    const int toDestroy = RollInclusive(rOutcome.minFacilitiesDestroyed,
-                                        rOutcome.maxFacilitiesDestroyed, rRng);
-    rResult.facilitiesDestroyed =
-        DestroyRandomFacilities_(rBase, rOutcome.facilityCandidates, toDestroy, rRng);
+    int destroyed = DestroyRandomFacilities_(rBase, rOutcome.facilityCandidates,
+                                             rOutcome.facilitiesToDestroy, rRng);
+    for (const char* pId : k_CaptureWipeBuildingIds_)
+    {
+        destroyed += DestroyIfPresent_(rBase, pId);
+    }
+    rResult.facilitiesDestroyed = destroyed;
 }
 
 BaseConquestResult_t ApplyLastDefenderCasualty_(BaseManager& rBase)

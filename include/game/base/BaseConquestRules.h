@@ -49,9 +49,10 @@ int LastDefenderPopLoss(const BaseManager& rBase);
 struct CaptureOutcome_t
 {
     std::vector<const BuildingConfig_t*> facilityCandidates;
-    // How many candidates are destroyed: a uniform draw in [min, max].
-    int minFacilitiesDestroyed = 0;
-    int maxFacilitiesDestroyed = 0;
+    // Shuffle-take-N of this many candidates, then wipe Commons and Recycling Tanks.
+    // Liberation (capturer is OccupierWindow().formerOwner) skips that; HQ still drops on transfer.
+    bool bRollCaptureFacilityLoss = false;
+    int facilitiesToDestroy = 0;
     int popLoss = 0;
     // A cross-species capture keeps one pop; half the displaced colonists flee as escape pods.
     int escapePods = 0;

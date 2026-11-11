@@ -247,10 +247,10 @@ static_assert(KindFor(StatId_t::AllocationImbalanceFactor) == StatKind_t::Additi
 static_assert(KindFor(StatId_t::ScrapRefund) == StatKind_t::RawScaled);
 // Additive, not RawScaled: base_conquest.json's effects list supplies the whole baseline.
 static_assert(KindFor(StatId_t::LastDefenderPopLoss) == StatKind_t::Additive);
-    static_assert(KindFor(StatId_t::CapturePopLoss) == StatKind_t::Additive);
-    static_assert(KindFor(StatId_t::ConqueredDroneCap) == StatKind_t::Additive);
-    static_assert(KindFor(StatId_t::CaptureFacilitiesDestroyedMin) == StatKind_t::Additive);
-static_assert(KindFor(StatId_t::CaptureFacilitiesDestroyedMaxPercent) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::CaptureFacilitiesDestroyed) == StatKind_t::RawScaled);
+static_assert(KindFor(StatId_t::CapturePopLoss) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::ConqueredDroneCap) == StatKind_t::Additive);
+static_assert(DomainFor(StatId_t::CaptureFacilitiesDestroyed) == ResolveDomain_t::Base);
 // A pure product of difficulty x Planet rating x native life x perihelion; the eco formula
 // multiplies by it once, so there is no raw value for it to scale.
 static_assert(KindFor(StatId_t::EcologicalDamage) == StatKind_t::PureMultiplier);

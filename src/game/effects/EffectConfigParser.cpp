@@ -1042,6 +1042,21 @@ double ParseNumber(const nlohmann::json& parameters, const std::string& key, dou
     if (it->is_string())
     {
         const std::string& rStr = it->get_ref<const std::string&>();
+        // Fraction strings ("1/3") stay exact until converted to double for the modifier stack.
+        if (rStr.find('/') != std::string::npos)
+        {
+            try
+            {
+                const Rational_t rational = Rational_t::Parse(rStr);
+                return static_cast<double>(rational.numerator)
+                    / static_cast<double>(rational.denominator);
+            }
+            catch (const std::exception& e)
+            {
+                throw std::runtime_error("Invalid rational string for parameter '" + key
+                                         + "': " + e.what());
+            }
+        }
         try
         {
             std::size_t idx = 0;

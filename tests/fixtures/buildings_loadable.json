@@ -1060,23 +1060,14 @@
     "category": "conquer"
   },
   {
-    "id": "test_capture_facility_shield",
-    "name": "Test Capture Facility Shield",
+    "id": "test_capture_facility_hardening",
+    "name": "Test Capture Facility Hardening",
     "effects": [
       {
         "type": "StatModifier",
         "scope": "ThisBase",
         "parameters": {
-          "stat": "capture_facilities_destroyed_min",
-          "amount": 0,
-          "op": "MaxClamp"
-        }
-      },
-      {
-        "type": "StatModifier",
-        "scope": "ThisBase",
-        "parameters": {
-          "stat": "capture_facilities_destroyed_max_percent",
+          "stat": "capture_facilities_destroyed",
           "amount": 0,
           "op": "MaxClamp"
         }

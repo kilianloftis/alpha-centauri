@@ -12,6 +12,7 @@
 #include "game/buildings/BuildingManager.h"
 #include "game/buildings/BuildingRules.h"
 #include "game/population/PopulationManager.h"
+#include "game/terraform/SurfaceOccupancy.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/combat/AttackRules.h"
@@ -31,6 +32,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
 #include <memory>
 #include <optional>
 #include <random>
@@ -80,10 +82,6 @@ struct ConquestGame_
     {
         FillLand_(fixtures.map);
 
-        actest::SetBaseConquestStat(*fixtures.dataContext.baseConquestConfig,
-                                    StatId_t::CaptureFacilitiesDestroyedMin, 1);
-        actest::SetBaseConquestStat(*fixtures.dataContext.baseConquestConfig,
-                                    StatId_t::CaptureFacilitiesDestroyedMaxPercent, 100);
         fixtures.dataContext.baseConquestConfig->escapeColonyPod.componentIds = {
             "test_chassis", "test_colony_pod"};
 
@@ -279,7 +277,7 @@ TEST_CASE("A single-use attacker that kills the last defender still cuts pop", "
     CHECK(rBase.GetPopulation().GetSize() == 3);
 }
 
-TEST_CASE("Killing the last defender cuts pop; stepping in captures, destroys facilities, repairs",
+TEST_CASE("Killing the last defender cuts pop; stepping in captures and repairs",
           "[unit][conquest]")
 {
     ConquestGame_ game;
@@ -306,7 +304,7 @@ TEST_CASE("Killing the last defender cuts pop; stepping in captures, destroys fa
     MoveOrder_t order;
     REQUIRE(game.fixtures.state.GetUnitMoves().TryStep(attacker, rBase.GetTile(), order).bEntered);
 
-    // Capture pop (-1); at least one non-SP facility destroyed, SP kept.
+    // Capture pop (-1); secret projects stay out of the 1/3 loop.
     CHECK(game.pAi->GetBaseCount() == 0);
     REQUIRE(game.pPlayer->GetBaseCount() == 1);
     BaseManager& rCaptured = *game.pPlayer->Bases().begin();
@@ -317,10 +315,6 @@ TEST_CASE("Killing the last defender cuts pop; stepping in captures, destroys fa
     CHECK(&rCaptured.GetFaction() == game.pPlayer);
     CHECK(rCaptured.GetPopulation().GetSize() == 2);
     CHECK(rCaptured.GetBuildingManager().HasBuilding("test_secret_project"));
-    const bool bKeptBothNonSp =
-        rCaptured.GetBuildingManager().HasBuilding("test_facility_a")
-        && rCaptured.GetBuildingManager().HasBuilding("Headquarters");
-    CHECK_FALSE(bKeptBothNonSp);
     CHECK(attacker.GetCurrentHp() == ResolveStat(attacker, StatId_t::HitPoints));
 }
 
@@ -348,33 +342,6 @@ TEST_CASE("Perimeter Defense MaxClamp 0 skips last-defender loss; capture loss s
 
     REQUIRE(game.pPlayer->GetBaseCount() == 1);
     CHECK((*game.pPlayer->Bases().begin()).GetPopulation().GetSize() == 2);
-}
-
-TEST_CASE("A facility can clamp capture facility destruction to nothing", "[unit][conquest]")
-{
-    // ConquestGame_ sets min 1 / max 100%, so without the shield at least one facility goes.
-    ConquestGame_ game;
-    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/4);
-    rBase.GetBuildingManager().AddBuilding("test_facility_a");
-    rBase.GetBuildingManager().AddBuilding("test_facility_b");
-    rBase.GetBuildingManager().AddBuilding("test_capture_facility_shield");
-
-    Unit& attacker = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_weapon"});
-    Unit& defender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis"}, &rBase);
-
-    auto result = game.fixtures.state.GetUnitAttacks().TryAttack(
-        attacker, defender);
-    REQUIRE(result.has_value());
-    REQUIRE(result->bDefenderDestroyed);
-
-    MoveOrder_t order;
-    REQUIRE(game.fixtures.state.GetUnitMoves().TryStep(attacker, rBase.GetTile(), order).bEntered);
-
-    REQUIRE(game.pPlayer->GetBaseCount() == 1);
-    BaseManager& rCaptured = *game.pPlayer->Bases().begin();
-    CHECK(rCaptured.GetBuildingManager().HasBuilding("test_facility_a"));
-    CHECK(rCaptured.GetBuildingManager().HasBuilding("test_facility_b"));
-    CHECK(rCaptured.GetBuildingManager().HasBuilding("test_capture_facility_shield"));
 }
 
 TEST_CASE("LastDefenderPopLoss MaxClamp leaves CapturePopLoss untouched", "[unit][conquest]")
@@ -793,7 +760,7 @@ TEST_CASE("Planning a cross-species capture keeps one pop and sends half the res
     const CaptureOutcome_t outcome = PlanCapture(attacker, rBase);
     CHECK(outcome.popLoss == 4);
     CHECK(outcome.escapePods == 2);
-    CHECK(outcome.minFacilitiesDestroyed <= outcome.maxFacilitiesDestroyed);
+    CHECK(outcome.bRollCaptureFacilityLoss);
     CHECK(rBase.GetPopulation().GetSize() == 5);
     CHECK(ConquestOnEntry(attacker, rBase)
           == ConquestKind_t::Capture);
@@ -942,20 +909,149 @@ TEST_CASE("A captured Headquarters is always lost, whatever the random facility 
           "[unit][conquest][hq]")
 {
     ConquestGame_ game;
-    actest::SetBaseConquestStat(*game.fixtures.dataContext.baseConquestConfig,
-                                StatId_t::CaptureFacilitiesDestroyedMaxPercent, 0);
-    actest::SetBaseConquestStat(*game.fixtures.dataContext.baseConquestConfig,
-                                StatId_t::CaptureFacilitiesDestroyedMin, 0);
     BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9);
     rBase.GetBuildingManager().AddBuilding("Headquarters");
-    rBase.GetBuildingManager().AddBuilding("test_facility_a");
 
     CaptureAt99_(game, *game.pPlayer);
 
     REQUIRE(&rBase.GetFaction() == game.pPlayer);
     CHECK_FALSE(rBase.IsHeadquarters());
-    CHECK(rBase.GetBuildingManager().HasBuilding("test_facility_a"));
     CHECK(game.pPlayer->GetHeadquarters() == nullptr);
+}
+
+TEST_CASE("Capture shuffle-takes the resolved facility count then wipes Commons",
+          "[unit][conquest]")
+{
+    ConquestGame_ game;
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
+    rBase.GetBuildingManager().AddBuilding("test_facility_a");
+    rBase.GetBuildingManager().AddBuilding("test_facility_b");
+    rBase.GetBuildingManager().AddBuilding("Recreation_Commons");
+    Unit& capturer = game.MakeUnit(*game.pPlayer, 9, 9, {"test_chassis", "test_weapon"});
+
+    const CaptureOutcome_t plan = PlanCapture(capturer, rBase);
+    REQUIRE(plan.bRollCaptureFacilityLoss);
+    REQUIRE(plan.facilityCandidates.size() == 3);
+    // Eligible 3 × MultiplyGeometric 1/3 → 1.
+    CHECK(plan.facilitiesToDestroy == 1);
+
+    // Fixed seed: the same shuffle DestroyRandomFacilities_ uses, then Commons wipe if it
+    // survived the take-N.
+    constexpr uint32_t kSeed = 42;
+    std::vector<const BuildingConfig_t*> shuffled = plan.facilityCandidates;
+    std::mt19937 expectedRng(kSeed);
+    std::shuffle(shuffled.begin(), shuffled.end(), expectedRng);
+    int expectedDestroyed = plan.facilitiesToDestroy;
+    bool bCommonsTaken = false;
+    for (int i = 0; i < plan.facilitiesToDestroy; ++i)
+    {
+        if (shuffled[static_cast<size_t>(i)]->id == "Recreation_Commons")
+        {
+            bCommonsTaken = true;
+        }
+    }
+    if (!bCommonsTaken)
+    {
+        ++expectedDestroyed;
+    }
+
+    std::mt19937 rng(kSeed);
+    const BaseConquestResult_t result =
+        ResolveBaseEntryConquest(capturer, game.fixtures.state, rng);
+    CHECK(result.outcome == BaseConquestOutcome_t::Captured);
+    CHECK(result.facilitiesDestroyed == expectedDestroyed);
+    CHECK_FALSE(rBase.GetBuildingManager().HasBuilding("Recreation_Commons"));
+}
+
+TEST_CASE("A facility can MaxClamp capture facility destruction to nothing", "[unit][conquest]")
+{
+    ConquestGame_ game;
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
+    rBase.GetBuildingManager().AddBuilding("test_facility_a");
+    rBase.GetBuildingManager().AddBuilding("test_facility_b");
+    rBase.GetBuildingManager().AddBuilding("Recreation_Commons");
+    rBase.GetBuildingManager().AddBuilding("test_capture_facility_hardening");
+    Unit& capturer = game.MakeUnit(*game.pPlayer, 9, 9, {"test_chassis", "test_weapon"});
+
+    const CaptureOutcome_t plan = PlanCapture(capturer, rBase);
+    REQUIRE(plan.bRollCaptureFacilityLoss);
+    CHECK(plan.facilitiesToDestroy == 0);
+
+    std::mt19937 rng(1);
+    const BaseConquestResult_t result =
+        ResolveBaseEntryConquest(capturer, game.fixtures.state, rng);
+    CHECK(result.outcome == BaseConquestOutcome_t::Captured);
+    // Commons/Tanks wipe still runs when rolling; only the shuffle-take is zeroed.
+    CHECK_FALSE(rBase.GetBuildingManager().HasBuilding("Recreation_Commons"));
+    CHECK(rBase.GetBuildingManager().HasBuilding("test_facility_a"));
+    CHECK(rBase.GetBuildingManager().HasBuilding("test_facility_b"));
+    CHECK(rBase.GetBuildingManager().HasBuilding("test_capture_facility_hardening"));
+}
+
+TEST_CASE("Pressure Dome on a sea base survives capture's random facility loss",
+          "[unit][conquest]")
+{
+    ConquestGame_ game;
+    FillWater_(game.fixtures.state.GetWorldMap());
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
+    rBase.GetBuildingManager().AddBuilding(k_PressureDomeBuildingId);
+    rBase.GetBuildingManager().AddBuilding("test_facility_a");
+    Unit& capturer =
+        game.MakeUnit(*game.pPlayer, 9, 9, {"test_sea_chassis", "test_weapon"});
+
+    const CaptureOutcome_t plan = PlanCapture(capturer, rBase);
+    for (const BuildingConfig_t* pBuilding : plan.facilityCandidates)
+    {
+        CHECK(pBuilding->id != k_PressureDomeBuildingId);
+    }
+
+    std::mt19937 rng(1);
+    ResolveBaseEntryConquest(capturer, game.fixtures.state, rng);
+    CHECK(rBase.GetBuildingManager().HasBuilding(k_PressureDomeBuildingId));
+}
+
+TEST_CASE("Liberation by the former owner skips capture facility loss", "[unit][conquest]")
+{
+    ConquestGame_ game;
+    BaseManager& rBase = game.MakeBase(*game.pPlayer, 9, 9, /*pop=*/3);
+    rBase.GetBuildingManager().AddBuilding("test_facility_a");
+    rBase.GetBuildingManager().AddBuilding("test_facility_b");
+    rBase.GetBuildingManager().AddBuilding("Recreation_Commons");
+
+    // Ai takes the player's base; OccupierWindow.formerOwner is the player.
+    rBase.GetPopulation().NotifyCaptured(game.pPlayer->GetFactionId(), game.pAi->GetFactionId());
+    game.pPlayer->TransferBaseTo(rBase.GetBaseId(), *game.pAi);
+    REQUIRE(rBase.GetPopulation().GetAssimilation().OccupierWindow().formerOwner
+            == game.pPlayer->GetFactionId());
+
+    Unit& liberator = game.MakeUnit(*game.pPlayer, 9, 9, {"test_chassis", "test_weapon"});
+    const CaptureOutcome_t plan = PlanCapture(liberator, rBase);
+    CHECK_FALSE(plan.bRollCaptureFacilityLoss);
+
+    std::mt19937 rng(1);
+    const BaseConquestResult_t result =
+        ResolveBaseEntryConquest(liberator, game.fixtures.state, rng);
+    CHECK(result.outcome == BaseConquestOutcome_t::Captured);
+    CHECK(result.facilitiesDestroyed == 0);
+    CHECK(rBase.GetBuildingManager().HasBuilding("test_facility_a"));
+    CHECK(rBase.GetBuildingManager().HasBuilding("test_facility_b"));
+    CHECK(rBase.GetBuildingManager().HasBuilding("Recreation_Commons"));
+}
+
+TEST_CASE("TakeBase drops Headquarters but leaves other facilities", "[unit][conquest]")
+{
+    // Mind control calls TakeBase and never ApplyCapture_'s facility rolls.
+    ConquestGame_ game;
+    BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
+    rBase.GetBuildingManager().AddBuilding("Headquarters");
+    rBase.GetBuildingManager().AddBuilding("test_facility_a");
+    rBase.GetBuildingManager().AddBuilding("Recreation_Commons");
+
+    TakeBase(game.fixtures.state, rBase, *game.pPlayer);
+
+    CHECK_FALSE(rBase.IsHeadquarters());
+    CHECK(rBase.GetBuildingManager().HasBuilding("test_facility_a"));
+    CHECK(rBase.GetBuildingManager().HasBuilding("Recreation_Commons"));
 }
 
 TEST_CASE("The escape goes to the base closest to the owner's others", "[unit][conquest][hq]")

@@ -213,21 +213,25 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
     CHECK_THROWS(ParseSocialRatingId("karma"));
 }
 
-TEST_CASE("ParseNumber: accepts numbers and numeric strings", "[effects][parser]")
+TEST_CASE("ParseNumber: accepts numbers, numeric strings, and rationals", "[effects][parser]")
 {
     const json params = {
         {"as_number", 2.5},
         {"as_int", 3},
         {"as_string", "4.5"},
+        {"as_rational", "1/3"},
         {"bad", true},
         {"junk", "2abc"},
+        {"bad_rational", "1/0"},
     };
 
     CHECK(EffectConfigParser::ParseNumber(params, "as_number", 0.0) == Approx(2.5));
     CHECK(EffectConfigParser::ParseNumber(params, "as_int", 0.0) == Approx(3.0));
     CHECK(EffectConfigParser::ParseNumber(params, "as_string", 0.0) == Approx(4.5));
+    CHECK(EffectConfigParser::ParseNumber(params, "as_rational", 0.0) == Approx(1.0 / 3.0));
     CHECK(EffectConfigParser::ParseNumber(params, "missing", 7.0) == Approx(7.0));
     CHECK_THROWS(EffectConfigParser::ParseNumber(params, "bad", 0.0));
+    CHECK_THROWS(EffectConfigParser::ParseNumber(params, "bad_rational", 0.0));
 
     try
     {
@@ -1058,6 +1062,26 @@ TEST_CASE("ParseEffectConfig: TransportParams", "[effects][parser][transport]")
         "scope": "ThisBase",
         "parameters": { "carries": ["land"] }
     })")));
+}
+
+TEST_CASE("ParseEffectConfig: StatModifier amount accepts a rational string", "[effects][parser]")
+{
+    const json effectJson = json::parse(R"({
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+            "stat": "capture_facilities_destroyed",
+            "amount": "1/3",
+            "op": "MultiplyGeometric"
+        }
+    })");
+
+    const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
+    const auto* pModifier = std::get_if<StatModifierEffect_t>(&config.effect);
+    REQUIRE(pModifier);
+    CHECK(pModifier->stat == StatId_t::CaptureFacilitiesDestroyed);
+    CHECK(pModifier->op == ModifierOp_t::MultiplyGeometric);
+    CHECK(pModifier->amount == Approx(1.0 / 3.0));
 }
 
 TEST_CASE("ParseEffectConfig: move_cost MaxClamp stores move fragments", "[effects][parser][movement]")

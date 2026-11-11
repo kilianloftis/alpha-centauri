@@ -30,9 +30,10 @@ namespace ac
 namespace
 {
 
-// A captured Headquarters is always lost (TransferBaseTo), so it is no random loss.
+// HQ drops on transfer; secret projects and Pressure Dome are outside capture_base's 1/3 loop.
 constexpr FacilityExclusions_t k_CaptureFacilityExclusions{.excludeHq = true,
-                                                           .excludeSecretProjects = true};
+                                                           .excludeSecretProjects = true,
+                                                           .excludePressureDome = true};
 // A native raid may take the Headquarters but never a secret project.
 constexpr FacilityExclusions_t k_RaidFacilityExclusions{.excludeHq = false,
                                                         .excludeSecretProjects = true};
@@ -113,12 +114,19 @@ bool IsNativeRaider_(const Unit& rUnit)
     return IsNativeLifeFaction(rUnit.GetFaction().GetDefinition().identity.species);
 }
 
-// Every base_conquest stat is Additive: base_conquest.json Adds the baseline, and facilities
-// and difficulty stack on top.
+// Additive conquest stats: base_conquest.json Adds the baseline; facilities and difficulty stack.
 int ResolveBaseConquestStat_(const BaseManager& rBase, StatId_t stat)
 {
     const double resolved = ResolveBaseStat(rBase.GetBaseEffects(), stat, SeedFor(stat), nullptr);
     return std::max(0, FinalizeResolvedStat(resolved));
+}
+
+int ResolveCaptureFacilitiesToDestroy_(const BaseManager& rBase, int eligible)
+{
+    const double seed = static_cast<double>(eligible);
+    const double resolved = ResolveBaseStat(rBase.GetBaseEffects(),
+                                            StatId_t::CaptureFacilitiesDestroyed, seed, nullptr);
+    return std::clamp(FinalizeResolvedStat(resolved), 0, eligible);
 }
 
 } // namespace
@@ -165,18 +173,16 @@ CaptureOutcome_t PlanCapture(const Unit& rCapturer, const BaseManager& rBase)
 
     outcome.facilityCandidates =
         CollectDestroyableFacilities(rBase, k_CaptureFacilityExclusions);
-    if (!outcome.facilityCandidates.empty())
+    // Liberation: capturer is the former owner still being assimilated.
+    const AssimilationState& rWindow =
+        rBase.GetPopulation().GetAssimilation().OccupierWindow();
+    const bool bLiberation = rWindow.IsActive()
+        && rWindow.formerOwner == rCapturer.GetFaction().GetFactionId();
+    outcome.bRollCaptureFacilityLoss = !bLiberation;
+    if (outcome.bRollCaptureFacilityLoss && !outcome.facilityCandidates.empty())
     {
-        // Both bounds clamp to what the base has, so no modifier can invert the range.
         const int eligible = static_cast<int>(outcome.facilityCandidates.size());
-        const int minStat =
-            ResolveBaseConquestStat_(rBase, StatId_t::CaptureFacilitiesDestroyedMin);
-        const int maxStat =
-            ResolveBaseConquestStat_(rBase, StatId_t::CaptureFacilitiesDestroyedMaxPercent);
-        const int maxPercent = std::clamp(maxStat, 0, 100);
-        outcome.minFacilitiesDestroyed = std::clamp(minStat, 0, eligible);
-        const int maxCount = std::max(outcome.minFacilitiesDestroyed, eligible * maxPercent / 100);
-        outcome.maxFacilitiesDestroyed = std::min(maxCount, eligible);
+        outcome.facilitiesToDestroy = ResolveCaptureFacilitiesToDestroy_(rBase, eligible);
     }
 
     const int size = rBase.GetPopulation().GetSize();

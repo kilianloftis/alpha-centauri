@@ -22,18 +22,9 @@
       "type": "StatModifier",
       "scope": "FactionGlobal",
       "parameters": {
-        "stat": "capture_facilities_destroyed_min",
-        "amount": 0,
-        "op": "Add"
-      }
-    },
-    {
-      "type": "StatModifier",
-      "scope": "FactionGlobal",
-      "parameters": {
-        "stat": "capture_facilities_destroyed_max_percent",
-        "amount": 50,
-        "op": "Add"
+        "stat": "capture_facilities_destroyed",
+        "amount": "1/3",
+        "op": "MultiplyGeometric"
       }
     },
     {

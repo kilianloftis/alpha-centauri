@@ -8,6 +8,7 @@
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
 #include "game/faction/Faction.h"
+#include "game/terraform/SurfaceOccupancy.h"
 
 #include <stdexcept>
 #include <string>
@@ -67,6 +68,10 @@ std::vector<const BuildingConfig_t*> CollectDestroyableFacilities(
             continue;
         }
         if (rExclusions.excludeHq && ResolveFlag(pBuilding->effects, RuleFlagId_t::Headquarters))
+        {
+            continue;
+        }
+        if (rExclusions.excludePressureDome && pBuilding->id == k_PressureDomeBuildingId)
         {
             continue;
         }

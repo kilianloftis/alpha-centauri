@@ -55,10 +55,10 @@ constexpr uint32_t k_TestRngSeed = 4321u;
 // lives in ThisTech TechCost effects (or the shipping Lua formula), not a base_cost field.
 inline const std::string k_TestTechCostFormula = "10";
 
-// Every base_conquest tunable is a baseline Add in its effects list, so tests set one by
-// rewriting that Add's amount in place. Replacing BaseConquestConfig_t wholesale would
-// dangle the reference FactionEffectsPool holds into `effects`, so never do that; editing an
-// existing entry is safe because the pool resolves through a pointer to it.
+// Additive base_conquest baselines: tests set one by rewriting that Add's amount in place.
+// CaptureFacilitiesDestroyed is RawScaled (MultiplyGeometric); edit its amount the same way.
+// Replacing BaseConquestConfig_t wholesale would dangle FactionEffectsPool's reference into
+// `effects`, so never do that; editing an existing entry is safe.
 void SetBaseConquestStat(ac::BaseConquestConfig_t& rConfig, ac::StatId_t stat, double amount);
 
 // The improvement and terrain files, under tests/fixtures/, a fixture session loads.

@@ -267,11 +267,18 @@ SessionInputs::SessionInputs(const OccupantFiles_t& rOccupants,
     SetBaseConquestStat(*dataContext.baseConquestConfig,
                         ac::StatId_t::LastDefenderPopLoss, 1);
     SetBaseConquestStat(*dataContext.baseConquestConfig, ac::StatId_t::CapturePopLoss, 1);
-    SetBaseConquestStat(*dataContext.baseConquestConfig,
-                        ac::StatId_t::CaptureFacilitiesDestroyedMin, 0);
-    SetBaseConquestStat(*dataContext.baseConquestConfig,
-                        ac::StatId_t::CaptureFacilitiesDestroyedMaxPercent, 50);
     SetBaseConquestStat(*dataContext.baseConquestConfig, ac::StatId_t::ConqueredDroneCap, -0.5);
+    // RawScaled: MultiplyGeometric ~1/3 of the eligible facility count (not an Add baseline).
+    {
+        ac::EffectConfig_t effect;
+        effect.scope = ac::EffectScope_t::FactionGlobal;
+        ac::StatModifierEffect_t modifier;
+        modifier.stat = ac::StatId_t::CaptureFacilitiesDestroyed;
+        modifier.amount = 1.0 / 3.0;
+        modifier.op = ac::ModifierOp_t::MultiplyGeometric;
+        effect.effect = modifier;
+        dataContext.baseConquestConfig->effects.push_back(effect);
+    }
     dataContext.baseConquestConfig->nativeRaid.facilityChancePercent = 50;
     dataContext.baseConquestConfig->nativeRaid.popLoss = 1;
     dataContext.baseConquestConfig->headquartersEscape = ac::HeadquartersEscapeConfig_t{

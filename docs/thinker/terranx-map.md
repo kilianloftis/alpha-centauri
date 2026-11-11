@@ -1825,9 +1825,13 @@ Gift id 8 offers `DiploBidBaseSwapID`.
   receiver with two. `find_hq` and `vulnerable` then take the receiver's first by base index.
   The function does reset the queue (`queue_size` 0, `production_id_last` and `queue_items[0]`
   −`FAC_STOCKPILE_ENERGY`, `0x54D2F0`–`0x54D305`) and zero `minerals_accumulated` (`0x54D2AC`).
-- `capture_base` (`0x50C510`) always clears it: `set_fac(FAC_HEADQUARTERS, base, 0)` at
-  `0x50D056`, after the random facility loss. Thinker's `mod_capture_base` matches.
-- Before that, the **escape** (`0x50C98B`–`0x50CC94`). It runs when the captured base holds the
+- **Capture facility loss** (`capture_base` `0x50C510`, Thinker `mod_capture_base`): for each
+  facility id `1..SP_ID_First-1`, destroy when `!(game_rand() % 3)` (~1/3). Skip Pressure Dome
+  (`0x1A`). Probe mind control and liberation recapture (`faction_id_former`) skip the loop.
+  After the loop, always clear Headquarters (`set_fac(FAC_HEADQUARTERS, base, 0)` at
+  `0x50D056`), then wipe Recreation Commons and Recycling Tanks if still present (Thinker only
+  skips that wipe behind `facility_capture_fix`).
+- Before the Headquarters clear, the **escape** (`0x50C98B`–`0x50CC94`). It runs when the captured base holds the
   Headquarters and its owner has at least 1000 credits (`cmp …, 0x3E8`, `0x50C9BC`). Each other
   base of the owner, by index, scores `score = 1 + Σ vector_dist` to every base of the owner but
   itself and the captured one, each distance doubled when that base is in another region

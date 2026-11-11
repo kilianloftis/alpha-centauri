@@ -236,12 +236,9 @@ enum class StatId_t
     // Population lost when a base's last defender falls (Additive), floored at 0.
     LastDefenderPopLoss,
 
-    // Fewest facilities destroyed on capture (Additive), clamped to the eligible count.
-    CaptureFacilitiesDestroyedMin,
-
-    // Most facilities destroyed on capture, as a percent of the eligible count (Additive; use Add,
-    // since AddPercent of a percent misleads).
-    CaptureFacilitiesDestroyedMaxPercent,
+    // Facilities destroyed on unit capture (RawScaled): seed is the eligible count; baseline
+    // MultiplyGeometric ~1/3 from base_conquest.json. Clamped to [0, eligible] after resolve.
+    CaptureFacilitiesDestroyed,
 
     // Artillery strike floor as a percent of the defender's hit_points (Additive; AddPercent is
     // rejected). The highest MinClamp wins, and the strike ceils the result.
@@ -362,8 +359,6 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::LastDefenderPopLoss:
         case StatId_t::CapturePopLoss:
         case StatId_t::ConqueredDroneCap:
-        case StatId_t::CaptureFacilitiesDestroyedMin:
-        case StatId_t::CaptureFacilitiesDestroyedMaxPercent:
         case StatId_t::BombardMinHpPercent:
         case StatId_t::TechCostDiff:
         case StatId_t::TechCostCatchUp:
@@ -406,6 +401,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::MoistureTier:
         case StatId_t::FacilityEnergyUpkeep:
         case StatId_t::ScrapRefund:
+        case StatId_t::CaptureFacilitiesDestroyed:
         case StatId_t::UpheavalCostScale:
         case StatId_t::GiftGivenValue:
         case StatId_t::GiftReceivedValue:
@@ -481,8 +477,7 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::AllocationImbalanceFactor:
         case StatId_t::ScrapRefund:
         case StatId_t::LastDefenderPopLoss:
-        case StatId_t::CaptureFacilitiesDestroyedMin:
-        case StatId_t::CaptureFacilitiesDestroyedMaxPercent:
+        case StatId_t::CaptureFacilitiesDestroyed:
         case StatId_t::CapturePopLoss:
         case StatId_t::ConqueredDroneCap:
         case StatId_t::EcologicalDamage:
@@ -642,12 +637,10 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "allocation_imbalance_factor") return StatId_t::AllocationImbalanceFactor;
     if (rStat == "scrap_refund")             return StatId_t::ScrapRefund;
     if (rStat == "last_defender_pop_loss")   return StatId_t::LastDefenderPopLoss;
+    if (rStat == "capture_facilities_destroyed")
+        return StatId_t::CaptureFacilitiesDestroyed;
     if (rStat == "capture_pop_loss")         return StatId_t::CapturePopLoss;
     if (rStat == "conquered_drone_cap")      return StatId_t::ConqueredDroneCap;
-    if (rStat == "capture_facilities_destroyed_min")
-        return StatId_t::CaptureFacilitiesDestroyedMin;
-    if (rStat == "capture_facilities_destroyed_max_percent")
-        return StatId_t::CaptureFacilitiesDestroyedMaxPercent;
     if (rStat == "bombard_min_hp_percent")   return StatId_t::BombardMinHpPercent;
     if (rStat == "ecological_damage")        return StatId_t::EcologicalDamage;
     if (rStat == "planet_fauna_cargo_scale")  return StatId_t::PlanetFaunaCargoScale;

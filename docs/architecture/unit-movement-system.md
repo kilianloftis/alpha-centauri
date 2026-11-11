@@ -416,13 +416,17 @@ entry):
   raids (`native_raid.facility_chance_percent` between one facility and
   `native_raid.pop_loss` population); anything else captures if `CanCaptureBase`.
   Same-species capture pop loss is the separate Additive `CapturePopLoss`, resolved
-  before random facility destruction so a `ThisBase` clamp still counts if the granting
-  building is then demolished. How many facilities are destroyed is likewise resolved
-  from the base's effects — Additive
-  `CaptureFacilitiesDestroyedMin` and `CaptureFacilitiesDestroyedMaxPercent`, each clamped
-  against the eligible count so no modifier can invert the range. It is independent
-  of `LastDefenderPopLoss`: Perimeter Defense guards the last-defender case only, and nothing
-  in the shipping config modifies capture loss.
+  before facility destruction so a `ThisBase` clamp still counts if the granting
+  building is then demolished. Unit capture then resolves RawScaled
+  `CaptureFacilitiesDestroyed` with seed = eligible facility count (`base_conquest.json`
+  MultiplyGeometric `"1/3"`), clamps to `[0, eligible]`, and shuffle-takes that many: HQ,
+  secret projects, and Pressure Dome are exempt from the candidate list; Recreation
+  Commons and Recycling Tanks are always cleared afterward if still present. Liberation
+  (capturer is `OccupierWindow().formerOwner`) skips the take and the Commons/Tanks wipe.
+  Probe mind control uses `TakeBase` only, so it never destroys facilities this way. Pop
+  loss is independent of `LastDefenderPopLoss`: Perimeter Defense guards the last-defender
+  case only; shipping does not modify capture pop loss, while facility loss is free for
+  buildings to clamp or scale.
 
 Same-species capture (and probe mind-control) also starts a recently-conquered drone window
 on the base: extra drones for `assimilation_drones × assimilation_decay_turns` turns
