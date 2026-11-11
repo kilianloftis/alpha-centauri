@@ -28,7 +28,9 @@
 #include "game/units/UnitDomain.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/units/UnitComponentRegistry.h"
+#include "lib/Rational.h"
 
+#include <array>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
@@ -269,6 +271,48 @@ TEST_CASE("Detonating a fungal payload funguses five tiles and spends the missil
     CHECK(FungusCount_(session.fixtures.state.GetWorldMap()) == 5);
     CHECK(UnitCount_(rPlayer) == 0);
     CHECK(UnitCount_(*session.pPlanet) == 1);
+}
+
+TEST_CASE("chance [1, 1/1] funguses the origin and every eligible neighbour", "[map][fungus]")
+{
+    BloomSession_ session(0, 0, false, false);
+    Tile& rOrigin = session.At_(8, 8);
+    const BloomCandidates_t candidates = BloomCandidateTiles(rOrigin);
+    const int expected =
+        (candidates.pOrigin != nullptr ? 1 : 0) + static_cast<int>(candidates.neighbours.size());
+    const std::array<Rational_t, 2> chances{Rational_t::FromInt(1), Rational_t{1, 1}};
+    const FungalBloomResult_t result =
+        ApplyFungalBloom(rOrigin, session.fixtures.state.GetWorldMap(), chances,
+                         session.fixtures.state.GetRng(), session.fixtures.state);
+
+    CHECK(result.tilesFungused == expected);
+    CHECK(rOrigin.HasFeature("Fungus"));
+    for (const Tile* pNeighbor : candidates.neighbours)
+    {
+        CHECK(pNeighbor->HasFeature("Fungus"));
+    }
+}
+
+TEST_CASE("chance [1, 0] funguses only the origin when it is eligible", "[map][fungus]")
+{
+    BloomSession_ session(0, 0, false, false);
+    Tile& rOrigin = session.At_(8, 8);
+    const std::array<Rational_t, 2> chances{Rational_t::FromInt(1), Rational_t{0, 1}};
+    const FungalBloomResult_t result =
+        ApplyFungalBloom(rOrigin, session.fixtures.state.GetWorldMap(), chances,
+                         session.fixtures.state.GetRng(), session.fixtures.state);
+    CHECK(result.tilesFungused == 1);
+    CHECK(rOrigin.HasFeature("Fungus"));
+    int neighborFungus = 0;
+    ForEachNeighborInChebyshevRadius(rOrigin, session.fixtures.state.GetWorldMap(), 1,
+                                     [&](Tile* pNeighbor, int)
+                                     {
+                                         if (pNeighbor->HasFeature("Fungus"))
+                                         {
+                                             ++neighborFungus;
+                                         }
+                                     });
+    CHECK(neighborFungus == 0);
 }
 
 TEST_CASE("Bloom candidates skip a base origin and base or fungus neighbours", "[map][fungus]")

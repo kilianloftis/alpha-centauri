@@ -2,6 +2,7 @@
 
 #include "game/faction/Faction.h"
 #include "game/effects/IWorldEffectsSource.h"
+#include "game/supply/SupplyPodIndex.h"
 #include "game/units/IUnitOrderWorld.h"
 #include "lib/DerefView.h"
 #include "lib/IdAllocator.h"
@@ -49,11 +50,12 @@ public:
     static constexpr int k_FirstPlayableMissionYear = k_StartingMissionYear + 1;
 
     // Throws if pWorldMap is null. rGameData must outlive this. rngSeed makes the session's rolls
-    // reproducible.
+    // reproducible. pSupplyPods is the placement stamp map (empty when omitted).
     GameState(std::unique_ptr<WorldMap> pWorldMap,
               const GameDataContext& rGameData,
               GameSettings& rSettings,
-              uint32_t rngSeed);
+              uint32_t rngSeed,
+              std::unique_ptr<SupplyPodIndex> pSupplyPods = nullptr);
     ~GameState();
 
     // Builds the council and its vote executor from the participating factions, once the
@@ -121,6 +123,10 @@ public:
     EcologyLedger& GetEcologyLedger();
     const EcologyLedger& GetEcologyLedger() const;
 
+    // Event-group id stamped on each supply-pod tile at placement.
+    SupplyPodIndex& GetSupplyPods();
+    const SupplyPodIndex& GetSupplyPods() const;
+
     DiplomaticActionExecutor& GetDiplomaticActionExecutor();
 
     // The only source of faction, base and unit ids.
@@ -146,6 +152,7 @@ public:
     void ApplyFightConsequences(Unit& rAttacker, const Tile& rBattleTile,
                                 CombatResult_t& rResult) override;
     void OnImprovementVisited(Unit& rVisitor) override;
+    SupplyPodOpenResult_t ApplySupplyPodOpen(Unit& rVisitor, std::mt19937& rRng) override;
     void OnTerritoryEntryRefused(Unit& rUnit, FactionId_t territoryOwner) override;
     bool ApplyTerraformCompleteEffects(Tile& rTile, const TerraformProject_t& rProject,
                                        Unit& rFormer, std::mt19937& rRng) override;
@@ -238,6 +245,7 @@ private:
     std::unique_ptr<AtrocityLedger> m_pAtrocities;
     std::unique_ptr<MindControlLedger> m_pMindControl;
     std::unique_ptr<EcologyLedger> m_pEcology;
+    std::unique_ptr<SupplyPodIndex> m_pSupplyPods;
     std::unique_ptr<DiplomaticActionExecutor> m_pDiplomaticActionExecutor;
     std::vector<std::unique_ptr<Faction>> m_factions;
     std::unique_ptr<FirstContactResolver> m_pFirstContact;

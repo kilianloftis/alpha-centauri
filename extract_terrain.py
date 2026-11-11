@@ -302,6 +302,11 @@ def _ter1_regions() -> list[Region]:
                     surface,
                 )
             )
+    # Supply pods: six frames across from (418, 379); see docs/thinker/smac-terrain-textures.md.
+    for i in range(6):
+        regions.append(
+            _ter1_object(f"sprites/tile_bonuses/supply_pod_{i}", 418 + i * 101, 379, "land")
+        )
     return regions
 
 

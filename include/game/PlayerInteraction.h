@@ -180,6 +180,23 @@ struct HeadquartersEscapeInteraction_t
     BaseId_t destinationId = 0;
 };
 
+// A supply pod opened. noticeKey is a TextPack script id; optional imagePath is notice art.
+struct SupplyPodNoticeInteraction_t
+{
+    std::string noticeKey;
+    std::optional<std::string> imagePath;
+    std::optional<TileCoord_t> cameraTile;
+    std::optional<int> creditAmount;
+    std::optional<std::string> techName;
+    std::optional<std::string> unitName;
+    std::optional<std::string> resourceBonusId;
+    std::optional<std::string> baseName;
+    std::optional<std::string> itemName;
+    std::optional<std::string> leaderTitle;
+    std::optional<std::string> leaderName;
+    std::optional<std::string> factionName;
+};
+
 using PlayerInteraction_t = std::variant<
     NoticeInteraction_t,
     OpenViewInteraction_t,
@@ -194,7 +211,8 @@ using PlayerInteraction_t = std::variant<
     ProbeFrameNoticeInteraction_t,
     AtrocityNoticeInteraction_t,
     CaptureNoticeInteraction_t,
-    HeadquartersEscapeInteraction_t
+    HeadquartersEscapeInteraction_t,
+    SupplyPodNoticeInteraction_t
 >;
 
 // Every queued item pauses turn processing for its audience until CompleteFront.

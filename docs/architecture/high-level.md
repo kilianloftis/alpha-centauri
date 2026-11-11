@@ -439,6 +439,7 @@ One directory under `include/game/` and `src/game/` per domain. The filename suf
 - `research/`: techs, tech cost, research progress and selection
 - `social-engineering/`: policies, social ratings, upheaval cost, a faction's pending/committed choices
 - `stages/`: the turn processor, stage infrastructure and mod hooks, every turn stage
+- `supply/`: supply-pod config, event-group stamp index, open rules and mutations
 - `terraform/`: terraform projects, elevation change, terraform spread, surface flips
 - `units/`: the unit aggregate, designs, components and slots, upgrade rules/cost/mutations,
   orders, the order executor

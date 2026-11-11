@@ -1,0 +1,50 @@
+{
+  "event_groups": [
+    {
+      "id": "Land",
+      "placement": {
+        "domain": "Land",
+        "global_fraction": 0.0,
+        "wreckage_radius": 0,
+        "wreckage_extra": 0,
+        "start_radius": 0,
+        "start_count": 0
+      },
+      "empty_notice": {
+        "script": "Empty"
+      },
+      "events": [
+        {
+          "id": "OnlyEnergy",
+          "weight": 1,
+          "notice": {
+            "script": "OnlyEnergy"
+          },
+          "effects": [
+            {
+              "type": "GrantEnergy",
+              "parameters": {
+                "formula": "10 + turn"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Sea",
+      "placement": {
+        "domain": "Sea",
+        "global_fraction": 0.0,
+        "wreckage_radius": 0,
+        "wreckage_extra": 0,
+        "start_radius": 0,
+        "start_count": 0
+      },
+      "empty_notice": {
+        "script": "Empty_Sea"
+      },
+      "events": []
+    }
+  ]
+}

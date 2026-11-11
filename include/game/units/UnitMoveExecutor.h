@@ -47,7 +47,8 @@ public:
 private:
     // Position only; caller spends moves (SpendMoveFragments) before enter.
     void EnterTile_(Unit& rMover, const Tile& rTo);
-    // Returns false when the arrival destroyed rMover (native raid).
+    // False when arrival destroyed rMover. TODO: return a named result (bMoverDestroyed) like
+    // ResolveBaseEntryConquest / SupplyPodOpenResult_t instead of inverted bool.
     bool ApplyArrivalEffects_(Unit& rMover);
     StepResult_t SpendMovesAndEnter_(Unit& rMover, const Tile& rTo, MoveOrder_t& rMoveOrder);
     void RevealBlockingUnits_(Unit& rMover, const StepEvaluation_t& rEval);

@@ -78,6 +78,7 @@
 #include "game/units/UnitManager.h"
 #include "game/units/UnitSlotConfig.h"
 #include "game/world-events/WorldEventConfig.h"
+#include "game/supply/SupplyPodConfigParser.h"
 #include "game/worldgen/WorldGenDecorationConfig.h"
 #include "game/worldgen/WorldGenDecorationConfigParser.h"
 #include "lib/LuaRuntime.h"
@@ -241,6 +242,8 @@ SessionInputs::SessionInputs(const OccupantFiles_t& rOccupants,
     dataContext.nativeUnitRegistry = std::make_unique<ac::NativeUnitRegistry>();
     dataContext.worldEventsConfig = std::make_unique<ac::WorldEventsConfig_t>(
         ac::WorldEventsConfigParser{}.ParseConfig(FixturePath("world_events.json")));
+    dataContext.supplyPodConfig = std::make_unique<ac::SupplyPodConfig_t>(
+        ac::SupplyPodConfigParser{}.ParseConfig(FixturePath("supply_pods.json")));
     dataContext.probeActionsConfig = std::make_unique<ac::ProbeActionsConfig_t>(
         ac::ProbeActionConfigParser{}.ParseConfig(FixturePath("probe_actions.json")));
     dataContext.probeCalculator =

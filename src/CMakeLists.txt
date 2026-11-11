@@ -66,6 +66,10 @@ add_library(ac-core STATIC
     game/natives/PlanetFaunaCalculator.cpp
     game/world-events/WorldEventConfig.cpp
     game/world-events/WorldEventTracker.cpp
+    game/supply/SupplyPodConfigParser.cpp
+    game/supply/SupplyPodIndex.cpp
+    game/supply/SupplyPodRules.cpp
+    game/supply/SupplyPodMutations.cpp
     game/social-engineering/SocialEngineeringManager.cpp
     game/social-engineering/SocialEngineeringRules.cpp
     game/social-engineering/SocialEngineeringMutations.cpp
@@ -254,6 +258,7 @@ add_library(ac-core STATIC
     game/combat/ExplosionMutations.cpp
     game/combat/ExplosionRules.cpp
     game/worldgen/TileBonusGeneration.cpp
+    game/worldgen/SupplyPodGeneration.cpp
     game/worldgen/MapGenerationConfig.cpp
     game/worldgen/MoistureGeneration.cpp
     game/map/RiverGeneration.cpp
@@ -403,6 +408,7 @@ add_library(ac-ui STATIC
     ui/AtrocityNotices.cpp
     ui/CaptureNotices.cpp
     ui/ProbeNotices.cpp
+    ui/SupplyPodNotices.cpp
     ui/style/UiStyle.cpp
     ui/style/DrawPanelChrome.cpp
     ui/world/WorldView.cpp

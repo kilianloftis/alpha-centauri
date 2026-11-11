@@ -521,7 +521,9 @@ once. These are two machines, and they are two types.
 - **`TriggeredEffectConfig_t`** (`TriggeredEffect.h`) holds a `TriggeredEffectVariant_t` —
   `AddBuilding`, `GrantTech`, `GrantUnit`, `GrantEnergy`, `GrantResource`, `GrantXp`, `RestoreHitPoints`,
   `WorldParameter`,
-  `SetInfiltration`, `ModifyPopulation`, `DestroyFacility`, `Rebel`, `DestroyUnit`, `Earthquake`, `FungalBloom`, `Explosion`, `SetTerrainFeature`, `StepRockiness`, `ElevationChange`, `CommitAtrocity`, `RecordMindControl`, `GrantCleanMinerals`, `AddVirtualMinerals` — plus an optional
+  `SetInfiltration`, `ModifyPopulation`, `DestroyFacility`, `Rebel`, `DestroyUnit`, `Earthquake`, `FungalBloom`, `Explosion`, `SetTerrainFeature`, `StepRockiness`, `ElevationChange`, `CommitAtrocity`, `RecordMindControl`, `GrantCleanMinerals`, `AddVirtualMinerals`,
+  `AddOccupant`, `RevealMap`, `TeleportUnit`, `FinishProduction`, `CloneUnit`, `GrantCommlink`,
+  `SpawnNative`, `TerraformCluster`, `AddRandomOccupant` — plus an optional
   `oncePer`, an optional `condition` (same `Condition_t` as continuous, evaluated against
   `TriggeredEffectContext_t::subjects`), and a `factionFilter` that **only `SetInfiltration`
   accepts** (every other type acts on the subjects its context supplies, so a filter there
@@ -566,7 +568,12 @@ and its owner is `actionTarget`.
 unit arrives. `UnitMoveExecutor` reports the arrival through `IUnitOrderWorld::OnImprovementVisited`,
 which `GameState` answers (player enqueue vs `ApplyVisitEffects`). Continuous
 tile yields stay in `effects`. Monolith authors heal (`RestoreHitPoints`) plus once-per-unit
-`GrantXp` with optional `remove_host_chance`.
+`GrantXp` with optional `remove_host_chance`. `Supply_Pod` does **not** use `on_visit_effects`;
+arrival opens it through `SupplyPodMutations`, which applies `PickEvent` (`SupplyPodRules`)
+for the event group stamped on the pod at placement (`SupplyPodIndex`), then a weighted event
+from that event group's `events`, or Empty (`k_SupplyPodEmptyEventId` + the event group's
+`empty_notice`) when none are eligible. Each event authors one `notice` (script id + optional
+image path).
 
 `on_hold_effects` live on the unit blueprint: a player design gathers them from its components,
 and a native returns the list on its config. They are considered when that unit is given a
@@ -575,7 +582,7 @@ Holding there (a `BaseHasBuilding` condition may have just become true). An impr
 named with the existing `TargetTileHas` condition. `GameState::ConsiderHoldLink` enqueues a
 Link / Do nothing prompt for the player and calls `ApplyHoldLink` immediately for an AI
 holder. Do nothing leaves the Hold in place. Link runs the list in order. Alien Artifact
-authors `GrantTech` `selection: Available` and then `DestroyUnit`, both gated by
+authors `GrantTech` (random currently-researchable) and then `DestroyUnit`, both gated by
 `BaseHasBuilding` `Network_Node`, so linking spends the artifact whether or not a tech was
 granted. `DestroyUnit` removes the context unit after that entry's `oncePer` key is recorded;
 an entry with no unit subject does nothing.
@@ -617,12 +624,14 @@ one magnitude source is authored — `levels` is a literal (a scripted quake), `
 names a **unit** stat resolved off the subject the trigger stamped. The rules come from the
 tile's own bound `MapRulesConfig_t`, so the effect needs no `GameDataContext`.
 
-`FungalBloom` (`include/game/ecology/FungalBloom.h`) sets fungus on the origin when it is not a
-base, then on a random sample of Chebyshev-1 neighbors that are not bases and do not already
-have fungus, up to the resolved tile count (the full count when the origin is a base);
-`BloomCandidateTiles` (`EcologyRules`) lists those candidates and the bloom shuffles them. Setting
-fungus removes improvements that cannot coexist with it. A nutrient bonus stays. A uniform draw of
-`[fungal_bloom_native_lifeforms_min, fungal_bloom_native_lifeforms_max]` from
+`FungalBloom` (`include/game/ecology/FungalBloom.h`) picks tiles with `SelectTilesByRingQuota`
+/ `SelectTilesByRingChance` (`MapUtils`) gated by `IsBloomCandidate` (not a base; neighbours
+also skip existing fungus). Exactly one size mode: fixed `tiles` (origin-first quota in
+radius 1), `tiles_stat` (same, resolved off the subject unit), or `chance` (per-distance
+`Rational_t` rolls, same shape as `TerraformCluster`). Supply-pod `GOODYFUNGUS` uses
+`chance: [1.0, "1/1"]` for the full 3×3. Setting fungus removes improvements that cannot
+coexist with it. A nutrient bonus stays.
+A uniform draw of `[fungal_bloom_native_lifeforms_min, fungal_bloom_native_lifeforms_max]` from
 `config/native_life.json` spawns that many of the `EligibleLifeforms` on the new tiles, owned by the
 session's native-life faction (Planet). A design is eligible when its domain can hold the
 tile: land on land, sea on water, air and orbital on either.
@@ -655,7 +664,7 @@ refuse.
 
 `on_discover_effects` fire whenever a tech joins a faction's discovered set (research
 breakthrough, probe steal, diplomatic grant, nested `GrantTech`). Secrets of the Human Brain
-uses world-scoped `oncePer` plus `GrantTech` `selection: Available` so only the first
+uses world-scoped `oncePer` plus `GrantTech` (no `tech_id`) so only the first
 discoverer in the session receives one random currently-researchable tech. The same
 `OnTechDiscovered` session subscriber calls `EnsureResearchTarget` so idle grants auto-pick.
 
@@ -737,6 +746,10 @@ Result floored at 0 and added to that resource's stockpile. Colony pods use
 `resource: minerals`, `amount: 10`, `stat: starting_minerals` on `on_found_effects`; a
 flat supply grant omits `stat`.
 
+### GrantEnergy
+Treasury credit. Exactly one mode: fixed integer `amount`, or Lua `formula` (global: `turn`).
+Shipping supply-pod Land/Sea use `50 + math.floor(turn / 5)` and `25 + math.floor(turn / 5)`.
+
 ### GrantCleanMinerals / AddVirtualMinerals
 Both write the subject faction's tally in `GameState`'s `EcologyLedger`, per-faction-subject
 like `RecordMindControl`, with a required positive integer `amount`. `GrantCleanMinerals`
@@ -747,12 +760,31 @@ captured or granted — credits it. `AddVirtualMinerals` charges eco damage no p
 (the Tectonic Payload's detonation), ungated by the Charter. See
 [ecology-system.md](ecology-system.md).
 
+### SpawnNative
+Places one native Military design on a **random Chebyshev-1** neighbor of the context tile.
+Candidates must pass `CanEnterTileTerrain` for the design's domain and hold no occupants
+hostile to the Planet faction (`MayShareTiles`). Optional `cargo_ids` fill `FreeCargoSlots`
+after spawn (random pick per slot, embarked on the hull) — shipping `Isle_of_the_Deep`
+loads `Mind_Worm`. Supply-pod Land and Sea event groups each author one `SpawnNative` for
+that surface.
+
+### TerraformCluster
+Picks tiles with `SelectTilesByRingChance` from `chance` (index = Chebyshev distance; origin
+is usually `1.0`), then places one improvement chosen uniformly from `improvement_ids`. A
+Mine pick also places Road on each tile that receives the Mine. SMAC (`goody_box` case 11)
+uses 2/3 for forest/farm/kelp and 1/2 for mine/solar; shipping config uses
+`chance: [1.0, "2/3"]`. Land and Sea supply-pod event groups author separate id lists.
+
 ### GrantUnit
-There is no registry of named designs (they are per-faction and player-authored, with ids
-derived from components via `UnitDesign::GetId`), so `GrantUnitEffect_t` names `component_ids`
-and a `count`, the same shape as `base_conquest`'s `escape_colony_pod`. Both go through the
-shared `EnsureAdHocDesign` (`units/AdHocDesign.h`). Ids are validated at load in
-`GameDataContext`, so a typo fails at startup naming the file.
+`GrantUnit` takes exactly one of `component_ids` (ad-hoc design via `EnsureAdHocDesign`) or
+`design_id` (look up the subject's Military, else add from `NativeUnitRegistry`). A missing
+`design_id` is a no-op. Component ids are validated at load; `design_id` is not.
+
+**TODO (supply pods case 9):** `UnityVehicle` in `config/supply_pods.json` still grants only
+`Unity_Rover`, and those stock designs are not authored. SMAC uses **one** goody outcome with
+conditional Rover / Scout Chopper / Foil / Battle Ogre Mk1–3 picks (not separate weighted
+events). Full gates, chances, over-cap re-roll, and notice keys (`GOODYPOD` / `OGREPOD`) are
+in [terranx-map.md](../thinker/terranx-map.md) under Case 9 — UnityVehicle.
 
 A granted unit is **homed but produced nowhere** (`CreateUnit` with an explicit null
 `pProducedAt`): it pays support, but receives neither stamped `ProducedAtThisBase` grants

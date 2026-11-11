@@ -152,6 +152,11 @@ const ScriptEntry_t& TextPack::Entry(const std::string& rId) const
     return it->second;
 }
 
+bool TextPack::HasEntry(const std::string& rId) const
+{
+    return m_entries.find(rId) != m_entries.end();
+}
+
 const std::string& TextPack::Label(int label) const
 {
     const auto it = m_labels.find(label);

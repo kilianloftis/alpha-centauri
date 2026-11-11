@@ -44,6 +44,26 @@ absent.
 
 ## TODO
 
+### Multiple supply-pod sets and multi-effect opens `[Ours]`
+
+- **Original:** one Unity supply-pod bit and one `goody_box` outcome table
+  (`docs/thinker/terranx-map.md` “Supply pods”). Sea and land share that table; land/sea only
+  change which cases apply. Opening yields a single case.
+- **Ours (shipping):** one `Supply_Pod` terrain occupant (`config/terrain.json`, own art);
+  `config/supply_pods.json` has Land and Sea `event_groups` (placement + events). Placement
+  and open hard-code `ImprovementIds::k_SupplyPod`. Placement stamps the event group's `id`
+  into `SupplyPodIndex`; an open resolves that stamp, picks one weighted event, and runs that
+  event's `effects` list.
+- **Ours (optional):** further pod sets as extra terrain features (open set — e.g.
+  `Alien_Cache` with its own `art` / `excludes` / `tags`). Each event group names an
+  `improvement_id` (shipping Land/Sea both `Supply_Pod`); generation and open use that id
+  or a `supply_pod` tag instead of the hardcoded constant. Optionally, opens that can apply
+  more than one weighted pick from a single pod.
+- **Where:** `SupplyPodConfig_t` / `SupplyPodIndex` / `SupplyPodGeneration` /
+  `SupplyPodMutations` / `SupplyPodRules`; keep art on the occupant, not in `supply_pods.json`.
+- **Missing:** per-event-group `improvement_id`, tag- or id-based open/placement, and
+  multi-pick open rules.
+
 ### Founding surface and embarked exceptions `[Ours]`
 
 - **Original:** only a sea-triad colony founds on ocean; a land colony on a transport cannot

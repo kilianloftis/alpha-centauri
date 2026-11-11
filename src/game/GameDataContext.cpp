@@ -69,6 +69,7 @@
 #include "game/ecology/EcoDamageCalculator.h"
 #include "game/ecology/EcoDamageConfig.h"
 #include "game/world-events/WorldEventConfig.h"
+#include "game/supply/SupplyPodConfigParser.h"
 #include "lib/LuaRuntime.h"
 
 #include <stdexcept>
@@ -279,6 +280,7 @@ void LoadRuleConfigs_(GameDataContext& rData)
     rData.diplomacyConfig = ParseOwned_<DiplomacyConfigParser>(rPaths.diplomacy);
     rData.difficultyConfig = ParseOwned_<DifficultyConfigParser>(rPaths.difficulty);
     rData.worldEventsConfig = ParseOwned_<WorldEventsConfigParser>(rPaths.worldEvents);
+    rData.supplyPodConfig = ParseOwned_<SupplyPodConfigParser>(rPaths.supplyPods);
     // Drone clamps and mood thresholds, loaded before the Lua calculators that use them.
     rData.popCompositionConfig = ParseOwned_<PopCompositionConfigParser>(rPaths.popComposition);
     ValidateCompositionPopTypes_(rData);
@@ -376,6 +378,7 @@ void ThrowIfIncomplete(const GameDataContext& rData)
         {rData.nativeLifeConfig.get(), "nativeLifeConfig"},
         {rData.planetFaunaCalculator.get(), "planetFaunaCalculator"},
         {rData.worldEventsConfig.get(), "worldEventsConfig"},
+        {rData.supplyPodConfig.get(), "supplyPodConfig"},
         {rData.ecoDamageConfig.get(), "ecoDamageConfig"},
         {rData.luaRuntime.get(), "luaRuntime"},
         {rData.droneCalculator.get(), "droneCalculator"},

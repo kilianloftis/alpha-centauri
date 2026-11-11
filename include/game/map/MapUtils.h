@@ -2,13 +2,19 @@
 
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "lib/RandomRoll.h"
+#include "lib/Rational.h"
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdlib>
+#include <random>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace ac
 {
@@ -238,6 +244,77 @@ void ForEachNeighborInChebyshevRadius(const Tile& rOrigin, WorldMapT& rWorldMap,
             fn(pTile, distance);
         }
     });
+}
+
+// Independent roll per tile: chances[d] for Chebyshev distance d (index 0 is the origin).
+// Radius is chances.size() - 1. eligible(tile, distance) gates before the roll.
+template<typename Pred>
+std::vector<Tile*> SelectTilesByRingChance(Tile& rOrigin, WorldMap& rWorldMap,
+                                           std::span<const Rational_t> rChances, Pred&& eligible,
+                                           std::mt19937& rRng)
+{
+    if (rChances.empty())
+    {
+        throw std::invalid_argument("SelectTilesByRingChance: chances must be non-empty");
+    }
+    const int radius = static_cast<int>(rChances.size()) - 1;
+    std::vector<Tile*> selected;
+    ForEachTileInChebyshevRadius(rOrigin, rWorldMap, radius,
+                                 [&](Tile* pTile, int distance)
+                                 {
+                                     if (!pTile || !eligible(*pTile, distance))
+                                     {
+                                         return;
+                                     }
+                                     const Rational_t& rChance =
+                                         rChances[static_cast<std::size_t>(distance)];
+                                     if (!RollRational(rChance, rRng))
+                                     {
+                                         return;
+                                     }
+                                     selected.push_back(pTile);
+                                 });
+    return selected;
+}
+
+// Up to `quota` eligible tiles in the Chebyshev disk. The origin is taken first when eligible;
+// remaining slots are a random sample of the other eligible tiles.
+template<typename Pred>
+std::vector<Tile*> SelectTilesByRingQuota(Tile& rOrigin, WorldMap& rWorldMap, int radius,
+                                          int quota, Pred&& eligible, std::mt19937& rRng)
+{
+    if (quota <= 0 || radius < 0)
+    {
+        return {};
+    }
+    std::vector<Tile*> selected;
+    std::vector<Tile*> ring;
+    ForEachTileInChebyshevRadius(rOrigin, rWorldMap, radius,
+                                 [&](Tile* pTile, int distance)
+                                 {
+                                     if (!pTile || !eligible(*pTile, distance))
+                                     {
+                                         return;
+                                     }
+                                     if (distance == 0)
+                                     {
+                                         selected.push_back(pTile);
+                                     }
+                                     else
+                                     {
+                                         ring.push_back(pTile);
+                                     }
+                                 });
+    if (static_cast<int>(selected.size()) >= quota)
+    {
+        selected.resize(static_cast<std::size_t>(quota));
+        return selected;
+    }
+    std::shuffle(ring.begin(), ring.end(), rRng);
+    const int need = quota - static_cast<int>(selected.size());
+    const int take = std::min(need, static_cast<int>(ring.size()));
+    selected.insert(selected.end(), ring.begin(), ring.begin() + take);
+    return selected;
 }
 
 // fn(tile) for rings 1 to radius (at most k_TableOffsetsMaxRadius) of k_TableOffsets in table

@@ -4,6 +4,7 @@
 #include "game/diplomacy/DiplomaticTransitionRules.h"
 #include "game/base/BaseTypes.h"
 #include "game/combat/CombatResolver.h"
+#include "game/supply/SupplyPodMutations.h"
 
 #include <optional>
 #include <random>
@@ -32,6 +33,9 @@ public:
 
     // rVisitor arrived on a tile with on_visit_effects.
     virtual void OnImprovementVisited(Unit& rVisitor) = 0;
+
+    // Opens a supply pod on rVisitor's tile.
+    virtual SupplyPodOpenResult_t ApplySupplyPodOpen(Unit& rVisitor, std::mt19937& rRng) = 0;
 
     // A unit's attack, described before it resolved. Called once it has resolved.
     virtual void OnHostileAct(const HostileAct_t& rAct) = 0;

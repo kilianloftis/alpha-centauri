@@ -37,6 +37,17 @@ class ExtractTextTests(unittest.TestCase):
         )
         self.assertEqual(script["PLAIN"], {"body": "Just a body.", "items": []})
 
+    def test_goody_script_ids_remap_to_supply_pod_event_ids(self) -> None:
+        script = self.load("script.json")
+        self.assertEqual(script["EnergyCredits"], {"body": "Recovered energy.", "items": []})
+        self.assertEqual(
+            script["EnergyCredits_Sea"], {"body": "Recovered sea energy.", "items": []})
+        self.assertEqual(script["PlaceMonolith"], {"body": "A monolith.", "items": []})
+        self.assertEqual(script["Empty"], {"body": "The supply pod is empty.", "items": []})
+        self.assertEqual(script["Empty_Sea"], {"body": "The supply pod is empty.", "items": []})
+        self.assertNotIn("GOODYURANIUM", script)
+        self.assertNotIn("MONOLITH", script)
+
     def test_an_entry_without_directives_is_all_items(self) -> None:
         self.assertEqual(
             self.load("script.json")["CHOICES"],

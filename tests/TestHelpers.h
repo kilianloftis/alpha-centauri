@@ -92,6 +92,7 @@ inline ac::GameDataPaths FixtureDataPaths()
     paths.nativeLife = FixturePath("native_life.json");
     paths.nativeLifeFormula = FixturePath("native_life.lua");
     paths.worldEvents = FixturePath("world_events.json");
+    paths.supplyPods = FixturePath("supply_pods.json");
     return paths;
 }
 

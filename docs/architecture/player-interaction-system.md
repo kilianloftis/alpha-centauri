@@ -87,6 +87,8 @@ Modal widgets used from here must set `ShouldClose` **before** invoking their ca
 - Production completed with empty queue → `NoticeInteraction_t` then `ProductionIdleInteraction_t`
 - Current production no longer constructable → `ProductionPreemptedInteraction_t` (after this turn's minerals have already been banked onto it)
 - Improvement visit (Monolith) → `ImprovementVisitInteraction_t`
+- Supply pod opened → `SupplyPodNoticeInteraction_t` (script + optional image from the event's
+  `notice`, or the stamped event group's `empty_notice`; no Investigate prompt)
 - A Pact ally attacked or declared on → `PactObligationInteraction_t` (queued by `ApplyHostileAct`, `ApplyAtrocityVendetta`, and `DeclareVendetta`)
 - A move order reaching forbidden territory → `TerritoryEntryInteraction_t` (queued by `GameState::OnTerritoryEntryRefused`, once per unit)
 - Probe mission finished → `ProbeNoticeInteraction_t` when the player is the probe owner or the target owner; `InteractionPresenter` formats the outcome. A probe the target's `probe_hunter` out-ranks dies on contact (`ProbeContactDestroyed_t`) and skips the action menu; the result carries the hunter's source building, which `FillNoticeNames_` turns into `facilityName` for the copy. Steal-tech with an empty pool copies the target's explored tiles (`CopyExploredMap`) and uses `ProbeStolenMap_t` (`STOLEMAP`) when the actor learned any tile. A framed probe then enqueues `ProbeFrameNoticeInteraction_t` (the target's and framed faction's names and `ProbeFrameOutcome_t`); `ProbeFrameNoticeCopy` gives the actor `FRAMED` or `FRAMEFLOP`.

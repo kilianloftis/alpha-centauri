@@ -793,6 +793,38 @@
         },
         "overhang": 0.24
       }
+    },
+    {
+      "id": "Supply_Pod",
+      "name": "Supply Pod",
+      "description": "A Unity supply pod. Entering the tile opens it automatically, removes the pod, and yields a random event.",
+      "tags": [
+        "supply_pod"
+      ],
+      "frequency": 0,
+      "excludes": [
+        "@landmark",
+        "@resource_bonus",
+        "Monolith",
+        "Supply_Pod"
+      ],
+      "effects": [],
+      "art": {
+        "layer": "object",
+        "variants": {
+          "land": [
+            "assets/sprites/tile_bonuses/supply_pod_0.png",
+            "assets/sprites/tile_bonuses/supply_pod_1.png",
+            "assets/sprites/tile_bonuses/supply_pod_2.png"
+          ],
+          "sea": [
+            "assets/sprites/tile_bonuses/supply_pod_3.png",
+            "assets/sprites/tile_bonuses/supply_pod_4.png",
+            "assets/sprites/tile_bonuses/supply_pod_5.png"
+          ]
+        },
+        "overhang": 0.24
+      }
     }
   ],
   "operations": [

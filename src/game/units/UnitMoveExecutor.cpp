@@ -7,6 +7,7 @@
 #include "game/movement/MoveCostRules.h"
 #include "game/movement/MovementRules.h"
 #include "game/movement/TransportMutations.h"
+#include "game/supply/SupplyPodRules.h"
 #include "game/units/IUnitOrderWorld.h"
 #include "game/visibility/FactionRevealedUnits.h"
 #include "game/visibility/VisibilityRules.h"
@@ -120,7 +121,15 @@ bool UnitMoveExecutor::ApplyArrivalEffects_(Unit& rMover)
     // Boards only when the mover cannot hold the tile itself; in a base it stays a garrison.
     ac::TryAutoAttachOnEntry(rMover);
 
-    if (TileHasVisitEffects(rMover.GetTile()))
+    if (TileHasSupplyPod(rMover.GetTile()) && CanOpenSupplyPod(rMover))
+    {
+        rMover.ClearOrder();
+        if (m_rWorld.ApplySupplyPodOpen(rMover, m_rRng).bVisitorDestroyed)
+        {
+            return false;
+        }
+    }
+    else if (TileHasVisitEffects(rMover.GetTile()))
     {
         // Stop multi-hop so the unit does not walk off before Investigate / Leave resolves.
         rMover.ClearOrder();

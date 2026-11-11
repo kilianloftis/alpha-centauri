@@ -138,6 +138,45 @@ struct ElevationChanged_t
     int deltaMeters = 0;
 };
 
+struct OccupantAdded_t
+{
+    std::string improvementId;
+};
+
+struct MapRevealed_t
+{
+    int radius = 0;
+};
+
+struct UnitTeleported_t
+{
+    TileCoord_t cameraTile{};
+};
+
+struct ProductionFinished_t
+{
+    std::string baseName;
+    std::string itemName;
+    TileCoord_t cameraTile{};
+};
+
+struct CommlinkGranted_t
+{
+    std::string leaderTitle;
+    std::string leaderName;
+    std::string factionName;
+};
+
+struct NativeSpawned_t
+{
+    std::string nativeId;
+};
+
+struct TerraformClusterApplied_t
+{
+    std::string improvementId;
+};
+
 using TriggeredEffectResult_t = std::variant<
     FacilitiesDestroyed_t,
     PopulationChanged_t,
@@ -160,7 +199,14 @@ using TriggeredEffectResult_t = std::variant<
     AtrocityCommitted_t,
     MindControlRecorded_t,
     CleanMineralsGranted_t,
-    VirtualMineralsAdded_t
+    VirtualMineralsAdded_t,
+    OccupantAdded_t,
+    MapRevealed_t,
+    UnitTeleported_t,
+    ProductionFinished_t,
+    CommlinkGranted_t,
+    NativeSpawned_t,
+    TerraformClusterApplied_t
 >;
 
 // Trigger fields and mutable subjects; Subjects() gives conditions the same const context

@@ -159,23 +159,34 @@ bool DomainCanHold_(UnitDomain_t domain, const Tile& rTile)
 
 } // namespace
 
+bool IsBloomCandidate(const Tile& rTile, int distanceFromOrigin)
+{
+    if (rTile.HasImprovement(ImprovementIds::k_Base))
+    {
+        return false;
+    }
+    if (distanceFromOrigin > 0 && rTile.HasTerrainFeature(ImprovementIds::k_Fungus))
+    {
+        return false;
+    }
+    return true;
+}
+
 BloomCandidates_t BloomCandidateTiles(const Tile& rOrigin)
 {
     BloomCandidates_t candidates;
-    if (!rOrigin.HasImprovement(ImprovementIds::k_Base))
+    if (IsBloomCandidate(rOrigin, 0))
     {
         candidates.pOrigin = &rOrigin;
     }
     const WorldMap& rWorldMap = CurrentGameState().GetWorldMap();
     ForEachNeighborInChebyshevRadius(rOrigin, rWorldMap, /*radius=*/1,
-        [&](const Tile* pTile, int /*distance*/)
+        [&](const Tile* pTile, int distance)
         {
-            if (pTile->HasImprovement(ImprovementIds::k_Base)
-                || pTile->HasTerrainFeature(ImprovementIds::k_Fungus))
+            if (IsBloomCandidate(*pTile, distance))
             {
-                return;
+                candidates.neighbours.push_back(pTile);
             }
-            candidates.neighbours.push_back(pTile);
         });
     return candidates;
 }

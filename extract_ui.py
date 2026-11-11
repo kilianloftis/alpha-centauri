@@ -39,9 +39,58 @@ _LOCAL_GAME_DIR = Path(
     "/home/martok/.PlayOnLinux/wineprefix/AlphaCentauri_gog/"
     "drive_c/GOG Games/Sid Meier's Alpha Centauri"
 )
+_WINE_GOG_GAME_DIR = Path.home() / (
+    ".wine/drive_c/Program Files/GOG Galaxy/Games/Alpha Centauri"
+)
 _WINDOWS_GAME_DIR = Path(r"C:\Program Files (x86)\Alpha Centauri")
-DEFAULT_GAME_DIR = _LOCAL_GAME_DIR if _LOCAL_GAME_DIR.is_dir() else _WINDOWS_GAME_DIR
+
+
+def _default_game_dir() -> Path:
+    for candidate in (_LOCAL_GAME_DIR, _WINE_GOG_GAME_DIR, _WINDOWS_GAME_DIR):
+        if candidate.is_dir():
+            return candidate
+    return _WINDOWS_GAME_DIR
+
+
+DEFAULT_GAME_DIR = _default_game_dir()
 DEFAULT_ASSET_ROOT = Path("assets")
+
+# goody_box NetMsg_pop art (terranx.exe / Thinker veh.cpp). Values are *_sm stems under
+# assets/ui/thumbs/<stem>.png; None means SMAC passed a null image. Confirmed in
+# docs/thinker/terranx-map.md “Supply pods”.
+# SMAC land/sea goody thumbs by event id. Shipping notices live on Land/Sea groups in
+# config/supply_pods.json; this table drives extract and the art-alignment test.
+SUPPLY_POD_NOTICE_ART: dict[str, dict[str, str | None]] = {
+    "EnergyCredits": {"land": "supply_sm", "sea": None},
+    "RiverSource": {"land": "supply_sm", "sea": None},
+    "MapReveal": {"land": "supply_sm", "sea": "supply_sm"},
+    "Earthquake": {"land": "quake_sm", "sea": None},
+    "Teleport": {"land": "stars_sm", "sea": None},  # SMAC GOODYWAVE has no thumb
+    "FinishProduction": {"land": "indbm_sm", "sea": "indbm_sm"},
+    "AlienArtifact": {"land": "art_dis_sm", "sea": "art_dis_sm"},
+    "FungalBloom": {"land": "fung_sm", "sea": None},
+    "PlaceMonolith": {"land": "monolith_sm", "sea": None},
+    "UnityVehicle": {"land": "supply_sm", "sea": "supply_sm"},
+    "GrantTech": {"land": "supply_sm", "sea": "supply_sm"},
+    "GrantCommlink": {"land": "supply_sm", "sea": "supply_sm"},
+    # Land forest/farm share forgr; mine/solar use supply_sm in SMAC — shipping land notice is forest.
+    "TerraformCluster": {"land": "forgr_sm", "sea": "kelp_sm"},
+    "NativeLife": {"land": "mindworm_sm", "sea": "isle_sm"},
+    "CloneUnit": {"land": "clone_sm", "sea": "clone_sm"},
+    "ResourceBonus": {"land": "supply_sm", "sea": None},
+    "DestroyVisitor": {"land": None, "sea": None},
+}
+
+# Extra goody thumbs SMAC uses for variants not yet separate shipping notices.
+SUPPLY_POD_EXTRA_THUMBS = (
+    "sporlnch_sm",  # GOODYWORMS when the land spawn is a Spore Launcher
+    "ogre_sm",  # OGREPOD (Unity Battle Ogre)
+)
+
+# GOG installs sporelnch_sm.pcx while terranx.exe asks for sporlnch_sm.pcx.
+PCX_SOURCE_ALIASES: dict[str, tuple[str, ...]] = {
+    "sporlnch_sm.pcx": ("sporelnch_sm.pcx",),
+}
 
 TRANSPARENT_INDEX = 255
 CURSOR_GUIDE_INDEX = 149
@@ -360,6 +409,40 @@ def convert_glob(game_dir: Path, pattern: str, out_dir: Path, *, keyed: bool) ->
     return written
 
 
+def supply_pod_thumb_stems() -> frozenset[str]:
+    stems: set[str] = set(SUPPLY_POD_EXTRA_THUMBS)
+    for surfaces in SUPPLY_POD_NOTICE_ART.values():
+        for stem in surfaces.values():
+            if stem:
+                stems.add(stem)
+    return frozenset(stems)
+
+
+def resolve_pcx_(game_dir: Path, filename: str) -> Path:
+    primary = game_dir / filename
+    if primary.is_file():
+        return primary
+    for alias in PCX_SOURCE_ALIASES.get(filename, ()):
+        candidate = game_dir / alias
+        if candidate.is_file():
+            return candidate
+    raise FileNotFoundError(f"Missing supply-pod thumb PCX: {primary}")
+
+
+def convert_supply_pod_thumbs(game_dir: Path, out_dir: Path, *, keyed: bool) -> list[Path]:
+    """Convert every goody_box notice thumb; fail if a required PCX is absent."""
+    written: list[Path] = []
+    for stem in sorted(supply_pod_thumb_stems()):
+        source = resolve_pcx_(game_dir, f"{stem}.pcx")
+        sheet = load_pcx(source)
+        written.append(save_rgba(sheet, out_dir / f"{stem}.png", keyed=keyed))
+    return written
+
+
+def thumb_asset_path(stem: str) -> str:
+    return f"assets/ui/thumbs/{stem}.png"
+
+
 def extract_ui(game_dir: Path, asset_root: Path, *, keyed: bool) -> dict[str, list[Path]]:
     if not game_dir.is_dir():
         raise FileNotFoundError(f"Game directory not found: {game_dir}")
@@ -394,7 +477,16 @@ def extract_ui(game_dir: Path, asset_root: Path, *, keyed: bool) -> dict[str, li
         raise ValueError(f"{game_dir / 'Cursor.pcx'} missing guide index {CURSOR_GUIDE_INDEX}")
     by_family["cursors"] = crop_regions(cursor_sheet, CURSOR_CROPS, asset_root, keyed=keyed)
 
-    by_family["thumbs"] = convert_glob(game_dir, "*_sm.pcx", ui_root / "thumbs", keyed=keyed)
+    thumbs_dir = ui_root / "thumbs"
+    thumbs = convert_glob(game_dir, "*_sm.pcx", thumbs_dir, keyed=keyed)
+    # Named goody thumbs: required set + GOG sporlnch→sporelnch alias (output keeps binary stem).
+    required = convert_supply_pod_thumbs(game_dir, thumbs_dir, keyed=keyed)
+    seen = {path.resolve() for path in thumbs}
+    for path in required:
+        if path.resolve() not in seen:
+            thumbs.append(path)
+            seen.add(path.resolve())
+    by_family["thumbs"] = thumbs
     by_family["artboxes"] = convert_glob(game_dir, "artbox*.pcx", ui_root / "artboxes", keyed=keyed)
     return by_family
 

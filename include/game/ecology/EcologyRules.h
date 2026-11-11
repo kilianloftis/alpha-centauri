@@ -27,6 +27,9 @@ int FungalPopChance(const BaseManager& rBase);
 // Workable tiles that are neither a base nor fungus.
 std::vector<const Tile*> FungalPopTiles(const BaseManager& rBase);
 
+// Bloom disk filter: never a base; neighbours also skip tiles that already have fungus.
+bool IsBloomCandidate(const Tile& rTile, int distanceFromOrigin);
+
 struct BloomCandidates_t
 {
     // Null when the origin is a base.

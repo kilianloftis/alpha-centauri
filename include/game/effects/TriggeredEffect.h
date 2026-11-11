@@ -26,23 +26,81 @@ struct AddBuildingEffect_t
 
 struct GrantTechEffect_t
 {
-    // Present: grant this tech id. Absent: pick uniformly from AvailableTechs() (Secrets
-    // first-discover bonus). Parser requires exactly one of tech_id / selection Available.
+    // Present: grant this tech id. Absent: pick uniformly from AvailableTechs() (SMAC
+    // goody / artifact / Secrets — currently researchable only).
     std::optional<std::string> techId;
 };
 
-// A unit assembled from component ids: designs are per faction, with ids derived from their
-// components, so there are no named ones to look up.
+// A unit from component ids (ad-hoc design) or a named design_id on the subject's Military /
+// NativeUnitRegistry. Parser requires exactly one of the two.
 struct GrantUnitEffect_t
 {
     std::vector<std::string> componentIds;
     int count = 1;
+    std::optional<std::string> designId;
 };
 
-// Treasury credit. Council proposals (Salvage Unity Fusion Core) fire this.
+// Treasury credit. Fixed `amount`, or Lua `formula` (exclusive). Formula global: `turn`.
 struct GrantEnergyEffect_t
 {
-    int amount = 0;
+    std::optional<int> amount;
+    std::optional<std::string> formula;
+};
+
+// Places one improvement occupant on the context tile when CanBuildImprovement allows.
+struct AddOccupantEffect_t
+{
+    std::string improvementId;
+};
+
+// Marks FactionExploredMap in a Chebyshev radius around the context tile.
+struct RevealMapEffect_t
+{
+    int radius = 0;
+};
+
+// Moves the context unit to a random same-surface tile in the distance band.
+struct TeleportUnitEffect_t
+{
+    int minDistance = 0;
+    int maxDistance = 0;
+};
+
+// Sets the nearest own base's mineral stockpile to the current item's cost.
+struct FinishProductionEffect_t
+{
+};
+
+// Creates another unit of the context unit's design on its tile.
+struct CloneUnitEffect_t
+{
+};
+
+// Sets Known with a random other non-native unknown faction.
+struct GrantCommlinkEffect_t
+{
+};
+
+// Spawns a native-life Military design on one random Chebyshev-1 neighbor the design can hold
+// that has no hostile occupants. Optional cargo_ids fill FreeCargoSlots after spawn.
+struct SpawnNativeEffect_t
+{
+    std::string nativeId;
+    std::vector<std::string> cargoIds;
+};
+
+// Places a cluster of improvements: uniform pick from improvementIds. chance[d] is the
+// independent roll for Chebyshev distance d (index 0 is the origin).
+struct TerraformClusterEffect_t
+{
+    std::vector<std::string> improvementIds;
+    std::vector<Rational_t> chance;
+};
+
+// Places one randomly chosen buildable improvement from the list on the context tile.
+struct AddRandomOccupantEffect_t
+{
+    std::vector<std::string> improvementIds;
 };
 
 // Credits a base resource stockpile. `amount` seeds the resolve; optional `modifierStat`
@@ -132,12 +190,14 @@ struct EarthquakeEffect_t
     std::optional<StatId_t> levelsStat;
 };
 
-// Turns the context tile and a random sample of its neighbours to fungus. Exactly one of
-// `tiles` and `tilesStat`.
+// Turns the context tile and a random sample of its neighbours to fungus. Exactly one mode:
+// fixed `tiles`, unit `tilesStat`, or TerraformCluster-style `chance` (per-distance rolls;
+// index 0 is the origin).
 struct FungalBloomEffect_t
 {
     int tiles = 0;
     std::optional<StatId_t> tilesStat;
+    std::vector<Rational_t> chance;
 };
 
 // Destroys other units, razes bases and removes improvements in a disk, then lowers it a
@@ -222,7 +282,16 @@ using TriggeredEffectVariant_t = std::variant<
     CommitAtrocityEffect_t,
     RecordMindControlEffect_t,
     GrantCleanMineralsEffect_t,
-    AddVirtualMineralsEffect_t
+    AddVirtualMineralsEffect_t,
+    AddOccupantEffect_t,
+    RevealMapEffect_t,
+    TeleportUnitEffect_t,
+    FinishProductionEffect_t,
+    CloneUnitEffect_t,
+    GrantCommlinkEffect_t,
+    SpawnNativeEffect_t,
+    TerraformClusterEffect_t,
+    AddRandomOccupantEffect_t
 >;
 
 // Which subject remembers that a once-only entry has already fired.

@@ -355,6 +355,21 @@
       ]
     },
     {
+      "id": "Supply_Pod",
+      "name": "Supply Pod",
+      "tags": [
+        "supply_pod"
+      ],
+      "frequency": 0,
+      "excludes": [
+        "@landmark",
+        "@resource_bonus",
+        "Monolith",
+        "Supply_Pod"
+      ],
+      "effects": []
+    },
+    {
       "id": "MonsoonJungle",
       "name": "Monsoon Jungle",
       "tags": [

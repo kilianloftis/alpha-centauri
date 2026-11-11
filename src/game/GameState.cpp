@@ -24,6 +24,8 @@
 #include "game/effects/TileEffectsContext.h"
 #include "game/effects/TriggeredEffectDispatch.h"
 #include "game/effects/TriggeredEffectRules.h"
+#include "game/supply/SupplyPodIndex.h"
+#include "game/supply/SupplyPodMutations.h"
 #include "game/terraform/TerraformRules.h"
 #include "game/units/UnitAttackExecutor.h"
 #include "game/units/UnitMoveExecutor.h"
@@ -151,7 +153,8 @@ void WireMoodNotices_(GameState& rGameState, BaseManager& rBase)
 GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
                      const GameDataContext& rGameData,
                      GameSettings& rSettings,
-                     uint32_t rngSeed)
+                     uint32_t rngSeed,
+                     std::unique_ptr<SupplyPodIndex> pSupplyPods)
     : m_missionYear(k_StartingMissionYear)
     , m_rSettings(rSettings)
     , m_rGameData(rGameData)
@@ -164,6 +167,7 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     , m_pAtrocities(std::make_unique<AtrocityLedger>())
     , m_pMindControl(std::make_unique<MindControlLedger>())
     , m_pEcology(std::make_unique<EcologyLedger>())
+    , m_pSupplyPods(pSupplyPods ? std::move(pSupplyPods) : std::make_unique<SupplyPodIndex>())
     , m_pDiplomaticActionExecutor(std::make_unique<DiplomaticActionExecutor>())
     , m_rng(rngSeed)
 {
@@ -431,6 +435,11 @@ void GameState::OnImprovementVisited(Unit& rVisitor)
     ApplyVisitEffects(*this, rVisitor, m_rng);
 }
 
+SupplyPodOpenResult_t GameState::ApplySupplyPodOpen(Unit& rVisitor, std::mt19937& rRng)
+{
+    return OpenSupplyPod(*this, rVisitor, rRng);
+}
+
 void GameState::WireFactionObservers_(Faction& rFaction)
 {
     rFaction.OnSecretProjectDestroyed.Connect([this](const BuildingId_t& rBuildingId)
@@ -609,6 +618,16 @@ EcologyLedger& GameState::GetEcologyLedger()
 const EcologyLedger& GameState::GetEcologyLedger() const
 {
     return *m_pEcology;
+}
+
+SupplyPodIndex& GameState::GetSupplyPods()
+{
+    return *m_pSupplyPods;
+}
+
+const SupplyPodIndex& GameState::GetSupplyPods() const
+{
+    return *m_pSupplyPods;
 }
 
 DiplomaticActionExecutor& GameState::GetDiplomaticActionExecutor()

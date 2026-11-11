@@ -15,6 +15,9 @@ RGBA (GDI `SetTextColor`), not terrain `palette.pcx`.
 | `artbox0.pcx`–`artbox24.pcx` | 420×520 | `assets/ui/artboxes/artboxNN.png` |
 | `*_sm.pcx` | varies | `assets/ui/thumbs/<stem>.png` |
 
+Supply-pod (`goody_box`) notice thumbs are listed in `extract_ui.SUPPLY_POD_NOTICE_ART` and
+required by `convert_supply_pod_thumbs` (see terranx-map.md “Supply pods” art columns).
+
 ## `console2.pcx` world console (1024×257)
 
 Drawn as a **single** native-size strip via `layouts.console` (fixed placement: `align`

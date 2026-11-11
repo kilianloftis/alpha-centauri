@@ -406,6 +406,114 @@ negative, so **every** later round the defender loses rolls the 50% again until 
 - `veh_skip` (`0x5C1D20`) on each, which spends all its moves;
 - `bit_set(tx, ty, 0x100000, 1)` (`BIT_SUPPLY_REMOVE`): no random supply pod spawns on the
   tile again;
+
+## Supply pods (`goody_box` `0x57A660`)
+
+Thinker's rewrite is `goody_box` in `refs/thinker/src/veh.cpp` (lead only — confirm in the
+binary). Air units do not open pods. Opening clears the pod and rolls an event; ineligible
+outcomes re-roll. Our names live in `config/supply_pods.json`; SMAC case numbers stay here:
+
+| SMAC case | Our event / outcome | Script notice | Land art | Sea art |
+|-----------|---------------------|---------------|----------|---------|
+| 0 | `EnergyCredits` / `GrantEnergy` | `GOODYURANIUM` / `GOODYHYDROGEN` | `supply_sm.pcx` | none |
+| 1 | `RiverSource` | `GOODYRIVER` | `supply_sm.pcx` | — |
+| 2 | `MapReveal` | `GOODYVIEW` / `GOODYSONAR` | `supply_sm.pcx` | `supply_sm.pcx` |
+| 3 | `Earthquake` | `GOODYQUAKE` | `quake_sm.pcx` | — |
+| 4 | `Teleport` | `GOODYGATE` / `GOODYWAVE` | `stars_sm.pcx` | none |
+| 5/6 | `FinishProduction` / `AlienArtifact` | `GOODYBUILD` / `GOODYARTIFACT` | `indbm_sm` / `art_dis_sm` | — |
+| 7 | `FungalBloom` | `GOODYFUNGUS` | `fung_sm.pcx` | — |
+| 8 | `PlaceMonolith` | monolith visit path | `monolith_sm.pcx` | — |
+| 9 | `UnityVehicle` | `GOODYPOD` / `OGREPOD` | `supply_sm` / `ogre_sm` | same |
+| 10 | `GrantTech` / `GrantCommlink` | `GOODYDATA*` / `GOODYCOMM` | `supply_sm.pcx` | `supply_sm.pcx` |
+| 11 | `TerraformCluster` | `GOODYFOREST` / `FARM` / `MINE` / `SOLAR` / `KELP` | `forgr_sm` (forest/farm) / `supply_sm` (mine/solar) | `kelp_sm.pcx` |
+| 12–17 | `NativeLife` | `GOODYWORMS` / `GOODYISLE` | `mindworm_sm` / `sporlnch_sm` | `isle_sm.pcx` |
+| 18 | `CloneUnit` | `GOODYCLONE` | `clone_sm.pcx` | — |
+| default | `ResourceBonus` | `GOODYRESOURCE` | `supply_sm.pcx` | — |
+| special | `DestroyVisitor` | `GOODYVANISH` / `GOODYWHIRLPOOL` | none | none |
+
+Shipping Land/Sea event groups in `config/supply_pods.json` author one `notice` (and `image`) per
+event; `extract_ui.SUPPLY_POD_NOTICE_ART` indexes SMAC's land/sea thumbs for extract
+(`assets/ui/thumbs/<stem>.png`). GOG ships `sporelnch_sm.pcx` while the binary asks for
+`sporlnch_sm.pcx`; extract aliases the disk name to the binary stem.
+
+### Case notes (confirmed in `terranx.exe`)
+
+**Case 2 — MapReveal** (`0x57b1a6`): `spot_loc` over `iterate_tiles` count 121
+(`cmp edi,0x1e4` step 4) — Chebyshev radius 5. Sea keeps same-ocean-region tiles only; land
+reveals the whole square. Shipping `RevealMap` uses `radius: 5`.
+
+**Case 10 — GrantTech** (`0x57c…` / Thinker `goody_box` case 10): after an optional commlink
+branch, picks a tech with `!has_tech && tech_avail` (currently researchable), plus shallow-prereq
+and exclusion filters. Artifact link (`study_artifact` `0x57CFA0`) uses the same
+`!has_tech && tech_avail` pool. Shipping `GrantTech` with no `tech_id` draws from
+`AvailableTechs()`.
+
+**Case 5 — FinishProduction** (`0x57abac`): nearest own base; only if mineral stockpile is
+strictly below `3 * prod_cost / 4`, then set stockpile to full cost. No vanilla upper deficit
+cap (Thinker's optional `rare_supply_pods` `40+rand(60)` gate is not in this binary). Our
+`FinishProduction` currently fills to cost with neither gate.
+
+**Case 7 — FungalBloom** (`0x57b9fc`): after notice, `site_radius` then fungus on every tile in
+the 3×3 (`iterate_tiles` count 9) with altitude ≥ ocean shelf — clear forest/farm/solar/mine/
+road/magtube bits. Shipping uses `FungalBloom` `chance: [1.0, "1/1"]` on bloom candidates.
+
+**Cases 12–17 — NativeLife** (`0x57c…` / Thinker `goody_box` case 12): always adjacent
+(`BaseOffset` ring). Empty same-surface tile (`anything_at() < 0`). Sea → Isle of the Deep
+then `min(veh_cargo, goody_rand(2)+1)` Mind Worm / Spore passengers on that tile (loaded
+cargo); land → Mind Worm or Spore, higher cases may place more with spacing. Notices
+`GOODYISLE` / `GOODYWORMS`. No Locusts. Shipping `SpawnNative` always picks one random
+eligible Chebyshev-1 neighbor; Isle authors `cargo_ids: ["Mind_Worm"]`.
+
+**Case 9 — UnityVehicle** (`0x57ad0a`–`0x57be52`): **one** goody outcome, not a weighted event
+per chassis. Stock unit ids (Thinker `BSC_*`, `alphax.txt` `#UNITS`): Rover `11`, Scout Chopper
+`12`, Foil `13`, Battle Ogre Mk1–3 `16`/`17`/`18`. Components from alphax: Rover Speeder+Gun+
+Scout; Chopper Copter+Gun+Scout; Foil Foil+Transport+Scout; Ogre Mk1 Infantry+R-Laser+3-Res;
+Mk2 Infantry+R-Bolt+8-Res; Mk3 Speeder+String+Stasis.
+
+Selection order (binary; Thinker `goody_box` case 9 matches aside from its
+`conf.spawn_battle_ogres` wrapper):
+
+1. Default pick = Rover (`mov [ebp-0x2c],0xb` at `0x57ad0f`).
+2. **Chopper** (`0x57ad16`–`0x57ad6d`): byte at `0x9a6696` nonzero (Thinker: any owner of
+   `TECH_Fossil` / Synthetic Fossil Fuels); `rand % 3 == 0`; faction owns no Chopper yet
+   (`units_active` byte); `base_find_2` then nearest-base dist ≤ `3 * proto_speed(Chopper)`
+   (`0x5c13b0` with unit 0xc) → pick Chopper (`0xc`).
+3. **Foil** (`0x57ad74`–`0x57af3b`): `n = foils_owned + (continent.tile_count > 50 ? 3 : 2)`;
+   if `foils_owned >= 2` skip; else if `rand % n != 0` skip. Sea pod → Foil (`0xd`). Land pod:
+   scan adjacent tiles; first ocean tile whose region has `tile_count >= 80` moves the spawn
+   coords onto that water and picks Foil.
+4. **Over-cap reroll** (`0x57aead`–`0x57af30`): if the faction already owns ≥1 of the chosen
+   type, and (`count_of_chosen > 1` **or** total Unity Rover+Chopper+Foil >
+   `(base_count+1)/2`), set event to `12 + (rand&1)` (native-life band), restore visitor xy,
+   and `goto` the goody start (pod already cleared).
+5. **Battle Ogre** (`0x57bc8b`–`0x57bcf7`): only if pick is still Rover; `rand % 5 == 0`;
+   expansion flag at `0x9a6488` nonzero (Alien Crossfire). Scan factions 1–7 for techs
+   `0x52` / `0x53` (Thinker `TECH_Bioadap` / `TECH_SentRes`): none → Mk1 (`0x10`); Bioadap
+   only → Mk2 (`0x11`); SentRes → Mk3 (`0x12`). Morale bytes after spawn: Mk1 `2`, Mk2 `4`,
+   Mk3 `6` (`0x57bd42`). Sea + land unit → sleep the new veh.
+6. Notice: Ogre ids → `#OGREPOD` (`0x68ee30`); else `#GOODYPOD` (`0x68ee5c`). Both take the
+   unit name as `$UNITYUNITTYPE0`. Early turn / landing-site pods set home base to none.
+
+Gates before the pick: `MRULES_SCN_UNITY_PODS_NO_VEHICLES`, anyone owns Orbital Spaceflight
+(`TECH_Orbital`), sea pod with no transport capacity on the visitor stack → re-roll.
+
+**Our status / TODO:** `config/supply_pods.json` `UnityVehicle` only `GrantUnit`
+`design_id: "Unity_Rover"`. Those stock designs are not authored (`NativeUnitRegistry` /
+Military), so the grant no-ops. Do **not** split into separate weighted supply-pod events —
+implement one picker (Rules + mutation or a dedicated triggered effect) that follows the
+gates above, authors the six designs (alphax rows), maps notices (`UnityVehicle` /
+`OGREPOD` or remap Ogre to a dedicated script id), and handles over-cap by choosing a
+native-life outcome (or equivalent) instead of spawning. Cite this section; confirm any
+new reading in the binary before changing the table.
+
+**Case 11 — TerraformCluster** (`0x57c271`): center tile always; each of 8 neighbors included
+when `rand % (3 - (choice > 1)) != 0` (`0x57c2c7`) — chance 2/3 for forest/farm (and sea
+kelp, choice 0), 1/2 for mine/solar. Shipping uses `chance: [1.0, "2/3"]`.
+
+`goody_at` (`0x5C0…` / Thinker `mod_goody_at`): returns 0 when `BIT_SUPPLY_REMOVE` or
+`BIT_MONOLITH` is set. `RULES_NO_UNITY_SCATTERING` limits pods to landing-site bits. Unity
+wreckage crash-tile specials are `do_unity_crash` (`0x5BED20`), separate from `goody_box`.
+
 - `owner_set(tx, ty, attacker)` (`0x591B10`) writes `MAP.val2 & 0xF`, the cached faction of
   the tile's occupant (Thinker `veh_owner()`). Territory (`MAP.owner`, `+0x7`) is not
   touched. Probe Mind Control on a unit makes the same call;

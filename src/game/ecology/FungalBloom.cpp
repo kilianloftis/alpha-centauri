@@ -10,15 +10,18 @@
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/ImprovementRegistry.h"
+#include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/natives/NativeLifeConfig.h"
 #include "game/natives/NativeUnitRegistry.h"
 #include "game/units/Military.h"
+#include "lib/Rational.h"
 
 #include <algorithm>
 #include <optional>
 #include <random>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -101,39 +104,6 @@ int SpawnLifeforms_(const NativeUnitRegistry& rNatives, const std::vector<Tile*>
     return PlaceLifeforms_(*pPlanet, rNatives, rNewTiles, lifeformCount, rRng, rGameState);
 }
 
-std::vector<Tile*> SelectBloomTiles_(const Tile& rOrigin, WorldMap& rWorldMap, int tileCount,
-                                    std::mt19937& rRng)
-{
-    BloomCandidates_t candidates = BloomCandidateTiles(rOrigin);
-    std::vector<const Tile*> selected;
-    if (candidates.pOrigin != nullptr)
-    {
-        selected.push_back(candidates.pOrigin);
-    }
-    std::shuffle(candidates.neighbours.begin(), candidates.neighbours.end(), rRng);
-    const int neighborSlots = tileCount - static_cast<int>(selected.size());
-    if (neighborSlots > 0)
-    {
-        const int available = static_cast<int>(candidates.neighbours.size());
-        const int take = std::min(neighborSlots, available);
-        selected.insert(selected.end(), candidates.neighbours.begin(),
-                        candidates.neighbours.begin() + take);
-    }
-
-    std::vector<Tile*> tiles;
-    tiles.reserve(selected.size());
-    for (const Tile* pTile : selected)
-    {
-        Tile* pMutable = rWorldMap.GetTile(pTile->GetX(), pTile->GetY());
-        if (pMutable == nullptr)
-        {
-            throw std::logic_error("ApplyFungalBloom: a bloom tile is off this world");
-        }
-        tiles.push_back(pMutable);
-    }
-    return tiles;
-}
-
 std::vector<Tile*> FungusTiles_(const std::vector<Tile*>& rSelected,
                                const ImprovementConfig_t& rFungus)
 {
@@ -162,15 +132,13 @@ int RollLifeformCount_(const NativeLifeConfig_t& rLife, std::mt19937& rRng)
     return countDist(rRng);
 }
 
-} // namespace
-
-FungalBloomResult_t ApplyFungalBloom(Tile& rOrigin, WorldMap& rWorldMap, int tileCount,
-                                     std::mt19937& rRng, GameState& rGameState)
+FungalBloomResult_t ApplySelectedBloom_(WorldMap& rWorldMap, std::vector<Tile*> selected,
+                                        std::mt19937& rRng, GameState& rGameState)
 {
     RequireCurrentGameState(rGameState);
     RequireCurrentWorldMap(rWorldMap);
     FungalBloomResult_t result;
-    if (tileCount <= 0)
+    if (selected.empty())
     {
         return result;
     }
@@ -187,8 +155,7 @@ FungalBloomResult_t ApplyFungalBloom(Tile& rOrigin, WorldMap& rWorldMap, int til
 
     const ImprovementConfig_t& rFungus =
         rGameState.GetTileEffects().GetImprovements().Get(std::string(ImprovementIds::k_Fungus));
-    const std::vector<Tile*> newly = FungusTiles_(
-        SelectBloomTiles_(rOrigin, rWorldMap, tileCount, rRng), rFungus);
+    const std::vector<Tile*> newly = FungusTiles_(selected, rFungus);
     result.tilesFungused = static_cast<int>(newly.size());
     if (newly.empty())
     {
@@ -203,6 +170,25 @@ FungalBloomResult_t ApplyFungalBloom(Tile& rOrigin, WorldMap& rWorldMap, int til
 
     result.lifeforms = SpawnLifeforms_(*pNatives, newly, lifeformCount, rRng, rGameState);
     return result;
+}
+
+} // namespace
+
+FungalBloomResult_t ApplyFungalBloom(Tile& rOrigin, WorldMap& rWorldMap, int tileCount,
+                                     std::mt19937& rRng, GameState& rGameState)
+{
+    std::vector<Tile*> selected =
+        SelectTilesByRingQuota(rOrigin, rWorldMap, /*radius=*/1, tileCount, IsBloomCandidate, rRng);
+    return ApplySelectedBloom_(rWorldMap, std::move(selected), rRng, rGameState);
+}
+
+FungalBloomResult_t ApplyFungalBloom(Tile& rOrigin, WorldMap& rWorldMap,
+                                     std::span<const Rational_t> rChances, std::mt19937& rRng,
+                                     GameState& rGameState)
+{
+    std::vector<Tile*> selected =
+        SelectTilesByRingChance(rOrigin, rWorldMap, rChances, IsBloomCandidate, rRng);
+    return ApplySelectedBloom_(rWorldMap, std::move(selected), rRng, rGameState);
 }
 
 } // namespace ac

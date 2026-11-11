@@ -106,9 +106,58 @@ def script_entry(lines: list[str]) -> dict:
     return {"body": "\n".join(body), "items": items}
 
 
+# SMAC GOODY* / MONOLITH script labels → supply-pod event ids (and _Sea variants).
+SCRIPT_ID_ALIASES = {
+    "GOODYURANIUM": "EnergyCredits",
+    "GOODYHYDROGEN": "EnergyCredits_Sea",
+    "GOODYRIVER": "RiverSource",
+    "GOODYVIEW": "MapReveal",
+    "GOODYSONAR": "MapReveal_Sea",
+    "GOODYQUAKE": "Earthquake",
+    "GOODYGATE": "Teleport",
+    "GOODYWAVE": "Teleport_Sea",
+    "GOODYBUILD": "FinishProduction",
+    "GOODYARTIFACT": "AlienArtifact",
+    "GOODYFUNGUS": "FungalBloom",
+    "MONOLITH": "PlaceMonolith",
+    "GOODYPOD": "UnityVehicle",
+    # OGREPOD stays OGREPOD until Case 9 UnityVehicle picker maps ogre notices (terranx-map.md).
+    "GOODYDATA1": "GrantTech",
+    "GOODYCOMM": "GrantCommlink",
+    "GOODYFOREST": "TerraformCluster",
+    "GOODYKELP": "TerraformCluster_Sea",
+    "GOODYWORMS": "NativeLife",
+    "GOODYISLE": "NativeLife_Sea",
+    "GOODYCLONE": "CloneUnit",
+    "GOODYRESOURCE": "ResourceBonus",
+    "GOODYVANISH": "DestroyVisitor",
+    "GOODYWHIRLPOOL": "DestroyVisitor_Sea",
+}
+
+
+def remap_script_ids(script: dict) -> dict:
+    remapped: dict = {}
+    for label, entry in script.items():
+        new_id = SCRIPT_ID_ALIASES.get(label, label)
+        if new_id in remapped and label in SCRIPT_ID_ALIASES:
+            continue
+        remapped[new_id] = entry
+    return remapped
+
+
+# Authored here: SMAC has no GOODY line for an empty eligible-outcome set.
+AUTHORED_SCRIPT_ENTRIES = {
+    "Empty": {"body": "The supply pod is empty.", "items": []},
+    "Empty_Sea": {"body": "The supply pod is empty.", "items": []},
+}
+
+
 def extract_script(game_dir: Path) -> dict:
     found = sections(read_lines(find_file(game_dir, SCRIPT_FILE)))
-    return {label: script_entry(lines) for label, lines in found.items()}
+    script = {label: script_entry(lines) for label, lines in found.items()}
+    remapped = remap_script_ids(script)
+    remapped.update(AUTHORED_SCRIPT_ENTRIES)
+    return remapped
 
 
 def extract_labels(game_dir: Path) -> dict:

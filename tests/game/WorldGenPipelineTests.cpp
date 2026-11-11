@@ -11,6 +11,8 @@
 #include "game/map/Tile.h"
 #include "game/worldgen/WorldGenPresetConfigParser.h"
 #include "game/worldgen/WorldGenerator.h"
+#include "game/supply/SupplyPodConfig.h"
+#include "game/supply/SupplyPodIndex.h"
 #include "game/map/WorldMap.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -108,10 +110,11 @@ TEST_CASE("Generated rivers are a fixed point of the terrain they were traced ov
     // finished world must change nothing.
     actest::WorldFixture world;
     WorldGenerator generator;
+    SupplyPodIndex supplyPods;
     const std::unique_ptr<WorldMap> pWorld =
         generator.Generate(SmallMapConfig_(), WorldGenPresetConfig_t{}, DecorationWithRivers_(),
                            TerrainChangingLandmarks_(), world.improvements,
-                           world.dataContext.mapRules, 99u);
+                           world.dataContext.mapRules, SupplyPodConfig_t{}, supplyPods, false, 99u);
 
     // The landmarks have to have actually landed for this to mean anything.
     int boreholeTiles = 0;
@@ -146,17 +149,23 @@ TEST_CASE("The generated map is a function of the resolved seed, not the config 
     REQUIRE(config.seed != 0);
 
     WorldGenerator first;
+    SupplyPodIndex firstPods;
     const std::unique_ptr<WorldMap> pFirst =
         first.Generate(config, WorldGenPresetConfig_t{}, DecorationWithRivers_(), {},
-                       world.improvements, world.dataContext.mapRules, 1u);
+                       world.improvements, world.dataContext.mapRules, SupplyPodConfig_t{},
+                       firstPods, false, 1u);
     WorldGenerator second;
+    SupplyPodIndex secondPods;
     const std::unique_ptr<WorldMap> pSecond =
         second.Generate(config, WorldGenPresetConfig_t{}, DecorationWithRivers_(), {},
-                        world.improvements, world.dataContext.mapRules, 2u);
+                        world.improvements, world.dataContext.mapRules, SupplyPodConfig_t{},
+                        secondPods, false, 2u);
     WorldGenerator repeat;
+    SupplyPodIndex repeatPods;
     const std::unique_ptr<WorldMap> pRepeat =
         repeat.Generate(config, WorldGenPresetConfig_t{}, DecorationWithRivers_(), {},
-                        world.improvements, world.dataContext.mapRules, 1u);
+                        world.improvements, world.dataContext.mapRules, SupplyPodConfig_t{},
+                        repeatPods, false, 1u);
 
     CHECK(Elevations_(*pFirst) != Elevations_(*pSecond));
     CHECK(Elevations_(*pFirst) == Elevations_(*pRepeat));
@@ -171,9 +180,10 @@ TEST_CASE("World generation places against bound tiles", "[worldgen][improvement
     // map could contain a placement the rules forbid.
     actest::WorldFixture world;
     WorldGenerator generator;
+    SupplyPodIndex supplyPods;
     const std::unique_ptr<WorldMap> pWorld =
         generator.Generate(SmallMapConfig_(), WorldGenPresetConfig_t{}, DecorationWithRivers_(),
-                           {}, world.improvements, world.dataContext.mapRules, 7u);
+                           {}, world.improvements, world.dataContext.mapRules, SupplyPodConfig_t{}, supplyPods, false, 7u);
 
     for (const auto& pTile : pWorld->GetTiles())
     {
@@ -204,9 +214,10 @@ TEST_CASE("Aquifers cover the fraction of tiles the Aquifer entry can occupy",
     decoration.tileBonuses.fraction = 0.0f;
 
     WorldGenerator generator;
+    SupplyPodIndex supplyPods;
     const std::unique_ptr<WorldMap> pWorld =
         generator.Generate(SmallMapConfig_(), WorldGenPresetConfig_t{}, decoration, {},
-                           world.improvements, world.dataContext.mapRules, 11u);
+                           world.improvements, world.dataContext.mapRules, SupplyPodConfig_t{}, supplyPods, false, 11u);
 
     int land = 0;
     int water = 0;
@@ -338,8 +349,9 @@ TEST_CASE("A lower ocean depth exponent deepens the sea without moving the coast
         WorldGenPresetConfig_t preset;
         preset.oceanDepthExponent = exponent;
         WorldGenerator generator;
+        SupplyPodIndex supplyPods;
         return generator.Generate(config, preset, WorldGenDecorationConfig_t{}, {},
-                                  world.improvements, world.dataContext.mapRules, 7u);
+                                  world.improvements, world.dataContext.mapRules, SupplyPodConfig_t{}, supplyPods, false, 7u);
     };
     const std::unique_ptr<WorldMap> pLinear = generate(1.0f);
     const std::unique_ptr<WorldMap> pSteep = generate(0.5f);

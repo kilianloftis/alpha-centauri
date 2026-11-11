@@ -28,6 +28,7 @@
 #include "ui/AtrocityNotices.h"
 #include "ui/CaptureNotices.h"
 #include "ui/ProbeNotices.h"
+#include "ui/SupplyPodNotices.h"
 #include "ui/UIManager.h"
 #include "ui/ViewFactory.h"
 #include "ui/style/UiStyle.h"
@@ -141,6 +142,8 @@ void InteractionPresenter::PresentFront_(const PlayerInteraction_t& rPayload)
             [this](const CaptureNoticeInteraction_t& rNotice) { PresentCaptureNotice_(rNotice); },
             [this](const HeadquartersEscapeInteraction_t& rEscape)
             { PresentHeadquartersEscape_(rEscape); },
+            [this](const SupplyPodNoticeInteraction_t& rNotice)
+            { PresentSupplyPodNotice_(rNotice); },
         },
         rPayload);
 }
@@ -513,6 +516,13 @@ void InteractionPresenter::PresentAtrocityNotice_(const AtrocityNoticeInteractio
     const AtrocityNoticeCopy_t copy = AtrocityNoticeCopy(rNotice);
     PresentNotice_(NoticeInteraction_t{PauseOnEventId_t::AtrocityCommitted, copy.title, copy.body,
                                        std::nullopt});
+}
+
+void InteractionPresenter::PresentSupplyPodNotice_(const SupplyPodNoticeInteraction_t& rNotice)
+{
+    const SupplyPodNoticeCopy_t copy = SupplyPodNoticeCopy(rNotice, m_rViews.GetText());
+    PresentNotice_(
+        NoticeInteraction_t{std::nullopt, copy.title, copy.body, rNotice.cameraTile});
 }
 
 void InteractionPresenter::PresentHeadquartersEscape_(

@@ -33,6 +33,7 @@
 #include "game/natives/NativeUnitRegistry.h"
 #include "game/probes/ProbeActionConfig.h"
 #include "game/effects/EffectConfig.h"
+#include "game/supply/SupplyPodConfig.h"
 
 #include <magic_enum.hpp>
 
@@ -155,6 +156,7 @@ struct TriggeredPayloadValidator
     const TechRegistry& rTechs;
     const UnitComponentRegistry& rUnitComponents;
     const ImprovementRegistry& rImprovements;
+    const NativeUnitRegistry& rNativeUnits;
 
     void operator()(const AddBuildingEffect_t& rAdd) const
     {
@@ -182,6 +184,7 @@ struct TriggeredPayloadValidator
                 ThrowBadReference(rSourceId, "unit component", rId);
             }
         }
+        // design_id may name a stock Unity design that is not authored yet; skip load check.
     }
 
     void operator()(const GrantEnergyEffect_t&) const {}
@@ -204,6 +207,56 @@ struct TriggeredPayloadValidator
     void operator()(const RecordMindControlEffect_t&) const {}
     void operator()(const GrantCleanMineralsEffect_t&) const {}
     void operator()(const AddVirtualMineralsEffect_t&) const {}
+
+    void operator()(const AddOccupantEffect_t& rAdd) const
+    {
+        if (!rImprovements.Find(rAdd.improvementId))
+        {
+            ThrowBadReference(rSourceId, "improvement", rAdd.improvementId);
+        }
+    }
+
+    void operator()(const RevealMapEffect_t&) const {}
+    void operator()(const TeleportUnitEffect_t&) const {}
+    void operator()(const FinishProductionEffect_t&) const {}
+    void operator()(const CloneUnitEffect_t&) const {}
+    void operator()(const GrantCommlinkEffect_t&) const {}
+    void operator()(const SpawnNativeEffect_t& rSpawn) const
+    {
+        if (!rNativeUnits.Find(rSpawn.nativeId))
+        {
+            ThrowBadReference(rSourceId, "native unit", rSpawn.nativeId);
+        }
+        for (const std::string& rCargoId : rSpawn.cargoIds)
+        {
+            if (!rNativeUnits.Find(rCargoId))
+            {
+                ThrowBadReference(rSourceId, "native unit", rCargoId);
+            }
+        }
+    }
+
+    void operator()(const TerraformClusterEffect_t& rCluster) const
+    {
+        for (const std::string& rId : rCluster.improvementIds)
+        {
+            if (!rImprovements.Find(rId))
+            {
+                ThrowBadReference(rSourceId, "improvement", rId);
+            }
+        }
+    }
+
+    void operator()(const AddRandomOccupantEffect_t& rAdd) const
+    {
+        for (const std::string& rId : rAdd.improvementIds)
+        {
+            if (!rImprovements.Find(rId))
+            {
+                ThrowBadReference(rSourceId, "improvement", rId);
+            }
+        }
+    }
 
     // Only terrain a tile stores itself can be set; depth bands and the two axes derive from
     // elevation.
@@ -353,7 +406,8 @@ public:
                    const std::string& rSourceId) const
     {
         const TriggeredPayloadValidator payloads{rSourceId, m_rBuildings, m_rTechs,
-                                                 m_rUnitComponents, m_rImprovements};
+                                                 m_rUnitComponents, m_rImprovements,
+                                                 m_rNativeUnits};
         for (const TriggeredEffectConfig_t& rEffect : rEffects)
         {
             std::visit(payloads, rEffect.effect);
@@ -557,6 +611,16 @@ void CheckRuleConfigSources_(const GameDataContext& rData, const EffectSourceChe
         RequireRegistry(rData.ecoDamageConfig, "ecoDamageConfig");
     rCheck.Effects(rEcoDamageConfig.effects, "eco_damage");
     rCheck.Triggered(rEcoDamageConfig.onPopEffects, "eco_damage.fungal_pop");
+    if (rData.supplyPodConfig)
+    {
+        for (const SupplyPodEventGroupConfig_t& rEventGroup : rData.supplyPodConfig->eventGroups)
+        {
+            for (const SupplyPodEventConfig_t& rEvent : rEventGroup.events)
+            {
+                rCheck.Triggered(rEvent.effects, "supply_pod:" + rEvent.id);
+            }
+        }
+    }
 }
 
 } // namespace

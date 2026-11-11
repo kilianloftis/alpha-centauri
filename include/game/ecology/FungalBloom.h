@@ -1,6 +1,9 @@
 #pragma once
 
+#include "lib/Rational.h"
+
 #include <random>
+#include <span>
 
 namespace ac
 {
@@ -19,5 +22,10 @@ struct FungalBloomResult_t
 // then native lifeforms on the new tiles. Throws without a native-life faction.
 FungalBloomResult_t ApplyFungalBloom(Tile& rOrigin, WorldMap& rWorldMap, int tileCount,
                                      std::mt19937& rRng, GameState& rGameState);
+
+// Same fungus + lifeform path; rChances[d] rolls independently for Chebyshev distance d.
+FungalBloomResult_t ApplyFungalBloom(Tile& rOrigin, WorldMap& rWorldMap,
+                                     std::span<const Rational_t> rChances, std::mt19937& rRng,
+                                     GameState& rGameState);
 
 } // namespace ac

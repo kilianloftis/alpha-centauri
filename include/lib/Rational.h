@@ -6,7 +6,8 @@
 namespace ac
 {
 
-// Exact rational for config values that may be ints (2) or fraction strings ("1/3").
+// Exact rational for config values that may be ints (2), whole-number floats (1.0), or
+// fraction strings ("1/3").
 struct Rational_t
 {
     int numerator = 0;

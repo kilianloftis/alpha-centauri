@@ -659,9 +659,6 @@
       "on_hold_effects": [
         {
           "type": "GrantTech",
-          "parameters": {
-            "selection": "Available"
-          },
           "condition": {
             "kind": "BaseHasBuilding",
             "building": "Network_Node"

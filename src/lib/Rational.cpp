@@ -1,5 +1,6 @@
 #include "lib/Rational.h"
 
+#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <limits>
@@ -66,11 +67,23 @@ Rational_t Rational_t::ParseJson(const nlohmann::json& rJson)
         const int value = static_cast<int>(rJson.get<unsigned>());
         return FromInt(value);
     }
+    if (rJson.is_number_float())
+    {
+        const double value = rJson.get<double>();
+        if (value != std::trunc(value) || value < static_cast<double>(std::numeric_limits<int>::min())
+            || value > static_cast<double>(std::numeric_limits<int>::max()))
+        {
+            throw std::runtime_error(
+                "Expected an integer, whole-number float, or rational string (e.g. \"1/3\")");
+        }
+        return FromInt(static_cast<int>(value));
+    }
     if (rJson.is_string())
     {
         return Parse(rJson.get<std::string>());
     }
-    throw std::runtime_error("Expected an integer or rational string (e.g. \"1/3\")");
+    throw std::runtime_error(
+        "Expected an integer, whole-number float, or rational string (e.g. \"1/3\")");
 }
 
 int Rational_t::ScaledInt(int scale) const

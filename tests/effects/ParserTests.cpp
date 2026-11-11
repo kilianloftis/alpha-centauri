@@ -1508,9 +1508,24 @@ TEST_CASE("ParseTriggeredEffectConfig: Earthquake", "[effects][parser][triggered
     REQUIRE(pBloomStat);
     CHECK(pBloomStat->tilesStat == StatId_t::FungalBloomTiles);
 
+    const TriggeredEffectConfig_t bloomChance = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "FungalBloom", "parameters": { "chance": [1.0, "1/1"] } })"),
+        "on_detonate_effects");
+    const auto* pBloomChance = std::get_if<FungalBloomEffect_t>(&bloomChance.effect);
+    REQUIRE(pBloomChance);
+    REQUIRE(pBloomChance->chance.size() == 2);
+    CHECK(pBloomChance->chance[0].numerator == 1);
+    CHECK(pBloomChance->chance[0].denominator == 1);
+    CHECK(pBloomChance->chance[1].numerator == 1);
+    CHECK(pBloomChance->chance[1].denominator == 1);
+
     CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(
         json::parse(R"({ "type": "FungalBloom",
                          "parameters": { "tiles": 1, "tiles_stat": "fungal_bloom_tiles" } })"),
+        "on_detonate_effects"), ContainsSubstring("exactly one"));
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "FungalBloom",
+                         "parameters": { "tiles": 1, "chance": [1.0, "1/1"] } })"),
         "on_detonate_effects"), ContainsSubstring("exactly one"));
     CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(
         json::parse(R"({ "type": "FungalBloom", "parameters": {} })"), "on_detonate_effects"),
@@ -1611,8 +1626,7 @@ TEST_CASE("ParseTriggeredEffectConfig: once_per", "[effects][parser][triggered]"
     const TriggeredEffectConfig_t worldOnce = TriggeredEffectParser::ParseTriggeredEffectConfig(
         json::parse(R"({
             "type": "GrantTech",
-            "once_per": { "scope": "world", "key": "first" },
-            "parameters": { "selection": "Available" }
+            "once_per": { "scope": "world", "key": "first" }
         })"), "on_discover_effects");
     REQUIRE(worldOnce.oncePer.has_value());
     CHECK(worldOnce.oncePer->scope == OnceScope_t::World);
@@ -1721,6 +1735,7 @@ TEST_CASE("ParseTriggeredEffectConfig: GrantUnit takes component ids", "[effects
         })"), "on_complete_effects");
     const auto* pGrant = std::get_if<GrantUnitEffect_t>(&config.effect);
     REQUIRE(pGrant != nullptr);
+    CHECK_FALSE(pGrant->designId.has_value());
     CHECK(pGrant->componentIds == std::vector<std::string>{"Scout", "Infantry"});
     CHECK(pGrant->count == 2);
 
@@ -1736,6 +1751,74 @@ TEST_CASE("ParseTriggeredEffectConfig: GrantUnit takes component ids", "[effects
     CHECK_THROWS(TriggeredEffectParser::ParseTriggeredEffectConfig(json::parse(R"({
         "type": "GrantUnit", "parameters": { "component_ids": ["Scout"], "count": 0 }
     })"), "on_complete_effects"));
+}
+
+TEST_CASE("ParseTriggeredEffectConfig: SpawnNative takes native_id and optional cargo_ids",
+          "[effects][parser][triggered]")
+{
+    const TriggeredEffectConfig_t bare = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({
+            "type": "SpawnNative",
+            "parameters": { "native_id": "Mind_Worm" }
+        })"),
+        "on_complete_effects");
+    const auto* pBare = std::get_if<SpawnNativeEffect_t>(&bare.effect);
+    REQUIRE(pBare != nullptr);
+    CHECK(pBare->nativeId == "Mind_Worm");
+    CHECK(pBare->cargoIds.empty());
+
+    const TriggeredEffectConfig_t withCargo =
+        TriggeredEffectParser::ParseTriggeredEffectConfig(
+            json::parse(R"({
+            "type": "SpawnNative",
+            "parameters": {
+                "native_id": "Isle_of_the_Deep",
+                "cargo_ids": ["Mind_Worm"]
+            }
+        })"),
+            "on_complete_effects");
+    const auto* pCargo = std::get_if<SpawnNativeEffect_t>(&withCargo.effect);
+    REQUIRE(pCargo != nullptr);
+    CHECK(pCargo->nativeId == "Isle_of_the_Deep");
+    CHECK(pCargo->cargoIds == std::vector<std::string>{"Mind_Worm"});
+
+    CHECK_THROWS(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "SpawnNative", "parameters": {} })"), "on_complete_effects"));
+    CHECK_THROWS(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({
+            "type": "SpawnNative",
+            "parameters": { "native_id": "Isle_of_the_Deep", "cargo_ids": [] }
+        })"),
+        "on_complete_effects"));
+}
+
+TEST_CASE("ParseTriggeredEffectConfig: TerraformCluster requires chance",
+          "[effects][parser][triggered]")
+{
+    const TriggeredEffectConfig_t config = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({
+            "type": "TerraformCluster",
+            "parameters": {
+                "improvement_ids": ["Forest", "Farm"],
+                "chance": [1.0, "2/3"]
+            }
+        })"),
+        "on_complete_effects");
+    const auto* pCluster = std::get_if<TerraformClusterEffect_t>(&config.effect);
+    REQUIRE(pCluster != nullptr);
+    CHECK(pCluster->improvementIds == std::vector<std::string>{"Forest", "Farm"});
+    REQUIRE(pCluster->chance.size() == 2);
+    CHECK(pCluster->chance[0].numerator == 1);
+    CHECK(pCluster->chance[0].denominator == 1);
+    CHECK(pCluster->chance[1].numerator == 2);
+    CHECK(pCluster->chance[1].denominator == 3);
+
+    CHECK_THROWS(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({
+            "type": "TerraformCluster",
+            "parameters": { "improvement_ids": ["Forest"] }
+        })"),
+        "on_complete_effects"));
 }
 
 TEST_CASE("ParseEffectConfig: grant effects require their id parameter", "[effects][parser]")
@@ -1754,8 +1837,6 @@ TEST_CASE("ParseEffectConfig: grant effects require their id parameter", "[effec
     CHECK_THROWS(TriggeredEffectParser::ParseTriggeredEffectConfig(
         json::parse(R"({ "type": "AddBuilding", "parameters": {} })"), "on_complete_effects"));
     CHECK_THROWS(TriggeredEffectParser::ParseTriggeredEffectConfig(
-        json::parse(R"({ "type": "GrantTech", "parameters": {} })"), "on_complete_effects"));
-    CHECK_THROWS(TriggeredEffectParser::ParseTriggeredEffectConfig(
         json::parse(R"({ "type": "GrantUnit", "parameters": {} })"), "on_complete_effects"));
 
     const TriggeredEffectConfig_t techConfig = TriggeredEffectParser::ParseTriggeredEffectConfig(
@@ -1770,7 +1851,6 @@ TEST_CASE("ParseEffectConfig: grant effects require their id parameter", "[effec
         TriggeredEffectParser::ParseTriggeredEffectConfig(
             json::parse(R"({
                 "type": "GrantTech",
-                "parameters": { "selection": "Available" },
                 "once_per": { "scope": "world", "key": "first_bonus" }
             })"),
             "on_discover_effects");
@@ -1779,19 +1859,6 @@ TEST_CASE("ParseEffectConfig: grant effects require their id parameter", "[effec
     CHECK_FALSE(pAvailable->techId.has_value());
     REQUIRE(availableConfig.oncePer.has_value());
     CHECK(availableConfig.oncePer->scope == OnceScope_t::World);
-
-    CHECK_THROWS(TriggeredEffectParser::ParseTriggeredEffectConfig(
-        json::parse(R"({
-            "type": "GrantTech",
-            "parameters": { "tech_id": "biogenetics", "selection": "Available" }
-        })"),
-        "on_discover_effects"));
-    CHECK_THROWS(TriggeredEffectParser::ParseTriggeredEffectConfig(
-        json::parse(R"({
-            "type": "GrantTech",
-            "parameters": { "selection": "Everything" }
-        })"),
-        "on_discover_effects"));
 }
 
 TEST_CASE("ParseEffectConfig: RuleFlag requires a valid flag", "[effects][parser]")

@@ -18,3 +18,15 @@ Answer two.
 #xs 440
 Just a body.
 
+#GOODYURANIUM
+#xs 440
+Recovered energy.
+
+#GOODYHYDROGEN
+#xs 440
+Recovered sea energy.
+
+#MONOLITH
+#xs 440
+A monolith.
+

@@ -1,0 +1,500 @@
+{
+  "event_groups": [
+    {
+      "id": "Land",
+      "placement": {
+        "domain": "Land",
+        "global_fraction": 0.04,
+        "wreckage_radius": 2,
+        "wreckage_extra": 4,
+        "start_radius": 3,
+        "start_count": 1
+      },
+      "empty_notice": {
+        "script": "Empty"
+      },
+      "events": [
+        {
+          "id": "EnergyCredits",
+          "weight": 20,
+          "notice": {
+            "script": "EnergyCredits",
+            "image": "assets/ui/thumbs/supply_sm.png"
+          },
+          "effects": [
+            {
+              "type": "GrantEnergy",
+              "parameters": {
+                "formula": "50 + math.floor(turn / 5)"
+              }
+            }
+          ]
+        },
+        {
+          "id": "RiverSource",
+          "weight": 8,
+          "notice": {
+            "script": "RiverSource",
+            "image": "assets/ui/thumbs/supply_sm.png"
+          },
+          "effects": [
+            {
+              "type": "SetTerrainFeature",
+              "parameters": {
+                "feature": "Aquifer",
+                "present": true
+              }
+            }
+          ]
+        },
+        {
+          "id": "MapReveal",
+          "weight": 8,
+          "notice": {
+            "script": "MapReveal",
+            "image": "assets/ui/thumbs/supply_sm.png"
+          },
+          "effects": [
+            {
+              "type": "RevealMap",
+              "parameters": {
+                "radius": 5
+              }
+            }
+          ]
+        },
+        {
+          "id": "Earthquake",
+          "weight": 5,
+          "notice": {
+            "script": "Earthquake",
+            "image": "assets/ui/thumbs/quake_sm.png"
+          },
+          "effects": [
+            {
+              "type": "Earthquake",
+              "parameters": {
+                "levels": 3
+              }
+            }
+          ]
+        },
+        {
+          "id": "Teleport",
+          "weight": 5,
+          "notice": {
+            "script": "Teleport",
+            "image": "assets/ui/thumbs/stars_sm.png"
+          },
+          "effects": [
+            {
+              "type": "TeleportUnit",
+              "parameters": {
+                "min_distance": 4,
+                "max_distance": 12
+              }
+            }
+          ]
+        },
+        {
+          "id": "FinishProduction",
+          "weight": 8,
+          "notice": {
+            "script": "FinishProduction",
+            "image": "assets/ui/thumbs/indbm_sm.png"
+          },
+          "effects": [
+            {
+              "type": "FinishProduction"
+            }
+          ]
+        },
+        {
+          "id": "AlienArtifact",
+          "weight": 4,
+          "notice": {
+            "script": "AlienArtifact",
+            "image": "assets/ui/thumbs/art_dis_sm.png"
+          },
+          "effects": [
+            {
+              "type": "GrantUnit",
+              "parameters": {
+                "design_id": "Alien_Artifact"
+              }
+            }
+          ]
+        },
+        {
+          "id": "FungalBloom",
+          "weight": 5,
+          "notice": {
+            "script": "FungalBloom",
+            "image": "assets/ui/thumbs/fung_sm.png"
+          },
+          "effects": [
+            {
+              "type": "FungalBloom",
+              "parameters": {
+                "chance": [
+                  1.0,
+                  "1/1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "PlaceMonolith",
+          "weight": 6,
+          "notice": {
+            "script": "PlaceMonolith",
+            "image": "assets/ui/thumbs/monolith_sm.png"
+          },
+          "effects": [
+            {
+              "type": "AddOccupant",
+              "parameters": {
+                "improvement_id": "Monolith"
+              }
+            }
+          ]
+        },
+        {
+          "id": "UnityVehicle",
+          "weight": 6,
+          "notice": {
+            "script": "UnityVehicle",
+            "image": "assets/ui/thumbs/supply_sm.png"
+          },
+          "effects": [
+            {
+              "type": "GrantUnit",
+              "parameters": {
+                "design_id": "Unity_Rover"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GrantTech",
+          "weight": 10,
+          "filters": {
+            "min_turn": 5
+          },
+          "notice": {
+            "script": "GrantTech",
+            "image": "assets/ui/thumbs/supply_sm.png"
+          },
+          "effects": [
+            {
+              "type": "GrantTech"
+            }
+          ]
+        },
+        {
+          "id": "GrantCommlink",
+          "weight": 6,
+          "notice": {
+            "script": "GrantCommlink",
+            "image": "assets/ui/thumbs/supply_sm.png"
+          },
+          "effects": [
+            {
+              "type": "GrantCommlink"
+            }
+          ]
+        },
+        {
+          "id": "TerraformCluster",
+          "weight": 10,
+          "notice": {
+            "script": "TerraformCluster",
+            "image": "assets/ui/thumbs/forgr_sm.png"
+          },
+          "effects": [
+            {
+              "type": "TerraformCluster",
+              "parameters": {
+                "improvement_ids": [
+                  "Forest",
+                  "Farm",
+                  "Mine",
+                  "SolarCollector"
+                ],
+                "chance": [
+                  1.0,
+                  "2/3"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "NativeLife",
+          "weight": 8,
+          "notice": {
+            "script": "NativeLife",
+            "image": "assets/ui/thumbs/mindworm_sm.png"
+          },
+          "effects": [
+            {
+              "type": "SpawnNative",
+              "parameters": {
+                "native_id": "Mind_Worm"
+              }
+            }
+          ]
+        },
+        {
+          "id": "CloneUnit",
+          "weight": 4,
+          "notice": {
+            "script": "CloneUnit",
+            "image": "assets/ui/thumbs/clone_sm.png"
+          },
+          "effects": [
+            {
+              "type": "CloneUnit"
+            }
+          ]
+        },
+        {
+          "id": "ResourceBonus",
+          "weight": 20,
+          "notice": {
+            "script": "ResourceBonus",
+            "image": "assets/ui/thumbs/supply_sm.png"
+          },
+          "effects": [
+            {
+              "type": "AddRandomOccupant",
+              "parameters": {
+                "improvement_ids": [
+                  "Nutrients",
+                  "Minerals",
+                  "Energy"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "DestroyVisitor",
+          "weight": 2,
+          "notice": {
+            "script": "DestroyVisitor"
+          },
+          "effects": [
+            {
+              "type": "DestroyUnit"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Sea",
+      "placement": {
+        "domain": "Sea",
+        "global_fraction": 0.04,
+        "wreckage_radius": 2,
+        "wreckage_extra": 4,
+        "start_radius": 3,
+        "start_count": 1
+      },
+      "empty_notice": {
+        "script": "Empty_Sea"
+      },
+      "events": [
+        {
+          "id": "EnergyCredits",
+          "weight": 20,
+          "notice": {
+            "script": "EnergyCredits_Sea"
+          },
+          "effects": [
+            {
+              "type": "GrantEnergy",
+              "parameters": {
+                "formula": "25 + math.floor(turn / 5)"
+              }
+            }
+          ]
+        },
+        {
+          "id": "MapReveal",
+          "weight": 8,
+          "notice": {
+            "script": "MapReveal_Sea",
+            "image": "assets/ui/thumbs/supply_sm.png"
+          },
+          "effects": [
+            {
+              "type": "RevealMap",
+              "parameters": {
+                "radius": 5
+              }
+            }
+          ]
+        },
+        {
+          "id": "Teleport",
+          "weight": 5,
+          "notice": {
+            "script": "Teleport_Sea"
+          },
+          "effects": [
+            {
+              "type": "TeleportUnit",
+              "parameters": {
+                "min_distance": 4,
+                "max_distance": 12
+              }
+            }
+          ]
+        },
+        {
+          "id": "FinishProduction",
+          "weight": 8,
+          "notice": {
+            "script": "FinishProduction",
+            "image": "assets/ui/thumbs/indbm_sm.png"
+          },
+          "effects": [
+            {
+              "type": "FinishProduction"
+            }
+          ]
+        },
+        {
+          "id": "AlienArtifact",
+          "weight": 4,
+          "notice": {
+            "script": "AlienArtifact",
+            "image": "assets/ui/thumbs/art_dis_sm.png"
+          },
+          "effects": [
+            {
+              "type": "GrantUnit",
+              "parameters": {
+                "design_id": "Alien_Artifact"
+              }
+            }
+          ]
+        },
+        {
+          "id": "UnityVehicle",
+          "weight": 6,
+          "notice": {
+            "script": "UnityVehicle",
+            "image": "assets/ui/thumbs/supply_sm.png"
+          },
+          "effects": [
+            {
+              "type": "GrantUnit",
+              "parameters": {
+                "design_id": "Unity_Rover"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GrantTech",
+          "weight": 10,
+          "filters": {
+            "min_turn": 5
+          },
+          "notice": {
+            "script": "GrantTech",
+            "image": "assets/ui/thumbs/supply_sm.png"
+          },
+          "effects": [
+            {
+              "type": "GrantTech"
+            }
+          ]
+        },
+        {
+          "id": "GrantCommlink",
+          "weight": 6,
+          "notice": {
+            "script": "GrantCommlink",
+            "image": "assets/ui/thumbs/supply_sm.png"
+          },
+          "effects": [
+            {
+              "type": "GrantCommlink"
+            }
+          ]
+        },
+        {
+          "id": "TerraformCluster",
+          "weight": 10,
+          "notice": {
+            "script": "TerraformCluster_Sea",
+            "image": "assets/ui/thumbs/kelp_sm.png"
+          },
+          "effects": [
+            {
+              "type": "TerraformCluster",
+              "parameters": {
+                "improvement_ids": [
+                  "KelpFarm"
+                ],
+                "chance": [
+                  1.0,
+                  "2/3"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "NativeLife",
+          "weight": 8,
+          "notice": {
+            "script": "NativeLife_Sea",
+            "image": "assets/ui/thumbs/isle_sm.png"
+          },
+          "effects": [
+            {
+              "type": "SpawnNative",
+              "parameters": {
+                "native_id": "Isle_of_the_Deep",
+                "cargo_ids": [
+                  "Mind_Worm"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "CloneUnit",
+          "weight": 4,
+          "notice": {
+            "script": "CloneUnit",
+            "image": "assets/ui/thumbs/clone_sm.png"
+          },
+          "effects": [
+            {
+              "type": "CloneUnit"
+            }
+          ]
+        },
+        {
+          "id": "DestroyVisitor",
+          "weight": 2,
+          "notice": {
+            "script": "DestroyVisitor_Sea"
+          },
+          "effects": [
+            {
+              "type": "DestroyUnit"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

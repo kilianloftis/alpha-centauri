@@ -15,6 +15,8 @@ namespace ac
 
 class ImprovementRegistry;
 class FbmNoise;
+class SupplyPodIndex;
+struct SupplyPodConfig_t;
 
 class WorldGenerator
 {
@@ -23,13 +25,18 @@ public:
     ~WorldGenerator();
 
     // Generates a world from the session knobs and a landmass preset. seed is the session seed the
-    // composition root resolved, so the reported seed reproduces the map.
+    // composition root resolved, so the reported seed reproduces the map. Supply pods land after
+    // landmarks and before tile bonuses (stamped into rSupplyPods); bNoUnityScattering skips
+    // global / wreckage pods.
     std::unique_ptr<WorldMap> Generate(const MapGenerationConfig_t& rConfig,
                                        const WorldGenPresetConfig_t& rPreset,
                                        const WorldGenDecorationConfig_t& rDecoration,
                                        const std::vector<LandmarkConfig_t>& rLandmarks,
                                        const ImprovementRegistry& rOccupants,
                                        const MapRulesConfig_t& rMapRules,
+                                       const SupplyPodConfig_t& rSupplyPods,
+                                       SupplyPodIndex& rSupplyPodIndex,
+                                       bool bNoUnityScattering,
                                        unsigned int seed);
 
 private:

@@ -64,6 +64,7 @@ class EcoDamageCalculator;
 struct NativeLifeConfig_t;
 class PlanetFaunaCalculator;
 struct WorldEventsConfig_t;
+struct SupplyPodConfig_t;
 struct CommerceConfig_t;
 struct DiplomacyConfig_t;
 
@@ -127,6 +128,7 @@ struct GameDataContext
     std::unique_ptr<AtrocitiesConfig_t> atrocitiesConfig;
     std::unique_ptr<NativeLifeConfig_t> nativeLifeConfig;
     std::unique_ptr<WorldEventsConfig_t> worldEventsConfig;
+    std::unique_ptr<SupplyPodConfig_t> supplyPodConfig;
     // eco_damage.json plus the formula eco_damage.lua returns.
     std::unique_ptr<EcoDamageConfig_t> ecoDamageConfig;
 

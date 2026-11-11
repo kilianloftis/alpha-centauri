@@ -38,6 +38,7 @@ public:
 
     // Each throws for an id no root has.
     const ScriptEntry_t& Entry(const std::string& rId) const;
+    bool HasEntry(const std::string& rId) const;
     const std::string& Label(int label) const;
     const FactionVocabulary_t& Vocabulary(const std::string& rFactionId) const;
 

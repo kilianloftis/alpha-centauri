@@ -54,6 +54,9 @@
 #include "game/worldgen/WorldGenPresetRegistry.h"
 #include "game/worldgen/WorldGenerator.h"
 #include "game/worldgen/WorldGenPresetConfigParser.h"
+#include "game/worldgen/SupplyPodGeneration.h"
+#include "game/supply/SupplyPodConfig.h"
+#include "game/supply/SupplyPodIndex.h"
 #include "ui/SpriteLibrary.h"
 #include "ui/StandingCaptions.h"
 #include "ui/commlinks/TalkScript.h"
@@ -479,16 +482,20 @@ void Engine::GenerateWorld_()
     const WorldGenPresetConfig_t& rPreset =
         m_gameDataContext->worldGenPresetRegistry->Get(rWorldConfig.presetId);
     WorldGenerator worldGen;
+    auto pSupplyPods = std::make_unique<SupplyPodIndex>();
     std::unique_ptr<WorldMap> pWorld =
         worldGen.Generate(rWorldConfig, rPreset, *m_gameDataContext->worldGenDecorationConfig,
                           m_gameDataContext->worldGenLandmarks,
                           *m_gameDataContext->improvementRegistry,
                           m_gameDataContext->mapRules,
+                          *m_gameDataContext->supplyPodConfig,
+                          *pSupplyPods,
+                          m_pSettings->GetGameRules().noUnityScattering,
                           m_sessionSeed);
     // Separate from world generation, so map size does not shift combat rolls.
     const auto combatSeed = static_cast<uint32_t>(m_sessionSeed ^ 0x5BF03635u);
     m_pGameState = std::make_unique<GameState>(std::move(pWorld), *m_gameDataContext,
-                                               *m_pSettings, combatSeed);
+                                               *m_pSettings, combatSeed, std::move(pSupplyPods));
     m_pGameStateScope = std::make_unique<GameStateScope>(*m_pGameState);
 
     const WorldMap& rMap = m_pGameState->GetWorldMap();
@@ -562,6 +569,10 @@ void Engine::AddFaction_(const FactionConfig_t& rFactionConfig, size_t positionI
     // After AddFaction, once the faction's id is final.
     m_eventBridge->WireFaction(rFaction);
     rFaction.GetEconomy().AddEnergy(10);
+    PlaceStartSupplyPods(m_pGameState->GetWorldMap(), *pStartTile,
+                         *m_gameDataContext->supplyPodConfig,
+                         *m_gameDataContext->improvementRegistry, m_pGameState->GetSupplyPods(),
+                         m_pGameState->GetRng());
     AddTestUnits_(rFaction, *pStartTile, *pBase);
 }
 

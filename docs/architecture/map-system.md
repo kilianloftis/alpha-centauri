@@ -113,7 +113,7 @@ Distances are on the lattice:
 
 | Metric | Definition | Used for |
 |--------|------------|----------|
-| **Chebyshev** | `max(\|p\|, \|q\|)` = `(\|dx\| + \|dy\|) / 2` | Unit/base/Sensor **sight**, improvement **auras**, unit ThisTile auras — `ForEachTileInChebyshevRadius` |
+| **Chebyshev** | `max(\|p\|, \|q\|)` = `(\|dx\| + \|dy\|) / 2` | Unit/base/Sensor **sight**, improvement **auras**, unit ThisTile auras — `ForEachTileInChebyshevRadius`. Ring picks for TerraformCluster / fungal bloom share `SelectTilesByRingChance` (per-distance `Rational_t` rolls) and `SelectTilesByRingQuota` (origin-first sample up to N) |
 | **Tabletop diagonal** | `longer + shorter/2` on `\|p\|` and `\|q\|` | Energy **inefficiency** HQ distance, unit-scrap closest friendly base, `HeadquartersDistance` (`BaseRules`, the binary's `vulnerable`: probe costs and base value) — `TabletopDiagonalDistance` |
 | **Euclidean disk** | `p² + q² ≤ R² + 1` | **Base workable area** (`R = 2`), **territory claim radius** (land `R = 7`, sea `R = 3`) — `InEuclideanRadius` / `ForEachTileInEuclideanRadius` |
 
@@ -186,14 +186,16 @@ graph LR
     Elevation[Elevation<br/>FBM noise + landmass mask] --> Rockiness[Rockiness<br/>erosive-forces weights]
     Rockiness --> Fungus[Fungus patches]
     Fungus --> Landmarks[Landmarks<br/>stamp + sculpt]
-    Landmarks --> Rivers[Aquifers + RecomputeRivers]
+    Landmarks --> SupplyPods[Supply pods<br/>global + wreckage]
+    SupplyPods --> Rivers[Aquifers + RecomputeRivers]
     Rivers --> Rainfall[RecomputeRainfall<br/>base moisture]
     Rainfall --> Bonuses[Tile bonuses]
 ```
 
 - **Ocean depth**: water takes how far below the waterline its noise sits (0–1), raised to the preset's `ocean_depth_exponent`, as a share of `min_elevation`. Below 1 the sea deepens quickly off the coast, so the shelf (above `ocean_shelf_meters`) stays a coastal band and the open sea renders as SMAC's deep blue; the shipping presets use 0.6.
 - **Landmarks before rivers**: landmark placement is the last stage that changes elevation (the Mount Planet sculpt raises peaks and roughens slopes) or stamps a `terminates_river` feature (BoreholeCluster). River tracing walks strictly downhill and stops at terminators, so it has to see the finished terrain. Run the other way round, rivers flowed down pre-sculpt slopes and straight through boreholes.
-- **Bonuses last**: landmarks exclude `@resource_bonus`, so bonuses must be placed against a tile set that already has its landmarks.
+- **Supply pods after landmarks, before bonuses**: `Supply_Pod` (`config/terrain.json`, `frequency: 0`) is placed by `PlaceGlobalSupplyPods` / `PlaceWreckageSupplyPods` from each `event_groups` entry in `config/supply_pods.json` (`placement.domain` filters eligible tiles). Placement stamps the event group's `id` into `SupplyPodIndex`; open resolves the table from that stamp, not the tile's current surface. Earlier landmarks win contested tiles; pods then beat later bonuses / random Monoliths via mutual `excludes`. `GameRulesConfig_t::noUnityScattering` skips global and wreckage scatter. Start-ring pods (`PlaceStartSupplyPods`) land when factions found, after world gen.
+- **Bonuses last**: landmarks exclude `@resource_bonus`, so bonuses must be placed against a tile set that already has its landmarks (and pods).
 - **Rain after rivers**: `RecomputeRainfall` ports SMAC's `world_rainfall`, which reads rivers and landmarks, so it runs after both, as in `world_climate`. It writes base moisture; on a new world each tile's moisture is then its base.
 - **Fungus before landmarks**: `PlaceFungus` covers `decoration.json`'s `fungus.fraction` of the tiles the fungus entry can occupy, land and water in one pool. It reads neither rivers nor moisture, and `TheRuins` sets fungus on its own footprint.
 - **Aquifers**: `GenerateAquifers_` covers `aquifers.fraction` of the tiles the Aquifer entry can occupy. The shipping entry's `domain` is land, so water tiles stay out of that pool.

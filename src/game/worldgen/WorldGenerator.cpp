@@ -3,6 +3,9 @@
 #include "game/worldgen/FbmNoise.h"
 #include "game/worldgen/FungusGeneration.h"
 #include "game/worldgen/TileBonusGeneration.h"
+#include "game/worldgen/SupplyPodGeneration.h"
+#include "game/supply/SupplyPodConfig.h"
+#include "game/supply/SupplyPodIndex.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/worldgen/LandmarkGeneration.h"
@@ -93,6 +96,9 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
                                                    const std::vector<LandmarkConfig_t>& rLandmarks,
                                                    const ImprovementRegistry& rOccupants,
                                                    const MapRulesConfig_t& rMapRules,
+                                                   const SupplyPodConfig_t& rSupplyPods,
+                                                   SupplyPodIndex& rSupplyPodIndex,
+                                                   bool bNoUnityScattering,
                                                    unsigned int seed)
 {
     m_rng.seed(seed);
@@ -110,12 +116,19 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
     }
 
     // Landmarks are the last stage to change elevation or stamp terminates_river, so rivers follow
-    // them; rain follows rivers (SMAC world_climate order); bonuses go last for their excludes.
+    // them; rain follows rivers (SMAC world_climate order); supply pods precede bonuses so pods
+    // win contested tiles; bonuses stay last among object stamps for their excludes.
     GenerateElevation_(*pWorld, rConfig, rPreset);
     GenerateRockiness_(*pWorld, rConfig.erosiveForces, rDecoration.rockiness);
     const ImprovementConfig_t& rFungus = rOccupants.Get(std::string(ImprovementIds::k_Fungus));
     PlaceFungus(*pWorld, rDecoration.fungus, rFungus, m_rng);
     PlaceLandmarks(*pWorld, rLandmarks, rOccupants, m_rng);
+    // TODO: take a closer look at pod gen configuration
+    if (!bNoUnityScattering)
+    {
+        PlaceGlobalSupplyPods(*pWorld, rSupplyPods, rOccupants, rSupplyPodIndex, m_rng);
+        PlaceWreckageSupplyPods(*pWorld, rSupplyPods, rOccupants, rSupplyPodIndex, m_rng);
+    }
     GenerateAquifers_(*pWorld, rDecoration.aquifers, rOccupants);
     moisture_gen::RecomputeRainfall(*pWorld, rDecoration.moisture);
     ApplyBaseMoisture_(*pWorld);

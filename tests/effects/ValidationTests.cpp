@@ -7,6 +7,7 @@
 #include "game/natives/NativeLifeConfig.h"
 #include "game/ecology/EcoDamageConfig.h"
 #include "game/world-events/WorldEventConfig.h"
+#include "game/supply/SupplyPodConfig.h"
 #include "game/EffectReferenceValidator.h"
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
@@ -82,6 +83,7 @@ void FillEffectReferenceContext(GameDataContext& rData)
     rData.atrocitiesConfig = std::make_unique<AtrocitiesConfig_t>();
     rData.nativeLifeConfig = std::make_unique<NativeLifeConfig_t>();
     rData.worldEventsConfig = std::make_unique<WorldEventsConfig_t>();
+    rData.supplyPodConfig = std::make_unique<SupplyPodConfig_t>();
     rData.ecoDamageConfig = std::make_unique<EcoDamageConfig_t>();
     rData.baseConquestConfig = std::make_unique<BaseConquestConfig_t>();
     rData.popCompositionConfig = std::make_unique<PopCompositionConfig_t>();

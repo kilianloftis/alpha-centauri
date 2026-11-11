@@ -16,6 +16,7 @@ namespace ImprovementIds
     inline constexpr std::string_view k_Base = "Base";
     inline constexpr std::string_view k_Sensor = "Sensor";
     inline constexpr std::string_view k_Monolith = "Monolith";
+    inline constexpr std::string_view k_SupplyPod = "Supply_Pod";
 
     inline constexpr std::string_view k_Fungus = "Fungus";
 } // namespace ImprovementIds

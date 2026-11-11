@@ -60,6 +60,7 @@ struct GameDataPaths
     std::string nativeLife = "config/native_life.json";
     std::string nativeLifeFormula = "config/native_life.lua";
     std::string worldEvents = "config/world_events.json";
+    std::string supplyPods = "config/supply_pods.json";
 };
 
 } // namespace ac

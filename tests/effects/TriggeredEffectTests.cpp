@@ -18,6 +18,7 @@
 #include "game/base/BaseManager.h"
 #include "game/buildings/BuildingManager.h"
 #include "game/population/PopulationManager.h"
+#include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
@@ -26,12 +27,16 @@
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitOrderExecutor.h"
+#include "game/units/UnitOrigin.h"
 #include "game/units/UnitSlotConfig.h"
 #include "lib/Rational.h"
 #include "game/PlayerInteractionQueue.h"
 #include "game/units/UnitMoveExecutor.h"
 #include "game/ecology/EcologyLedger.h"
 #include "game/units/UnitComponentRegistry.h"
+#include "game/movement/TransportRules.h"
+#include "game/natives/NativeUnitRegistry.h"
+#include "game/units/UnitDomain.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <algorithm>
@@ -762,4 +767,144 @@ TEST_CASE("Every ecology ledger write moves its revision", "[effects][triggered]
     CHECK(ledger.FungalBlooms(2) == 0);
     CHECK_THROWS_AS(ledger.AddVirtualMinerals(1, 0), std::invalid_argument);
     CHECK_THROWS_AS(ledger.GrantCleanMinerals(1, -1), std::invalid_argument);
+}
+
+TEST_CASE("TerraformCluster chance gates Chebyshev rings",
+          "[effects][triggered][terraform]")
+{
+    TriggerGame_ game;
+    Tile& rCenter = *game.fixtures.state.GetWorldMap().GetTile(8, 8);
+
+    auto applyCluster = [&](std::vector<Rational_t> chance)
+    {
+        for (auto& pTile : game.fixtures.state.GetWorldMap().GetTiles())
+        {
+            if (pTile->HasFeature("Forest"))
+            {
+                game.fixtures.state.GetTileEffects().RemoveOccupantWithEffects(*pTile, "Forest");
+            }
+        }
+        TriggeredEffectConfig_t effect =
+            Effect_(TerraformClusterEffect_t{{"Forest"}, std::move(chance)});
+        TriggeredEffectContext_t context(game.fixtures.state, *game.pFaction);
+        context.pTile = &rCenter;
+        context.pRng = &game.fixtures.state.GetRng();
+        ApplyTriggeredEffects(std::span{&effect, 1}, context);
+    };
+
+    applyCluster({Rational_t::FromInt(1), Rational_t{0, 1}});
+    REQUIRE(rCenter.HasFeature("Forest"));
+    int neighborForests = 0;
+    ForEachNeighborInChebyshevRadius(rCenter, game.fixtures.state.GetWorldMap(), 1,
+                                     [&](Tile* pNeighbor, int)
+                                     {
+                                         if (pNeighbor->HasFeature("Forest"))
+                                         {
+                                             ++neighborForests;
+                                         }
+                                     });
+    CHECK(neighborForests == 0);
+
+    applyCluster({Rational_t::FromInt(1), Rational_t{1, 1}});
+    REQUIRE(rCenter.HasFeature("Forest"));
+    neighborForests = 0;
+    int neighborCount = 0;
+    ForEachNeighborInChebyshevRadius(rCenter, game.fixtures.state.GetWorldMap(), 1,
+                                     [&](Tile* pNeighbor, int)
+                                     {
+                                         ++neighborCount;
+                                         if (pNeighbor->HasFeature("Forest"))
+                                         {
+                                             ++neighborForests;
+                                         }
+                                     });
+    CHECK(neighborForests == neighborCount);
+}
+
+TEST_CASE("SpawnNative places one unit on a random eligible adjacent tile",
+          "[effects][triggered][spawn-native]")
+{
+    FactionFixture fixtures;
+    FillLand(fixtures.map);
+    fixtures.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
+    fixtures.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
+    Faction& rPlanet = AddNativeLifeFaction(fixtures);
+    Faction& rPlayer = fixtures.MakeFaction();
+    GameStateScope scope(fixtures.state);
+
+    Tile& rOrigin = fixtures.At(8, 8);
+    Tile& rOnlyOpen = fixtures.At(9, 9);
+    ForEachNeighborInChebyshevRadius(
+        rOrigin, fixtures.map, 1,
+        [&](Tile* pNeighbor, int)
+        {
+            if (!pNeighbor || pNeighbor == &rOnlyOpen)
+            {
+                return;
+            }
+            rPlayer.GetUnitManager().CreateUnit(
+                fixtures.state.AllocateUnitId(),
+                fixtures.MakeDesign({"test_chassis", "test_weapon"}),
+                fixtures.map.GetUnitPositions(), *pNeighbor, UnitOrigin::Gift(nullptr));
+        });
+
+    TriggeredEffectConfig_t effect = Effect_(SpawnNativeEffect_t{"Mind_Worm", {}});
+    TriggeredEffectContext_t context(fixtures.state, rPlayer);
+    context.pTile = &rOrigin;
+    context.pRng = &fixtures.state.GetRng();
+    const std::vector<TriggeredEffectResult_t> results =
+        ApplyTriggeredEffects(std::span{&effect, 1}, context);
+    REQUIRE(results.size() == 1);
+    REQUIRE(UnitCount_(rPlanet) == 1);
+    CHECK(&FirstUnit_(rPlanet).GetTile() == &rOnlyOpen);
+}
+
+TEST_CASE("SpawnNative loads cargo_ids onto a transport hull",
+          "[effects][triggered][spawn-native]")
+{
+    FactionFixture fixtures;
+    FillLand(fixtures.map);
+    fixtures.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
+    fixtures.dataContext.nativeUnitRegistry->Load(FixturePath("native_units_full.json"));
+    Faction& rPlanet = AddNativeLifeFaction(fixtures);
+    Faction& rPlayer = fixtures.MakeFaction();
+    GameStateScope scope(fixtures.state);
+
+    // Isle cargo uses wild lifecycle × IntrinsicXp; floor reaches 1 at turn 45.
+    while (fixtures.state.GetTurnNumber() < 45)
+    {
+        fixtures.state.IncrementMissionYear();
+    }
+
+    Tile& rOrigin = fixtures.At(8, 8);
+    ForEachNeighborInChebyshevRadius(rOrigin, fixtures.map, 1,
+                                     [&](Tile* pNeighbor, int)
+                                     {
+                                         if (pNeighbor)
+                                         {
+                                             pNeighbor->SetElevation(-100);
+                                         }
+                                     });
+
+    TriggeredEffectConfig_t effect =
+        Effect_(SpawnNativeEffect_t{"Isle_of_the_Deep", {"Mind_Worm"}});
+    TriggeredEffectContext_t context(fixtures.state, rPlayer);
+    context.pTile = &rOrigin;
+    context.pRng = &fixtures.state.GetRng();
+    REQUIRE(ApplyTriggeredEffects(std::span{&effect, 1}, context).size() == 1);
+
+    const Unit* pIsle = nullptr;
+    for (const Unit& rUnit : rPlanet.GetUnitManager().Units())
+    {
+        if (rUnit.GetDesign().GetId() == "Isle_of_the_Deep")
+        {
+            pIsle = &rUnit;
+            break;
+        }
+    }
+    REQUIRE(pIsle != nullptr);
+    CHECK(pIsle->GetTile().IsWater());
+    CHECK(FreeCargoSlots(*pIsle) == 0);
+    REQUIRE(!pIsle->Transport().GetCargo().empty());
+    CHECK(pIsle->Transport().GetCargo().front()->GetDesign().GetId() == "Mind_Worm");
 }

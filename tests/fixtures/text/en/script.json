@@ -125,5 +125,41 @@
   "MAPS": {
     "body": "Maps",
     "items": []
+  },
+  "Empty": {
+    "body": "The supply pod is empty.",
+    "items": []
+  },
+  "Empty_Sea": {
+    "body": "The supply pod is empty.",
+    "items": []
+  },
+  "OnlyEnergy": {
+    "body": "You recover $NUM0 energy credits.",
+    "items": []
+  },
+  "EnergyCredits": {
+    "body": "You recover $NUM0 energy credits.",
+    "items": []
+  },
+  "EnergyCredits_Sea": {
+    "body": "You recover $NUM0 energy credits.",
+    "items": []
+  },
+  "ResourceBonus": {
+    "body": "A $STRING0 bonus is nearby.",
+    "items": []
+  },
+  "MapReveal": {
+    "body": "The surrounding terrain is revealed.",
+    "items": []
+  },
+  "PlaceMonolith": {
+    "body": "A monolith rises from the pod.",
+    "items": []
+  },
+  "DestroyVisitor": {
+    "body": "The unit vanishes.",
+    "items": []
   }
 }

@@ -104,6 +104,8 @@ public:
 
     WindowLayout_t GetFullscreenLayout() const;
 
+    const TextPack& GetText() const { return m_rText; }
+
 private:
 
     GameState& m_rGameState;

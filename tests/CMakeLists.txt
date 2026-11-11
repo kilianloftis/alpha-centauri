@@ -112,6 +112,7 @@ add_executable(effects-tests
     game/NativeUnitsTests.cpp
     game/PlanetFaunaTests.cpp
     game/ArtifactLinkTests.cpp
+    game/SupplyPodTests.cpp
     game/MovementTests.cpp
     game/TransportTests.cpp
     game/FuelTests.cpp
@@ -208,3 +209,6 @@ catch_discover_tests(effects-tests)
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 add_test(NAME extract_text
          COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/test_extract_text.py)
+add_test(NAME extract_ui_supply_pod_art
+         COMMAND ${Python3_EXECUTABLE}
+                 ${CMAKE_CURRENT_SOURCE_DIR}/tools/test_extract_ui_supply_pod_art.py)

@@ -117,7 +117,7 @@ Sea Lurk and the `Deep_Pressure_Hull` ability share Conceal channel `deep_pressu
 ## Alien Artifact link
 
 Alien Artifact declares `on_hold_effects` in [`config/native_units.json`](../../config/native_units.json):
-`GrantTech` `selection: Available`, then `DestroyUnit`, both gated by `BaseHasBuilding`
+`GrantTech` (random currently-researchable), then `DestroyUnit`, both gated by `BaseHasBuilding`
 `Network_Node`. Network Node is an ordinary building (mineral cost 20, upkeep 1). The prompt
 fires when the artifact is ordered to Hold in a friendly base that has the node, and when the
 node is completed under an artifact that is already Holding there. Linking spends the artifact.

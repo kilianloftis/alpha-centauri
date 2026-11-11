@@ -23,7 +23,9 @@ TEST_CASE("Rational parses ints and fraction strings", "[move-cost][rational]")
     CHECK(Rational_t::FromInt(2).ScaledInt(360) == 720);
     CHECK(Rational_t::Parse("1/3").ScaledInt(360) == 120);
     CHECK(Rational_t::ParseJson(nlohmann::json(0)).ScaledInt(360) == 0);
+    CHECK(Rational_t::ParseJson(nlohmann::json(1.0)).ScaledInt(360) == 360);
     CHECK(Rational_t::ParseJson(nlohmann::json("1/3")).ScaledInt(360) == 120);
+    CHECK_THROWS(Rational_t::ParseJson(nlohmann::json(0.5)));
     CHECK_THROWS(Rational_t::Parse("1/7").ScaledInt(360));
     CHECK_THROWS(Rational_t::Parse("1/0"));
 }

@@ -177,8 +177,9 @@ ignores the ban wherever the territory's owner does not know whose unit it is
 
 `SpendMovesAndEnter_` splits arrival into two phases. `EnterTile_` does position and move
 cost only; `ApplyArrivalEffects_` then runs the side effects of *being* on the new tile —
-boarding a transport parked there, improvement visit (Investigate prompt or AI auto-apply of
-`on_visit_effects`), and base-entry conquest.
+boarding a transport parked there, auto-opening a `Supply_Pod` (no Investigate prompt;
+`SupplyPodMutations::OpenSupplyPod`), else improvement visit (Investigate prompt or AI
+auto-apply of `on_visit_effects`), and base-entry conquest. Air and orbital units skip pods.
 
 ### A step can destroy the mover
 

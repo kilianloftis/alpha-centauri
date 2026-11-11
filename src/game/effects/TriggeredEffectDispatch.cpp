@@ -10,7 +10,9 @@
 #include "game/diplomacy/InfiltrationRules.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/effects/TriggeredEffectRules.h"
+#include "game/diplomacy/DiplomaticPermissionRules.h"
 #include "game/diplomacy/DiplomacyLedger.h"
+#include "game/movement/TransportRules.h"
 #include "game/economy/EconomyManager.h"
 #include "game/base/RebelMutations.h"
 #include "game/research/ResearchManager.h"
@@ -35,12 +37,24 @@
 #include "game/population/PopCompositionConfigParser.h"
 #include "game/population/PopulationManager.h"
 #include "game/units/AdHocDesign.h"
+#include "game/natives/NativeDesign.h"
 #include "game/natives/NativeUnitRegistry.h"
 #include "game/movement/MovementRules.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitOrder.h"
+#include "game/units/UnitOrigin.h"
 #include "game/units/UnitPlacementRules.h"
+#include "game/units/Military.h"
+#include "game/map/OccupantCoexistence.h"
+#include "game/map/ImprovementIds.h"
+#include "game/map/ImprovementRegistry.h"
+#include "game/units/UnitDomain.h"
+#include "game/visibility/FactionExploredMap.h"
+#include "game/production/ProductionRules.h"
+#include "game/production/IConstructable.h"
+#include "game/faction/FactionConfig.h"
+#include "lib/LuaRuntime.h"
 #include "lib/RandomRoll.h"
 #include "game/ecology/EcologyLedger.h"
 #include "game/probes/MindControlLedger.h"
@@ -50,8 +64,10 @@
 #include <magic_enum.hpp>
 #include <random>
 #include <set>
+#include <span>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -230,32 +246,485 @@ int SpawnGrantedUnits_(GameState& rGameState, Faction& rFaction, const UnitDesig
     return spawned;
 }
 
+const IDesign* ResolveGrantUnitDesign_(TriggeredEffectContext_t& rCtx, Faction& rFaction,
+                                       const GrantUnitEffect_t& rGrant)
+{
+    if (rGrant.designId)
+    {
+        if (const IDesign* pExisting = rFaction.GetMilitary().GetDesign(*rGrant.designId))
+        {
+            return pExisting;
+        }
+        const NativeUnitRegistry* pNatives =
+            rCtx.rGameState.GetGameData().nativeUnitRegistry.get();
+        if (!pNatives)
+        {
+            return nullptr;
+        }
+        const NativeUnitConfig_t* pConfig = pNatives->Find(*rGrant.designId);
+        if (!pConfig)
+        {
+            // TODO(supply-pods case 9): author Unity Rover/Chopper/Foil + Battle Ogre Mk1–3
+            // and a single conditional picker — docs/thinker/terranx-map.md "Case 9 — UnityVehicle".
+            return nullptr;
+        }
+        auto pDesign = std::make_unique<NativeDesign>(*pConfig);
+        if (!rFaction.GetMilitary().AddDesign(std::move(pDesign)))
+        {
+            return rFaction.GetMilitary().GetDesign(*rGrant.designId);
+        }
+        return rFaction.GetMilitary().GetDesign(*rGrant.designId);
+    }
+    return EnsureAdHocDesign(rFaction, *rCtx.rGameState.GetGameData().unitComponentRegistry,
+                             rGrant.componentIds, "granted");
+}
+
+bool DomainMatchesTile_(UnitDomain_t domain, const Tile& rTile)
+{
+    switch (domain)
+    {
+        case UnitDomain_t::Land:
+            return !rTile.IsWater();
+        case UnitDomain_t::Sea:
+            return rTile.IsWater();
+        case UnitDomain_t::Air:
+        case UnitDomain_t::Orbital:
+            return true;
+    }
+    return false;
+}
+
+int SpawnOnTile_(GameState& rGameState, Faction& rFaction, const IDesign& rDesign,
+                 BaseManager* pAnchor, Tile& rTile, int count)
+{
+    WorldMap& rMap = rGameState.GetWorldMap();
+    int spawned = 0;
+    for (int i = 0; i < count; ++i)
+    {
+        rFaction.GetUnitManager().CreateUnit(rGameState.AllocateUnitId(), rDesign,
+                                             rMap.GetUnitPositions(), rTile,
+                                             UnitOrigin::Gift(pAnchor));
+        ++spawned;
+    }
+    return spawned;
+}
+
 bool GrantUnit_(TriggeredEffectContext_t& rCtx, const GrantUnitEffect_t& rGrant,
                 Faction& rFaction, std::vector<TriggeredEffectResult_t>& rOut)
 {
-    // A grant may have no base at all (a council vote); the anchor homes the unit, so it pays
-    // support like a produced one.
-    const std::optional<BaseId_t> anchorId = GrantAnchorBase(rFaction, rCtx.pBase, rCtx.pTile);
-    BaseManager* pAnchor = anchorId ? rFaction.FindBase(*anchorId) : nullptr;
-    if (!pAnchor || rGrant.count <= 0)
+    if (rGrant.count <= 0)
     {
         rOut.push_back(UnitsGranted_t{0, {}});
         return false;
     }
 
-    const UnitDesign* pDesign =
-        EnsureAdHocDesign(rFaction, *rCtx.rGameState.GetGameData().unitComponentRegistry,
-                          rGrant.componentIds, "granted");
+    const IDesign* pDesign = ResolveGrantUnitDesign_(rCtx, rFaction, rGrant);
     if (!pDesign)
     {
         rOut.push_back(UnitsGranted_t{0, {}});
         return false;
     }
 
-    const int spawned = SpawnGrantedUnits_(rCtx.rGameState, rFaction, *pDesign, *pAnchor,
-                                           rGrant.count);
+    const std::optional<BaseId_t> anchorId = GrantAnchorBase(rFaction, rCtx.pBase, rCtx.pTile);
+    BaseManager* pAnchor = anchorId ? rFaction.FindBase(*anchorId) : nullptr;
+
+    int spawned = 0;
+    if (rGrant.designId)
+    {
+        // Named designs (natives / future Unity stock) land on the context tile.
+        if (!rCtx.pTile || !DomainMatchesTile_(pDesign->GetDomain(), *rCtx.pTile))
+        {
+            rOut.push_back(UnitsGranted_t{0, {}});
+            return false;
+        }
+        spawned = SpawnOnTile_(rCtx.rGameState, rFaction, *pDesign, pAnchor, *rCtx.pTile,
+                               rGrant.count);
+    }
+    else
+    {
+        // Component grants keep the anchor-ring placement used by base conquest / council.
+        if (!pAnchor)
+        {
+            rOut.push_back(UnitsGranted_t{0, {}});
+            return false;
+        }
+        const auto* pUnitDesign = dynamic_cast<const UnitDesign*>(pDesign);
+        if (!pUnitDesign)
+        {
+            rOut.push_back(UnitsGranted_t{0, {}});
+            return false;
+        }
+        spawned = SpawnGrantedUnits_(rCtx.rGameState, rFaction, *pUnitDesign, *pAnchor,
+                                     rGrant.count);
+    }
     rOut.push_back(UnitsGranted_t{spawned, pDesign->GetId()});
     return spawned > 0;
+}
+
+int ResolveGrantEnergyAmount_(const GrantEnergyEffect_t& rGrant, TriggeredEffectContext_t& rCtx)
+{
+    if (rGrant.amount)
+    {
+        return *rGrant.amount;
+    }
+    LuaRuntime& rLua = *rCtx.rGameState.GetGameData().luaRuntime;
+    const std::unordered_map<std::string, double> vars = {
+        {"turn", static_cast<double>(rCtx.rGameState.GetTurnNumber())},
+    };
+    return rLua.EvalInt(*rGrant.formula, vars);
+}
+
+bool TryPlaceOccupant_(GameState& rGameState, Tile& rTile, const std::string& rImprovementId)
+{
+    const ImprovementRegistry& rRegistry = rGameState.GetTileEffects().GetImprovements();
+    const ImprovementConfig_t* pConfig = rRegistry.Find(rImprovementId);
+    if (!pConfig)
+    {
+        return false;
+    }
+    if (rTile.HasTerrainFeature(pConfig->id))
+    {
+        return false;
+    }
+    if (!CanBuildImprovement(rTile, *pConfig, {}, {}))
+    {
+        return false;
+    }
+    rGameState.GetTileEffects().AddOccupantWithEffects(rTile, pConfig->id);
+    return true;
+}
+
+bool AddOccupant_(TriggeredEffectContext_t& rCtx, const std::string& rImprovementId,
+                  std::vector<TriggeredEffectResult_t>& rOut)
+{
+    if (!rCtx.pTile)
+    {
+        return false;
+    }
+    if (!TryPlaceOccupant_(rCtx.rGameState, *rCtx.pTile, rImprovementId))
+    {
+        return false;
+    }
+    rOut.push_back(OccupantAdded_t{rImprovementId});
+    return true;
+}
+
+bool RevealMap_(TriggeredEffectContext_t& rCtx, Faction& rFaction,
+                const RevealMapEffect_t& rReveal, std::vector<TriggeredEffectResult_t>& rOut)
+{
+    if (!rCtx.pTile)
+    {
+        return false;
+    }
+    FactionExploredMap& rExplored = rFaction.GetExploredMap();
+    WorldMap& rWorldMap = rCtx.rGameState.GetWorldMap();
+    ForEachTileInChebyshevRadius(*rCtx.pTile, rWorldMap, rReveal.radius,
+                                 [&rExplored](Tile* pTile, int)
+                                 {
+                                     rExplored.Mark(*pTile);
+                                 });
+    rOut.push_back(MapRevealed_t{rReveal.radius});
+    return true;
+}
+
+bool TeleportUnit_(TriggeredEffectContext_t& rCtx, const TeleportUnitEffect_t& rTeleport,
+                   std::vector<TriggeredEffectResult_t>& rOut)
+{
+    if (!rCtx.pUnit || !rCtx.pTile)
+    {
+        return false;
+    }
+    WorldMap& rWorldMap = rCtx.rGameState.GetWorldMap();
+    const int mapWidth = rWorldMap.GetWidth();
+    const bool bSea = rCtx.pTile->IsWater();
+    std::vector<Tile*> candidates;
+    for (const std::unique_ptr<Tile>& pTile : rWorldMap.GetTiles())
+    {
+        Tile& rCandidate = *pTile;
+        if (rCandidate.IsWater() != bSea)
+        {
+            continue;
+        }
+        const int distance = ChebyshevDistance(*rCtx.pTile, rCandidate, mapWidth);
+        if (distance < rTeleport.minDistance || distance > rTeleport.maxDistance)
+        {
+            continue;
+        }
+        candidates.push_back(&rCandidate);
+    }
+    if (candidates.empty())
+    {
+        return false;
+    }
+    std::uniform_int_distribution<std::size_t> pick(0, candidates.size() - 1);
+    Tile& rDest = *candidates[pick(rCtx.Rng())];
+    rWorldMap.GetUnitPositions().MoveUnit(*rCtx.pUnit, rDest);
+    rCtx.pTile = &rDest;
+    rOut.push_back(UnitTeleported_t{TileCoord_t{rDest.GetX(), rDest.GetY()}});
+    return true;
+}
+
+bool FinishProduction_(TriggeredEffectContext_t& rCtx, Faction& rFaction,
+                       std::vector<TriggeredEffectResult_t>& rOut)
+{
+    if (!rCtx.pTile)
+    {
+        return false;
+    }
+    BaseManager* pBase = rFaction.FindNearestBase(*rCtx.pTile);
+    if (!pBase)
+    {
+        return false;
+    }
+    const IConstructable* pItem = pBase->GetProduction().GetCurrentProduction();
+    if (!pItem)
+    {
+        return false;
+    }
+    const int cost = ItemMineralCost(*pBase, *pItem);
+    pBase->GetProduction().SetMineralStockpile(cost);
+    ProductionFinished_t finished;
+    finished.baseName = pBase->GetName();
+    finished.itemName = pItem->GetName();
+    finished.cameraTile = TileCoord_t{pBase->GetTile().GetX(), pBase->GetTile().GetY()};
+    rOut.push_back(std::move(finished));
+    return true;
+}
+
+bool CloneUnit_(TriggeredEffectContext_t& rCtx, Faction& rFaction,
+                std::vector<TriggeredEffectResult_t>& rOut)
+{
+    if (!rCtx.pUnit || !rCtx.pTile)
+    {
+        return false;
+    }
+    const int hp = rCtx.pUnit->GetCurrentHp();
+    Unit& rClone = rFaction.GetUnitManager().CreateUnit(
+        rCtx.rGameState.AllocateUnitId(), rCtx.pUnit->GetDesign(),
+        rCtx.rGameState.GetWorldMap().GetUnitPositions(), *rCtx.pTile, UnitOrigin::Gift(nullptr));
+    rClone.SetCurrentHp(hp);
+    rOut.push_back(UnitsGranted_t{1, rClone.GetDesign().GetId()});
+    return true;
+}
+
+bool GrantCommlink_(TriggeredEffectContext_t& rCtx, Faction& rFaction,
+                    std::vector<TriggeredEffectResult_t>& rOut)
+{
+    const FactionId_t visitorId = rFaction.GetFactionId();
+    DiplomacyLedger& rLedger = rCtx.rGameState.GetDiplomacyLedger();
+    std::vector<Faction*> candidates;
+    for (Faction& rOther : rCtx.rGameState.Factions())
+    {
+        if (rOther.GetFactionId() == visitorId)
+        {
+            continue;
+        }
+        if (IsNativeLifeFaction(rOther.GetDefinition().identity.species))
+        {
+            continue;
+        }
+        if (rLedger.AreKnown(visitorId, rOther.GetFactionId()))
+        {
+            continue;
+        }
+        candidates.push_back(&rOther);
+    }
+    if (candidates.empty())
+    {
+        return false;
+    }
+    std::uniform_int_distribution<std::size_t> pick(0, candidates.size() - 1);
+    Faction& rContact = *candidates[pick(rCtx.Rng())];
+    rLedger.SetKnown(visitorId, rContact.GetFactionId(), true);
+    const FactionConfig_t& rDef = rContact.GetDefinition();
+    rOut.push_back(CommlinkGranted_t{rDef.leader.title, rDef.leader.name, rDef.identity.name});
+    return true;
+}
+
+Faction* FindNativeLifeFaction_(GameState& rGameState)
+{
+    for (Faction& rFaction : rGameState.Factions())
+    {
+        if (IsNativeLifeFaction(rFaction.GetDefinition().identity.species))
+        {
+            return &rFaction;
+        }
+    }
+    return nullptr;
+}
+
+bool TileAcceptsNativeSpawn_(const Faction& rPlanet, const IDesign& rDesign, const Tile& rTile,
+                             const WorldMap& rWorldMap)
+{
+    if (!CanEnterTileTerrain(rDesign.GetDomain(), rTile))
+    {
+        return false;
+    }
+    for (const Unit* pUnit : rWorldMap.GetUnitsOnTile(rTile))
+    {
+        if (pUnit && !MayShareTiles(rPlanet, pUnit->GetFaction().GetFactionId()))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::vector<Tile*> CollectAdjacentNativeSpawnTiles_(const Faction& rPlanet,
+                                                    const IDesign& rDesign, Tile& rOrigin,
+                                                    WorldMap& rWorldMap)
+{
+    std::vector<Tile*> candidates;
+    ForEachNeighborInChebyshevRadius(
+        rOrigin, rWorldMap, 1,
+        [&](Tile* pNeighbor, int)
+        {
+            if (pNeighbor && TileAcceptsNativeSpawn_(rPlanet, rDesign, *pNeighbor, rWorldMap))
+            {
+                candidates.push_back(pNeighbor);
+            }
+        });
+    return candidates;
+}
+
+Unit& SpawnNativeUnit_(Faction& rPlanet, const IDesign& rDesign, Tile& rTile,
+                       GameState& rGameState)
+{
+    return rPlanet.GetUnitManager().CreateUnit(rGameState.AllocateUnitId(), rDesign,
+                                               rGameState.GetWorldMap().GetUnitPositions(),
+                                               rTile, UnitOrigin::Gift(nullptr));
+}
+
+void LoadSpawnedTransportCargo_(Faction& rPlanet, Unit& rHull, Tile& rTile,
+                                const std::vector<std::string>& rCargoIds,
+                                GameState& rGameState, std::mt19937& rRng)
+{
+    if (rCargoIds.empty())
+    {
+        return;
+    }
+    while (FreeCargoSlots(rHull) > 0)
+    {
+        std::uniform_int_distribution<std::size_t> pick(0, rCargoIds.size() - 1);
+        const IDesign* pCargo = rPlanet.GetMilitary().GetDesign(rCargoIds[pick(rRng)]);
+        if (!pCargo)
+        {
+            break;
+        }
+        Unit& rPassenger = SpawnNativeUnit_(rPlanet, *pCargo, rTile, rGameState);
+        rPassenger.Transport().EmbarkInto(rHull);
+    }
+}
+
+bool SpawnNative_(TriggeredEffectContext_t& rCtx, const SpawnNativeEffect_t& rSpawn,
+                  std::vector<TriggeredEffectResult_t>& rOut)
+{
+    if (!rCtx.pTile)
+    {
+        return false;
+    }
+    Faction* pPlanet = FindNativeLifeFaction_(rCtx.rGameState);
+    if (!pPlanet)
+    {
+        return false;
+    }
+    const IDesign* pDesign = pPlanet->GetMilitary().GetDesign(rSpawn.nativeId);
+    if (!pDesign)
+    {
+        return false;
+    }
+
+    WorldMap& rWorldMap = rCtx.rGameState.GetWorldMap();
+    const std::vector<Tile*> candidates =
+        CollectAdjacentNativeSpawnTiles_(*pPlanet, *pDesign, *rCtx.pTile, rWorldMap);
+    if (candidates.empty())
+    {
+        return false;
+    }
+    std::uniform_int_distribution<std::size_t> pick(0, candidates.size() - 1);
+    Tile& rSpawnTile = *candidates[pick(rCtx.Rng())];
+    Unit& rSpawned =
+        SpawnNativeUnit_(*pPlanet, *pDesign, rSpawnTile, rCtx.rGameState);
+    LoadSpawnedTransportCargo_(*pPlanet, rSpawned, rSpawnTile, rSpawn.cargoIds,
+                               rCtx.rGameState, rCtx.Rng());
+    rOut.push_back(NativeSpawned_t{rSpawn.nativeId});
+    return true;
+}
+
+void PlaceOnTile_(GameState& rGameState, Tile& rTile, const std::string& rPrimaryId,
+                  bool bAlsoRoad)
+{
+    TryPlaceOccupant_(rGameState, rTile, rPrimaryId);
+    if (bAlsoRoad)
+    {
+        TryPlaceOccupant_(rGameState, rTile, std::string(ImprovementIds::k_Road));
+    }
+}
+
+void PlaceCluster_(GameState& rGameState, Tile& rCenter, WorldMap& rWorldMap,
+                   const std::string& rPrimaryId, bool bAlsoRoad,
+                   std::span<const Rational_t> rChances, std::mt19937& rRng)
+{
+    const std::vector<Tile*> tiles = SelectTilesByRingChance(
+        rCenter, rWorldMap, rChances, [](Tile&, int) { return true; }, rRng);
+    for (Tile* pTile : tiles)
+    {
+        PlaceOnTile_(rGameState, *pTile, rPrimaryId, bAlsoRoad);
+    }
+}
+
+bool TerraformCluster_(TriggeredEffectContext_t& rCtx, const TerraformClusterEffect_t& rCluster,
+                       std::vector<TriggeredEffectResult_t>& rOut)
+{
+    if (!rCtx.pTile)
+    {
+        return false;
+    }
+    WorldMap& rWorldMap = rCtx.rGameState.GetWorldMap();
+    std::uniform_int_distribution<std::size_t> pick(0, rCluster.improvementIds.size() - 1);
+    const std::string& rChosenId = rCluster.improvementIds[pick(rCtx.Rng())];
+    const bool bAlsoRoad = rChosenId == "Mine";
+    PlaceCluster_(rCtx.rGameState, *rCtx.pTile, rWorldMap, rChosenId, bAlsoRoad, rCluster.chance,
+                  rCtx.Rng());
+    rOut.push_back(TerraformClusterApplied_t{rChosenId});
+    return true;
+}
+
+bool AddRandomOccupant_(TriggeredEffectContext_t& rCtx, const AddRandomOccupantEffect_t& rAdd,
+                        std::vector<TriggeredEffectResult_t>& rOut)
+{
+    if (!rCtx.pTile)
+    {
+        return false;
+    }
+    const ImprovementRegistry& rRegistry = rCtx.rGameState.GetTileEffects().GetImprovements();
+    std::vector<const ImprovementConfig_t*> candidates;
+    for (const std::string& rId : rAdd.improvementIds)
+    {
+        const ImprovementConfig_t* pBonus = rRegistry.Find(rId);
+        if (!pBonus)
+        {
+            continue;
+        }
+        if (rCtx.pTile->HasTerrainFeature(pBonus->id))
+        {
+            continue;
+        }
+        if (!CanBuildImprovement(*rCtx.pTile, *pBonus, {}, {}))
+        {
+            continue;
+        }
+        candidates.push_back(pBonus);
+    }
+    if (candidates.empty())
+    {
+        return false;
+    }
+    std::uniform_int_distribution<std::size_t> pick(0, candidates.size() - 1);
+    const ImprovementConfig_t& rBonus = *candidates[pick(rCtx.Rng())];
+    rCtx.rGameState.GetTileEffects().AddOccupantWithEffects(*rCtx.pTile, rBonus.id);
+    rOut.push_back(OccupantAdded_t{rBonus.id});
+    return true;
 }
 
 bool Earthquake_(TriggeredEffectContext_t& rCtx, const EarthquakeEffect_t& rConfig,
@@ -393,17 +862,26 @@ bool FungalBloom_(TriggeredEffectContext_t& rCtx, const FungalBloomEffect_t& rCo
     {
         return false;
     }
-    int tiles = rConfig.tiles;
-    if (rConfig.tilesStat)
+    FungalBloomResult_t result;
+    if (!rConfig.chance.empty())
     {
-        if (!rCtx.pUnit)
-        {
-            return false;
-        }
-        tiles = ResolveStat(*rCtx.pUnit, *rConfig.tilesStat);
+        result = ApplyFungalBloom(*rCtx.pTile, rCtx.rGameState.GetWorldMap(), rConfig.chance,
+                                  rCtx.Rng(), rCtx.rGameState);
     }
-    const FungalBloomResult_t result = ApplyFungalBloom(
-        *rCtx.pTile, rCtx.rGameState.GetWorldMap(), tiles, rCtx.Rng(), rCtx.rGameState);
+    else
+    {
+        int tiles = rConfig.tiles;
+        if (rConfig.tilesStat)
+        {
+            if (!rCtx.pUnit)
+            {
+                return false;
+            }
+            tiles = ResolveStat(*rCtx.pUnit, *rConfig.tilesStat);
+        }
+        result = ApplyFungalBloom(*rCtx.pTile, rCtx.rGameState.GetWorldMap(), tiles, rCtx.Rng(),
+                                  rCtx.rGameState);
+    }
     if (result.tilesFungused == 0)
     {
         return false;
@@ -475,7 +953,16 @@ bool IsPerFactionSubject_(const TriggeredEffectVariant_t& rEffect)
                                || std::is_same_v<T, SetTerrainFeatureEffect_t>
                                || std::is_same_v<T, StepRockinessEffect_t>
                                || std::is_same_v<T, ElevationChangeEffect_t>
-                               || std::is_same_v<T, WorldParameterEffect_t>)
+                               || std::is_same_v<T, WorldParameterEffect_t>
+                               || std::is_same_v<T, AddOccupantEffect_t>
+                               || std::is_same_v<T, RevealMapEffect_t>
+                               || std::is_same_v<T, TeleportUnitEffect_t>
+                               || std::is_same_v<T, FinishProductionEffect_t>
+                               || std::is_same_v<T, CloneUnitEffect_t>
+                               || std::is_same_v<T, GrantCommlinkEffect_t>
+                               || std::is_same_v<T, SpawnNativeEffect_t>
+                               || std::is_same_v<T, TerraformClusterEffect_t>
+                               || std::is_same_v<T, AddRandomOccupantEffect_t>)
             {
                 return false;
             }
@@ -566,8 +1053,9 @@ struct TriggeredEffectApplier_
 
     bool operator()(const GrantEnergyEffect_t& rGrant) const
     {
-        rFaction.GetEconomy().AddEnergy(rGrant.amount);
-        rOut.push_back(EnergyGranted_t{rGrant.amount});
+        const int amount = ResolveGrantEnergyAmount_(rGrant, rCtx);
+        rFaction.GetEconomy().AddEnergy(amount);
+        rOut.push_back(EnergyGranted_t{amount});
         return true;
     }
 
@@ -740,6 +1228,51 @@ struct TriggeredEffectApplier_
         }
         rOut.push_back(UnitDestroyed_t{rCtx.pUnit->GetUnitId()});
         return true;
+    }
+
+    bool operator()(const AddOccupantEffect_t& rAdd) const
+    {
+        return AddOccupant_(rCtx, rAdd.improvementId, rOut);
+    }
+
+    bool operator()(const RevealMapEffect_t& rReveal) const
+    {
+        return RevealMap_(rCtx, rFaction, rReveal, rOut);
+    }
+
+    bool operator()(const TeleportUnitEffect_t& rTeleport) const
+    {
+        return TeleportUnit_(rCtx, rTeleport, rOut);
+    }
+
+    bool operator()(const FinishProductionEffect_t&) const
+    {
+        return FinishProduction_(rCtx, rFaction, rOut);
+    }
+
+    bool operator()(const CloneUnitEffect_t&) const
+    {
+        return CloneUnit_(rCtx, rFaction, rOut);
+    }
+
+    bool operator()(const GrantCommlinkEffect_t&) const
+    {
+        return GrantCommlink_(rCtx, rFaction, rOut);
+    }
+
+    bool operator()(const SpawnNativeEffect_t& rSpawn) const
+    {
+        return SpawnNative_(rCtx, rSpawn, rOut);
+    }
+
+    bool operator()(const TerraformClusterEffect_t& rCluster) const
+    {
+        return TerraformCluster_(rCtx, rCluster, rOut);
+    }
+
+    bool operator()(const AddRandomOccupantEffect_t& rAdd) const
+    {
+        return AddRandomOccupant_(rCtx, rAdd, rOut);
     }
 
 private:

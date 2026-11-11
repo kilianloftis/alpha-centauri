@@ -567,9 +567,6 @@
     "on_discover_effects": [
       {
         "type": "GrantTech",
-        "parameters": {
-          "selection": "Available"
-        },
         "once_per": {
           "scope": "world",
           "key": "secrets_of_the_human_brain_first"
