@@ -13,7 +13,7 @@ using namespace actest;
 TEST_CASE("NextFriction adds then clamps", "[diplomacy][calculator]")
 {
     const DiplomacyConfig_t config =
-        DiplomacyConfigParser{}.ParseConfig(FixturePath("diplomacy.json"));
+        DiplomacyConfigParser::ParseConfig(FixturePath("diplomacy.json"));
     const DiplomacyCalculator calculator(config);
 
     CHECK(calculator.NextFriction(19, 5) == 20);
@@ -23,7 +23,7 @@ TEST_CASE("NextFriction adds then clamps", "[diplomacy][calculator]")
 TEST_CASE("NextBlemishes adds, raises to the floor, then clamps", "[diplomacy][calculator]")
 {
     const DiplomacyConfig_t config =
-        DiplomacyConfigParser{}.ParseConfig(FixturePath("diplomacy.json"));
+        DiplomacyConfigParser::ParseConfig(FixturePath("diplomacy.json"));
     const DiplomacyCalculator calculator(config);
 
     CHECK(calculator.NextBlemishes(0, 2, 6) == 6);
@@ -54,7 +54,7 @@ TEST_CASE("BaseValue scales the treasury by distance and population, with floors
           "[diplomacy][calculator][base_value]")
 {
     const DiplomacyConfig_t config =
-        DiplomacyConfigParser{}.ParseConfig(FixturePath("diplomacy.json"));
+        DiplomacyConfigParser::ParseConfig(FixturePath("diplomacy.json"));
     const DiplomacyCalculator calculator(config);
 
     BaseValueInputs_t inputs = PlainBase_();
@@ -74,7 +74,7 @@ TEST_CASE("BaseValue scales the treasury by distance and population, with floors
 TEST_CASE("BaseValue halves an empty base, truncating", "[diplomacy][calculator][base_value]")
 {
     const DiplomacyConfig_t config =
-        DiplomacyConfigParser{}.ParseConfig(FixturePath("diplomacy.json"));
+        DiplomacyConfigParser::ParseConfig(FixturePath("diplomacy.json"));
     const DiplomacyCalculator calculator(config);
 
     BaseValueInputs_t inputs = PlainBase_();
@@ -89,7 +89,7 @@ TEST_CASE("BaseValue scales by who holds bases in the region",
           "[diplomacy][calculator][base_value]")
 {
     const DiplomacyConfig_t config =
-        DiplomacyConfigParser{}.ParseConfig(FixturePath("diplomacy.json"));
+        DiplomacyConfigParser::ParseConfig(FixturePath("diplomacy.json"));
     const DiplomacyCalculator calculator(config);
     BaseValueInputs_t inputs = PlainBase_();
 
@@ -122,7 +122,7 @@ TEST_CASE("BaseValue adds facilities by their order, projects and the evaluator'
           "[diplomacy][calculator][base_value]")
 {
     const DiplomacyConfig_t config =
-        DiplomacyConfigParser{}.ParseConfig(FixturePath("diplomacy.json"));
+        DiplomacyConfigParser::ParseConfig(FixturePath("diplomacy.json"));
     const DiplomacyCalculator calculator(config);
     BaseValueInputs_t inputs = PlainBase_();
 
@@ -144,7 +144,7 @@ namespace
 const DiplomacyCalculator& GiftCalculator_()
 {
     static const DiplomacyConfig_t s_config =
-        DiplomacyConfigParser{}.ParseConfig(FixturePath("diplomacy.json"));
+        DiplomacyConfigParser::ParseConfig(FixturePath("diplomacy.json"));
     static const DiplomacyCalculator s_calculator(s_config);
     return s_calculator;
 }

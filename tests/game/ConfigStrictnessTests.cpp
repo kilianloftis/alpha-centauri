@@ -158,13 +158,12 @@ TEST_CASE("Growth config requires its keys and positive values", "[config][popul
 {
     // json.value(...) meant a typo'd key loaded the struct default, and nutrients_per_pop of 0
     // makes the growth threshold identically 0 - every base grows every turn.
-    GrowthConfigParser parser;
 
     SECTION("a missing key names the key, not just the file")
     {
         const TempConfigFile config("ac_growth_missing.json",
                                     R"({"nutrient_intake_per_citizen": 2, "effects": []})");
-        CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
+        CHECK_THROWS_WITH(GrowthConfigParser::ParseConfig(config.Path()),
                           Catch::Matchers::ContainsSubstring("nutrients_per_pop")
                               && Catch::Matchers::ContainsSubstring("required"));
     }
@@ -174,7 +173,7 @@ TEST_CASE("Growth config requires its keys and positive values", "[config][popul
         const TempConfigFile config(
             "ac_growth_zero.json",
             R"({"nutrients_per_pop": 0, "nutrient_intake_per_citizen": 2, "effects": []})");
-        CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
+        CHECK_THROWS_WITH(GrowthConfigParser::ParseConfig(config.Path()),
                           Catch::Matchers::ContainsSubstring("nutrients_per_pop"));
     }
 
@@ -183,7 +182,7 @@ TEST_CASE("Growth config requires its keys and positive values", "[config][popul
         const TempConfigFile config(
             "ac_growth_float.json",
             R"({"nutrients_per_pop": 10.9, "nutrient_intake_per_citizen": 2, "effects": []})");
-        CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
+        CHECK_THROWS_WITH(GrowthConfigParser::ParseConfig(config.Path()),
                           Catch::Matchers::ContainsSubstring("integer"));
     }
 
@@ -205,7 +204,7 @@ TEST_CASE("Growth config requires its keys and positive values", "[config][popul
               }
             ]
         })");
-        const GrowthConfig_t growth = parser.ParseConfig(config.Path());
+        const GrowthConfig_t growth = GrowthConfigParser::ParseConfig(config.Path());
         CHECK(growth.nutrientsPerPop == 10);
         CHECK(growth.nutrientIntakePerCitizen == 2);
         CHECK(growth.effects.size() == 2);
@@ -225,7 +224,7 @@ TEST_CASE("Growth config requires its keys and positive values", "[config][popul
     SECTION("an empty effects list is rejected rather than resolving both baselines to zero")
     {
         const TempConfigFile config("ac_growth_no_effects.json", growthConfigWith("[]"));
-        CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
+        CHECK_THROWS_WITH(GrowthConfigParser::ParseConfig(config.Path()),
                           Catch::Matchers::ContainsSubstring("starting_size"));
     }
 
@@ -233,7 +232,7 @@ TEST_CASE("Growth config requires its keys and positive values", "[config][popul
     {
         const TempConfigFile config("ac_growth_no_max.json",
                                     growthConfigWith("[" + k_StartingSize + "]"));
-        CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
+        CHECK_THROWS_WITH(GrowthConfigParser::ParseConfig(config.Path()),
                           Catch::Matchers::ContainsSubstring("max_base_size"));
     }
 
@@ -246,7 +245,7 @@ TEST_CASE("Growth config requires its keys and positive values", "[config][popul
                "parameters": {"stat": "max_base_size", "amount": 8, "op": "Add"}},
               {"type": "StatModifier", "scope": "AllOwnerBases",
                "parameters": {"stat": "attack", "amount": 8, "op": "Add"}}])"));
-        CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
+        CHECK_THROWS_WITH(GrowthConfigParser::ParseConfig(config.Path()),
                           Catch::Matchers::ContainsSubstring("stat is not allowed"));
     }
 
@@ -257,7 +256,7 @@ TEST_CASE("Growth config requires its keys and positive values", "[config][popul
             growthConfigWith("[" + k_StartingSize + R"(,
               {"type": "StatModifier", "scope": "AllOwnerBases",
                "parameters": {"stat": "max_base_size", "amount": 8, "op": "AddPercent"}}])"));
-        CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
+        CHECK_THROWS_WITH(GrowthConfigParser::ParseConfig(config.Path()),
                           Catch::Matchers::ContainsSubstring("op Add"));
     }
 
@@ -268,7 +267,7 @@ TEST_CASE("Growth config requires its keys and positive values", "[config][popul
             growthConfigWith("[" + k_StartingSize + R"(,
               {"type": "StatModifier", "scope": "AllOwnerBases",
                "parameters": {"stat": "max_base_size", "amount": 0, "op": "Add"}}])"));
-        CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
+        CHECK_THROWS_WITH(GrowthConfigParser::ParseConfig(config.Path()),
                           Catch::Matchers::ContainsSubstring("must be > 0"));
     }
 }
@@ -276,7 +275,6 @@ TEST_CASE("Growth config requires its keys and positive values", "[config][popul
 TEST_CASE("Pop composition requires formulas and rejects unknown keys",
           "[config][population]")
 {
-    PopCompositionConfigParser parser;
 
     SECTION("an empty drone source formula would mean zero drones from that source forever")
     {
@@ -288,7 +286,7 @@ TEST_CASE("Pop composition requires formulas and rejects unknown keys",
             "drone_type": "Drone",
             "talent_type": "Talent"
         })");
-        CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
+        CHECK_THROWS_WITH(PopCompositionConfigParser::ParseConfig(config.Path()),
                           Catch::Matchers::ContainsSubstring("size_drone_formula"));
     }
 
@@ -301,7 +299,7 @@ TEST_CASE("Pop composition requires formulas and rejects unknown keys",
             "drone_type": "Drone",
             "talent_type": "Talent"
         })");
-        CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
+        CHECK_THROWS_WITH(PopCompositionConfigParser::ParseConfig(config.Path()),
                           Catch::Matchers::ContainsSubstring("occupation_drone_formula"));
     }
 
@@ -315,7 +313,7 @@ TEST_CASE("Pop composition requires formulas and rejects unknown keys",
             "drone_type": "Drone",
             "talent_type": "Talent"
         })");
-        CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
+        CHECK_THROWS_WITH(PopCompositionConfigParser::ParseConfig(config.Path()),
                           Catch::Matchers::ContainsSubstring("bureaucracy_limit_formula"));
     }
     SECTION("unknown keys are refused rather than silently ignored")
@@ -329,7 +327,7 @@ TEST_CASE("Pop composition requires formulas and rejects unknown keys",
             "talent_type": "Talent",
             "precedence": ["Talent", "Drone"]
         })");
-        CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
+        CHECK_THROWS_WITH(PopCompositionConfigParser::ParseConfig(config.Path()),
                           Catch::Matchers::ContainsSubstring("unknown key"));
     }
 
@@ -344,7 +342,7 @@ TEST_CASE("Pop composition requires formulas and rejects unknown keys",
             "talent_type": "Talent",
             "assimilation_decay_turns": 10
         })");
-        CHECK_THROWS_WITH(parser.ParseConfig(missing.Path()),
+        CHECK_THROWS_WITH(PopCompositionConfigParser::ParseConfig(missing.Path()),
                           Catch::Matchers::ContainsSubstring("assimilation_drones"));
 
         const TempConfigFile zero("ac_comp_zero_assim_drones.json", R"({
@@ -357,7 +355,7 @@ TEST_CASE("Pop composition requires formulas and rejects unknown keys",
             "assimilation_drones": 0,
             "assimilation_decay_turns": 10
         })");
-        CHECK_THROWS_WITH(parser.ParseConfig(zero.Path()),
+        CHECK_THROWS_WITH(PopCompositionConfigParser::ParseConfig(zero.Path()),
                           Catch::Matchers::ContainsSubstring("assimilation_drones"));
     }
 }
@@ -414,8 +412,7 @@ TEST_CASE("A negative improvement energy cost is rejected, by name", "[config][i
         { "id": "cheap_farm", "name": "Cheap Farm", "turns_required": 2, "energy_cost": -5 }
     ])");
 
-    ImprovementConfigParser parser;
-    CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
+    CHECK_THROWS_WITH(ImprovementConfigParser::ParseConfig(config.Path()),
                       Catch::Matchers::ContainsSubstring("cheap_farm")
                           && Catch::Matchers::ContainsSubstring("energy_cost"));
 }
@@ -469,9 +466,8 @@ TEST_CASE("An improvement's vision radius comes from its own Vision modifiers",
         ]}
     ])");
 
-    ImprovementConfigParser parser;
     ImprovementRegistry registry;
-    registry.Assign(parser.ParseConfig(config.Path()));
+    registry.Assign(ImprovementConfigParser::ParseConfig(config.Path()));
 
     CHECK(registry.Get("watchtower").visionRadius == 3);
     CHECK(registry.Get("plain_farm").visionRadius == 0);
@@ -637,7 +633,7 @@ TEST_CASE("A float config field accepts a fraction string", "[config]")
           "min_elevation": -3000, "max_elevation": 3500 }
     ])");
     const std::vector<WorldGenPresetConfig_t> presets =
-        WorldGenPresetConfigParser{}.ParseConfig(config.Path());
+        WorldGenPresetConfigParser::ParseConfig(config.Path());
     REQUIRE(presets.size() == 1);
     CHECK(presets[0].frequency == Catch::Approx(0.02f));
     CHECK(presets[0].gain == Catch::Approx(0.5f));

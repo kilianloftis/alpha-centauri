@@ -146,7 +146,7 @@ TEST_CASE("Non-combatants are left unprotected only when no combatant shares the
           "[combat][collateral]")
 {
     std::vector<EffectConfig_t> worldRules =
-        WorldRulesConfigParser{}.ParseConfig(FixturePath("world_rules.json"));
+        WorldRulesConfigParser::ParseConfig(FixturePath("world_rules.json"));
     FactionFixture fixture(k_TestMapWidth, k_TestMapHeight, std::move(worldRules));
     FillLand_(fixture);
     Faction& player = fixture.MakeFaction();

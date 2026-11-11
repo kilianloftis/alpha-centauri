@@ -83,7 +83,7 @@ struct EcoFixture_
 
 EcoDamageConfig_t LoadFixtureConfig_(LuaRuntime& rLua)
 {
-    return EcoDamageConfigParser{}.ParseConfig(FixturePath("eco_damage.json"),
+    return EcoDamageConfigParser::ParseConfig(FixturePath("eco_damage.json"),
                                                FixturePath("eco_damage.lua"), rLua);
 }
 
@@ -485,7 +485,7 @@ TEST_CASE("EcoDamageConfigParser rejects bad configs", "[ecology][parser]")
     LuaRuntime lua;
     const auto parse = [&lua](const std::string& rJson) {
         const TempConfigFile file("eco_damage.json", rJson);
-        return EcoDamageConfigParser{}.ParseConfig(file.Path(), FixturePath("eco_damage.lua"),
+        return EcoDamageConfigParser::ParseConfig(file.Path(), FixturePath("eco_damage.lua"),
                                                    lua);
     };
     const std::string popOk =
@@ -515,7 +515,7 @@ TEST_CASE("EcoDamageConfigParser requires the script to name damage_formula", "[
 {
     LuaRuntime lua;
     const TempConfigFile script("eco_damage.lua", "return { }");
-    CHECK_THROWS_WITH(EcoDamageConfigParser{}.ParseConfig(FixturePath("eco_damage.json"),
+    CHECK_THROWS_WITH(EcoDamageConfigParser::ParseConfig(FixturePath("eco_damage.json"),
                                                           script.Path(), lua),
                       ContainsSubstring("damage_formula"));
 }

@@ -60,8 +60,7 @@ TEST_CASE("BuildingConfigParser reads singular required_tech", "[buildings][tech
   }
 )");
 
-    BuildingConfigParser parser;
-    const std::vector<BuildingConfig_t> configs = parser.ParseConfig(path.string());
+    const std::vector<BuildingConfig_t> configs = BuildingConfigParser::ParseConfig(path.string());
     REQUIRE(configs.size() == 1);
     CHECK(configs[0].requiredTech == "ecology");
     CHECK_FALSE(configs[0].IsAvailable({}));
@@ -82,8 +81,7 @@ TEST_CASE("BuildingConfigParser treats omitted required_tech as always available
   }
 )");
 
-    BuildingConfigParser parser;
-    const std::vector<BuildingConfig_t> configs = parser.ParseConfig(path.string());
+    const std::vector<BuildingConfig_t> configs = BuildingConfigParser::ParseConfig(path.string());
     REQUIRE(configs.size() == 1);
     CHECK(configs[0].requiredTech.empty());
     CHECK(configs[0].IsAvailable({}));
@@ -103,8 +101,7 @@ TEST_CASE("BuildingConfigParser reads optional icon path", "[buildings][parser][
   }
 )");
 
-    BuildingConfigParser parser;
-    const std::vector<BuildingConfig_t> configs = parser.ParseConfig(path.string());
+    const std::vector<BuildingConfig_t> configs = BuildingConfigParser::ParseConfig(path.string());
     REQUIRE(configs.size() == 1);
     CHECK(configs[0].icon == "assets/sprites/facilities/fac000.png");
 
@@ -122,8 +119,7 @@ TEST_CASE("BuildingConfigParser treats omitted icon as empty", "[buildings][pars
   }
 )");
 
-    BuildingConfigParser parser;
-    const std::vector<BuildingConfig_t> configs = parser.ParseConfig(path.string());
+    const std::vector<BuildingConfig_t> configs = BuildingConfigParser::ParseConfig(path.string());
     REQUIRE(configs.size() == 1);
     CHECK(configs[0].icon.empty());
 
@@ -149,8 +145,7 @@ TEST_CASE("BuildingConfigParser reads destroyed_effects on secret projects",
   }
 )");
 
-    BuildingConfigParser parser;
-    const std::vector<BuildingConfig_t> configs = parser.ParseConfig(path.string());
+    const std::vector<BuildingConfig_t> configs = BuildingConfigParser::ParseConfig(path.string());
     REQUIRE(configs.size() == 1);
     REQUIRE(configs[0].destroyedEffects.size() == 1);
     CHECK(configs[0].destroyedEffects[0].scope == EffectScope_t::WorldGlobal);
@@ -176,8 +171,7 @@ TEST_CASE("BuildingConfigParser rejects destroyed_effects on ordinary buildings"
   }
 )");
 
-    BuildingConfigParser parser;
-    CHECK_THROWS_AS(parser.ParseConfig(path.string()), std::runtime_error);
+    CHECK_THROWS_AS(BuildingConfigParser::ParseConfig(path.string()), std::runtime_error);
 
     std::filesystem::remove(path);
 }

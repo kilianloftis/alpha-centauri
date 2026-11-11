@@ -146,7 +146,7 @@ TEST_CASE("Council proposals config loads with expected vote weights", "[council
 TEST_CASE("Council rules config loads propose intervals and governor effects", "[council][parser]")
 {
     const CouncilRulesConfig_t rules =
-        CouncilRulesConfigParser{}.ParseConfig(FixturePath("council/rules.json"));
+        CouncilRulesConfigParser::ParseConfig(FixturePath("council/rules.json"));
 
     CHECK(rules.governorProposeIntervalYears == 10);
     CHECK(rules.memberProposeIntervalYears == 20);
@@ -181,7 +181,7 @@ TEST_CASE("Council proposal honored shapes: stock OK; inert shapes throw", "[cou
                 }]
             }])";
         }
-        CHECK_THROWS(CouncilProposalConfigParser{}.ParseConfig(path.string()));
+        CHECK_THROWS(CouncilProposalConfigParser::ParseConfig(path.string()));
     }
 
     SECTION("A one-shot outcome the applier does not handle throws")
@@ -194,7 +194,7 @@ TEST_CASE("Council proposal honored shapes: stock OK; inert shapes throw", "[cou
                 "on_passed_effects": [{ "type": "Rebel" }]
             }])";
         }
-        CHECK_THROWS(CouncilProposalConfigParser{}.ParseConfig(path.string()));
+        CHECK_THROWS(CouncilProposalConfigParser::ParseConfig(path.string()));
     }
 
     std::filesystem::remove(path);
@@ -219,7 +219,7 @@ TEST_CASE("Council governor honored shapes: inert shapes throw", "[council][pars
                 }]
             })";
         }
-        CHECK_THROWS(CouncilRulesConfigParser{}.ParseConfig(path.string()));
+        CHECK_THROWS(CouncilRulesConfigParser::ParseConfig(path.string()));
     }
 
     SECTION("A one-shot effect in governor_effects throws, naming on_elected_effects")
@@ -232,7 +232,7 @@ TEST_CASE("Council governor honored shapes: inert shapes throw", "[council][pars
                 "governor_effects": [{ "type": "SetInfiltration" }]
             })";
         }
-        CHECK_THROWS(CouncilRulesConfigParser{}.ParseConfig(path.string()));
+        CHECK_THROWS(CouncilRulesConfigParser::ParseConfig(path.string()));
     }
 
     SECTION("A one-shot effect in on_elected_effects loads")
@@ -245,7 +245,7 @@ TEST_CASE("Council governor honored shapes: inert shapes throw", "[council][pars
                 "on_elected_effects": [{ "type": "SetInfiltration" }]
             })";
         }
-        const CouncilRulesConfig_t rules = CouncilRulesConfigParser{}.ParseConfig(path.string());
+        const CouncilRulesConfig_t rules = CouncilRulesConfigParser::ParseConfig(path.string());
         REQUIRE(rules.onElectedEffects.size() == 1);
         CHECK(std::get_if<SetInfiltrationEffect_t>(&rules.onElectedEffects[0].effect) != nullptr);
     }
@@ -267,11 +267,11 @@ TEST_CASE("Tile yield rules reject illegal scopes", "[effects][parser][tile_yiel
             }]
         })";
     }
-    CHECK_THROWS(TileYieldRulesConfigParser{}.ParseConfig(path.string()));
+    CHECK_THROWS(TileYieldRulesConfigParser::ParseConfig(path.string()));
     std::filesystem::remove(path);
 
     CHECK_NOTHROW(
-        TileYieldRulesConfigParser{}.ParseConfig(FixturePath("tile_yield_rules.json")));
+        TileYieldRulesConfigParser::ParseConfig(FixturePath("tile_yield_rules.json")));
 }
 
 TEST_CASE("Proposing requires commlinks to every council member and shares them", "[council]")

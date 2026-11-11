@@ -33,8 +33,7 @@ std::string BuiltInTurnStagesPath_()
 
 TEST_CASE("TurnStageConfigParser loads a stage list", "[TurnStageConfig]")
 {
-    TurnStageConfigParser parser;
-    const auto stages = parser.ParseConfig(BuiltInTurnStagesPath_());
+    const auto stages = TurnStageConfigParser::ParseConfig(BuiltInTurnStagesPath_());
     REQUIRE_FALSE(stages.empty());
     for (const auto& stage : stages)
     {
@@ -76,8 +75,7 @@ TEST_CASE("TurnStageConfigParser rejects scriptPath hooks", "[TurnStageConfig]")
       }
     ])");
 
-    TurnStageConfigParser parser;
-    CHECK_THROWS_AS(parser.ParseConfig(path), std::runtime_error);
+    CHECK_THROWS_AS(TurnStageConfigParser::ParseConfig(path), std::runtime_error);
 }
 
 TEST_CASE("TurnStageConfigParser rejects duplicate stage ids", "[TurnStageConfig]")
@@ -95,8 +93,7 @@ TEST_CASE("TurnStageConfigParser rejects duplicate stage ids", "[TurnStageConfig
       }
     ])");
 
-    TurnStageConfigParser parser;
-    CHECK_THROWS_AS(parser.ParseConfig(path), std::runtime_error);
+    CHECK_THROWS_AS(TurnStageConfigParser::ParseConfig(path), std::runtime_error);
 }
 
 TEST_CASE("TurnStageFactory rejects repeatForEachFaction mismatch for built-ins",

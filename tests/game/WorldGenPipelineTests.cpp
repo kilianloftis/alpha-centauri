@@ -266,9 +266,8 @@ TEST_CASE("Sculpt knobs come from landmark config", "[worldgen][landmarks][confi
         }])" << '\n';
     }
 
-    LandmarkConfigParser parser;
     const auto landmarks =
-        parser.ParseConfig(path.string(), {"Nutrients"});
+        LandmarkConfigParser::ParseConfig(path.string(), {"Nutrients"});
     std::filesystem::remove(path);
 
     REQUIRE(landmarks.size() == 1);
@@ -312,8 +311,7 @@ TEST_CASE("A landmark that can never be placed is rejected at load", "[worldgen]
         }])" << '\n';
     }
 
-    LandmarkConfigParser parser;
-    CHECK_THROWS_WITH(parser.ParseConfig(path.string(), {"Nutrients"}),
+    CHECK_THROWS_WITH(LandmarkConfigParser::ParseConfig(path.string(), {"Nutrients"}),
                       Catch::Matchers::ContainsSubstring("Blank")
                           && Catch::Matchers::ContainsSubstring("footprint"));
     std::filesystem::remove(path);
@@ -389,7 +387,7 @@ TEST_CASE("A preset's ocean depth exponent must be positive", "[worldgen][ocean]
         }])" << '\n';
     }
 
-    CHECK_THROWS_WITH(WorldGenPresetConfigParser{}.ParseConfig(path.string()),
+    CHECK_THROWS_WITH(WorldGenPresetConfigParser::ParseConfig(path.string()),
                       Catch::Matchers::ContainsSubstring("ocean_depth_exponent"));
     std::filesystem::remove(path);
 }

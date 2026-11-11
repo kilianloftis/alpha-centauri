@@ -128,7 +128,7 @@ TEST_CASE("WorldGenDecorationConfigParser throws when erosive object is missing"
 })" << '\n';
     }
 
-    CHECK_THROWS_WITH(WorldGenDecorationConfigParser{}.ParseConfig(path.string()),
+    CHECK_THROWS_WITH(WorldGenDecorationConfigParser::ParseConfig(path.string()),
                       Catch::Matchers::ContainsSubstring("erosive"));
     std::filesystem::remove(path);
 }
@@ -137,7 +137,7 @@ TEST_CASE("WorldGenDecorationConfigParser loads fixture erosive levels",
           "[worldgen][erosive][parser]")
 {
     const WorldGenDecorationConfig_t cfg =
-        WorldGenDecorationConfigParser{}.ParseConfig(
+        WorldGenDecorationConfigParser::ParseConfig(
             actest::FixturePath("worldGen/decoration.json"));
     CHECK(cfg.erosive.low.landRelief == Catch::Approx(0.5f));
     CHECK(cfg.erosive.low.roughness == Catch::Approx(0.0f));

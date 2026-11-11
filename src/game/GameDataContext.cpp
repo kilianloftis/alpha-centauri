@@ -87,17 +87,10 @@ namespace
 {
 
 template <typename TParser>
-auto Parse_(const std::string& rPath)
-{
-    TParser parser;
-    return parser.ParseConfig(rPath);
-}
-
-template <typename TParser>
 auto ParseOwned_(const std::string& rPath)
 {
-    using Config_t = decltype(Parse_<TParser>(rPath));
-    return std::make_unique<Config_t>(Parse_<TParser>(rPath));
+    using Config_t = decltype(TParser::ParseConfig(rPath));
+    return std::make_unique<Config_t>(TParser::ParseConfig(rPath));
 }
 
 template <typename TRegistry>
@@ -189,9 +182,8 @@ std::vector<LandmarkConfig_t> LoadLandmarks_(const GameDataContext& rData)
     {
         occupantIds.push_back(rConfig.id);
     }
-    LandmarkConfigParser landmarkParser;
     std::vector<LandmarkConfig_t> landmarks =
-        landmarkParser.ParseConfig(rData.paths.worldGenLandmarks, occupantIds);
+        LandmarkConfigParser::ParseConfig(rData.paths.worldGenLandmarks, occupantIds);
     for (const WorldGenPresetConfig_t& rPreset : rData.worldGenPresetRegistry->GetAll())
     {
         for (const LandmarkConfig_t& rLandmark : landmarks)
@@ -235,7 +227,7 @@ void LoadEffectRegistries_(GameDataContext& rData)
     rData.stockpileRegistry = LoadRegistry_<StockpileRegistry>(rPaths.stockpiles);
     {
         SocialPoliciesConfig_t socialPolicies =
-            SocialPolicyConfigParser{}.ParseConfig(rPaths.socialPolicies);
+            SocialPolicyConfigParser::ParseConfig(rPaths.socialPolicies);
         rData.upheavalCostConfig =
             std::make_unique<UpheavalCostConfig_t>(std::move(socialPolicies.upheaval));
         rData.socialPolicyRegistry = std::make_unique<SocialPolicyRegistry>();
@@ -248,7 +240,7 @@ void LoadEffectRegistries_(GameDataContext& rData)
 void LoadWorldGenData_(GameDataContext& rData)
 {
     const GameDataPaths& rPaths = rData.paths;
-    rData.mapRules = Parse_<MapRulesConfigParser>(rPaths.mapRules);
+    rData.mapRules = MapRulesConfigParser::ParseConfig(rPaths.mapRules);
     rData.worldGenPresetRegistry = LoadRegistry_<WorldGenPresetRegistry>(rPaths.worldGenPresets);
     for (const WorldGenPresetConfig_t& rPreset : rData.worldGenPresetRegistry->GetAll())
     {
@@ -262,10 +254,10 @@ void LoadWorldGenData_(GameDataContext& rData)
 void LoadRuleConfigs_(GameDataContext& rData)
 {
     const GameDataPaths& rPaths = rData.paths;
-    rData.tileYieldRules = Parse_<TileYieldRulesConfigParser>(rPaths.tileYieldRules);
-    rData.interactionGrids = Parse_<InteractionGridsConfigParser>(rPaths.interactionGrids);
-    rData.policeRules = Parse_<PoliceRulesConfigParser>(rPaths.policeRules);
-    rData.worldRules = Parse_<WorldRulesConfigParser>(rPaths.worldRules);
+    rData.tileYieldRules = TileYieldRulesConfigParser::ParseConfig(rPaths.tileYieldRules);
+    rData.interactionGrids = InteractionGridsConfigParser::ParseConfig(rPaths.interactionGrids);
+    rData.policeRules = PoliceRulesConfigParser::ParseConfig(rPaths.policeRules);
+    rData.worldRules = WorldRulesConfigParser::ParseConfig(rPaths.worldRules);
     rData.moraleConfig = ParseOwned_<MoraleConfigParser>(rPaths.moraleLevels);
     rData.probeActionsConfig = ParseOwned_<ProbeActionConfigParser>(rPaths.probeActions);
     rData.baseConquestConfig = ParseOwned_<BaseConquestConfigParser>(rPaths.baseConquest);
@@ -287,12 +279,11 @@ void LoadRuleConfigs_(GameDataContext& rData)
 
     // Created here so Lua formulas load before ValidateEffectReferences walks effect configs.
     rData.luaRuntime = std::make_unique<LuaRuntime>();
-    EcoDamageConfigParser ecoDamageParser;
-    rData.ecoDamageConfig = std::make_unique<EcoDamageConfig_t>(ecoDamageParser.ParseConfig(
+    rData.ecoDamageConfig = std::make_unique<EcoDamageConfig_t>(EcoDamageConfigParser::ParseConfig(
         rPaths.ecoDamage, rPaths.ecoDamageFormula, *rData.luaRuntime));
-    NativeLifeConfigParser nativeLifeParser;
-    rData.nativeLifeConfig = std::make_unique<NativeLifeConfig_t>(nativeLifeParser.ParseConfig(
-        rPaths.nativeLife, rPaths.nativeLifeFormula, *rData.luaRuntime));
+    rData.nativeLifeConfig = std::make_unique<NativeLifeConfig_t>(
+        NativeLifeConfigParser::ParseConfig(rPaths.nativeLife, rPaths.nativeLifeFormula,
+                                            *rData.luaRuntime));
 }
 
 // Formula configs and calculators, which need the registries and the Lua runtime.
@@ -306,9 +297,8 @@ void LoadFormulasAndCalculators_(GameDataContext& rData)
         *rData.popCompositionConfig, *rData.popTypeRegistry);
     rData.growthConfig = ParseOwned_<GrowthConfigParser>(rPaths.popGrowth);
 
-    TechCostConfigParser techCostParser;
-    rData.techCostConfig =
-        std::make_unique<TechCostConfig_t>(techCostParser.ParseConfig(rPaths.techCost, rLua));
+    rData.techCostConfig = std::make_unique<TechCostConfig_t>(
+        TechCostConfigParser::ParseConfig(rPaths.techCost, rLua));
     rData.techCostCalculator = std::make_unique<TechCostCalculator>(*rData.techCostConfig, rLua);
     rData.ecoDamageCalculator = std::make_unique<EcoDamageCalculator>(*rData.ecoDamageConfig, rLua);
     rData.planetFaunaCalculator =
@@ -318,13 +308,13 @@ void LoadFormulasAndCalculators_(GameDataContext& rData)
     rData.scrapRefundCalculator =
         std::make_unique<ScrapRefundCalculator>(*rData.productionConfig, rLua);
     rData.upgradeCostConfig = std::make_unique<UpgradeCostConfig_t>(
-        UpgradeCostConfigParser{}.ParseConfig(rPaths.unitUpgrade, rLua));
+        UpgradeCostConfigParser::ParseConfig(rPaths.unitUpgrade, rLua));
     rData.upgradeCostCalculator =
         std::make_unique<UpgradeCostCalculator>(*rData.upgradeCostConfig, rLua);
     rData.moraleCalculator = std::make_unique<MoraleCalculator>(*rData.moraleConfig, rLua);
     rData.commerceCalculator = std::make_unique<CommerceCalculator>(*rData.commerceConfig, rLua);
     rData.allocationImbalanceConfig = std::make_unique<AllocationImbalanceConfig_t>(
-        AllocationImbalanceConfigParser{}.ParseConfig(rPaths.energyAllocationFormula, rLua));
+        AllocationImbalanceConfigParser::ParseConfig(rPaths.energyAllocationFormula, rLua));
     rData.allocationImbalanceCalculator = std::make_unique<AllocationImbalanceCalculator>(
         *rData.allocationImbalanceConfig, rLua);
     rData.probeCalculator = std::make_unique<ProbeCalculator>(rLua);

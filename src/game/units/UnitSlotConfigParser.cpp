@@ -23,7 +23,7 @@ UnitSlotConfig_t ParseSlot_(const ConfigReader& rReader)
 
 } // namespace
 
-std::vector<UnitSlotConfig_t> UnitSlotConfigParser::ParseConfig(const std::string& rConfigPath) const
+std::vector<UnitSlotConfig_t> UnitSlotConfigParser::ParseConfig(const std::string& rConfigPath)
 {
     return JsonConfigLoader::LoadFile<UnitSlotConfig_t>(rConfigPath, "unit slot", ParseSlot_);
 }

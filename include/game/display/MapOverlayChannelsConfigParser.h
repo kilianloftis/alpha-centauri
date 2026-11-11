@@ -9,7 +9,7 @@ namespace ac
 class MapOverlayChannelsConfigParser
 {
 public:
-    MapOverlayChannelsConfig_t ParseConfig(const std::string& rConfigPath) const;
+    static MapOverlayChannelsConfig_t ParseConfig(const std::string& rConfigPath);
 };
 
 } // namespace ac

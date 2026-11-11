@@ -70,8 +70,7 @@ TEST_CASE("LandmarkConfigParser loads landmarks.json and validates improvement i
 ])" << '\n';
     }
 
-    LandmarkConfigParser parser;
-    const auto landmarks = parser.ParseConfig(path.string(), ids);
+    const auto landmarks = LandmarkConfigParser::ParseConfig(path.string(), ids);
     REQUIRE(landmarks.size() == 1);
     CHECK(landmarks[0].improvementId == "Nutrients");
     CHECK(landmarks[0].domain == LandmarkDomain_t::Land);
@@ -90,8 +89,7 @@ TEST_CASE("LandmarkConfigParser throws on unknown improvement_id", "[worldgen][l
             "shape":{"kind":"disk","radius":0}}])" << '\n';
     }
 
-    LandmarkConfigParser parser;
-    CHECK_THROWS_WITH(parser.ParseConfig(path.string(), {"Nutrients"}),
+    CHECK_THROWS_WITH(LandmarkConfigParser::ParseConfig(path.string(), {"Nutrients"}),
                       Catch::Matchers::ContainsSubstring("NoSuchThing"));
     std::filesystem::remove(path);
 }

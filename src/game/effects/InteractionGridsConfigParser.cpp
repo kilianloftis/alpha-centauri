@@ -125,7 +125,7 @@ InteractionGridsConfig_t ParseGrids_(const ConfigReader& rReader)
 } // namespace
 
 InteractionGridsConfig_t InteractionGridsConfigParser::ParseConfig(
-    const std::string& configPath) const
+    const std::string& configPath)
 {
     return JsonConfigLoader::LoadObjectFile<InteractionGridsConfig_t>(
         configPath, "interaction grids", ParseGrids_);

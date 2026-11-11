@@ -32,8 +32,7 @@ TEST_CASE("An improvement is buildable exactly when it declares turns_required",
         { "id": "Farm", "name": "Farm", "turns_required": 4, "energy_cost": 0 },
         { "id": "Base", "name": "Base" }
     ])");
-    ImprovementConfigParser parser;
-    const auto configs = parser.ParseConfig(path.string());
+    const auto configs = ImprovementConfigParser::ParseConfig(path.string());
     REQUIRE(configs.size() == 2);
     CHECK(configs[0].placement == OccupantPlacement_t::Improvement);
     REQUIRE(configs[0].project);
@@ -49,8 +48,7 @@ TEST_CASE("An energy cost with no build time is rejected", "[improvements][parse
     const auto path = WriteTempJson("ac_cost_no_time.json", R"([
         { "id": "Farm", "name": "Farm", "energy_cost": 5 }
     ])");
-    ImprovementConfigParser parser;
-    CHECK_THROWS_WITH(parser.ParseConfig(path.string()),
+    CHECK_THROWS_WITH(ImprovementConfigParser::ParseConfig(path.string()),
                       Catch::Matchers::ContainsSubstring("turns_required"));
     std::filesystem::remove(path);
 }
@@ -64,8 +62,7 @@ TEST_CASE("A terrain operation must declare what it does", "[improvements][parse
             { "id": "Dance", "name": "Dance", "turns_required": 1, "energy_cost": 0 }
         ]
     })");
-    TerrainOperationConfigParser parser;
-    CHECK_THROWS_WITH(parser.ParseConfig(path.string()),
+    CHECK_THROWS_WITH(TerrainOperationConfigParser::ParseConfig(path.string()),
                       Catch::Matchers::ContainsSubstring("Dance")
                           && Catch::Matchers::ContainsSubstring("on_complete_effects"));
     std::filesystem::remove(path);
@@ -88,8 +85,8 @@ TEST_CASE("A terrain operation composed of existing effects parses",
             }
         ]
     })");
-    TerrainOperationConfigParser parser;
-    const std::vector<TerrainOperationConfig_t> ops = parser.ParseConfig(path.string());
+    const std::vector<TerrainOperationConfig_t> ops =
+        TerrainOperationConfigParser::ParseConfig(path.string());
     REQUIRE(ops.size() == 1);
     CHECK(ops[0].id == "Rockify");
     REQUIRE(ops[0].onCompleteEffects.size() == 1);
@@ -169,8 +166,7 @@ TEST_CASE("ImprovementConfigParser: suppress_yield_sources", "[improvements][par
         }
     ])");
 
-    ImprovementConfigParser parser;
-    const auto configs = parser.ParseConfig(path.string());
+    const auto configs = ImprovementConfigParser::ParseConfig(path.string());
     REQUIRE(configs.size() == 1);
     REQUIRE(configs[0].suppressYieldSources.size() == 2);
     CHECK(configs[0].suppressYieldSources[0] == "Rocky");
@@ -189,8 +185,7 @@ TEST_CASE("ImprovementConfigParser: tags are stored on config", "[improvements][
         }
     ])");
 
-    ImprovementConfigParser parser;
-    const auto configs = parser.ParseConfig(path.string());
+    const auto configs = ImprovementConfigParser::ParseConfig(path.string());
     REQUIRE(configs.size() == 1);
     REQUIRE(configs[0].tags.size() == 1);
     CHECK(configs[0].tags[0] == "landform");
@@ -227,8 +222,7 @@ TEST_CASE("ImprovementConfigParser: expands @tag in excludes and suppress_yield_
         }
     ])");
 
-    ImprovementConfigParser parser;
-    const auto configs = parser.ParseConfig(path.string());
+    const auto configs = ImprovementConfigParser::ParseConfig(path.string());
     REQUIRE(configs.size() == 5);
 
     const ImprovementConfig_t* pForest = nullptr;
@@ -267,8 +261,7 @@ TEST_CASE("ImprovementConfigParser: @tag expansion omits self from suppress list
         }
     ])");
 
-    ImprovementConfigParser parser;
-    const auto configs = parser.ParseConfig(path.string());
+    const auto configs = ImprovementConfigParser::ParseConfig(path.string());
     REQUIRE(configs.size() == 2);
     REQUIRE(configs[1].suppressYieldSources == std::vector<std::string>({"Farm"}));
     std::filesystem::remove(path);
@@ -287,8 +280,7 @@ TEST_CASE("ImprovementConfigParser: tag expansion deduplicates mixed ids", "[imp
         }
     ])");
 
-    ImprovementConfigParser parser;
-    const auto configs = parser.ParseConfig(path.string());
+    const auto configs = ImprovementConfigParser::ParseConfig(path.string());
     REQUIRE(configs.size() == 3);
     REQUIRE(configs[2].suppressYieldSources == std::vector<std::string>({"Flat", "Rocky"}));
     std::filesystem::remove(path);
@@ -305,8 +297,7 @@ TEST_CASE("ImprovementConfigParser: unknown @tag throws", "[improvements][parser
         }
     ])");
 
-    ImprovementConfigParser parser;
-    CHECK_THROWS(parser.ParseConfig(path.string()));
+    CHECK_THROWS(ImprovementConfigParser::ParseConfig(path.string()));
     std::filesystem::remove(path);
 }
 
@@ -353,8 +344,7 @@ TEST_CASE("art variants list sprites per tile surface", "[improvements][parser][
         { "id": "Plain", "name": "Plain", "effects": [] }
     ])");
 
-    ImprovementConfigParser parser;
-    const auto configs = parser.ParseConfig(path.string());
+    const auto configs = ImprovementConfigParser::ParseConfig(path.string());
     REQUIRE(configs.size() == 3);
     REQUIRE(configs[0].art.has_value());
     CHECK(configs[0].art->layer == ArtLayer_t::Object);
@@ -380,8 +370,7 @@ TEST_CASE("art variants reject a surface that is not land or sea", "[improvement
         }
     ])");
 
-    ImprovementConfigParser parser;
-    CHECK_THROWS_WITH(parser.ParseConfig(path.string()),
+    CHECK_THROWS_WITH(ImprovementConfigParser::ParseConfig(path.string()),
                       Catch::Matchers::ContainsSubstring("Grove")
                           && Catch::Matchers::ContainsSubstring("water"));
     std::filesystem::remove(path);
@@ -396,8 +385,7 @@ TEST_CASE("art overhang defaults to zero and must not be negative",
         { "id": "Flat", "name": "Flat", "effects": [],
           "art": { "layer": "object", "variants": { "land": ["f.png"] } } }
     ])");
-    ImprovementConfigParser parser;
-    const auto configs = parser.ParseConfig(path.string());
+    const auto configs = ImprovementConfigParser::ParseConfig(path.string());
     REQUIRE(configs.size() == 2);
     CHECK(configs[0].art->overhang == 0.24f);
     CHECK(configs[1].art->overhang == 0.0f);
@@ -407,7 +395,7 @@ TEST_CASE("art overhang defaults to zero and must not be negative",
         { "id": "Sunken", "name": "Sunken", "effects": [],
           "art": { "layer": "object", "variants": { "land": ["s.png"] }, "overhang": -0.1 } }
     ])");
-    CHECK_THROWS_WITH(parser.ParseConfig(negative.string()),
+    CHECK_THROWS_WITH(ImprovementConfigParser::ParseConfig(negative.string()),
                       Catch::Matchers::ContainsSubstring("Sunken")
                           && Catch::Matchers::ContainsSubstring("overhang"));
     std::filesystem::remove(negative);
@@ -433,8 +421,7 @@ TEST_CASE("art tiles expand a pattern into one path per neighbor mask",
         }
     ])");
 
-    ImprovementConfigParser parser;
-    const auto configs = parser.ParseConfig(path.string());
+    const auto configs = ImprovementConfigParser::ParseConfig(path.string());
     REQUIRE(configs.size() == 2);
     const auto& grove = std::get<OccupantTileSet_t>(configs[0].art->sprites);
     CHECK(grove.layout == SpriteTileLayout_t::Edges);
@@ -452,7 +439,6 @@ TEST_CASE("art tiles expand a pattern into one path per neighbor mask",
 TEST_CASE("art rejects a pattern without {mask}, an unknown layout, or two sprite kinds",
           "[improvements][parser][art]")
 {
-    ImprovementConfigParser parser;
     const struct
     {
         const char* name;
@@ -490,7 +476,7 @@ TEST_CASE("art rejects a pattern without {mask}, an unknown layout, or two sprit
     {
         CAPTURE(rCase.name);
         const auto path = WriteTempJson(rCase.name, rCase.body);
-        CHECK_THROWS_WITH(parser.ParseConfig(path.string()),
+        CHECK_THROWS_WITH(ImprovementConfigParser::ParseConfig(path.string()),
                           Catch::Matchers::ContainsSubstring("Grove")
                               && Catch::Matchers::ContainsSubstring(rCase.message));
         std::filesystem::remove(path);
@@ -502,8 +488,7 @@ TEST_CASE("Improvement art fields reject what the renderer cannot use",
 {
     const auto parseOne = [](const char* json) {
         const auto path = WriteTempJson("ac_improvement_art.json", json);
-        ImprovementConfigParser parser;
-        const auto configs = parser.ParseConfig(path.string());
+        const auto configs = ImprovementConfigParser::ParseConfig(path.string());
         std::filesystem::remove(path);
         return configs;
     };

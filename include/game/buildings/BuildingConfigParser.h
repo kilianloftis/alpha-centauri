@@ -10,10 +10,7 @@ namespace ac
 class BuildingConfigParser
 {
 public:
-    BuildingConfigParser() = default;
-    ~BuildingConfigParser() = default;
-
-    std::vector<BuildingConfig_t> ParseConfig(const std::string& configPath);
+    static std::vector<BuildingConfig_t> ParseConfig(const std::string& configPath);
 };
 
 } // namespace ac

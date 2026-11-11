@@ -19,11 +19,8 @@ struct GrowthConfig_t
 class GrowthConfigParser
 {
 public:
-    GrowthConfigParser() = default;
-    ~GrowthConfigParser() = default;
-
     // Load pop_growth.json. Throws if the file cannot be opened or parsed.
-    GrowthConfig_t ParseConfig(const std::string& configPath);
+    static GrowthConfig_t ParseConfig(const std::string& configPath);
 };
 
 } // namespace ac

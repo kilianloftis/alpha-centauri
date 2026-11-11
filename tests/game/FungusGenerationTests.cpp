@@ -165,8 +165,7 @@ TEST_CASE("WorldGenDecorationConfigParser throws when fungus object is missing",
 })" << '\n';
     }
 
-    WorldGenDecorationConfigParser parser;
-    CHECK_THROWS_WITH(parser.ParseConfig(path.string()),
+    CHECK_THROWS_WITH(WorldGenDecorationConfigParser::ParseConfig(path.string()),
                       Catch::Matchers::ContainsSubstring("fungus"));
     std::filesystem::remove(path);
 }
@@ -175,7 +174,7 @@ TEST_CASE("WorldGenDecorationConfigParser loads fungus coverage knobs",
           "[worldgen][fungus][parser]")
 {
     const WorldGenDecorationConfig_t cfg =
-        WorldGenDecorationConfigParser{}.ParseConfig(
+        WorldGenDecorationConfigParser::ParseConfig(
             actest::FixturePath("worldGen/decoration.json"));
     CHECK(cfg.fungus.coverage == Catch::Approx(0.30f));
     CHECK(cfg.fungus.clusterScaleTiles == 12);

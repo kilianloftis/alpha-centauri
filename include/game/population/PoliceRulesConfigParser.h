@@ -12,11 +12,8 @@ namespace ac
 class PoliceRulesConfigParser
 {
 public:
-    PoliceRulesConfigParser() = default;
-    ~PoliceRulesConfigParser() = default;
-
     // Throws if the file cannot be opened or the effects array is invalid.
-    std::vector<EffectConfig_t> ParseConfig(const std::string& configPath);
+    static std::vector<EffectConfig_t> ParseConfig(const std::string& configPath);
 };
 
 } // namespace ac

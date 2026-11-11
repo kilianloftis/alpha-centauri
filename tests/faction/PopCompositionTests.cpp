@@ -88,7 +88,7 @@ struct CompositionFixture_
 {
     LuaRuntime lua;
     PopCompositionConfig_t config =
-        PopCompositionConfigParser{}.ParseConfig(actest::FixturePath("pop_composition.json"));
+        PopCompositionConfigParser::ParseConfig(actest::FixturePath("pop_composition.json"));
     DroneCalculator droneCalculator{config, lua};
 };
 
@@ -781,21 +781,21 @@ TEST_CASE("Every conversion path resolves the obsolescence chain", "[population]
 TEST_CASE("Pop composition config requires type ids and per-source formulas",
           "[population][composition]")
 {
-    PopCompositionConfigParser parser;
 
     const PopCompositionConfig_t config =
-        parser.ParseConfig(actest::FixturePath("pop_composition.json"));
+        PopCompositionConfigParser::ParseConfig(actest::FixturePath("pop_composition.json"));
     CHECK(config.droneTypeId == "Drone");
     CHECK(config.talentTypeId == "Talent");
     CHECK(config.riotThreshold == 1);
     CHECK(config.goldenAgeThreshold == 0);
 
-    CHECK_THROWS_WITH(parser.ParseConfig(actest::FixturePath("pop_composition_missing_types.json")),
+    CHECK_THROWS_WITH(PopCompositionConfigParser::ParseConfig(
+                          actest::FixturePath("pop_composition_missing_types.json")),
                       ContainsSubstring("drone_type"));
 
-    CHECK_THROWS_WITH(
-        parser.ParseConfig(actest::FixturePath("pop_composition_missing_thresholds.json")),
-        ContainsSubstring("riot_threshold"));
+    CHECK_THROWS_WITH(PopCompositionConfigParser::ParseConfig(
+                          actest::FixturePath("pop_composition_missing_thresholds.json")),
+                      ContainsSubstring("riot_threshold"));
 }
 
 TEST_CASE("Each drone source is computed on its own formula", "[population][composition]")
@@ -822,7 +822,7 @@ TEST_CASE("Each drone source is computed on its own formula", "[population][comp
 })cfg");
 
     PopCompositionConfig_t config =
-        PopCompositionConfigParser{}.ParseConfig(compositionConfig.Path());
+        PopCompositionConfigParser::ParseConfig(compositionConfig.Path());
     DroneCalculator calculator(config, lua);
 
     SizeDroneInputs_t size;

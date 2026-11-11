@@ -15,7 +15,7 @@ void ValidateComponentChassisRequirements(const UnitComponentRegistry& rRegistry
 class UnitComponentConfigParser
 {
 public:
-    std::vector<UnitComponentConfig_t> ParseConfig(const std::string& rConfigPath);
+    static std::vector<UnitComponentConfig_t> ParseConfig(const std::string& rConfigPath);
 };
 
 } // namespace ac

@@ -9,10 +9,7 @@ namespace ac
 class SocialPolicyConfigParser
 {
 public:
-    SocialPolicyConfigParser() = default;
-    ~SocialPolicyConfigParser() = default;
-
-    SocialPoliciesConfig_t ParseConfig(const std::string& configPath);
+    static SocialPoliciesConfig_t ParseConfig(const std::string& configPath);
 };
 
 } // namespace ac

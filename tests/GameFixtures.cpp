@@ -132,7 +132,7 @@ SessionInputs::SessionInputs(const OccupantFiles_t& rOccupants,
 {
     // As LoadGameData leaves it: the preset's elevation range belongs to the map.
     dataContext.mapRules =
-        ac::MapRulesConfigParser{}.ParseConfig(FixturePath("map_rules.json"));
+        ac::MapRulesConfigParser::ParseConfig(FixturePath("map_rules.json"));
     // The same call production uses, so the fixture cannot drift from it or skip the
     // improvement-shadows-operation check that only this path performs.
     dataContext.terrainOperationRegistry = std::make_unique<ac::TerrainOperationRegistry>();
@@ -141,50 +141,50 @@ SessionInputs::SessionInputs(const OccupantFiles_t& rOccupants,
     unitComponents.Load(FixturePath("unit_components.json"));
     // Before any TileEffectsContext: it holds the yield rules by reference and stamps
     // them into every per-tile resolve (ElevationEnergy reads the step from here).
-    dataContext.tileYieldRules = ac::TileYieldRulesConfigParser{}.ParseConfig(
+    dataContext.tileYieldRules = ac::TileYieldRulesConfigParser::ParseConfig(
         FixturePath("tile_yield_rules.json"));
-    dataContext.interactionGrids = ac::InteractionGridsConfigParser{}.ParseConfig(
+    dataContext.interactionGrids = ac::InteractionGridsConfigParser::ParseConfig(
         FixturePath("interaction_grids.json"));
     // Climate re-runs read the rainfall knobs.
     dataContext.worldGenDecorationConfig = std::make_unique<ac::WorldGenDecorationConfig_t>(
-        ac::WorldGenDecorationConfigParser{}.ParseConfig(
+        ac::WorldGenDecorationConfigParser::ParseConfig(
             FixturePath("worldGen/decoration.json")));
     dataContext.worldRules = std::move(worldRules);
     dataContext.luaRuntime = std::make_unique<ac::LuaRuntime>();
     // Same morale table Engine loads, and the one calculator built from it.
     dataContext.moraleConfig = std::make_unique<ac::MoraleConfig_t>(
-        ac::MoraleConfigParser{}.ParseConfig(FixturePath("morale_levels.json")));
+        ac::MoraleConfigParser::ParseConfig(FixturePath("morale_levels.json")));
     dataContext.moraleCalculator = std::make_unique<ac::MoraleCalculator>(
         *dataContext.moraleConfig, *dataContext.luaRuntime);
 
     dataContext.buildingRegistry = std::make_unique<ac::BuildingRegistry>();
     dataContext.buildingRegistry->Load(FixturePath("buildings.json"));
     dataContext.mapOverlayChannels = std::make_unique<ac::MapOverlayChannelsConfig_t>(
-        ac::MapOverlayChannelsConfigParser{}.ParseConfig(
+        ac::MapOverlayChannelsConfigParser::ParseConfig(
             FixturePath("map_overlay_channels.json")));
     dataContext.baseSpriteSizes = std::make_unique<ac::BaseSpriteSizesConfig_t>(
-        ac::BaseSpriteSizesConfigParser{}.ParseConfig(FixturePath("base_sprite_sizes.json")));
+        ac::BaseSpriteSizesConfigParser::ParseConfig(FixturePath("base_sprite_sizes.json")));
     dataContext.stockpileRegistry = std::make_unique<ac::StockpileRegistry>();
     dataContext.stockpileRegistry->Load(FixturePath("stockpiles.json"));
     dataContext.popTypeRegistry = std::make_unique<ac::PopTypeRegistry>();
     dataContext.popTypeRegistry->Load(FixturePath("pop_types.json"));
     dataContext.growthConfig = std::make_unique<ac::GrowthConfig_t>(FixtureGrowthConfig());
     dataContext.productionConfig = std::make_unique<ac::ProductionConfig_t>(
-        ac::ProductionConfigParser{}.ParseConfig(FixturePath("production.json")));
+        ac::ProductionConfigParser::ParseConfig(FixturePath("production.json")));
     dataContext.commerceConfig = std::make_unique<ac::CommerceConfig_t>(
-        ac::CommerceConfigParser{}.ParseConfig(FixturePath("commerce.json")));
+        ac::CommerceConfigParser::ParseConfig(FixturePath("commerce.json")));
     dataContext.commerceCalculator = std::make_unique<ac::CommerceCalculator>(
         *dataContext.commerceConfig, *dataContext.luaRuntime);
     dataContext.allocationImbalanceConfig = std::make_unique<ac::AllocationImbalanceConfig_t>(
-        ac::AllocationImbalanceConfigParser{}.ParseConfig(FixturePath("energy_allocation.lua"),
+        ac::AllocationImbalanceConfigParser::ParseConfig(FixturePath("energy_allocation.lua"),
                                                           *dataContext.luaRuntime));
     dataContext.allocationImbalanceCalculator =
         std::make_unique<ac::AllocationImbalanceCalculator>(
             *dataContext.allocationImbalanceConfig, *dataContext.luaRuntime);
     dataContext.diplomacyConfig = std::make_unique<ac::DiplomacyConfig_t>(
-        ac::DiplomacyConfigParser{}.ParseConfig(FixturePath("diplomacy.json")));
+        ac::DiplomacyConfigParser::ParseConfig(FixturePath("diplomacy.json")));
     dataContext.combatConfig = std::make_unique<ac::CombatConfig_t>(
-        ac::CombatConfigParser{}.ParseConfig(FixturePath("combat.json")));
+        ac::CombatConfigParser::ParseConfig(FixturePath("combat.json")));
     dataContext.diplomacyCalculator =
         std::make_unique<ac::DiplomacyCalculator>(*dataContext.diplomacyConfig);
     dataContext.hurryProductionCalculator =
@@ -194,7 +194,7 @@ SessionInputs::SessionInputs(const OccupantFiles_t& rOccupants,
         std::make_unique<ac::ScrapRefundCalculator>(*dataContext.productionConfig,
                                                     *dataContext.luaRuntime);
     dataContext.upgradeCostConfig = std::make_unique<ac::UpgradeCostConfig_t>(
-        ac::UpgradeCostConfigParser{}.ParseConfig(FixturePath("unit_upgrade.lua"),
+        ac::UpgradeCostConfigParser::ParseConfig(FixturePath("unit_upgrade.lua"),
                                                   *dataContext.luaRuntime));
     dataContext.upgradeCostCalculator = std::make_unique<ac::UpgradeCostCalculator>(
         *dataContext.upgradeCostConfig, *dataContext.luaRuntime);
@@ -208,7 +208,7 @@ SessionInputs::SessionInputs(const OccupantFiles_t& rOccupants,
         *dataContext.techCostConfig, *dataContext.luaRuntime);
     {
         ac::SocialPoliciesConfig_t socialPolicies =
-            ac::SocialPolicyConfigParser{}.ParseConfig(FixturePath("social_policies.json"));
+            ac::SocialPolicyConfigParser::ParseConfig(FixturePath("social_policies.json"));
         dataContext.upheavalCostConfig =
             std::make_unique<ac::UpheavalCostConfig_t>(std::move(socialPolicies.upheaval));
         dataContext.socialPolicyRegistry = std::make_unique<ac::SocialPolicyRegistry>();
@@ -218,22 +218,22 @@ SessionInputs::SessionInputs(const OccupantFiles_t& rOccupants,
     }
     dataContext.socialRatingRegistry = std::make_unique<ac::SocialRatingRegistry>();
     dataContext.socialRatingRegistry->Load(FixturePath("social_rating_effects.json"));
-    dataContext.policeRules = ac::PoliceRulesConfigParser{}.ParseConfig(
+    dataContext.policeRules = ac::PoliceRulesConfigParser::ParseConfig(
         FixturePath("police_rules.json"));
     dataContext.popTypeAvailabilityCalculator =
         std::make_unique<ac::PopTypeAvailabilityCalculator>(*dataContext.popTypeRegistry);
     dataContext.popCompositionConfig = std::make_unique<ac::PopCompositionConfig_t>(
-        ac::PopCompositionConfigParser{}.ParseConfig(FixturePath("pop_composition.json")));
+        ac::PopCompositionConfigParser::ParseConfig(FixturePath("pop_composition.json")));
     dataContext.droneCalculator = std::make_unique<ac::DroneCalculator>(
         *dataContext.popCompositionConfig, *dataContext.luaRuntime);
     dataContext.popCompositionCalculator = std::make_unique<ac::PopCompositionCalculator>(
         *dataContext.popCompositionConfig, *dataContext.popTypeRegistry);
     dataContext.difficultyConfig = std::make_unique<ac::DifficultyConfig_t>(
-        ac::DifficultyConfigParser{}.ParseConfig(FixturePath("difficulty.json")));
+        ac::DifficultyConfigParser::ParseConfig(FixturePath("difficulty.json")));
     dataContext.atrocitiesConfig = std::make_unique<ac::AtrocitiesConfig_t>(
-        ac::AtrocityConfigParser{}.ParseConfig(FixturePath("atrocities.json")));
+        ac::AtrocityConfigParser::ParseConfig(FixturePath("atrocities.json")));
     dataContext.nativeLifeConfig = std::make_unique<ac::NativeLifeConfig_t>(
-        ac::NativeLifeConfigParser{}.ParseConfig(FixturePath("native_life.json"),
+        ac::NativeLifeConfigParser::ParseConfig(FixturePath("native_life.json"),
                                                  FixturePath("native_life.lua"),
                                                  *dataContext.luaRuntime));
     dataContext.planetFaunaCalculator = std::make_unique<ac::PlanetFaunaCalculator>(
@@ -241,22 +241,22 @@ SessionInputs::SessionInputs(const OccupantFiles_t& rOccupants,
     // Empty until a test loads designs; present so fauna/lifecycle paths need not soft-null.
     dataContext.nativeUnitRegistry = std::make_unique<ac::NativeUnitRegistry>();
     dataContext.worldEventsConfig = std::make_unique<ac::WorldEventsConfig_t>(
-        ac::WorldEventsConfigParser{}.ParseConfig(FixturePath("world_events.json")));
+        ac::WorldEventsConfigParser::ParseConfig(FixturePath("world_events.json")));
     dataContext.supplyPodConfig = std::make_unique<ac::SupplyPodConfig_t>(
-        ac::SupplyPodConfigParser{}.ParseConfig(FixturePath("supply_pods.json")));
+        ac::SupplyPodConfigParser::ParseConfig(FixturePath("supply_pods.json")));
     dataContext.probeActionsConfig = std::make_unique<ac::ProbeActionsConfig_t>(
-        ac::ProbeActionConfigParser{}.ParseConfig(FixturePath("probe_actions.json")));
+        ac::ProbeActionConfigParser::ParseConfig(FixturePath("probe_actions.json")));
     dataContext.probeCalculator =
         std::make_unique<ac::ProbeCalculator>(*dataContext.luaRuntime);
     // GameState builds its council from these, enacting the initially active proposals.
     dataContext.councilProposalRegistry = std::make_unique<ac::CouncilProposalRegistry>();
     dataContext.councilProposalRegistry->Load(FixturePath("council/proposals.json"));
     dataContext.councilRules = std::make_unique<ac::CouncilRulesConfig_t>(
-        ac::CouncilRulesConfigParser{}.ParseConfig(FixturePath("council/rules.json")));
+        ac::CouncilRulesConfigParser::ParseConfig(FixturePath("council/rules.json")));
     // Built before any Faction: the pool holds a reference into `effects`. Tests that want
     // a different formula edit damageFormula in place.
     dataContext.ecoDamageConfig = std::make_unique<ac::EcoDamageConfig_t>(
-        ac::EcoDamageConfigParser{}.ParseConfig(FixturePath("eco_damage.json"),
+        ac::EcoDamageConfigParser::ParseConfig(FixturePath("eco_damage.json"),
                                                 FixturePath("eco_damage.lua"),
                                                 *dataContext.luaRuntime));
     dataContext.ecoDamageCalculator = std::make_unique<ac::EcoDamageCalculator>(

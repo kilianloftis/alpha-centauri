@@ -12,10 +12,7 @@ namespace ac
 class NativeUnitConfigParser
 {
 public:
-    NativeUnitConfigParser() = default;
-    ~NativeUnitConfigParser() = default;
-
-    std::vector<NativeUnitConfig_t> ParseConfig(const std::string& rConfigPath);
+    static std::vector<NativeUnitConfig_t> ParseConfig(const std::string& rConfigPath);
     static NativeUnitConfig_t ParseNativeUnitConfig(const ConfigReader& rReader);
 };
 

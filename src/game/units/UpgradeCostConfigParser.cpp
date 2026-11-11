@@ -6,7 +6,7 @@ namespace ac
 {
 
 UpgradeCostConfig_t UpgradeCostConfigParser::ParseConfig(const std::string& rScriptPath,
-                                                         LuaRuntime& rLua) const
+                                                         LuaRuntime& rLua)
 {
     const sol::table table = LuaConfigLoader::RunScript(rLua, rScriptPath, "unit upgrade");
     UpgradeCostConfig_t config;

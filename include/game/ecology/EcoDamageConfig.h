@@ -29,8 +29,8 @@ class EcoDamageConfigParser
 public:
     // Every key in rConfigPath is required. rFormulaPath is a Lua script returning a table
     // whose damage_formula names a non-empty expression.
-    EcoDamageConfig_t ParseConfig(const std::string& rConfigPath,
-                                  const std::string& rFormulaPath, LuaRuntime& rLua);
+    static EcoDamageConfig_t ParseConfig(const std::string& rConfigPath,
+                                         const std::string& rFormulaPath, LuaRuntime& rLua);
 };
 
 } // namespace ac

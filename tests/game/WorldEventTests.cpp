@@ -60,7 +60,7 @@ struct WorldEventSession_
 WorldEventsConfig_t ParseWorldEvents_(const std::string& rJson)
 {
     const TempConfigFile file("world_events.json", rJson);
-    return WorldEventsConfigParser{}.ParseConfig(file.Path());
+    return WorldEventsConfigParser::ParseConfig(file.Path());
 }
 
 } // namespace

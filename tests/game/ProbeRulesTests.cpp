@@ -57,7 +57,7 @@ const StatModifierEffect_t* FindProbeDefenseAtLevel_(const SocialRatingConfig_t&
 TEST_CASE("ProbeActionConfigParser loads SMAC defaults", "[probe][config]")
 {
     const ProbeActionsConfig_t config =
-        ProbeActionConfigParser{}.ParseConfig(FixturePath("probe_actions.json"));
+        ProbeActionConfigParser::ParseConfig(FixturePath("probe_actions.json"));
 
     CHECK_FALSE(config.successFormula.defense.empty());
     CHECK_FALSE(config.successFormula.missionStrength.empty());
@@ -136,7 +136,7 @@ TEST_CASE("ProbeActionConfigParser rejects trigger lists and divisors its rules 
                                   "{ " + k_SuccessFormula
                                       + R"(, "frame_risk": 1, "effects": [], "actions": [ )"
                                       + rActionJson + " ] }");
-        return ProbeActionConfigParser{}.ParseConfig(file.Path());
+        return ProbeActionConfigParser::ParseConfig(file.Path());
     };
     const std::string recordEntry =
         R"([{ "type": "RecordMindControl", "parameters": { "weight": 4 } }])";
@@ -191,7 +191,7 @@ TEST_CASE("ProbeActionConfigParser requires a non-negative integer frame_risk", 
                                       + R"( "effects": [], "actions": [
                                          { "id": "Infiltrate", "target": "base", )"
                                       + k_Standing + " } ] }");
-        return ProbeActionConfigParser{}.ParseConfig(file.Path());
+        return ProbeActionConfigParser::ParseConfig(file.Path());
     };
 
     CHECK(parseFrameRisk(R"(, "frame_risk": 2,)").frameRisk == 2);
@@ -207,7 +207,7 @@ TEST_CASE("ProbeActionConfigParser requires the faction-wide effects list", "[pr
                                   + R"(, "frame_risk": 1, "actions": [
                                          { "id": "Infiltrate", "target": "base", )"
                                   + k_Standing + " } ] }");
-    CHECK_THROWS_WITH(ProbeActionConfigParser{}.ParseConfig(file.Path()),
+    CHECK_THROWS_WITH(ProbeActionConfigParser::ParseConfig(file.Path()),
                       ContainsSubstring("effects"));
 }
 
@@ -220,7 +220,7 @@ TEST_CASE("ProbeActionConfigParser requires success_formula's three formulas", "
                                       + R"(, "frame_risk": 1, "effects": [],
                                          "actions": [ { "id": "Infiltrate", "target": "base", )"
                                       + k_Standing + " } ] }");
-        return ProbeActionConfigParser{}.ParseConfig(file.Path());
+        return ProbeActionConfigParser::ParseConfig(file.Path());
     };
 
     CHECK_NOTHROW(parseOdds(R"({ "defense": "probe_defense", "mission_strength": "morale",
@@ -240,7 +240,7 @@ TEST_CASE("SE Probe negative levels emit probe_defense for success math", "[prob
     // success/escape formulas (not a separate success_rate stat). Positive levels raise
     // own-probe morale instead and must not emit probe_defense.
     const std::vector<SocialRatingConfig_t> ratings =
-        SocialRatingConfigParser{}.ParseConfig(FixturePath("social_rating_effects.json"));
+        SocialRatingConfigParser::ParseConfig(FixturePath("social_rating_effects.json"));
 
     const SocialRatingConfig_t* pProbe = nullptr;
     for (const SocialRatingConfig_t& rRating : ratings)

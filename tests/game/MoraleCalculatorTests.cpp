@@ -38,7 +38,7 @@ using namespace actest;
 TEST_CASE("MoraleConfigParser loads SMAC defaults", "[morale][config]")
 {
     const MoraleConfig_t config =
-        MoraleConfigParser{}.ParseConfig(FixturePath("morale_levels.json"));
+        MoraleConfigParser::ParseConfig(FixturePath("morale_levels.json"));
     CHECK(config.startingIntrinsic == 1);
     CHECK(config.defenseFloorIndex == 1);
     CHECK(config.percentPerLevel == Catch::Approx(12.5));
@@ -73,7 +73,7 @@ TEST_CASE("MoraleConfigParser rejects invalid level effects", "[morale][config]"
         }]
       }]
     })");
-    CHECK_THROWS_WITH(MoraleConfigParser{}.ParseConfig(config.Path()),
+    CHECK_THROWS_WITH(MoraleConfigParser::ParseConfig(config.Path()),
                       Catch::Matchers::ContainsSubstring("percent_per_level"));
 }
 
@@ -87,7 +87,7 @@ TEST_CASE("MoraleConfigParser requires percent_per_level and baseline_index", "[
         "effects": []
       }]
     })");
-    CHECK_THROWS_WITH(MoraleConfigParser{}.ParseConfig(config.Path()),
+    CHECK_THROWS_WITH(MoraleConfigParser::ParseConfig(config.Path()),
                       Catch::Matchers::ContainsSubstring("percent_per_level"));
 }
 

@@ -9,7 +9,7 @@ namespace ac
 class BaseConquestConfigParser
 {
 public:
-    BaseConquestConfig_t ParseConfig(const std::string& configPath) const;
+    static BaseConquestConfig_t ParseConfig(const std::string& configPath);
 };
 
 } // namespace ac

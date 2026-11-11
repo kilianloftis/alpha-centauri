@@ -31,7 +31,7 @@ namespace
 
 BaseSpriteSizesConfig_t StockSizes_()
 {
-    return BaseSpriteSizesConfigParser{}.ParseConfig(actest::FixturePath("base_sprite_sizes.json"));
+    return BaseSpriteSizesConfigParser::ParseConfig(actest::FixturePath("base_sprite_sizes.json"));
 }
 
 } // namespace
@@ -175,7 +175,7 @@ TEST_CASE("BaseSpriteSizesConfigParser rejects non-increasing thresholds",
         std::ofstream out(path);
         out << R"({"size_stages":[{"min_population":1},{"min_population":1}]})";
     }
-    CHECK_THROWS_WITH(BaseSpriteSizesConfigParser{}.ParseConfig(path),
+    CHECK_THROWS_WITH(BaseSpriteSizesConfigParser::ParseConfig(path),
                       Catch::Matchers::ContainsSubstring("strictly increasing"));
     std::filesystem::remove_all("assets/factions/_test_bad_sizes");
 }
@@ -228,7 +228,6 @@ TEST_CASE("LoadFactionColorsFile rejects a broken colors.json", "[ui][faction-ar
 TEST_CASE("Building parser requires map_overlay when a channel is named",
           "[ui][faction-art][parser]")
 {
-    BuildingConfigParser parser;
     const std::string path = "assets/factions/_test_overlay_parse/buildings.json";
     std::filesystem::create_directories("assets/factions/_test_overlay_parse");
     {
@@ -239,7 +238,7 @@ TEST_CASE("Building parser requires map_overlay when a channel is named",
   "map_overlay_channel": "base_defense"
 }])";
     }
-    CHECK_THROWS_WITH(parser.ParseConfig(path),
+    CHECK_THROWS_WITH(BuildingConfigParser::ParseConfig(path),
                       Catch::Matchers::ContainsSubstring("map_overlay"));
     std::filesystem::remove_all("assets/factions/_test_overlay_parse");
 }
@@ -247,7 +246,6 @@ TEST_CASE("Building parser requires map_overlay when a channel is named",
 TEST_CASE("Unknown map_overlay_channel is rejected against the channel registry",
           "[ui][faction-art][parser]")
 {
-    BuildingConfigParser parser;
     const std::string path = "assets/factions/_test_bad_channel/buildings.json";
     std::filesystem::create_directories("assets/factions/_test_bad_channel");
     {
@@ -259,9 +257,9 @@ TEST_CASE("Unknown map_overlay_channel is rejected against the channel registry"
   "map_overlay_channel": "no_such_channel"
 }])";
     }
-    const std::vector<BuildingConfig_t> buildings = parser.ParseConfig(path);
+    const std::vector<BuildingConfig_t> buildings = BuildingConfigParser::ParseConfig(path);
     const MapOverlayChannelsConfig_t channels =
-        MapOverlayChannelsConfigParser{}.ParseConfig(
+        MapOverlayChannelsConfigParser::ParseConfig(
             actest::FixturePath("map_overlay_channels.json"));
     REQUIRE_FALSE(buildings.empty());
     CHECK_FALSE(channels.layersByChannel.contains(buildings.front().mapOverlayChannel));

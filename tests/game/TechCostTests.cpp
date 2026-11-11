@@ -27,7 +27,7 @@ int FixtureCost_(const TechCostInputs_t& rInputs)
 {
     LuaRuntime lua;
     const TechCostConfig_t config =
-        TechCostConfigParser{}.ParseConfig(FixturePath("tech_cost.lua"), lua);
+        TechCostConfigParser::ParseConfig(FixturePath("tech_cost.lua"), lua);
     const TechCostCalculator calculator(config, lua);
     return calculator.CalculateCost(rInputs);
 }
@@ -158,7 +158,7 @@ TEST_CASE("Session inputs include map sqrt, turns, and the turn-lag setting",
     CHECK(first.research == 0);
 
     fixtures.dataContext.worldRules =
-        WorldRulesConfigParser{}.ParseConfig(FixturePath("world_rules_stagnation.json"));
+        WorldRulesConfigParser::ParseConfig(FixturePath("world_rules_stagnation.json"));
     FactionConfig_t laggedDef;
     laggedDef.id = "lagged";
     Faction& rLagged = fixtures.MakeFaction(laggedDef);
@@ -204,7 +204,7 @@ TEST_CASE("TechCost MultiplyGeometric applies after Lua, including world-rules s
 {
     FactionFixture fixtures;
     fixtures.dataContext.worldRules =
-        WorldRulesConfigParser{}.ParseConfig(FixturePath("world_rules_stagnation.json"));
+        WorldRulesConfigParser::ParseConfig(FixturePath("world_rules_stagnation.json"));
     Faction& rFaction = fixtures.MakeFaction();
     TechConfig_t tech;
     tech.id = "priced";

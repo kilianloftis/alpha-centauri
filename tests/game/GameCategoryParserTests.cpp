@@ -31,8 +31,8 @@ std::filesystem::path WriteTempTechJson_(const std::string& body)
 
 TEST_CASE("TechConfigParser parses game categories", "[game][category][parser]")
 {
-    TechConfigParser parser;
-    const std::vector<TechConfig_t> configs = parser.ParseConfig(FixturePath("techs.json"));
+    const std::vector<TechConfig_t> configs =
+        TechConfigParser::ParseConfig(FixturePath("techs.json"));
 
     REQUIRE(configs.size() == 19);
     CHECK(configs[0].category == GameCategory_t::Build);
@@ -88,8 +88,7 @@ TEST_CASE("TechConfigParser reads optional icon and rejects unknown keys", "[gam
     "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 },
     "icon": "assets/sprites/techs/tech000.png" }
 )");
-        TechConfigParser parser;
-        const std::vector<TechConfig_t> configs = parser.ParseConfig(path.string());
+        const std::vector<TechConfig_t> configs = TechConfigParser::ParseConfig(path.string());
         REQUIRE(configs.size() == 1);
         CHECK(configs[0].icon == "assets/sprites/techs/tech000.png");
         std::filesystem::remove(path);
@@ -99,8 +98,7 @@ TEST_CASE("TechConfigParser reads optional icon and rejects unknown keys", "[gam
   { "id": "plain_tech", "name": "Plain Tech", "category": "build",
     "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 } }
 )");
-        TechConfigParser parser;
-        const std::vector<TechConfig_t> configs = parser.ParseConfig(path.string());
+        const std::vector<TechConfig_t> configs = TechConfigParser::ParseConfig(path.string());
         REQUIRE(configs.size() == 1);
         CHECK(configs[0].icon.empty());
         std::filesystem::remove(path);
@@ -111,8 +109,7 @@ TEST_CASE("TechConfigParser reads optional icon and rejects unknown keys", "[gam
     "ai_weights": { "power": 0, "tech": 0, "wealth": 0, "growth": 0 },
     "icone": "x.png" }
 )");
-        TechConfigParser parser;
-        CHECK_THROWS_WITH(parser.ParseConfig(path.string()),
+        CHECK_THROWS_WITH(TechConfigParser::ParseConfig(path.string()),
                           Catch::Matchers::ContainsSubstring("icone"));
         std::filesystem::remove(path);
     }
@@ -125,8 +122,7 @@ TEST_CASE("TechConfigParser requires each AI weight", "[game][tech][parser]")
   { "id": "weighted", "name": "Weighted", "category": "build",
     "ai_weights": { "power": 1, "tech": 2, "wealth": 3, "growth": 4 } }
 )");
-        TechConfigParser parser;
-        const std::vector<TechConfig_t> configs = parser.ParseConfig(path.string());
+        const std::vector<TechConfig_t> configs = TechConfigParser::ParseConfig(path.string());
         REQUIRE(configs.size() == 1);
         CHECK(configs[0].aiWeights.power == 1);
         CHECK(configs[0].aiWeights.tech == 2);
@@ -138,8 +134,7 @@ TEST_CASE("TechConfigParser requires each AI weight", "[game][tech][parser]")
         const auto path = WriteTempTechJson_(R"(
   { "id": "unweighted", "name": "Unweighted", "category": "build" }
 )");
-        TechConfigParser parser;
-        CHECK_THROWS_WITH(parser.ParseConfig(path.string()),
+        CHECK_THROWS_WITH(TechConfigParser::ParseConfig(path.string()),
                           Catch::Matchers::ContainsSubstring("ai_weights"));
         std::filesystem::remove(path);
     }
@@ -148,8 +143,7 @@ TEST_CASE("TechConfigParser requires each AI weight", "[game][tech][parser]")
   { "id": "no_growth", "name": "No Growth", "category": "build",
     "ai_weights": { "power": 1, "tech": 2, "wealth": 3 } }
 )");
-        TechConfigParser parser;
-        CHECK_THROWS_WITH(parser.ParseConfig(path.string()),
+        CHECK_THROWS_WITH(TechConfigParser::ParseConfig(path.string()),
                           Catch::Matchers::ContainsSubstring("growth"));
         std::filesystem::remove(path);
     }
@@ -157,8 +151,8 @@ TEST_CASE("TechConfigParser requires each AI weight", "[game][tech][parser]")
 
 TEST_CASE("BuildingConfigParser parses game categories", "[game][category][parser]")
 {
-    BuildingConfigParser parser;
-    const std::vector<BuildingConfig_t> configs = parser.ParseConfig(FixturePath("buildings.json"));
+    const std::vector<BuildingConfig_t> configs =
+        BuildingConfigParser::ParseConfig(FixturePath("buildings.json"));
 
     REQUIRE_FALSE(configs.empty());
     const BuildingConfig_t* pGrantedHall = nullptr;

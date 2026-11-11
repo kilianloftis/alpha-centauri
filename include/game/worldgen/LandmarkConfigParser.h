@@ -13,7 +13,7 @@ class LandmarkConfigParser
 public:
     // Loads config/worldGen/landmarks.json, checking improvement ids when rKnownImprovementIds is
     // non-empty. Sculpt elevations are checked against the preset later.
-    std::vector<LandmarkConfig_t> ParseConfig(
+    static std::vector<LandmarkConfig_t> ParseConfig(
         const std::string& configPath,
         const std::vector<std::string>& rKnownImprovementIds);
 

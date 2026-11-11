@@ -661,7 +661,7 @@ TEST_CASE("The eco term counts Major atrocities committed under the Charter only
 TEST_CASE("atrocities.json round-trips and rejects bad input", "[atrocity][parser]")
 {
     const AtrocitiesConfig_t config =
-        AtrocityConfigParser{}.ParseConfig(FixturePath("atrocities.json"));
+        AtrocityConfigParser::ParseConfig(FixturePath("atrocities.json"));
 
     const AtrocitySeverityConfig_t& rSimple = config.For(k_Simple);
     CHECK(rSimple.ecoVirtualMinerals == 0);
@@ -707,7 +707,7 @@ TEST_CASE("The atrocities parser rejects a missing severity and a bad name", "[a
       "sanction_years_per_atrocity": 10
     })";
     CHECK_THROWS_AS(
-        AtrocityConfigParser{}.ParseConfig(writeTemp("ac_atrocities_partial.json", onlySimple)),
+        AtrocityConfigParser::ParseConfig(writeTemp("ac_atrocities_partial.json", onlySimple)),
         std::runtime_error);
 
     const std::string badName = R"({
@@ -720,7 +720,7 @@ TEST_CASE("The atrocities parser rejects a missing severity and a bad name", "[a
       "sanction_years_per_atrocity": 10
     })";
     CHECK_THROWS_AS(
-        AtrocityConfigParser{}.ParseConfig(writeTemp("ac_atrocities_badname.json", badName)),
+        AtrocityConfigParser::ParseConfig(writeTemp("ac_atrocities_badname.json", badName)),
         std::runtime_error);
 
     // A missing required key inside a severity is an error, not a zero.
@@ -734,7 +734,7 @@ TEST_CASE("The atrocities parser rejects a missing severity and a bad name", "[a
       "sanction_years_per_atrocity": 10
     })";
     CHECK_THROWS_AS(
-        AtrocityConfigParser{}.ParseConfig(writeTemp("ac_atrocities_missingkey.json", missingKey)),
+        AtrocityConfigParser::ParseConfig(writeTemp("ac_atrocities_missingkey.json", missingKey)),
         std::runtime_error);
 
     // A retired or misspelled key is a typo the author wants to hear about, not a silent no-op.
@@ -753,7 +753,7 @@ TEST_CASE("The atrocities parser rejects a missing severity and a bad name", "[a
       "sanction_years_per_atrocity": 10
     })";
     CHECK_THROWS_AS(
-        AtrocityConfigParser{}.ParseConfig(writeTemp("ac_atrocities_unknown.json", unknownKey)),
+        AtrocityConfigParser::ParseConfig(writeTemp("ac_atrocities_unknown.json", unknownKey)),
         std::runtime_error);
 
     // Every severity states its standing in full, Simple's zero floor included.
@@ -771,7 +771,7 @@ TEST_CASE("The atrocities parser rejects a missing severity and a bad name", "[a
       "sanction_years_per_atrocity": 10
     })";
     CHECK_THROWS_AS(
-        AtrocityConfigParser{}.ParseConfig(writeTemp("ac_atrocities_no_floor.json", noFloor)),
+        AtrocityConfigParser::ParseConfig(writeTemp("ac_atrocities_no_floor.json", noFloor)),
         std::runtime_error);
 }
 
@@ -869,7 +869,7 @@ TEST_CASE("The atrocities parser rejects a severity outside the closed set", "[a
     out << extraTier;
     out.close();
 
-    CHECK_THROWS_AS(AtrocityConfigParser{}.ParseConfig(path.string()), std::runtime_error);
+    CHECK_THROWS_AS(AtrocityConfigParser::ParseConfig(path.string()), std::runtime_error);
 }
 
 // --- Notice ---------------------------------------------------------------------------------

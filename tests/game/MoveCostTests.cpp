@@ -44,8 +44,7 @@ TEST_CASE("Invalid move_cost fraction fails at improvement parse time", "[move-c
         ])";
     }
 
-    ImprovementConfigParser parser;
-    CHECK_THROWS(parser.ParseConfig(path.string()));
+    CHECK_THROWS(ImprovementConfigParser::ParseConfig(path.string()));
     fs::remove(path);
 }
 
@@ -60,8 +59,7 @@ TEST_CASE("Negative move_cost fails at improvement parse time", "[move-cost]")
         ])";
     }
 
-    ImprovementConfigParser parser;
-    CHECK_THROWS(parser.ParseConfig(path.string()));
+    CHECK_THROWS(ImprovementConfigParser::ParseConfig(path.string()));
     fs::remove(path);
 }
 

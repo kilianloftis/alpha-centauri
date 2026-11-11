@@ -41,10 +41,7 @@ struct TechConfig_t
 class TechConfigParser
 {
 public:
-    TechConfigParser() = default;
-    ~TechConfigParser() = default;
-
-    std::vector<TechConfig_t> ParseConfig(const std::string& configPath);
+    static std::vector<TechConfig_t> ParseConfig(const std::string& configPath);
 };
 
 } // namespace ac

@@ -53,7 +53,7 @@ TerrainFile_t ParseTerrainFile(const std::string& configPath);
 class TerrainOperationConfigParser
 {
 public:
-    std::vector<TerrainOperationConfig_t> ParseConfig(const std::string& configPath);
+    static std::vector<TerrainOperationConfig_t> ParseConfig(const std::string& configPath);
 };
 
 } // namespace ac

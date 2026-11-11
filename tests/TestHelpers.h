@@ -101,10 +101,10 @@ inline ac::GameDataPaths FixtureDataPaths()
 inline ac::MapRulesConfig_t LoadTestMapRules()
 {
     ac::MapRulesConfig_t rules =
-        ac::MapRulesConfigParser{}.ParseConfig(FixturePath("map_rules.json"));
+        ac::MapRulesConfigParser::ParseConfig(FixturePath("map_rules.json"));
     const std::string presetId = ac::MapGenerationConfig_t{}.presetId;
     const std::vector<ac::WorldGenPresetConfig_t> presets =
-        ac::WorldGenPresetConfigParser{}.ParseConfig(FixturePath("worldGen/presets.json"));
+        ac::WorldGenPresetConfigParser::ParseConfig(FixturePath("worldGen/presets.json"));
     const auto it = std::ranges::find_if(
         presets, [&](const ac::WorldGenPresetConfig_t& rPreset) { return rPreset.id == presetId; });
     if (it == presets.end())
@@ -248,7 +248,7 @@ inline ac::Condition_t HasComponentCondition(std::string componentId)
 // The fixture pop_growth.json, for tests that adjust a growth config of their own.
 inline ac::GrowthConfig_t FixtureGrowthConfig()
 {
-    return ac::GrowthConfigParser{}.ParseConfig(FixturePath("pop_growth.json"));
+    return ac::GrowthConfigParser::ParseConfig(FixturePath("pop_growth.json"));
 }
 
 // An AllOwnerBases Add of amount to stat, the shape pop_growth.json's baselines take.
@@ -295,7 +295,7 @@ inline void SetStartingSize(ac::GrowthConfig_t& rConfig, double startingSize)
 inline ac::UnitComponentConfig_t ParseOneComponent(const nlohmann::json& rEntry)
 {
     const TempConfigFile file("one_component.json", nlohmann::json::array({rEntry}).dump());
-    return ac::UnitComponentConfigParser{}.ParseConfig(file.Path()).at(0);
+    return ac::UnitComponentConfigParser::ParseConfig(file.Path()).at(0);
 }
 
 } // namespace actest

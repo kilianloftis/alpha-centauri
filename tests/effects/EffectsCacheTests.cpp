@@ -124,9 +124,8 @@ TEST_CASE("ResearchManager: a TechCost effect appearing mid-research updates the
     TechRegistry techRegistry;
     techRegistry.Load(actest::FixturePath("techs.json"));
     LuaRuntime lua;
-    TechCostConfigParser parser;
     const TechCostConfig_t config =
-        parser.ParseConfig(actest::FixturePath("tech_cost.lua"), lua);
+        TechCostConfigParser::ParseConfig(actest::FixturePath("tech_cost.lua"), lua);
     TechCostCalculator calculator(config, lua);
 
     FakeEffectsProvider provider(faction);
@@ -158,9 +157,8 @@ TEST_CASE("ResearchManager: before the first breakthrough, cost follows the live
     TechRegistry techRegistry;
     techRegistry.Load(actest::FixturePath("techs.json"));
     LuaRuntime lua;
-    TechCostConfigParser parser;
     const TechCostConfig_t config =
-        parser.ParseConfig(actest::FixturePath("tech_cost.lua"), lua);
+        TechCostConfigParser::ParseConfig(actest::FixturePath("tech_cost.lua"), lua);
     TechCostCalculator calculator(config, lua);
 
     ResearchManager research(techRegistry, calculator, /*pEffectsProvider*/ nullptr);
@@ -178,9 +176,8 @@ TEST_CASE("ResearchManager: a breakthrough fixes the formula cost until the next
     TechRegistry techRegistry;
     techRegistry.Load(actest::FixturePath("techs.json"));
     LuaRuntime lua;
-    TechCostConfigParser parser;
     const TechCostConfig_t config =
-        parser.ParseConfig(actest::FixturePath("tech_cost.lua"), lua);
+        TechCostConfigParser::ParseConfig(actest::FixturePath("tech_cost.lua"), lua);
     TechCostCalculator calculator(config, lua);
 
     ResearchManager research(techRegistry, calculator, /*pEffectsProvider*/ nullptr);
@@ -227,9 +224,8 @@ TEST_CASE("ResearchManager: ThisTech TechCost raises research cost without enter
     TechRegistry techRegistry;
     techRegistry.Load(techs.Path());
     LuaRuntime lua;
-    TechCostConfigParser parser;
     const TechCostConfig_t config =
-        parser.ParseConfig(actest::FixturePath("tech_cost.lua"), lua);
+        TechCostConfigParser::ParseConfig(actest::FixturePath("tech_cost.lua"), lua);
     TechCostCalculator calculator(config, lua);
 
     FakeEffectsProvider provider(faction);

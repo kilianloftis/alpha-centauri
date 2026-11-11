@@ -122,7 +122,7 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
         "spread_altitude_limit_meters": 1000,
         "missing_headquarters_distance": 12
     })");
-    CHECK_THROWS_WITH(MapRulesConfigParser{}.ParseConfig(path.string()),
+    CHECK_THROWS_WITH(MapRulesConfigParser::ParseConfig(path.string()),
                       ContainsSubstring("max_adjacent_difference_meters"));
 
     WriteTempRules_(path, R"({
@@ -135,7 +135,7 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
         "spread_altitude_limit_meters": 1000,
         "missing_headquarters_distance": 12
     })");
-    CHECK_THROWS_WITH(MapRulesConfigParser{}.ParseConfig(path.string()),
+    CHECK_THROWS_WITH(MapRulesConfigParser::ParseConfig(path.string()),
                       ContainsSubstring("level_max_meters"));
 
     WriteTempRules_(path, R"({
@@ -148,7 +148,7 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
         "spread_altitude_limit_meters": 1000,
         "missing_headquarters_distance": 12
     })");
-    CHECK_THROWS_WITH(MapRulesConfigParser{}.ParseConfig(path.string()),
+    CHECK_THROWS_WITH(MapRulesConfigParser::ParseConfig(path.string()),
                       ContainsSubstring("ocean_shelf_meters"));
 
     WriteTempRules_(path, R"({
@@ -161,7 +161,7 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
         "spread_altitude_limit_meters": 1000,
         "missing_headquarters_distance": 12
     })");
-    CHECK_THROWS_WITH(MapRulesConfigParser{}.ParseConfig(path.string()),
+    CHECK_THROWS_WITH(MapRulesConfigParser::ParseConfig(path.string()),
                       ContainsSubstring("max_adjacent_difference_meters"));
 
     WriteTempRules_(path, R"({
@@ -174,7 +174,7 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
         "spread_altitude_limit_meters": -500,
         "missing_headquarters_distance": 12
     })");
-    CHECK_THROWS_WITH(MapRulesConfigParser{}.ParseConfig(path.string()),
+    CHECK_THROWS_WITH(MapRulesConfigParser::ParseConfig(path.string()),
                       ContainsSubstring("spread_altitude_limit_meters"));
 
     WriteTempRules_(path, R"({
@@ -186,7 +186,7 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
         "reference_level_meters": 1000,
         "spread_altitude_limit_meters": 1000
     })");
-    CHECK_THROWS_WITH(MapRulesConfigParser{}.ParseConfig(path.string()),
+    CHECK_THROWS_WITH(MapRulesConfigParser::ParseConfig(path.string()),
                       ContainsSubstring("missing_headquarters_distance"));
 
     WriteTempRules_(path, R"({
@@ -199,7 +199,7 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
         "spread_altitude_limit_meters": 1000,
         "missing_headquarters_distance": 0
     })");
-    CHECK_THROWS_WITH(MapRulesConfigParser{}.ParseConfig(path.string()),
+    CHECK_THROWS_WITH(MapRulesConfigParser::ParseConfig(path.string()),
                       ContainsSubstring("missing_headquarters_distance"));
 
     std::filesystem::remove(path);

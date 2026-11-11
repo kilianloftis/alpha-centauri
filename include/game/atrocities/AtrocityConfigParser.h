@@ -11,7 +11,7 @@ class AtrocityConfigParser
 {
 public:
     // Load config/atrocities.json. Throws if the file cannot be opened or fails validation.
-    AtrocitiesConfig_t ParseConfig(const std::string& configPath);
+    static AtrocitiesConfig_t ParseConfig(const std::string& configPath);
 };
 
 } // namespace ac

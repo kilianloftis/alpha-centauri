@@ -26,7 +26,7 @@ const ProbeCostConfig_t& FixtureCost_(const ProbeActionsConfig_t& rConfig, Probe
 TEST_CASE("The fixture's mind-control cost formula is the binary's", "[probe][calculator]")
 {
     const ProbeActionsConfig_t config =
-        ProbeActionConfigParser{}.ParseConfig(FixturePath("probe_actions.json"));
+        ProbeActionConfigParser::ParseConfig(FixturePath("probe_actions.json"));
     LuaRuntime lua;
     const ProbeCalculator calculator(lua);
 
@@ -47,7 +47,7 @@ TEST_CASE("The fixture's subversion cost formula divides before multiplying",
           "[probe][calculator]")
 {
     const ProbeActionsConfig_t config =
-        ProbeActionConfigParser{}.ParseConfig(FixturePath("probe_actions.json"));
+        ProbeActionConfigParser::ParseConfig(FixturePath("probe_actions.json"));
     LuaRuntime lua;
     const ProbeCalculator calculator(lua);
 
@@ -71,7 +71,7 @@ TEST_CASE("A cost formula naming an unknown variable throws", "[probe][calculato
 TEST_CASE("The fixture's drain formulas are the binary's", "[probe][calculator]")
 {
     const ProbeActionsConfig_t config =
-        ProbeActionConfigParser{}.ParseConfig(FixturePath("probe_actions.json"));
+        ProbeActionConfigParser::ParseConfig(FixturePath("probe_actions.json"));
     const DrainFormulas_t& rDrain = *config.Find(ProbeActionId_t::DrainEnergy)->drain;
     LuaRuntime lua;
     const ProbeCalculator calculator(lua);
@@ -87,7 +87,7 @@ TEST_CASE("The fixture's drain formulas are the binary's", "[probe][calculator]"
 TEST_CASE("The fixture's plague formulas are the binary's", "[probe][calculator]")
 {
     const ProbeActionsConfig_t config =
-        ProbeActionConfigParser{}.ParseConfig(FixturePath("probe_actions.json"));
+        ProbeActionConfigParser::ParseConfig(FixturePath("probe_actions.json"));
     const PlagueFormulas_t& rPlague = *config.Find(ProbeActionId_t::GeneticPlague)->plague;
     LuaRuntime lua;
     const ProbeCalculator calculator(lua);
@@ -110,7 +110,7 @@ TEST_CASE("The fixture's plague formulas are the binary's", "[probe][calculator]
 TEST_CASE("The fixture's odds formulas give the wiki's strengths", "[probe][calculator]")
 {
     const ProbeActionsConfig_t config =
-        ProbeActionConfigParser{}.ParseConfig(FixturePath("probe_actions.json"));
+        ProbeActionConfigParser::ParseConfig(FixturePath("probe_actions.json"));
     const ProbeSuccessFormula_t& rOdds = config.successFormula;
     LuaRuntime lua;
     const ProbeCalculator calculator(lua);

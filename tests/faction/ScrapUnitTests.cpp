@@ -163,7 +163,7 @@ TEST_CASE("Production config loads unit default_scrap as minerals", "[unit][scra
             }
         }
     })json");
-    const ProductionConfig_t config = ProductionConfigParser{}.ParseConfig(file.Path());
+    const ProductionConfig_t config = ProductionConfigParser::ParseConfig(file.Path());
     REQUIRE(config.kinds.at(ConstructableKind_t::Unit).defaultScrap.has_value());
     const ScrapKindConfig_t& rScrap = *config.kinds.at(ConstructableKind_t::Unit).defaultScrap;
     CHECK(rScrap.formula == "floor(minerals / 2)");

@@ -45,9 +45,8 @@ struct ResearchTestFixture
     {
         techRegistry.Load(FixturePath("techs.json"));
         luaRuntime = std::make_unique<LuaRuntime>();
-        TechCostConfigParser techCostParser;
         techCostConfig = std::make_unique<TechCostConfig_t>(
-            techCostParser.ParseConfig(actest::FixturePath("tech_cost.lua"),
+            TechCostConfigParser::ParseConfig(actest::FixturePath("tech_cost.lua"),
                                        *luaRuntime));
         techCostCalculator = std::make_unique<TechCostCalculator>(*techCostConfig, *luaRuntime);
         research = std::make_unique<ResearchManager>(techRegistry, *techCostCalculator,

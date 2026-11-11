@@ -20,8 +20,8 @@ std::string FixturesFactionsDir()
 
 TEST_CASE("FactionConfigParser loads per-faction directory layout", "[faction][parser]")
 {
-    FactionConfigParser parser;
-    const std::vector<FactionConfig_t> configs = parser.ParseConfig(FixturesFactionsDir());
+    const std::vector<FactionConfig_t> configs =
+        FactionConfigParser::ParseConfig(FixturesFactionsDir());
 
     REQUIRE(configs.size() == 2);
 
@@ -79,11 +79,10 @@ TEST_CASE("FactionConfigParser throws when required files are missing", "[factio
     const std::filesystem::path factionDir = tempDir / "broken";
     std::filesystem::create_directories(factionDir);
 
-    FactionConfigParser parser;
 
     try
     {
-        parser.ParseConfig(tempDir.string());
+        FactionConfigParser::ParseConfig(tempDir.string());
         FAIL("Expected missing identity.json to throw");
     }
     catch (const std::runtime_error& e)
@@ -95,7 +94,7 @@ TEST_CASE("FactionConfigParser throws when required files are missing", "[factio
 
     try
     {
-        parser.ParseConfig(tempDir.string());
+        FactionConfigParser::ParseConfig(tempDir.string());
         FAIL("Expected missing leader.json to throw");
     }
     catch (const std::runtime_error& e)
@@ -123,8 +122,7 @@ TEST_CASE("FactionConfigParser honors participates_in_council false", "[faction]
     std::ofstream(factionDir / "effects.json") << R"({"effects": []})";
     std::ofstream(factionDir / "base_names.json") << R"([])";
 
-    FactionConfigParser parser;
-    const std::vector<FactionConfig_t> configs = parser.ParseConfig(tempDir.string());
+    const std::vector<FactionConfig_t> configs = FactionConfigParser::ParseConfig(tempDir.string());
     REQUIRE(configs.size() == 1);
     CHECK_FALSE(configs.front().identity.participatesInCouncil);
 

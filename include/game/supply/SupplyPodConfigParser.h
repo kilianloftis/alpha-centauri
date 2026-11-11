@@ -10,7 +10,7 @@ namespace ac
 class SupplyPodConfigParser
 {
 public:
-    SupplyPodConfig_t ParseConfig(const std::string& rConfigPath);
+    static SupplyPodConfig_t ParseConfig(const std::string& rConfigPath);
 };
 
 } // namespace ac

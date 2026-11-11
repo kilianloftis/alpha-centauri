@@ -265,7 +265,7 @@ TEST_CASE("Production config groups hurry under kinds", "[production][hurry][con
                 }
             }
         })");
-        const ProductionConfig_t config = ProductionConfigParser{}.ParseConfig(file.Path());
+        const ProductionConfig_t config = ProductionConfigParser::ParseConfig(file.Path());
         REQUIRE(config.kinds.at(ConstructableKind_t::Building).hurry.has_value());
         CHECK(config.kinds.at(ConstructableKind_t::Building).hurry->formula == "2 * minerals");
         CHECK(config.kinds.at(ConstructableKind_t::Building).hurry->mineralThreshold == 8);
@@ -295,7 +295,7 @@ TEST_CASE("Production config groups hurry under kinds", "[production][hurry][con
                 }
             }
         })");
-        const ProductionConfig_t config = ProductionConfigParser{}.ParseConfig(file.Path());
+        const ProductionConfig_t config = ProductionConfigParser::ParseConfig(file.Path());
         CHECK(config.retoolPenaltyThreshold == 40);
         CHECK(config.kinds.at(ConstructableKind_t::Building).hurry->mineralThreshold == 10);
         CHECK(config.kinds.at(ConstructableKind_t::Building).hurry->belowThresholdMultiplier == 2);
@@ -311,7 +311,7 @@ TEST_CASE("Production config groups hurry under kinds", "[production][hurry][con
             "prototype_surcharge_percent": 50,
             "kinds": {}
         })");
-        const ProductionConfig_t config = ProductionConfigParser{}.ParseConfig(file.Path());
+        const ProductionConfig_t config = ProductionConfigParser::ParseConfig(file.Path());
         CHECK(config.kinds.empty());
     }
 
@@ -322,7 +322,7 @@ TEST_CASE("Production config groups hurry under kinds", "[production][hurry][con
             "retool_penalty_percent": 50,
             "prototype_surcharge_percent": 50
         })");
-        CHECK_THROWS_WITH(ProductionConfigParser{}.ParseConfig(file.Path()),
+        CHECK_THROWS_WITH(ProductionConfigParser::ParseConfig(file.Path()),
                           Catch::Matchers::ContainsSubstring("kinds"));
     }
 
@@ -334,7 +334,7 @@ TEST_CASE("Production config groups hurry under kinds", "[production][hurry][con
             "prototype_surcharge_percent": 50,
             "kinds": { "building": { "hurry": { "formula": "1", "below_threshold_multiplier": 2 } } }
         })");
-        CHECK_THROWS_WITH(ProductionConfigParser{}.ParseConfig(file.Path()),
+        CHECK_THROWS_WITH(ProductionConfigParser::ParseConfig(file.Path()),
                           Catch::Matchers::ContainsSubstring("kinds.building.hurry")
                               && Catch::Matchers::ContainsSubstring("mineral_threshold"));
     }
@@ -347,7 +347,7 @@ TEST_CASE("Production config groups hurry under kinds", "[production][hurry][con
             "prototype_surcharge_percent": 50,
             "kinds": { "building": { "hurry": { "formula": "1", "mineral_threshold": 10 } } }
         })");
-        CHECK_THROWS_WITH(ProductionConfigParser{}.ParseConfig(file.Path()),
+        CHECK_THROWS_WITH(ProductionConfigParser::ParseConfig(file.Path()),
                           Catch::Matchers::ContainsSubstring("below_threshold_multiplier"));
     }
 
@@ -360,7 +360,7 @@ TEST_CASE("Production config groups hurry under kinds", "[production][hurry][con
             "kinds": { "building": { "hurry": { "mineral_threshold": 10,
                                                 "below_threshold_multiplier": 2 } } }
         })");
-        CHECK_THROWS_WITH(ProductionConfigParser{}.ParseConfig(file.Path()),
+        CHECK_THROWS_WITH(ProductionConfigParser::ParseConfig(file.Path()),
                           Catch::Matchers::ContainsSubstring("formula"));
     }
 
@@ -373,7 +373,7 @@ TEST_CASE("Production config groups hurry under kinds", "[production][hurry][con
             "kinds": { "building": { "hurry": { "formula": "1", "mineral_threshold": 10,
                                                 "below_threshold_multiplier": 0 } } }
         })");
-        CHECK_THROWS_WITH(ProductionConfigParser{}.ParseConfig(file.Path()),
+        CHECK_THROWS_WITH(ProductionConfigParser::ParseConfig(file.Path()),
                           Catch::Matchers::ContainsSubstring("below_threshold_multiplier"));
     }
 
@@ -386,7 +386,7 @@ TEST_CASE("Production config groups hurry under kinds", "[production][hurry][con
             "kinds": { "wonder": { "hurry": { "formula": "1", "mineral_threshold": 10,
                                               "below_threshold_multiplier": 2 } } }
         })");
-        CHECK_THROWS_WITH(ProductionConfigParser{}.ParseConfig(file.Path()),
+        CHECK_THROWS_WITH(ProductionConfigParser::ParseConfig(file.Path()),
                           Catch::Matchers::ContainsSubstring("kinds.wonder")
                               && Catch::Matchers::ContainsSubstring("known constructable kind"));
     }
@@ -400,7 +400,7 @@ TEST_CASE("Production config groups hurry under kinds", "[production][hurry][con
             "kinds": { "stockpile": { "hurry": { "formula": "1", "mineral_threshold": 10,
                                                  "below_threshold_multiplier": 2 } } }
         })");
-        CHECK_THROWS_WITH(ProductionConfigParser{}.ParseConfig(file.Path()),
+        CHECK_THROWS_WITH(ProductionConfigParser::ParseConfig(file.Path()),
                           Catch::Matchers::ContainsSubstring("kinds.stockpile")
                               && Catch::Matchers::ContainsSubstring("omit it from kinds"));
     }

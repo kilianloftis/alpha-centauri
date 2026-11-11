@@ -10,10 +10,7 @@ namespace ac
 class FactionConfigParser
 {
 public:
-    FactionConfigParser() = default;
-    ~FactionConfigParser() = default;
-
-    std::vector<FactionConfig_t> ParseConfig(const std::string& configPath);
+    static std::vector<FactionConfig_t> ParseConfig(const std::string& configPath);
 };
 
 } // namespace ac

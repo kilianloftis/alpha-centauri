@@ -24,7 +24,7 @@ namespace
 
 DiplomacyConfig_t FixtureDiplomacy_()
 {
-    return DiplomacyConfigParser{}.ParseConfig(FixturePath("diplomacy.json"));
+    return DiplomacyConfigParser::ParseConfig(FixturePath("diplomacy.json"));
 }
 
 StandingCaptions LoadFixture_()

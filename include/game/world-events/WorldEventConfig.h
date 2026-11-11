@@ -39,7 +39,7 @@ class WorldEventsConfigParser
 {
 public:
     // Every key is required. trigger.kind must be "Cycle", the only trigger kind.
-    WorldEventsConfig_t ParseConfig(const std::string& rConfigPath);
+    static WorldEventsConfig_t ParseConfig(const std::string& rConfigPath);
 };
 
 bool IsWorldEventActive(const WorldEventCycle_t& rCycle, int yearsSinceFirstPlayable);

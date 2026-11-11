@@ -62,7 +62,7 @@ BaseSpriteSizesConfig_t ParseBaseSpriteSizes_(const ConfigReader& rReader)
 } // namespace
 
 BaseSpriteSizesConfig_t BaseSpriteSizesConfigParser::ParseConfig(
-    const std::string& rConfigPath) const
+    const std::string& rConfigPath)
 {
     return JsonConfigLoader::LoadObjectFile<BaseSpriteSizesConfig_t>(
         rConfigPath, "base sprite sizes", ParseBaseSpriteSizes_);

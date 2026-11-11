@@ -87,8 +87,7 @@ TEST_CASE("WorldGenDecorationConfigParser throws when rockiness object is missin
 })" << '\n';
     }
 
-    WorldGenDecorationConfigParser parser;
-    CHECK_THROWS_WITH(parser.ParseConfig(path.string()),
+    CHECK_THROWS_WITH(WorldGenDecorationConfigParser::ParseConfig(path.string()),
                       Catch::Matchers::ContainsSubstring("rockiness"));
     std::filesystem::remove(path);
 }
@@ -120,8 +119,7 @@ TEST_CASE("WorldGenDecorationConfigParser requires poles weights", "[worldgen][r
 })" << '\n';
     }
 
-    WorldGenDecorationConfigParser parser;
-    CHECK_THROWS_WITH(parser.ParseConfig(path.string()),
+    CHECK_THROWS_WITH(WorldGenDecorationConfigParser::ParseConfig(path.string()),
                       Catch::Matchers::ContainsSubstring("rockiness.poles"));
     std::filesystem::remove(path);
 }
@@ -156,7 +154,7 @@ TEST_CASE("WorldGenDecorationConfigParser requires max on non-final bands only",
   "tile_bonuses": { "fraction": 0.01 }
 })" << '\n';
     }
-    CHECK_THROWS_WITH(WorldGenDecorationConfigParser{}.ParseConfig(missingMax.string()),
+    CHECK_THROWS_WITH(WorldGenDecorationConfigParser::ParseConfig(missingMax.string()),
                       Catch::Matchers::ContainsSubstring("non-final"));
     std::filesystem::remove(missingMax);
 
@@ -187,7 +185,7 @@ TEST_CASE("WorldGenDecorationConfigParser requires max on non-final bands only",
   "tile_bonuses": { "fraction": 0.01 }
 })" << '\n';
     }
-    CHECK_THROWS_WITH(WorldGenDecorationConfigParser{}.ParseConfig(lastHasMax.string()),
+    CHECK_THROWS_WITH(WorldGenDecorationConfigParser::ParseConfig(lastHasMax.string()),
                       Catch::Matchers::ContainsSubstring("last entry"));
     std::filesystem::remove(lastHasMax);
 }
@@ -224,7 +222,7 @@ TEST_CASE("WorldGenDecorationConfigParser requires strictly increasing band maxe
 })" << '\n';
     }
 
-    CHECK_THROWS_WITH(WorldGenDecorationConfigParser{}.ParseConfig(path.string()),
+    CHECK_THROWS_WITH(WorldGenDecorationConfigParser::ParseConfig(path.string()),
                       Catch::Matchers::ContainsSubstring("strictly increasing"));
     std::filesystem::remove(path);
 }
@@ -233,7 +231,7 @@ TEST_CASE("WorldGenDecorationConfigParser loads shipping rockiness bands",
           "[worldgen][rockiness][parser]")
 {
     const WorldGenDecorationConfig_t cfg =
-        WorldGenDecorationConfigParser{}.ParseConfig(
+        WorldGenDecorationConfigParser::ParseConfig(
             actest::FixturePath("worldGen/decoration.json"));
     CHECK(cfg.rockiness.poles.rocky == Catch::Approx(1.0f));
     REQUIRE(cfg.rockiness.bands.size() == 5);

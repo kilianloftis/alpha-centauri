@@ -45,10 +45,7 @@ struct PopTypeConfig_t
 class PopTypeConfigParser
 {
 public:
-    PopTypeConfigParser() = default;
-    ~PopTypeConfigParser() = default;
-
-    std::vector<PopTypeConfig_t> ParseConfig(const std::string& configPath);
+    static std::vector<PopTypeConfig_t> ParseConfig(const std::string& configPath);
 };
 
 } // namespace ac

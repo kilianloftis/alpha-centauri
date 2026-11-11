@@ -12,7 +12,7 @@ class LuaRuntime;
 class UpgradeCostConfigParser
 {
 public:
-    UpgradeCostConfig_t ParseConfig(const std::string& rScriptPath, LuaRuntime& rLua) const;
+    static UpgradeCostConfig_t ParseConfig(const std::string& rScriptPath, LuaRuntime& rLua);
 };
 
 } // namespace ac

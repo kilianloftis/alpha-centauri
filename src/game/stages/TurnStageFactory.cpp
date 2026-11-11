@@ -84,8 +84,7 @@ void TurnStageFactory::RegisterPerFactionCreator(const std::string& id, PerFacti
 
 void TurnStageFactory::LoadConfig(const std::string& configPath)
 {
-    TurnStageConfigParser parser;
-    m_stageConfigs = parser.ParseConfig(configPath);
+    m_stageConfigs = TurnStageConfigParser::ParseConfig(configPath);
     if (m_stageConfigs.empty())
     {
         throw std::runtime_error("Turn stage config '" + configPath + "' produced no stages");

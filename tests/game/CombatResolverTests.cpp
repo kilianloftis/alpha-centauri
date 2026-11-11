@@ -1282,7 +1282,7 @@ TEST_CASE("A wild native killed in a base pays pearls and the survivor does not"
 
 std::vector<EffectConfig_t> LoadWorldRules_()
 {
-    return WorldRulesConfigParser{}.ParseConfig(FixturePath("world_rules.json"));
+    return WorldRulesConfigParser::ParseConfig(FixturePath("world_rules.json"));
 }
 
 TEST_CASE("A unit with susceptibility zero takes no splash while a stackmate does",

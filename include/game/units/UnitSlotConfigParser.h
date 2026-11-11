@@ -10,7 +10,7 @@ namespace ac
 class UnitSlotConfigParser
 {
 public:
-    std::vector<UnitSlotConfig_t> ParseConfig(const std::string& rConfigPath) const;
+    static std::vector<UnitSlotConfig_t> ParseConfig(const std::string& rConfigPath);
 };
 
 } // namespace ac

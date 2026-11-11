@@ -300,7 +300,7 @@ TEST_CASE("Production config groups default_scrap under kinds", "[building][scra
                 }
             }
         })json");
-        const ProductionConfig_t config = ProductionConfigParser{}.ParseConfig(file.Path());
+        const ProductionConfig_t config = ProductionConfigParser::ParseConfig(file.Path());
         REQUIRE(config.kinds.at(ConstructableKind_t::Building).defaultScrap.has_value());
         const ScrapKindConfig_t& rScrap = *config.kinds.at(ConstructableKind_t::Building).defaultScrap;
         CHECK(rScrap.formula == "floor(minerals / 4)");
@@ -324,7 +324,7 @@ TEST_CASE("Production config groups default_scrap under kinds", "[building][scra
                 }
             }
         })");
-        const ProductionConfig_t config = ProductionConfigParser{}.ParseConfig(file.Path());
+        const ProductionConfig_t config = ProductionConfigParser::ParseConfig(file.Path());
         CHECK_FALSE(config.kinds.at(ConstructableKind_t::Building).defaultScrap.has_value());
     }
 
@@ -343,7 +343,7 @@ TEST_CASE("Production config groups default_scrap under kinds", "[building][scra
                 }
             }
         })");
-        CHECK_THROWS_WITH(ProductionConfigParser{}.ParseConfig(file.Path()),
+        CHECK_THROWS_WITH(ProductionConfigParser::ParseConfig(file.Path()),
                           Catch::Matchers::ContainsSubstring("kinds.building.default_scrap")
                               && Catch::Matchers::ContainsSubstring("formula"));
     }
@@ -363,7 +363,7 @@ TEST_CASE("Production config groups default_scrap under kinds", "[building][scra
                 }
             }
         })json");
-        CHECK_THROWS_WITH(ProductionConfigParser{}.ParseConfig(file.Path()),
+        CHECK_THROWS_WITH(ProductionConfigParser::ParseConfig(file.Path()),
                           Catch::Matchers::ContainsSubstring("kinds.building.default_scrap")
                               && Catch::Matchers::ContainsSubstring("refund_type"));
     }
@@ -383,7 +383,7 @@ TEST_CASE("Production config groups default_scrap under kinds", "[building][scra
                 }
             }
         })json");
-        CHECK_THROWS_WITH(ProductionConfigParser{}.ParseConfig(file.Path()),
+        CHECK_THROWS_WITH(ProductionConfigParser::ParseConfig(file.Path()),
                           Catch::Matchers::ContainsSubstring("kinds.building.default_scrap")
                               && Catch::Matchers::ContainsSubstring("refund_ceiling_percent"));
     }
@@ -404,7 +404,7 @@ TEST_CASE("Production config groups default_scrap under kinds", "[building][scra
                 }
             }
         })");
-        CHECK_THROWS_WITH(ProductionConfigParser{}.ParseConfig(file.Path()),
+        CHECK_THROWS_WITH(ProductionConfigParser::ParseConfig(file.Path()),
                           Catch::Matchers::ContainsSubstring("refund_type"));
     }
 
@@ -424,7 +424,7 @@ TEST_CASE("Production config groups default_scrap under kinds", "[building][scra
                 }
             }
         })");
-        CHECK_THROWS_WITH(ProductionConfigParser{}.ParseConfig(file.Path()),
+        CHECK_THROWS_WITH(ProductionConfigParser::ParseConfig(file.Path()),
                           Catch::Matchers::ContainsSubstring("creditable scrap payout"));
     }
 
@@ -444,7 +444,7 @@ TEST_CASE("Production config groups default_scrap under kinds", "[building][scra
                 }
             }
         })json");
-        const ProductionConfig_t config = ProductionConfigParser{}.ParseConfig(file.Path());
+        const ProductionConfig_t config = ProductionConfigParser::ParseConfig(file.Path());
         CHECK(config.kinds.at(ConstructableKind_t::Building).defaultScrap->refundType
               == StatId_t::Nutrients);
     }
@@ -465,7 +465,7 @@ TEST_CASE("Production config groups default_scrap under kinds", "[building][scra
                 }
             }
         })json");
-        CHECK_THROWS_WITH(ProductionConfigParser{}.ParseConfig(file.Path()),
+        CHECK_THROWS_WITH(ProductionConfigParser::ParseConfig(file.Path()),
                           Catch::Matchers::ContainsSubstring("kinds.secret_project.default_scrap")
                               && Catch::Matchers::ContainsSubstring("cannot be scrapped"));
     }

@@ -28,7 +28,7 @@ struct StagedParser
 {
     static inline std::vector<ThingConfig_t> staged;
 
-    std::vector<ThingConfig_t> ParseConfig(const std::string&) { return staged; }
+    static std::vector<ThingConfig_t> ParseConfig(const std::string&) { return staged; }
 };
 
 class ThingRegistry : public Registry<ThingConfig_t, StagedParser>

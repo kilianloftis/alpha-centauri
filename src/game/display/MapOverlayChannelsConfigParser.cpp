@@ -26,7 +26,7 @@ MapOverlayChannelsConfig_t ParseChannels_(const ConfigReader& rReader)
 } // namespace
 
 MapOverlayChannelsConfig_t MapOverlayChannelsConfigParser::ParseConfig(
-    const std::string& rConfigPath) const
+    const std::string& rConfigPath)
 {
     return JsonConfigLoader::LoadObjectFile<MapOverlayChannelsConfig_t>(
         rConfigPath, "map overlay channels", ParseChannels_);

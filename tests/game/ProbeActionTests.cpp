@@ -82,8 +82,7 @@ struct ProbeGame_
             fixtures.dataContext.techRegistry = std::make_unique<TechRegistry>();
             fixtures.dataContext.techRegistry->Load(FixturePath("techs.json"));
             // luaRuntime is already created by BaseFixture; reuse it.
-            TechCostConfigParser techCostParser;
-            pTechCostConfig = std::make_unique<TechCostConfig_t>(techCostParser.ParseConfig(
+            pTechCostConfig = std::make_unique<TechCostConfig_t>(TechCostConfigParser::ParseConfig(
                 actest::FixturePath("tech_cost.lua"),
                 *fixtures.dataContext.luaRuntime));
             fixtures.dataContext.techCostCalculator = std::make_unique<TechCostCalculator>(

@@ -33,14 +33,15 @@ DiplomacyConfig_t ParseEdited_(const std::string& rName,
     rEdit(json);
     const std::filesystem::path path = actest::TestTempDir::Path() / rName;
     std::ofstream(path) << json.dump();
-    return DiplomacyConfigParser{}.ParseConfig(path.string());
+    return DiplomacyConfigParser::ParseConfig(path.string());
 }
 
 } // namespace
 
 TEST_CASE("diplomacy.json loads every status's rules", "[diplomacy][parser]")
 {
-    const DiplomacyConfig_t config = DiplomacyConfigParser{}.ParseConfig(FixturePath("diplomacy.json"));
+    const DiplomacyConfig_t config =
+        DiplomacyConfigParser::ParseConfig(FixturePath("diplomacy.json"));
 
     const DiplomaticStatusRules_t& rTruce = config.For(DiplomaticStatus_t::Truce);
     CHECK(rTruce.bEnterTerritory);
@@ -305,7 +306,7 @@ TEST_CASE("The diplomacy parser loads base_value and rejects a missing block or 
           "[diplomacy][parser][base_value]")
 {
     const DiplomacyConfig_t config =
-        DiplomacyConfigParser{}.ParseConfig(FixturePath("diplomacy.json"));
+        DiplomacyConfigParser::ParseConfig(FixturePath("diplomacy.json"));
     CHECK(config.baseValue.scanRadius == 6);
     CHECK(config.baseValue.creditsOffset == 1000);
     CHECK(config.baseValue.mineralsPerRow == 10);
@@ -335,7 +336,7 @@ TEST_CASE("The diplomacy parser loads the gifts block and the allied-ground gift
           "[diplomacy][parser][gifts]")
 {
     const DiplomacyConfig_t config =
-        DiplomacyConfigParser{}.ParseConfig(FixturePath("diplomacy.json"));
+        DiplomacyConfigParser::ParseConfig(FixturePath("diplomacy.json"));
     CHECK(config.alliedTerritoryBattleGiftsFloor == 1);
 
     const GiftSizesConfig_t& rCredits = config.gifts.credits.sizes;

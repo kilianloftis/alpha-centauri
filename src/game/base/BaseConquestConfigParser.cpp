@@ -46,7 +46,7 @@ BaseConquestConfig_t ParseBaseConquest_(const ConfigReader& rReader)
 
 } // namespace
 
-BaseConquestConfig_t BaseConquestConfigParser::ParseConfig(const std::string& configPath) const
+BaseConquestConfig_t BaseConquestConfigParser::ParseConfig(const std::string& configPath)
 {
     return JsonConfigLoader::LoadObjectFile<BaseConquestConfig_t>(configPath, "base conquest",
                                                                   ParseBaseConquest_);

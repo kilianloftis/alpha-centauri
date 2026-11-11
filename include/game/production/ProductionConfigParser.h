@@ -57,11 +57,8 @@ struct ProductionConfig_t
 class ProductionConfigParser
 {
 public:
-    ProductionConfigParser() = default;
-    ~ProductionConfigParser() = default;
-
     // Throws on bad values or a malformed kinds block. Formulas throw where they are used.
-    ProductionConfig_t ParseConfig(const std::string& configPath);
+    static ProductionConfig_t ParseConfig(const std::string& configPath);
 };
 
 } // namespace ac

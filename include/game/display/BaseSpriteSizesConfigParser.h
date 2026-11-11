@@ -9,7 +9,7 @@ namespace ac
 class BaseSpriteSizesConfigParser
 {
 public:
-    BaseSpriteSizesConfig_t ParseConfig(const std::string& rConfigPath) const;
+    static BaseSpriteSizesConfig_t ParseConfig(const std::string& rConfigPath);
 };
 
 } // namespace ac

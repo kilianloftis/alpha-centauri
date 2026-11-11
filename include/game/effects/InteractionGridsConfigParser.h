@@ -10,10 +10,8 @@ namespace ac
 class InteractionGridsConfigParser
 {
 public:
-    InteractionGridsConfigParser() = default;
-
     // Throws if the file cannot be opened, axes/cells are incomplete, or values are unknown.
-    InteractionGridsConfig_t ParseConfig(const std::string& configPath) const;
+    static InteractionGridsConfig_t ParseConfig(const std::string& configPath);
 };
 
 } // namespace ac

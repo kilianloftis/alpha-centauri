@@ -65,8 +65,7 @@ TEST_CASE("WorldGenDecorationConfigParser throws when aquifers object is missing
 })" << '\n';
     }
 
-    WorldGenDecorationConfigParser parser;
-    CHECK_THROWS_WITH(parser.ParseConfig(path.string()),
+    CHECK_THROWS_WITH(WorldGenDecorationConfigParser::ParseConfig(path.string()),
                       Catch::Matchers::ContainsSubstring("aquifers"));
     std::filesystem::remove(path);
 }

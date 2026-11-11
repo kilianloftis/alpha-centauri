@@ -32,10 +32,7 @@ struct TechCostConfig_t
 class TechCostConfigParser
 {
 public:
-    TechCostConfigParser() = default;
-    ~TechCostConfigParser() = default;
-
-    TechCostConfig_t ParseConfig(const std::string& scriptPath, LuaRuntime& rLua);
+    static TechCostConfig_t ParseConfig(const std::string& scriptPath, LuaRuntime& rLua);
 };
 
 } // namespace ac

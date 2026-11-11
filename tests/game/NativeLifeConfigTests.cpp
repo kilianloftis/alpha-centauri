@@ -40,7 +40,7 @@ NativeLifeConfig_t Parse_(const std::string& rJson)
     const TempConfigFile jsonFile("native_life.json", rJson);
     const TempConfigFile luaFile("native_life.lua", k_MinimalLua);
     LuaRuntime lua;
-    return NativeLifeConfigParser{}.ParseConfig(jsonFile.Path(), luaFile.Path(), lua);
+    return NativeLifeConfigParser::ParseConfig(jsonFile.Path(), luaFile.Path(), lua);
 }
 
 std::string SessionKeys_()
@@ -67,7 +67,7 @@ TEST_CASE("NativeLifeConfigParser reads levels and resolves the session level",
           "[ecology][native-life][parser]")
 {
     LuaRuntime lua;
-    const NativeLifeConfig_t config = NativeLifeConfigParser{}.ParseConfig(
+    const NativeLifeConfig_t config = NativeLifeConfigParser::ParseConfig(
         FixturePath("native_life.json"), FixturePath("native_life.lua"), lua);
     CHECK(config.defaultId == "normal");
     CHECK(config.levels.size() == 3);

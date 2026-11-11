@@ -90,7 +90,7 @@ void FillLand_(WorldFixture& fixture)
 
 std::vector<EffectConfig_t> LoadWorldRules_()
 {
-    return WorldRulesConfigParser{}.ParseConfig(FixturePath("world_rules.json"));
+    return WorldRulesConfigParser::ParseConfig(FixturePath("world_rules.json"));
 }
 
 int ResolvedFloorPercent_(const FactionFixture& fixture, const Tile& rTile)

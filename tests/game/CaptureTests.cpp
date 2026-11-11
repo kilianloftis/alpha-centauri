@@ -46,7 +46,7 @@ constexpr int k_BoardingHpOfTen = 6;
 struct CaptureGame_
 {
     FactionFixture fixtures{k_TestMapWidth, k_TestMapHeight,
-                            WorldRulesConfigParser{}.ParseConfig(FixturePath("world_rules.json"))};
+                            WorldRulesConfigParser::ParseConfig(FixturePath("world_rules.json"))};
     Faction* pA = nullptr;
     Faction* pB = nullptr;
 
@@ -595,12 +595,12 @@ TEST_CASE("A subverted unit is homed at the actor's nearest base with full moves
 TEST_CASE("combat.json requires a non-negative boarding_home_base_min_pop", "[capture][parser]")
 {
     const TempConfigFile valid("ac_combat_valid.json", R"({ "boarding_home_base_min_pop": 2 })");
-    CHECK(CombatConfigParser{}.ParseConfig(valid.Path()).boardingHomeBaseMinPop == 2);
+    CHECK(CombatConfigParser::ParseConfig(valid.Path()).boardingHomeBaseMinPop == 2);
 
     const TempConfigFile missing("ac_combat_missing.json", "{}");
-    CHECK_THROWS_AS(CombatConfigParser{}.ParseConfig(missing.Path()), std::runtime_error);
+    CHECK_THROWS_AS(CombatConfigParser::ParseConfig(missing.Path()), std::runtime_error);
 
     const TempConfigFile negative("ac_combat_negative.json",
                                   R"({ "boarding_home_base_min_pop": -1 })");
-    CHECK_THROWS_AS(CombatConfigParser{}.ParseConfig(negative.Path()), std::runtime_error);
+    CHECK_THROWS_AS(CombatConfigParser::ParseConfig(negative.Path()), std::runtime_error);
 }

@@ -94,10 +94,7 @@ struct PopCompositionConfig_t
 class PopCompositionConfigParser
 {
 public:
-    PopCompositionConfigParser() = default;
-    ~PopCompositionConfigParser() = default;
-
-    PopCompositionConfig_t ParseConfig(const std::string& configPath);
+    static PopCompositionConfig_t ParseConfig(const std::string& configPath);
 };
 
 // Highest tier where consecutiveTurns >= minTurns, or nullptr.

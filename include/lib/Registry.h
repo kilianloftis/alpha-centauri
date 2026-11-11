@@ -22,8 +22,7 @@ public:
     // All or nothing: a file that fails to parse or validate leaves the registry as it was.
     void Load(const std::string& rConfigPath)
     {
-        TParser parser;
-        Assign(parser.ParseConfig(rConfigPath));
+        Assign(TParser::ParseConfig(rConfigPath));
     }
 
     // Optional lookup: nullptr when the id is absent. Prefer Get() when the id must exist.

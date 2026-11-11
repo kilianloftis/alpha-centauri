@@ -11,10 +11,7 @@ namespace ac
 class WorldGenPresetConfigParser
 {
 public:
-    WorldGenPresetConfigParser() = default;
-    ~WorldGenPresetConfigParser() = default;
-
-    std::vector<WorldGenPresetConfig_t> ParseConfig(const std::string& configPath);
+    static std::vector<WorldGenPresetConfig_t> ParseConfig(const std::string& configPath);
 
     // Preset min/max must bracket ocean level and cover the shelf and spread-altitude limit.
     static void ValidateAgainstMapRules(const WorldGenPresetConfig_t& rPreset,

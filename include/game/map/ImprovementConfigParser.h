@@ -103,7 +103,7 @@ class ImprovementConfigParser
 {
 public:
     // Registry<> adapter: this file alone, tags expanded against this file alone.
-    std::vector<ImprovementConfig_t> ParseConfig(const std::string& configPath);
+    static std::vector<ImprovementConfig_t> ParseConfig(const std::string& configPath);
 };
 
 } // namespace ac

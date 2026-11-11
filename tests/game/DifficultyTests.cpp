@@ -42,7 +42,7 @@ void SelectDifficulty_(FactionFixture& rFixtures, const char* difficultyId);
 void UseFixtureDifficulty_(FactionFixture& rFixtures, const char* difficultyId)
 {
     *rFixtures.dataContext.difficultyConfig =
-        DifficultyConfigParser{}.ParseConfig(FixturePath("difficulty/levels.json"));
+        DifficultyConfigParser::ParseConfig(FixturePath("difficulty/levels.json"));
     SelectDifficulty_(rFixtures, difficultyId);
 }
 
@@ -71,7 +71,7 @@ TEST_CASE("DifficultyConfigParser rejects bad configs", "[difficulty][parser]")
         std::ofstream out(path);
         out << R"({"default":"missing","levels":[{"id":"citizen","name":"Citizen","rules":{"player_atrocity_threshold":28,"ai_atrocity_threshold":20,"planet_fauna_diff":0,"planet_fauna_swarm_event":false}}]})";
     }
-    CHECK_THROWS_WITH(DifficultyConfigParser{}.ParseConfig(path.string()),
+    CHECK_THROWS_WITH(DifficultyConfigParser::ParseConfig(path.string()),
                       Catch::Matchers::ContainsSubstring("default"));
 
     {
@@ -84,14 +84,14 @@ TEST_CASE("DifficultyConfigParser rejects bad configs", "[difficulty][parser]")
           ]
         })";
     }
-    CHECK_THROWS_WITH(DifficultyConfigParser{}.ParseConfig(path.string()),
+    CHECK_THROWS_WITH(DifficultyConfigParser::ParseConfig(path.string()),
                       Catch::Matchers::ContainsSubstring("duplicate level id"));
 
     {
         std::ofstream out(path);
         out << R"({"default":"citizen","levels":[{"id":"citizen","name":"Citizen","rules":{}}]})";
     }
-    CHECK_THROWS_WITH(DifficultyConfigParser{}.ParseConfig(path.string()),
+    CHECK_THROWS_WITH(DifficultyConfigParser::ParseConfig(path.string()),
                       Catch::Matchers::ContainsSubstring("player_atrocity_threshold"));
 
     // The AI number is required on every level too, not defaulted to the player's.
@@ -101,7 +101,7 @@ TEST_CASE("DifficultyConfigParser rejects bad configs", "[difficulty][parser]")
             {"id":"citizen","name":"Citizen","rules":{"player_atrocity_threshold":28}}
         ]})";
     }
-    CHECK_THROWS_WITH(DifficultyConfigParser{}.ParseConfig(path.string()),
+    CHECK_THROWS_WITH(DifficultyConfigParser::ParseConfig(path.string()),
                       Catch::Matchers::ContainsSubstring("ai_atrocity_threshold"));
 
     std::filesystem::remove(path);
@@ -247,7 +247,7 @@ TEST_CASE("Bureaucracy drones distribute past the limit end-to-end",
     fixtures.dataContext.socialRatingRegistry->Load(
         FixturePath("difficulty/social_rating_effects.json"));
     fixtures.dataContext.popCompositionConfig = std::make_unique<PopCompositionConfig_t>(
-        PopCompositionConfigParser{}.ParseConfig(
+        PopCompositionConfigParser::ParseConfig(
             FixturePath("difficulty/pop_composition.json")));
     fixtures.dataContext.droneCalculator = std::make_unique<DroneCalculator>(
         *fixtures.dataContext.popCompositionConfig, *fixtures.dataContext.luaRuntime);
@@ -294,7 +294,7 @@ TEST_CASE("A captured base gains recently-conquered drones",
     fixtures.dataContext.socialRatingRegistry->Load(
         FixturePath("difficulty/social_rating_effects.json"));
     fixtures.dataContext.popCompositionConfig = std::make_unique<PopCompositionConfig_t>(
-        PopCompositionConfigParser{}.ParseConfig(
+        PopCompositionConfigParser::ParseConfig(
             FixturePath("difficulty/pop_composition.json")));
     fixtures.dataContext.droneCalculator = std::make_unique<DroneCalculator>(
         *fixtures.dataContext.popCompositionConfig, *fixtures.dataContext.luaRuntime);

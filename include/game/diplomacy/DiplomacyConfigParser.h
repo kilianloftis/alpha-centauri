@@ -11,7 +11,7 @@ class DiplomacyConfigParser
 {
 public:
     // Load config/diplomacy.json. Throws if the file cannot be opened or fails validation.
-    DiplomacyConfig_t ParseConfig(const std::string& configPath);
+    static DiplomacyConfig_t ParseConfig(const std::string& configPath);
 };
 
 } // namespace ac

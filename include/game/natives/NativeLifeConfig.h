@@ -60,8 +60,8 @@ class NativeLifeConfigParser
 {
 public:
     // Every JSON key is required. rFormulaPath is a Lua script returning the five formula names.
-    NativeLifeConfig_t ParseConfig(const std::string& rConfigPath, const std::string& rFormulaPath,
-                                   LuaRuntime& rLua);
+    static NativeLifeConfig_t ParseConfig(const std::string& rConfigPath,
+                                          const std::string& rFormulaPath, LuaRuntime& rLua);
 };
 
 } // namespace ac

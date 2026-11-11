@@ -10,7 +10,7 @@ namespace ac
 class CouncilProposalConfigParser
 {
 public:
-    std::vector<CouncilProposalConfig_t> ParseConfig(const std::string& configPath);
+    static std::vector<CouncilProposalConfig_t> ParseConfig(const std::string& configPath);
 };
 
 } // namespace ac
