@@ -11,6 +11,7 @@
   ],
   "ambush_near_base_min_dist": 2,
   "ambush_near_base_max_dist": 5,
+  "boat_empty_ocean_min_region_tiles": 50,
   "default": "normal",
   "levels": [
     {

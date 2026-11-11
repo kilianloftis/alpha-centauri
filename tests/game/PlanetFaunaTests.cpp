@@ -26,6 +26,7 @@
 
 #include <memory>
 #include <random>
+#include <string>
 #include <vector>
 
 using namespace ac;
@@ -48,6 +49,33 @@ const PlanetFaunaCalculator& Calc_(const FactionFixture& rFixture)
 void PlantFungus_(FactionFixture& rFixture, Tile& rTile)
 {
     rTile.AddTerrainFeature(rFixture.state.GetTileEffects().GetImprovements().Get("Fungus"));
+}
+
+void AdvanceToBoatPeriodTurn_(GameState& rState, int period)
+{
+    while (rState.GetTurnNumber() % period != 0 || rState.GetTurnNumber() == 0)
+    {
+        rState.IncrementMissionYear();
+    }
+}
+
+bool IsBoatHullUnit_(const Unit& rUnit)
+{
+    const std::string& rId = rUnit.GetDesign().GetId();
+    return rId == "Isle_of_the_Deep" || rId == "Sea_Lurk";
+}
+
+int CountBoatHulls_(const Faction& rPlanet)
+{
+    int count = 0;
+    for (const Unit& rUnit : rPlanet.GetUnitManager().Units())
+    {
+        if (IsBoatHullUnit_(rUnit))
+        {
+            ++count;
+        }
+    }
+    return count;
 }
 
 } // namespace
@@ -145,8 +173,7 @@ TEST_CASE("Planet fauna formulas use difficulty and native forms", "[native][fau
     CHECK_FALSE(PlanetFaunaSwarmYearReached(39, rCalc, 1));
 }
 
-TEST_CASE("Boat spawn places an Isle with embarked land cargo on a fungus tile",
-          "[native][fauna]")
+TEST_CASE("Boat spawn places an Isle with embarked land cargo on sea fungus", "[native][fauna]")
 {
     FactionFixture fixture;
     LoadFullNatives_(fixture);
@@ -204,6 +231,87 @@ TEST_CASE("Boat spawn places an Isle with embarked land cargo on a fungus tile",
     }
     REQUIRE(isleCount == 1);
     CHECK(embarkedCargo >= 1);
+}
+
+TEST_CASE("Boat spawn rejects land fungus as a site", "[native][fauna]")
+{
+    FactionFixture fixture(8, 5);
+    LoadFullNatives_(fixture);
+    FillLand(fixture.map);
+    Faction& rPlanet = AddNativeLifeFaction(fixture);
+    GameStateScope scope(fixture.state);
+
+    Tile& rFungus = fixture.At(4, 2);
+    PlantFungus_(fixture, rFungus);
+    REQUIRE_FALSE(AcceptsBoatSpawnSite(rFungus, fixture.map));
+
+    AdvanceToBoatPeriodTurn_(fixture.state, Calc_(fixture).BoatPeriod(1));
+    std::mt19937 rng(1);
+    RunPlanetFauna(fixture.state, rng);
+    CHECK(CountBoatHulls_(rPlanet) == 0);
+}
+
+TEST_CASE("Boat spawn skips empty ocean below the region-tile minimum", "[native][fauna]")
+{
+    FactionFixture fixture;
+    LoadFullNatives_(fixture);
+    FillLand(fixture.map);
+    Faction& rPlanet = AddNativeLifeFaction(fixture);
+    GameStateScope scope(fixture.state);
+
+    // Small inland pond: empty water, no fungus, under boat_empty_ocean_min_region_tiles.
+    for (auto& pTile : fixture.map.GetTiles())
+    {
+        if (!pTile)
+        {
+            continue;
+        }
+        const int x = pTile->GetX();
+        const int y = pTile->GetY();
+        if (x >= 4 && x <= 8 && y >= 2 && y <= 4)
+        {
+            pTile->SetElevation(-100);
+        }
+    }
+    Tile& rPond = fixture.At(6, 2);
+    const int minRegionTiles =
+        fixture.dataContext.nativeLifeConfig->boatEmptyOceanMinRegionTiles;
+    REQUIRE(fixture.map.GetRegions().TileCountInRegion(rPond) < minRegionTiles);
+    REQUIRE_FALSE(AcceptsBoatSpawnSite(rPond, fixture.map));
+
+    AdvanceToBoatPeriodTurn_(fixture.state, Calc_(fixture).BoatPeriod(1));
+    std::mt19937 rng(1);
+    RunPlanetFauna(fixture.state, rng);
+    CHECK(CountBoatHulls_(rPlanet) == 0);
+}
+
+TEST_CASE("Boat spawn accepts empty ocean at the region-tile minimum", "[native][fauna]")
+{
+    FactionFixture fixture;
+    LoadFullNatives_(fixture);
+    FillLand(fixture.map);
+    Faction& rPlanet = AddNativeLifeFaction(fixture);
+    GameStateScope scope(fixture.state);
+
+    // Flood non-polar rows so the middle water body is well above 50 tiles.
+    for (auto& pTile : fixture.map.GetTiles())
+    {
+        if (!pTile || pTile->GetY() == 0 || pTile->GetY() == fixture.map.GetHeight() - 1)
+        {
+            continue;
+        }
+        pTile->SetElevation(-100);
+    }
+    Tile& rOcean = fixture.At(8, 8);
+    REQUIRE(rOcean.IsWater());
+    REQUIRE(fixture.map.GetRegions().TileCountInRegion(rOcean)
+            >= fixture.dataContext.nativeLifeConfig->boatEmptyOceanMinRegionTiles);
+    REQUIRE(AcceptsBoatSpawnSite(rOcean, fixture.map));
+
+    AdvanceToBoatPeriodTurn_(fixture.state, Calc_(fixture).BoatPeriod(1));
+    std::mt19937 rng(1);
+    RunPlanetFauna(fixture.state, rng);
+    CHECK(CountBoatHulls_(rPlanet) == 1);
 }
 
 TEST_CASE("SuppressPlanetFauna resolves from active effects for owned and destroyed SPs",

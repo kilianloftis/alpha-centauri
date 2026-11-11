@@ -121,3 +121,29 @@ TEST_CASE("The region cache follows a tile that turns from water to land", "[map
 
     CHECK(rRegions.RegionOf(rWest) == rRegions.RegionOf(rEast));
 }
+
+TEST_CASE("RegionCache TileCountInRegion matches flood sizes for two ponds", "[map][regions]")
+{
+    WorldMap map(k_Width, k_Height, actest::TestMapRules(), Rainfall_t::Average);
+    for (const auto& pTile : map.GetTiles())
+    {
+        pTile->SetElevation(100);
+    }
+    // Two inland ponds separated by land (8-neighbour flood). Even-parity cells only.
+    map.GetTile(4, 2)->SetElevation(-100);
+    map.GetTile(5, 3)->SetElevation(-100);
+    map.GetTile(6, 2)->SetElevation(-100);
+
+    map.GetTile(10, 2)->SetElevation(-100);
+    map.GetTile(11, 3)->SetElevation(-100);
+    map.GetTile(12, 2)->SetElevation(-100);
+    map.GetTile(12, 4)->SetElevation(-100);
+    map.GetTile(11, 1)->SetElevation(-100);
+
+    const RegionCache& rRegions = map.GetRegions();
+    CHECK(rRegions.TileCountInRegion(*map.GetTile(4, 2)) == 3);
+    CHECK(rRegions.TileCountInRegion(*map.GetTile(6, 2)) == 3);
+    CHECK(rRegions.TileCountInRegion(*map.GetTile(10, 2)) == 5);
+    CHECK(rRegions.TileCountInRegion(*map.GetTile(12, 2)) == 5);
+    CHECK(rRegions.RegionOf(*map.GetTile(4, 2)) != rRegions.RegionOf(*map.GetTile(10, 2)));
+}

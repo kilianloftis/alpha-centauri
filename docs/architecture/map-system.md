@@ -175,7 +175,7 @@ Territory overlap between factions is broken by lattice crow-flies distance (`pÂ
 ### Regions (land and water bodies)
 - **Purpose**: SMAC's tile regions (`docs/thinker/terranx-map.md`, "Regions"): which land mass or body of water a tile belongs to. The base value's same-region tests and per-region base counts read them.
 - **Rule**: `AssignRegions` (`include/game/map/RegionRules.h`) gives one opaque id per tile. Off the first and last rows, same-surface (`IsWater`) tiles that touch, among the 8 ring neighbours, share an id. Each pole (the first row, and the last) takes one id per surface, so the north and south poles never share one (deviation "Poles are separate regions"), and the flood never passes through those rows, so two bodies that meet only there stay apart. Land and water never share an id. There is no cap on the number of bodies (deviation "Region cap empties the rest of the map").
-- **Cache**: `RegionCache` (`include/game/map/RegionCache.h`), owned by `WorldMap` (`GetRegions()`), memoises `AssignRegions` against `GetAppearanceRevision()`. Every land/water change goes through `Tile::SetElevation`, which bumps that revision, so `RegionOf` is never stale; SMAC likewise reruns its scan after every topology change (`world_climate`).
+- **Cache**: `RegionCache` (`include/game/map/RegionCache.h`), owned by `WorldMap` (`GetRegions()`), memoises `AssignRegions` against `GetAppearanceRevision()`. Every land/water change goes through `Tile::SetElevation`, which bumps that revision, so `RegionOf` is never stale; SMAC likewise reruns its scan after every topology change (`world_climate`). `Validate_` also builds a per-region tile-count histogram for `TileCountInRegion` (Planet fauna empty-ocean boat sites).
 
 ### World Generation pipeline
 

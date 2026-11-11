@@ -105,12 +105,7 @@ Tile* FindBoatSpawnTile_(WorldMap& rMap, std::mt19937& rRng)
         {
             return nullptr;
         }
-        if (!pTile->IsWater())
-        {
-            continue;
-        }
-        if (pTile->HasFeature(ImprovementIds::k_Fungus)
-            || rMap.GetUnitsOnTile(*pTile).empty())
+        if (AcceptsBoatSpawnSite(*pTile, rMap))
         {
             return pTile;
         }

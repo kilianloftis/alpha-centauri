@@ -50,6 +50,7 @@ std::string SessionKeys_()
   "planet_lifecycle_turn_thresholds": [45, 90, 170, 250, 0, 330],
   "ambush_near_base_min_dist": 2,
   "ambush_near_base_max_dist": 5,
+  "boat_empty_ocean_min_region_tiles": 50,
 )";
 }
 
@@ -74,6 +75,7 @@ TEST_CASE("NativeLifeConfigParser reads levels and resolves the session level",
     CHECK_THROWS_WITH(config.RequireForSession("teeming"), ContainsSubstring("teeming"));
     CHECK(config.fungalBloomNativeLifeformsMin == 1);
     CHECK(config.ambushNearBaseMaxDist == 5);
+    CHECK(config.boatEmptyOceanMinRegionTiles == 50);
 
     const PlanetFaunaCalculator calc(config, lua);
     CHECK(calc.BoatPeriod(1) == 8);
@@ -125,6 +127,7 @@ TEST_CASE("NativeLifeConfigParser rejects an inverted fungal lifeform range",
   "planet_lifecycle_turn_thresholds": [45, 90, 170, 250, 0, 330],
   "ambush_near_base_min_dist": 2,
   "ambush_near_base_max_dist": 5,
+  "boat_empty_ocean_min_region_tiles": 50,
   "default": "rare",
   "levels": [ { "id": "rare", "name": "Rare", "fauna_forms": 0, "effects": [] } ]
 })"),

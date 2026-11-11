@@ -587,6 +587,20 @@ absent.
   swaps and threatened cession need and which then takes the doubling over from the gift
   weight.
 
+### Planet fauna boats stay on water `[Ours]`
+
+- **Original:** `alien_fauna` boat sites accept any `is_fungus()` tile (land or ocean shelf) or
+  empty ocean with region size ≥ 50, and `veh_init` does not triad-check the hull — Isle /
+  Sealurk can sit on land fungus (`docs/thinker/terranx-map.md` “alien_fauna”).
+- **Ours:** boat sites are sea fungus (shelf) or empty ocean with
+  `boat_empty_ocean_min_region_tiles`; hull and escort picks require `CanEnterTileTerrain` for
+  the tile. Land fungus never hosts a boat. Cargo still skips the domain filter so land
+  passengers can embark on water.
+- **Where:** `AcceptsBoatSpawnSite` / `FaunaCandidatesForRole` (`PlanetFaunaRules`);
+  `RunBoatSpawn_` (`PlanetFaunaMutations`).
+- **Missing:** the original land-fungus site path and a hull/escort pick that skips the enter
+  terrain gate, behind a switch.
+
 ### Poles are separate regions `[Ours]`
 
 - **Original:** `Path_continents` sets every tile on the first and last rows to 63 (land) or 127

@@ -155,6 +155,7 @@ NativeLifeConfig_t ParseNativeLifeJson_(const nlohmann::json& rJson, const std::
         "planet_lifecycle_turn_thresholds",
         "ambush_near_base_min_dist",
         "ambush_near_base_max_dist",
+        "boat_empty_ocean_min_region_tiles",
         "default",
         "levels",
     };
@@ -185,6 +186,8 @@ NativeLifeConfig_t ParseNativeLifeJson_(const nlohmann::json& rJson, const std::
         throw std::runtime_error(
             rCtx + ": 'ambush_near_base_max_dist' must be >= 'ambush_near_base_min_dist'");
     }
+    config.boatEmptyOceanMinRegionTiles =
+        RequireNonNegativeInt_(rJson, "boat_empty_ocean_min_region_tiles", rCtx);
     // Level set only — do not call ParseLevelSet (it rejects sibling session keys).
     if (!rJson.contains("default") || !rJson.at("default").is_string()
         || rJson.at("default").get<std::string>().empty())

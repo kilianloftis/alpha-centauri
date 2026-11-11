@@ -6,11 +6,17 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include "game/faction/Faction.h"
+#include "game/map/ImprovementIds.h"
+#include "game/map/RegionCache.h"
 #include "game/map/Tile.h"
+#include "game/map/WorldMap.h"
 #include "game/movement/MovementRules.h"
+#include "game/natives/NativeLifeConfig.h"
 #include "game/natives/NativeUnitRegistry.h"
 #include "game/natives/PlanetFaunaCalculator.h"
 #include "game/research/ResearchRules.h"
+
+#include <magic_enum.hpp>
 
 #include <algorithm>
 #include <stdexcept>
@@ -56,6 +62,32 @@ bool PlanetFaunaSwarmYearReached(int turnNumber, const PlanetFaunaCalculator& rC
                                  int faunaForms)
 {
     return turnNumber >= rCalc.SwarmYearThreshold(faunaForms);
+}
+
+bool AcceptsBoatSpawnSite(const Tile& rTile, const WorldMap& rMap)
+{
+    if (!rTile.IsWater())
+    {
+        return false;
+    }
+    // Sea fungus only (deviation: SMAC is_fungus at 0x5226b3 also accepts land). Shelf gate
+    // matches the binary: BIT_FUNGUS and alt_level >= ALT_OCEAN_SHELF, not deep ocean.
+    if (rTile.HasFeature(ImprovementIds::k_Fungus))
+    {
+        const auto deepOceanId = magic_enum::enum_name(TerrainFeature_t::Ocean);
+        return !rTile.HasFeature(deepOceanId);
+    }
+    if (!rMap.GetUnitsOnTile(rTile).empty())
+    {
+        return false;
+    }
+    const NativeLifeConfig_t* pLife = CurrentGameState().GetGameData().nativeLifeConfig.get();
+    if (!pLife)
+    {
+        throw std::logic_error("AcceptsBoatSpawnSite: no native life config is available");
+    }
+    const int regionTiles = rMap.GetRegions().TileCountInRegion(rTile);
+    return regionTiles >= pLife->boatEmptyOceanMinRegionTiles;
 }
 
 std::vector<const NativeUnitConfig_t*> FaunaCandidatesForRole(NativeFaunaRole_t role,

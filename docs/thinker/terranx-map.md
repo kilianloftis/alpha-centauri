@@ -374,15 +374,20 @@ Per-turn Planet fauna (with forest/kelp growth samples at the top — that half 
 - **early_limit:** `CurrentTurn < 2 * (10 * (3 − native) − DiffLevel)` forces boat cargo 1
   (and caps the XMINDWORMS burst).
 - **Boat period:** every `2 * (5 − native)` turns. Site pick (up to 1000 tries): any
-  `is_fungus()` tile (land or sea; `BIT_FUNGUS` and alt ≥ ocean shelf) **or** empty ocean
-  with region tile count ≥ 50. No triad check before `veh_init` — Isle (`0x9`) / Sealurk
-  (`0xE`) can land on land fungus and are not killed on spawn. Cargo
+  `is_fungus()` tile **or** empty ocean with region tile count ≥ 50. `is_fungus` is
+  inlined at `0x5226b3`–`0x5226c3`: `items & BIT_FUNGUS` (`0x20`) and altitude bits
+  (`byte0 & 0xE0`) `>= 0x40` (`ALT_OCEAN_SHELF` = 2) — land or ocean shelf, not deep
+  ocean. Empty ocean: alt `< ALT_SHORE_LINE` (`0x60`), `anything_at < 0`, region not
+  bad, `Continents[region].tile_count >= 50` (`0x52270d`). No triad check before
+  `veh_init` — Isle (`0x9`) / Sealurk (`0xE`) can land on land fungus and are not
+  killed on spawn. Our `AcceptsBoatSpawnSite` keeps sea fungus / empty ocean only
+  (`boat_empty_ocean_min_region_tiles` for the 50) and hull/escort picks still require
+  `CanEnterTileTerrain` — see deviations “Planet fauna boats stay on water”. Cargo
   `CurrentTurn * (1 or 2 if perihelion `GameState` `0x100000`) / (4 * (4*(8−native) − DiffLevel)) + native + 1`,
   clamped by Isle cargo. Expansion: Sealurk vs Isle via `timeGetTime` LSB
   (Thinker: `game_rand`). Passengers Mind Worm (`0x8`) or Spore (`0xF`) when
   Expansion and `rand % 5 == 0`. Then Locusts (`0xA`) if anyone owns Centauri Psi
   (`TechOwners[63]` `0x9A66AF`) or Quantum Power (`TechOwners[25]` `0x9A6689`).
-  Our `FindBoatSpawnTile_` keeps only water fungus / empty ocean.
 - **Fungus lurkers:** `2*native+2` random fungus tries — Worm/Spore near foreign units or
   near bases (find-distance 2–5).
 - **XMINDWORMS:** after a near-base lurker, Diff ≥ Librarian, not bell-curve, turn ≥

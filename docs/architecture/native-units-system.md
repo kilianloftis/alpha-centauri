@@ -38,7 +38,7 @@ classDiagram
 `domain`, `plan` (required; `alpha.txt`'s plan for the predefined unit, read by `IDesign::GetPlan`), `mineral_cost`, `effects[]` (continuous `EffectConfig_t` with
 `EffectSourceKind_t::NativeUnit`), optional `on_hold_effects[]`, and optional `planet` (fauna roles / weight / tech gate / lifecycle). Combat natives declare the `native_life` RuleFlag. Alien Artifact omits `planet`.
 
-[`config/native_life.json`](../../config/native_life.json) (+ [`native_life.lua`](../../config/native_life.lua)) — fungal-bloom lifeform count, lifecycle turn thresholds, ambush near-base band, abundance `levels`, and Planet fauna formulas. Perihelion scales boat cargo via WorldGlobal `planet_fauna_cargo_scale` on the world event.
+[`config/native_life.json`](../../config/native_life.json) (+ [`native_life.lua`](../../config/native_life.lua)) — fungal-bloom lifeform count, lifecycle turn thresholds, ambush near-base band, `boat_empty_ocean_min_region_tiles`, abundance `levels`, and Planet fauna formulas. Perihelion scales boat cargo via WorldGlobal `planet_fauna_cargo_scale` on the world event.
 
 `IDesign::IsNativeLife` reads that flag, so a composed `UnitDesign` is native life when any
 filled component declares it. Combat natives Add `collateral_damage` 1, the fission-tier
@@ -88,12 +88,15 @@ combat promotions above `starting_intrinsic` stack; each design’s `planet.life
 fungus ambushes, and the near-base swarm use `PlanetFaunaCalculator` (`native_life.lua`),
 `PlanetFaunaRules` for gates and candidate picks, `fauna_forms` on native-life levels, and
 `planet_fauna_diff` / `planet_fauna_swarm_event` on `DifficultyRules_t`. Designs opt into roles
-via `planet.fauna_roles` with a single `fauna_weight`. Boat hulls spawn only on water (sea fungus
-or empty ocean) and must fit the tile; boat cargo skips the domain filter and embarks onto the
-hull. Voice of Planet authors WorldGlobal
-`suppress_planet_fauna` on both `effects` and `destroyed_effects`; `PlanetFaunaSuppressed` reads
-that flag from faction active effects (owned building pool or tombstone `destroyed_effects` via
-session world extras). Fungal-bloom spawn uses designs that declare `planet`.
+via `planet.fauna_roles` with a single `fauna_weight`. Boat sites (`AcceptsBoatSpawnSite`):
+sea fungus (ocean shelf) or empty ocean whose water region has at least
+`boat_empty_ocean_min_region_tiles` tiles — not land fungus. Hull and escort picks require
+`CanEnterTileTerrain` for the site; cargo skips the domain filter and embarks onto the hull
+(deviation “Planet fauna boats stay on water”). Voice of Planet authors WorldGlobal
+`suppress_planet_fauna` on both `effects` and `destroyed_effects`; `PlanetFaunaSuppressed`
+reads that flag from faction active effects (owned building pool or tombstone
+`destroyed_effects` via session world extras). Fungal-bloom spawn uses designs that declare
+`planet`.
 
 ## Isle cargo (IntrinsicXp)
 

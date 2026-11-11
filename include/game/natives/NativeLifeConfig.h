@@ -36,6 +36,9 @@ struct NativeLifeConfig_t
     int ambushNearBaseMinDist = 2;
     int ambushNearBaseMaxDist = 5;
 
+    // Empty-ocean boat sites need this many tiles in the water region (SMAC Continents.tile_count).
+    int boatEmptyOceanMinRegionTiles = 0;
+
     std::string boatPeriodFormula;
     std::string earlyLimitThresholdFormula;
     std::string boatCargoFormula;
