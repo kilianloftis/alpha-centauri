@@ -13,6 +13,7 @@
 #include "game/economy/EconomyManager.h"
 #include "game/research/ResearchManager.h"
 #include "game/base/BaseManager.h"
+#include "game/base/BaseRules.h"
 #include "game/base/BaseTypes.h"
 #include "game/population/PopulationManager.h"
 #include "game/map/MapRulesConfig.h"
@@ -567,7 +568,8 @@ SurfaceFlipConsequences_t SurfaceFlipConsequences(const Tile& rTile, bool bNowWa
         }
         consequences.removedImprovements.push_back(pImprovement->id);
     }
-    const bool bBaseUntouched = pBase && (!bNowWater || pBase->MayOccupyWater());
+    const bool bBaseUntouched =
+        pBase && MayBaseOccupySurface(bNowWater, pBase->MayOccupyWater());
     if (bBaseUntouched)
     {
         return consequences;

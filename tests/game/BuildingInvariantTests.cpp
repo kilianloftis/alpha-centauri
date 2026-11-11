@@ -14,6 +14,7 @@
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
 #include "game/base/BaseManager.h"
+#include "game/base/BaseRules.h"
 #include "game/buildings/BuildingManager.h"
 #include "game/production/ProductionApplyResult.h"
 #include "game/production/ProductionManager.h"
@@ -285,4 +286,63 @@ TEST_CASE("A base holds a building once unless it stacks, and a secret project w
     CHECK(MayHoldBuilding(rivalBase.GetBuildingManager(), rProject));
     base.GetBuildingManager().AddBuilding("test_secret_project");
     CHECK_FALSE(MayHoldBuilding(rivalBase.GetBuildingManager(), rProject));
+}
+
+TEST_CASE("Destroying the last may_occupy_water facility on water razes the base",
+          "[building][occupancy]")
+{
+    BuildingGame_ game;
+    BaseManager& sea = game.MakeBase(*game.pPlayer, 8, 4);
+    sea.GetTile().SetElevation(-100);
+    REQUIRE(sea.GetTile().IsWater());
+    CHECK_FALSE(MayBaseOccupySurface(sea.GetTile().IsWater(), sea.MayOccupyWater()));
+    sea.GetBuildingManager().AddBuilding("Pressure_Dome");
+    sea.GetBuildingManager().AddBuilding("test_facility_a");
+    CHECK(MayBaseOccupySurface(sea.GetTile().IsWater(), sea.MayOccupyWater()));
+    const BuildingConfig_t& rDome = *game.fixtures.buildings().Find("Pressure_Dome");
+    const BuildingConfig_t& rOther = *game.fixtures.buildings().Find("test_facility_a");
+
+    CHECK(WouldDestroyingBuildingRazeBase(sea, rDome));
+    CHECK_FALSE(WouldDestroyingBuildingRazeBase(sea, rOther));
+
+    FacilityExclusions_t none;
+    const std::vector<const BuildingConfig_t*> candidates =
+        CollectDestroyableFacilities(sea, none);
+    REQUIRE(candidates.size() == 1);
+    CHECK(candidates.front()->id == "test_facility_a");
+
+    sea.GetBuildingManager().DestroyBuilding("test_facility_a");
+    CHECK_FALSE(sea.IsRazed());
+    CHECK(sea.GetBuildingManager().HasBuilding("Pressure_Dome"));
+
+    sea.GetBuildingManager().DestroyBuilding("Pressure_Dome");
+    CHECK(sea.IsRazed());
+}
+
+TEST_CASE("A land Pressure Dome is destroyable and does not raze the base",
+          "[building][occupancy]")
+{
+    BuildingGame_ game;
+    BaseManager& land = game.MakeBase(*game.pPlayer, 8, 4);
+    REQUIRE_FALSE(land.GetTile().IsWater());
+    land.GetBuildingManager().AddBuilding("Pressure_Dome");
+    land.GetBuildingManager().AddBuilding("test_facility_a");
+    const BuildingConfig_t& rDome = *game.fixtures.buildings().Find("Pressure_Dome");
+
+    CHECK_FALSE(WouldDestroyingBuildingRazeBase(land, rDome));
+
+    FacilityExclusions_t none;
+    bool bDomeListed = false;
+    for (const BuildingConfig_t* pBuilding : CollectDestroyableFacilities(land, none))
+    {
+        if (pBuilding && pBuilding->id == "Pressure_Dome")
+        {
+            bDomeListed = true;
+        }
+    }
+    CHECK(bDomeListed);
+
+    land.GetBuildingManager().DestroyBuilding("Pressure_Dome");
+    CHECK_FALSE(land.IsRazed());
+    CHECK_FALSE(land.GetBuildingManager().HasBuilding("Pressure_Dome"));
 }

@@ -30,10 +30,10 @@ namespace ac
 namespace
 {
 
-// HQ drops on transfer; secret projects and Pressure Dome are outside capture_base's 1/3 loop.
+// HQ drops on transfer; secret projects are outside capture_base's 1/3 loop. Facilities whose
+// loss would raze the base are omitted by CollectDestroyableFacilities.
 constexpr FacilityExclusions_t k_CaptureFacilityExclusions{.excludeHq = true,
-                                                           .excludeSecretProjects = true,
-                                                           .excludePressureDome = true};
+                                                           .excludeSecretProjects = true};
 // A native raid may take the Headquarters but never a secret project.
 constexpr FacilityExclusions_t k_RaidFacilityExclusions{.excludeHq = false,
                                                         .excludeSecretProjects = true};

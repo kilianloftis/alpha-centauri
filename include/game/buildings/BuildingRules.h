@@ -36,7 +36,12 @@ bool IsSecretProjectUnavailable(const BuildingId_t& buildingId);
 // Some base holds the project now. A destroyed project is unavailable but owned by nobody.
 bool IsSecretProjectOwned(const BuildingId_t& buildingId);
 
-// Facilities that may be randomly destroyed under the given exclusions.
+// True when destroying rBuilding would leave the base unable to occupy its tile
+// (last may_occupy_water source on water).
+bool WouldDestroyingBuildingRazeBase(const BaseManager& rBase, const BuildingConfig_t& rBuilding);
+
+// Facilities that may be randomly destroyed under the given exclusions. Always omits
+// facilities for which WouldDestroyingBuildingRazeBase is true.
 std::vector<const BuildingConfig_t*> CollectDestroyableFacilities(
     const BaseManager& rBase, const FacilityExclusions_t& rExclusions);
 

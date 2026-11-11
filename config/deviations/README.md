@@ -86,11 +86,16 @@ absent.
   on a flood loses `clamp(size/2, roll, cap)` population, is granted Pressure Dome, and is
   razed only when emptied (last-base exception).
 - **Ours:** a base may always sit on land. Pressure Dome (`RuleFlag may_occupy_water`) adds
-  water occupancy. If the tile is water and the base may not occupy water, raze immediately
-  (no pop-loss / emergency-dome path). Sea founding constructs Pressure Dome via the
-  founder's `on_found_effects`.
-- **Where:** `SurfaceFlipConsequences` / `ReconcileSurfaceFlips` (`TerraformRules`,
-  `SurfaceOccupancy`); founding `AddBuilding` on Colony_Pod `on_found_effects`.
+  water occupancy. If the base may not occupy its surface (`MayBaseOccupySurface`), raze
+  immediately (no pop-loss / emergency-dome path) — on surface flip and when a building
+  destroy leaves occupancy illegal. Destruction / scrap candidates omit facilities whose
+  loss would raze (`WouldDestroyingBuildingRazeBase`). Sea founding constructs Pressure Dome
+  via the founder's `on_found_effects`.
+- **Where:** `MayBaseOccupySurface` (`BaseRules`); `SurfaceFlipConsequences` /
+  `ReconcileSurfaceFlips` (`TerraformRules`, `SurfaceOccupancy`);
+  `BaseManager::OnBuildingDestroyed_`; `CollectDestroyableFacilities` / `CanScrapBuilding`
+  (`BuildingRules`, `ProductionRules`); founding `AddBuilding` on Colony_Pod
+  `on_found_effects`.
 - **Missing:** the original pop-loss / emergency-dome path and a selectable switch.
 
 ### Evacuate on territory change / Covert reveal `[Ours]`

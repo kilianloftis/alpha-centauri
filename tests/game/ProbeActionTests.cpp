@@ -722,6 +722,40 @@ TEST_CASE("Targeted sabotage of a facility the base lacks fails", "[probe][actio
     CHECK(game.pAi->CountBuildings("Command_Center") == 0);
 }
 
+TEST_CASE("Targeted sabotage cannot destroy a sea base's last may_occupy_water facility",
+          "[probe][action][sabotage]")
+{
+    ProbeGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 8, 2);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 8, 8);
+    enemy.GetTile().SetElevation(-100);
+    REQUIRE(enemy.GetTile().IsWater());
+    enemy.GetBuildingManager().AddBuilding("Pressure_Dome");
+    enemy.GetBuildingManager().AddBuilding("Command_Center");
+    Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"}, &home);
+
+    const ProbeActionConfig_t* pAction =
+        game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::SabotageFacility);
+    REQUIRE(pAction);
+    const std::optional<ProbeTarget_t> target = ResolveProbeTarget(
+        probe, enemy.GetTile(), ProbeTargetKind_t::Base, game.fixtures.state);
+    REQUIRE(target.has_value());
+
+    ProbeActionResult_t result;
+    std::mt19937 rng(7);
+    CHECK_FALSE(ApplyProbeActionEffect(probe, *pAction, *target, game.fixtures.state,
+                                       {"Pressure_Dome"}, result, rng));
+    CHECK(std::holds_alternative<ProbeNoTarget_t>(result.detail));
+    CHECK(enemy.GetBuildingManager().HasBuilding("Pressure_Dome"));
+    CHECK_FALSE(enemy.IsRazed());
+
+    ProbeActionResult_t otherHit;
+    REQUIRE(ApplyProbeActionEffect(probe, *pAction, *target, game.fixtures.state,
+                                   {"Command_Center"}, otherHit, rng));
+    CHECK_FALSE(enemy.GetBuildingManager().HasBuilding("Command_Center"));
+    CHECK(enemy.GetBuildingManager().HasBuilding("Pressure_Dome"));
+}
+
 TEST_CASE("sabotage_random effect picks randomly among non-HQ buildings",
           "[probe][action][sabotage]")
 {

@@ -165,6 +165,11 @@ void BaseManager::OnBuildingDestroyed_(const BuildingConfig_t& rBuilding)
     {
         m_pFaction->OnSecretProjectDestroyed.Emit(rBuilding.id);
     }
+    // Same one-pathway idea as size-0 pop loss: a base that cannot occupy its surface is gone.
+    if (!MayBaseOccupySurface(GetTile().IsWater(), MayOccupyWater()))
+    {
+        m_pFaction->RazeBase(*this);
+    }
 }
 
 void BaseManager::WirePopulation_()

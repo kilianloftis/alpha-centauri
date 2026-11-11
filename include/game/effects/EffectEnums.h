@@ -754,7 +754,7 @@ enum class RuleFlagId_t
     NearZeroGrowth,
     // Base is the faction headquarters (assassinate / MC eligibility).
     Headquarters,
-    // Base may sit on water (Pressure Dome). Queried by MayOccupyWater / surface flip.
+    // Base may sit on water (Pressure Dome). Queried by MayOccupyWater / MayBaseOccupySurface.
     MayOccupyWater,
     // SE Probe +3 / Thought Control: bases and units cannot be subverted by standard probes.
     ProbeSubversionImmune,

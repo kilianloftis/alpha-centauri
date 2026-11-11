@@ -423,7 +423,8 @@ entry):
   building is then demolished. Unit capture then resolves RawScaled
   `CaptureFacilitiesDestroyed` with seed = eligible facility count (`base_conquest.json`
   MultiplyGeometric `"1/3"`), clamps to `[0, eligible]`, and shuffle-takes that many: HQ,
-  secret projects, and Pressure Dome are exempt from the candidate list; Recreation
+  secret projects, and any facility whose loss would leave the base unable to occupy its
+  tile (`WouldDestroyingBuildingRazeBase`) are exempt from the candidate list; Recreation
   Commons and Recycling Tanks are always cleared afterward if still present. Liberation
   (capturer is `OccupierWindow().formerOwner`) skips the take and the Commons/Tanks wipe.
   Probe mind control uses `TakeBase` only, so it never destroys facilities this way. Pop

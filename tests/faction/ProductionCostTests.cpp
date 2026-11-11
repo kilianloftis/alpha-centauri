@@ -4,6 +4,7 @@
 #include "game/faction/Faction.h"
 #include "game/production/IConstructable.h"
 #include "game/buildings/BuildingConfig.h"
+#include "game/buildings/BuildingManager.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include "game/base/BaseManager.h"
@@ -479,6 +480,8 @@ TEST_CASE("Secret projects cannot be scrapped; Pressure Dome cannot on water",
     const BuildingConfig_t* pDome =
         fixture.dataContext.buildingRegistry->Find("Pressure_Dome");
     REQUIRE(pDome);
+    landBase.GetBuildingManager().AddBuilding(pDome->id);
+    waterBase.GetBuildingManager().AddBuilding(pDome->id);
     CHECK(CanScrapBuilding(landBase, *pDome));
     CHECK_FALSE(CanScrapBuilding(waterBase, *pDome));
 }

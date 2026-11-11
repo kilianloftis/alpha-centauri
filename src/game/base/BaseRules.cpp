@@ -14,6 +14,11 @@
 namespace ac
 {
 
+bool MayBaseOccupySurface(bool bWater, bool bMayOccupyWater)
+{
+    return !bWater || bMayOccupyWater;
+}
+
 int HeadquartersDistance(const Faction& rFaction, const Tile& rTile)
 {
     const BaseManager* pHq = rFaction.GetHeadquarters();

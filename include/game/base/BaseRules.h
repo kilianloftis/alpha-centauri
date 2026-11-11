@@ -9,6 +9,10 @@ class Faction;
 class Tile;
 class WorkerAssignmentManager;
 
+// Land always; water needs may_occupy_water. Callers pass the surface and capability under
+// test (current tile, a surface-flip forecast, or post-destroy occupancy).
+bool MayBaseOccupySurface(bool bWater, bool bMayOccupyWater);
+
 // terranx vulnerable: tabletop distance from rTile to rFaction's headquarters, or map_rules.json
 // missing_headquarters_distance when it has none.
 int HeadquartersDistance(const Faction& rFaction, const Tile& rTile);

@@ -25,7 +25,7 @@
 #include "game/production/StockpileConfig.h"
 #include "game/production/StockpileRegistry.h"
 #include "game/research/ResearchManager.h"
-#include "game/terraform/SurfaceOccupancy.h"
+#include "game/buildings/BuildingRules.h"
 #include "game/units/IDesign.h"
 #include "game/units/Military.h"
 #include "game/units/UnitDesign.h"
@@ -181,7 +181,7 @@ bool CanScrapBuilding(const BaseManager& rBase, const BuildingConfig_t& rBuildin
     {
         return false;
     }
-    if (rBuilding.id == k_PressureDomeBuildingId && rBase.GetTile().IsWater())
+    if (WouldDestroyingBuildingRazeBase(rBase, rBuilding))
     {
         return false;
     }

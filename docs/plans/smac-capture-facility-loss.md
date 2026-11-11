@@ -8,7 +8,8 @@ min/max count and shuffle-take-N model.
 
 After a successful unit capture (not probe mind control, not liberation recapture):
 
-1. For each built regular facility except Pressure Dome and Headquarters, destroy it when
+1. For each built regular facility except Headquarters and any facility whose loss would
+   leave the base unable to occupy its tile, destroy it when
    `RollExclusiveMax(3, rng) == 0` (~1/3). Secret projects are never in this loop.
 2. Always clear Headquarters on transfer (`TransferBaseTo` / `DropHeadquarters_` — already).
 3. Also destroy Recreation Commons and Recycling Tanks if still present (vanilla SMAC after
@@ -24,10 +25,10 @@ Native raid and riot `DestroyFacility` keep shuffle-take-N — those are differe
 - [`CaptureOutcome_t`](include/game/base/BaseConquestRules.h): remove
   `minFacilitiesDestroyed` / `maxFacilitiesDestroyed`. Add `bRollCaptureFacilityLoss`.
   Keep `facilityCandidates` (eligible list for the mutation loop).
-- [`PlanCapture`](src/game/base/BaseConquestRules.cpp): build candidates with HQ, secret
-  projects, and Pressure Dome excluded (`FacilityExclusions_t` +
-  [`CollectDestroyableFacilities`](src/game/buildings/BuildingRules.cpp)). Set
-  `bRollCaptureFacilityLoss` false for liberation; true otherwise.
+- [`PlanCapture`](src/game/base/BaseConquestRules.cpp): build candidates with HQ and secret
+  projects excluded (`FacilityExclusions_t` +
+  [`CollectDestroyableFacilities`](src/game/buildings/BuildingRules.cpp), which also omits
+  would-raze facilities). Set `bRollCaptureFacilityLoss` false for liberation; true otherwise.
 - [`DestroyCaptureFacilities_`](src/game/base/BaseConquestMutations.cpp): if
   `bRollCaptureFacilityLoss`, per candidate `RollExclusiveMax(3) == 0` → destroy; then
   force-destroy Commons and Recycling Tanks by id if present. Count →

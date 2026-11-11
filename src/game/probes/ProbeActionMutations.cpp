@@ -14,6 +14,7 @@
 #include "game/base/BaseManager.h"
 #include "game/buildings/BuildingMutations.h"
 #include "game/buildings/BuildingManager.h"
+#include "game/buildings/BuildingRules.h"
 #include "game/population/PopulationManager.h"
 #include "game/production/IConstructable.h"
 #include "game/production/ProductionManager.h"
@@ -163,7 +164,7 @@ bool ApplyTargetedSabotage_(BaseManager& rBase, const BuildingId_t& facilityId,
         return WipeProduction_(rBase, rResult);
     }
     const BuildingConfig_t* pTarget = rBase.GetBuildingManager().FindBuilding(facilityId);
-    if (!pTarget)
+    if (!pTarget || WouldDestroyingBuildingRazeBase(rBase, *pTarget))
     {
         rResult.detail = ProbeNoTarget_t{};
         return false;

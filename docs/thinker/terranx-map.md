@@ -1856,7 +1856,13 @@ Gift id 8 offers `DiploBidBaseSwapID`.
   −`FAC_STOCKPILE_ENERGY`, `0x54D2F0`–`0x54D305`) and zero `minerals_accumulated` (`0x54D2AC`).
 - **Capture facility loss** (`capture_base` `0x50C510`, Thinker `mod_capture_base`): for each
   facility id `1..SP_ID_First-1`, destroy when `!(game_rand() % 3)` (~1/3). Skip Pressure Dome
-  (`0x1A`). Probe mind control and liberation recapture (`faction_id_former`) skip the loop.
+  (`0x1A`) always (land or sea). Probe mind control and liberation recapture
+  (`faction_id_former`) skip the loop.
+- **Probe sabotage** (`probe.cpp` / Thinker `mod_probe`): random pick and the VIRUS facility
+  list skip Pressure Dome only when the target base is ocean
+  (`facility_id != FAC_PRESSURE_DOME || !is_ocean`). Headquarters is never listed.
+- **Native worm raid** (`veh_action.cpp`): random facility pick skips Pressure Dome when
+  `is_ocean` on the target tile.
   After the loop, always clear Headquarters (`set_fac(FAC_HEADQUARTERS, base, 0)` at
   `0x50D056`), then wipe Recreation Commons and Recycling Tanks if still present (Thinker only
   skips that wipe behind `facility_capture_fix`).

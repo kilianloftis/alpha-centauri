@@ -3,12 +3,12 @@
 #include "game/CurrentGameState.h"
 #include "game/GameState.h"
 #include "game/base/BaseManager.h"
+#include "game/base/BaseRules.h"
 #include "game/buildings/BuildingManager.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
 #include "game/faction/Faction.h"
-#include "game/terraform/SurfaceOccupancy.h"
 
 #include <stdexcept>
 #include <string>
@@ -53,6 +53,24 @@ bool IsSecretProjectOwned(const BuildingId_t& buildingId)
     return false;
 }
 
+bool WouldDestroyingBuildingRazeBase(const BaseManager& rBase, const BuildingConfig_t& rBuilding)
+{
+    if (!ResolveFlag(rBuilding.effects, RuleFlagId_t::MayOccupyWater))
+    {
+        return false;
+    }
+    int mayOccupyWaterCopies = 0;
+    for (const BuildingConfig_t* pBuilding : rBase.GetBuildingManager().GetBuildings())
+    {
+        if (pBuilding && ResolveFlag(pBuilding->effects, RuleFlagId_t::MayOccupyWater))
+        {
+            ++mayOccupyWaterCopies;
+        }
+    }
+    const bool bMayOccupyWaterAfter = mayOccupyWaterCopies > 1;
+    return !MayBaseOccupySurface(rBase.GetTile().IsWater(), bMayOccupyWaterAfter);
+}
+
 std::vector<const BuildingConfig_t*> CollectDestroyableFacilities(
     const BaseManager& rBase, const FacilityExclusions_t& rExclusions)
 {
@@ -71,7 +89,7 @@ std::vector<const BuildingConfig_t*> CollectDestroyableFacilities(
         {
             continue;
         }
-        if (rExclusions.excludePressureDome && pBuilding->id == k_PressureDomeBuildingId)
+        if (WouldDestroyingBuildingRazeBase(rBase, *pBuilding))
         {
             continue;
         }
