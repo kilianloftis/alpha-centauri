@@ -9,6 +9,7 @@
 #include "game/population/PopulationManager.h"
 #include "game/map/Tile.h"
 #include "ui/SpriteLibrary.h"
+#include "lib/config/JsonConfigLoader.h"
 
 #include <nlohmann/json.hpp>
 
@@ -274,20 +275,7 @@ std::vector<ResolvedBaseOverlay_t> ResolveBaseMapOverlays(
 
 FactionColors_t LoadFactionColorsFile(const std::string& rPath)
 {
-    std::ifstream file(rPath);
-    if (!file)
-    {
-        throw std::runtime_error("Cannot open colors.json: " + rPath);
-    }
-    nlohmann::json json;
-    try
-    {
-        file >> json;
-    }
-    catch (const nlohmann::json::exception& e)
-    {
-        throw std::runtime_error(std::string("Invalid colors.json: ") + e.what());
-    }
+    const nlohmann::json json = JsonConfigLoader::ReadFile(rPath);
     if (!json.is_object())
     {
         throw std::runtime_error("colors.json must be an object");

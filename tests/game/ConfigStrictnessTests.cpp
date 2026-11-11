@@ -12,8 +12,10 @@
 #include "game/research/TechCostCalculator.h"
 #include "game/research/TechCostConfig.h"
 #include "game/research/TechRegistry.h"
+#include "game/worldgen/WorldGenPresetConfigParser.h"
 #include "lib/LuaRuntime.h"
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
@@ -625,4 +627,19 @@ TEST_CASE("Tile renderer style rejects unusable water shading and relief values"
         CHECK_THROWS_WITH(ac::UiStyle::Load(config.Path()),
                           Catch::Matchers::ContainsSubstring("depth_shades"));
     }
+}
+
+TEST_CASE("A float config field accepts a fraction string", "[config]")
+{
+    const TempConfigFile config("ac_preset_fraction.json", R"([
+        { "id": "p", "name": "P", "type": "continents",
+          "frequency": "1/50", "gain": 0.5, "edge_falloff": "1/4",
+          "min_elevation": -3000, "max_elevation": 3500 }
+    ])");
+    const std::vector<WorldGenPresetConfig_t> presets =
+        WorldGenPresetConfigParser{}.ParseConfig(config.Path());
+    REQUIRE(presets.size() == 1);
+    CHECK(presets[0].frequency == Catch::Approx(0.02f));
+    CHECK(presets[0].gain == Catch::Approx(0.5f));
+    CHECK(presets[0].edgeFalloff == Catch::Approx(0.25f));
 }

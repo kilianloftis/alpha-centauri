@@ -1,10 +1,8 @@
 #include "ui/text/TextPack.h"
 
-#include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
 
 #include <algorithm>
-#include <nlohmann/json.hpp>
 #include <stdexcept>
 #include <utility>
 
@@ -60,70 +58,28 @@ constexpr const char* k_PhraseKeys[] = {
     "code",
 };
 
-const std::string& RequireString_(const nlohmann::json& rJson, const std::string& rKey,
-                                  const std::string& rContext)
+std::vector<std::string> RequireStrings_(const ConfigReader& rReader, const char* pKey)
 {
-    if (!rJson.contains(rKey) || !rJson.at(rKey).is_string())
-    {
-        throw std::runtime_error(rContext + ": '" + rKey + "' must be a string");
-    }
-    return rJson.at(rKey).get_ref<const std::string&>();
+    rReader.Array(pKey);
+    return rReader.StringArray(pKey);
 }
 
-bool RequireBool_(const nlohmann::json& rJson, const std::string& rKey,
-                  const std::string& rContext)
+GrammaticalGender_t ParseGender_(const ConfigReader& rReader)
 {
-    if (!rJson.contains(rKey) || !rJson.at(rKey).is_boolean())
-    {
-        throw std::runtime_error(rContext + ": '" + rKey + "' must be a boolean");
-    }
-    return rJson.at(rKey).get<bool>();
-}
-
-const nlohmann::json& RequireObject_(const nlohmann::json& rJson, const std::string& rKey,
-                                    const std::string& rContext)
-{
-    if (!rJson.contains(rKey) || !rJson.at(rKey).is_object())
-    {
-        throw std::runtime_error(rContext + ": '" + rKey + "' must be an object");
-    }
-    return rJson.at(rKey);
-}
-
-std::vector<std::string> RequireStrings_(const nlohmann::json& rJson, const std::string& rKey,
-                                         const std::string& rContext)
-{
-    if (!rJson.contains(rKey) || !rJson.at(rKey).is_array())
-    {
-        throw std::runtime_error(rContext + ": '" + rKey + "' must be an array of strings");
-    }
-    std::vector<std::string> strings;
-    for (const nlohmann::json& rString : rJson.at(rKey))
-    {
-        if (!rString.is_string())
-        {
-            throw std::runtime_error(rContext + ": '" + rKey + "' must be an array of strings");
-        }
-        strings.push_back(rString.get<std::string>());
-    }
-    return strings;
-}
-
-GrammaticalGender_t ParseGender_(const std::string& rCode, const std::string& rContext)
-{
-    if (rCode == "M")
+    const std::string code = rReader.String("noun_gender");
+    if (code == "M")
     {
         return GrammaticalGender_t::Masculine;
     }
-    if (rCode == "F")
+    if (code == "F")
     {
         return GrammaticalGender_t::Feminine;
     }
-    if (rCode == "N")
+    if (code == "N")
     {
         return GrammaticalGender_t::Neuter;
     }
-    throw std::runtime_error(rContext + ": 'noun_gender' must be \"M\", \"F\" or \"N\"");
+    rReader.FailKey("noun_gender", "must be \"M\", \"F\" or \"N\"");
 }
 
 } // namespace
@@ -195,24 +151,16 @@ void TextPack::LoadLocaleDirectory_(const std::filesystem::path& rDirectory)
 
 void TextPack::LoadScript_(const std::filesystem::path& rPath)
 {
-    const std::string context = "Script '" + rPath.string() + "'";
     std::map<std::string, ScriptEntry_t> entries =
         JsonConfigLoader::LoadObjectFile<std::map<std::string, ScriptEntry_t>>(
-            rPath.string(), "script text",
-            [&context](const ConfigReader& rReader) {
-                return ParseScript_(rReader.Json(), context);
-            });
+            rPath.string(), "script text", ParseScript_);
     m_entries.merge(entries);
 }
 
 void TextPack::LoadLabels_(const std::filesystem::path& rPath)
 {
-    const std::string context = "Labels '" + rPath.string() + "'";
     std::map<int, std::string> labels = JsonConfigLoader::LoadObjectFile<std::map<int, std::string>>(
-        rPath.string(), "label text",
-        [&context](const ConfigReader& rReader) {
-            return ParseLabels_(rReader.Json(), context);
-        });
+        rPath.string(), "label text", ParseLabels_);
     m_labels.merge(labels);
 }
 
@@ -229,90 +177,74 @@ void TextPack::LoadVocabularies_(const std::filesystem::path& rDirectory)
     std::ranges::sort(files);
     for (const std::filesystem::path& rFile : files)
     {
-        const std::string context = "Faction vocabulary '" + rFile.string() + "'";
-        m_vocabularies.emplace(
-            rFile.stem().string(),
-            JsonConfigLoader::LoadObjectFile<FactionVocabulary_t>(
-                rFile.string(), "faction vocabulary",
-                [&context](const ConfigReader& rReader) {
-                    return ParseVocabulary_(rReader.Json(), context);
-                }));
+        m_vocabularies.emplace(rFile.stem().string(),
+                               JsonConfigLoader::LoadObjectFile<FactionVocabulary_t>(
+                                   rFile.string(), "faction vocabulary", ParseVocabulary_));
     }
 }
 
-std::map<std::string, ScriptEntry_t> TextPack::ParseScript_(const nlohmann::json& rJson,
-                                                            const std::string& rContext)
+std::map<std::string, ScriptEntry_t> TextPack::ParseScript_(const ConfigReader& rReader)
 {
     std::map<std::string, ScriptEntry_t> entries;
-    for (const auto& [rId, rEntry] : rJson.items())
+    for (const auto& [rId, rUnused] : rReader.Json().items())
     {
-        entries.emplace(rId, ParseEntry_(rEntry, rContext + " '" + rId + "'"));
+        entries.emplace(rId, ParseEntry_(rReader.Object(rId)));
     }
     return entries;
 }
 
-std::map<int, std::string> TextPack::ParseLabels_(const nlohmann::json& rJson,
-                                                  const std::string& rContext)
+std::map<int, std::string> TextPack::ParseLabels_(const ConfigReader& rReader)
 {
     std::map<int, std::string> labels;
-    for (const auto& [rKey, rLabel] : rJson.items())
+    for (const auto& [rKey, rLabel] : rReader.Json().items())
     {
         const bool bNumber = !rKey.empty()
             && std::ranges::all_of(rKey, [](char c) { return c >= '0' && c <= '9'; });
-        if (!bNumber || !rLabel.is_string())
+        if (!bNumber)
         {
-            throw std::runtime_error(rContext + ": '" + rKey
-                                     + "' must be a label number with a string");
+            rReader.FailKey(rKey, "must be a label number");
         }
-        labels.emplace(std::stoi(rKey), rLabel.get<std::string>());
+        labels.emplace(std::stoi(rKey), rReader.String(rKey));
     }
     return labels;
 }
 
-ScriptEntry_t TextPack::ParseEntry_(const nlohmann::json& rJson, const std::string& rContext)
+ScriptEntry_t TextPack::ParseEntry_(const ConfigReader& rReader)
 {
-    if (!rJson.is_object())
-    {
-        throw std::runtime_error(rContext + ": must be an object");
-    }
-    ConfigFields::RejectUnknownKeys(rJson, {"body", "items"}, rContext);
-    return ScriptEntry_t{RequireString_(rJson, "body", rContext),
-                         RequireStrings_(rJson, "items", rContext)};
+    rReader.RejectUnknownKeys({"body", "items"});
+    return ScriptEntry_t{rReader.String("body"), RequireStrings_(rReader, "items")};
 }
 
-FactionVocabulary_t TextPack::ParseVocabulary_(const nlohmann::json& rJson,
-                                               const std::string& rContext)
+FactionVocabulary_t TextPack::ParseVocabulary_(const ConfigReader& rReader)
 {
-    ConfigFields::RejectUnknownKeys(
-        rJson, {"leader_female", "noun_gender", "noun_plural", "fields", "phrases"}, rContext);
-    const GrammaticalGender_t leaderGender = RequireBool_(rJson, "leader_female", rContext)
+    rReader.RejectUnknownKeys({"leader_female", "noun_gender", "noun_plural", "fields", "phrases"});
+    const GrammaticalGender_t leaderGender = rReader.Bool("leader_female")
         ? GrammaticalGender_t::Feminine
         : GrammaticalGender_t::Masculine;
-    const GrammaticalGender_t nounGender =
-        ParseGender_(RequireString_(rJson, "noun_gender", rContext), rContext);
-    const bool bNounPlural = RequireBool_(rJson, "noun_plural", rContext);
+    const GrammaticalGender_t nounGender = ParseGender_(rReader);
+    const bool bNounPlural = rReader.Bool("noun_plural");
 
-    const nlohmann::json& rFields = RequireObject_(rJson, "fields", rContext);
+    const ConfigReader fields = rReader.Object("fields");
     std::vector<std::string> known;
     FactionVocabulary_t vocabulary;
     for (const VocabularyField_t& rField : k_VocabularyFields)
     {
         known.emplace_back(rField.key);
         const bool bLeader = rField.grammar == FieldGrammar_t::Leader;
-        const std::string& rText = RequireString_(rFields, rField.key, rContext + " 'fields'");
-        vocabulary.fields.emplace(
-            rField.key,
-            ScriptValue_t{rText, bLeader ? leaderGender : nounGender, !bLeader && bNounPlural});
+        vocabulary.fields.emplace(rField.key,
+                                  ScriptValue_t{fields.String(rField.key),
+                                                bLeader ? leaderGender : nounGender,
+                                                !bLeader && bNounPlural});
     }
-    ConfigFields::RejectUnknownKeys(rFields, known, rContext + " 'fields'");
+    fields.RejectUnknownKeys(known);
 
-    const nlohmann::json& rPhrases = RequireObject_(rJson, "phrases", rContext);
+    const ConfigReader phrases = rReader.Object("phrases");
     const std::vector<std::string> phraseKeys(std::begin(k_PhraseKeys), std::end(k_PhraseKeys));
     for (const std::string& rKey : phraseKeys)
     {
-        vocabulary.phrases.emplace(rKey, RequireString_(rPhrases, rKey, rContext + " 'phrases'"));
+        vocabulary.phrases.emplace(rKey, phrases.String(rKey));
     }
-    ConfigFields::RejectUnknownKeys(rPhrases, phraseKeys, rContext + " 'phrases'");
+    phrases.RejectUnknownKeys(phraseKeys);
     return vocabulary;
 }
 

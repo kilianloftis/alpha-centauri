@@ -6,9 +6,7 @@
 #include "lib/config/EnumNames.h"
 #include "lib/config/JsonConfigLoader.h"
 
-#include <functional>
 #include <magic_enum.hpp>
-#include <nlohmann/json.hpp>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -91,50 +89,15 @@ std::size_t ActionIndex(HotkeyAction_t action)
     return static_cast<std::size_t>(*magic_enum::enum_index(action));
 }
 
-bool ReadModifier_(const nlohmann::json& rEntry, const char* name, const std::string& rAction,
-                   const std::function<void(const std::string&)>& rFail)
-{
-    if (!rEntry.contains(name))
-    {
-        return false;
-    }
-    if (!rEntry.at(name).is_boolean())
-    {
-        rFail("action '" + rAction + "' has a non-boolean '" + name + "'");
-    }
-    return rEntry.at(name).get<bool>();
-}
-
 [[noreturn]] void FailHotkeys_(const std::string& rConfigPath, const std::string& rMessage)
 {
     throw std::runtime_error("Hotkeys '" + rConfigPath + "': " + rMessage);
 }
 
-// Returns the binding's action name.
-std::string RequireBindingFields_(const nlohmann::json& rEntry, const std::string& rConfigPath)
+HotkeyChord_t ReadChord_(const ConfigReader& rEntry)
 {
-    if (!rEntry.contains("action") || !rEntry.at("action").is_string())
-    {
-        FailHotkeys_(rConfigPath, "a binding is missing string 'action'");
-    }
-    if (!rEntry.contains("key") || !rEntry.at("key").is_string())
-    {
-        FailHotkeys_(rConfigPath, "a binding is missing string 'key'");
-    }
-    return rEntry.at("action").get<std::string>();
-}
-
-HotkeyChord_t ReadChord_(const nlohmann::json& rEntry, const std::string& rActionName,
-                         const std::string& rConfigPath)
-{
-    const auto fail = [&rConfigPath](const std::string& rMessage) {
-        FailHotkeys_(rConfigPath, rMessage);
-    };
-    const std::string keyName = rEntry.at("key").get<std::string>();
-    return HotkeyChord_t{EnumFromName<Key_t>(keyName, "hotkey key"),
-                         ReadModifier_(rEntry, "ctrl", rActionName, fail),
-                         ReadModifier_(rEntry, "alt", rActionName, fail),
-                         ReadModifier_(rEntry, "shift", rActionName, fail)};
+    return HotkeyChord_t{rEntry.Enum<Key_t>("key", "hotkey key"), rEntry.BoolOr("ctrl", false),
+                         rEntry.BoolOr("alt", false), rEntry.BoolOr("shift", false)};
 }
 
 // The built-in action, or nullopt for a terraform project; exactly one must match.
@@ -234,24 +197,20 @@ HotkeyConfig HotkeyConfig::Load(const std::string& rConfigPath,
     return JsonConfigLoader::LoadObjectFile<HotkeyConfig>(
         rConfigPath, "hotkey",
         [&rConfigPath, &rImprovements, &rOperations](const ConfigReader& rReader) {
-            return Parse_(rReader.Json(), rConfigPath, rImprovements, rOperations);
+            return Parse_(rReader, rConfigPath, rImprovements, rOperations);
         });
 }
 
-HotkeyConfig HotkeyConfig::Parse_(const nlohmann::json& rJson, const std::string& rConfigPath,
+HotkeyConfig HotkeyConfig::Parse_(const ConfigReader& rReader, const std::string& rConfigPath,
                                   const ImprovementRegistry& rImprovements,
                                   const TerrainOperationRegistry& rOperations)
 {
-    if (!rJson.contains("bindings") || !rJson.at("bindings").is_array())
-    {
-        FailHotkeys_(rConfigPath, "missing required array 'bindings'");
-    }
     HotkeyConfig config;
     BindingLedger_ ledger(rConfigPath);
-    for (const nlohmann::json& rEntry : rJson.at("bindings"))
+    for (const ConfigReader& rEntry : rReader.Objects("bindings"))
     {
-        const std::string actionName = RequireBindingFields_(rEntry, rConfigPath);
-        const HotkeyChord_t chord = ReadChord_(rEntry, actionName, rConfigPath);
+        const std::string actionName = rEntry.String("action");
+        const HotkeyChord_t chord = ReadChord_(rEntry);
         ledger.RequireNewAction(actionName);
         const std::optional<HotkeyAction_t> builtin =
             ResolveAction_(actionName, rImprovements, rOperations, rConfigPath);

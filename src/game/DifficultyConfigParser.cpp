@@ -95,8 +95,8 @@ DifficultyLevel_t ParseLevel_(const ConfigReader& rReader)
 DifficultyConfig_t ParseDifficulty_(const ConfigReader& rReader)
 {
     rReader.RejectUnknownKeys({"default", "levels"});
-    ConfigFields::LevelSet_t<DifficultyLevel_t> set =
-        ConfigFields::ParseLevelSet<DifficultyLevel_t>(rReader, ParseLevel_);
+    ConfigSets::LevelSet_t<DifficultyLevel_t> set =
+        ConfigSets::ParseLevelSet<DifficultyLevel_t>(rReader, ParseLevel_);
     DifficultyConfig_t config;
     config.defaultId = std::move(set.defaultId);
     config.levels = std::move(set.levels);

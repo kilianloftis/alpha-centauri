@@ -14,7 +14,7 @@
 namespace ac
 {
 
-namespace ConfigFields
+namespace ConfigSets
 {
 
 template <typename Level_t>
@@ -79,6 +79,6 @@ std::array<Entry_t, magic_enum::enum_count<Enum_t>()> ParseEnumKeyedObject(
     return entries;
 }
 
-} // namespace ConfigFields
+} // namespace ConfigSets
 
 } // namespace ac

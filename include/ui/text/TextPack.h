@@ -2,7 +2,7 @@
 
 #include "ui/text/ScriptMarkup.h"
 
-#include <nlohmann/json_fwd.hpp>
+#include "lib/config/ConfigReader.h"
 
 #include <filesystem>
 #include <map>
@@ -49,13 +49,10 @@ private:
     void LoadScript_(const std::filesystem::path& rPath);
     void LoadLabels_(const std::filesystem::path& rPath);
     void LoadVocabularies_(const std::filesystem::path& rDirectory);
-    static std::map<std::string, ScriptEntry_t> ParseScript_(const nlohmann::json& rJson,
-                                                             const std::string& rContext);
-    static std::map<int, std::string> ParseLabels_(const nlohmann::json& rJson,
-                                                   const std::string& rContext);
-    static ScriptEntry_t ParseEntry_(const nlohmann::json& rJson, const std::string& rContext);
-    static FactionVocabulary_t ParseVocabulary_(const nlohmann::json& rJson,
-                                                const std::string& rContext);
+    static std::map<std::string, ScriptEntry_t> ParseScript_(const ConfigReader& rReader);
+    static std::map<int, std::string> ParseLabels_(const ConfigReader& rReader);
+    static ScriptEntry_t ParseEntry_(const ConfigReader& rReader);
+    static FactionVocabulary_t ParseVocabulary_(const ConfigReader& rReader);
 
     std::map<std::string, ScriptEntry_t> m_entries;
     std::map<int, std::string> m_labels;

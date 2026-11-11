@@ -2,7 +2,7 @@
 
 #include "game/faction/FactionConfig.h"
 #include "game/faction/FactionRegistry.h"
-#include "lib/config/ConfigFields.h"
+#include "lib/config/EnumNames.h"
 #include "lib/config/JsonConfigLoader.h"
 #include "ui/text/ScriptMarkup.h"
 #include "ui/text/TextPack.h"
@@ -21,37 +21,18 @@ namespace ac
 namespace
 {
 
-template <typename Enum>
-Enum ParseEnum_(const nlohmann::json& rJson, const std::string& rContext)
+// An enumerator named by an object key (a map entry's name) rather than a value.
+template <typename Enum_t>
+Enum_t EnumFromKey_(const ConfigReader& rReader, const std::string& rKey, const char* pWhat)
 {
-    const std::optional<Enum> value =
-        rJson.is_string() ? magic_enum::enum_cast<Enum>(rJson.get<std::string>()) : std::nullopt;
-    if (!value)
+    try
     {
-        throw std::runtime_error(rContext + ": unknown " + std::string(magic_enum::enum_type_name<Enum>())
-                                 + " " + rJson.dump());
+        return EnumFromName<Enum_t>(rKey, pWhat);
     }
-    return *value;
-}
-
-const nlohmann::json& RequireObject_(const nlohmann::json& rJson, const std::string& rKey,
-                                     const std::string& rContext)
-{
-    if (!rJson.contains(rKey) || !rJson.at(rKey).is_object())
+    catch (const std::runtime_error&)
     {
-        throw std::runtime_error(rContext + ": '" + rKey + "' must be an object");
+        rReader.FailKey(rKey, std::string("is not a known ") + pWhat);
     }
-    return rJson.at(rKey);
-}
-
-const std::string& RequireString_(const nlohmann::json& rJson, const std::string& rKey,
-                                  const std::string& rContext)
-{
-    if (!rJson.contains(rKey) || !rJson.at(rKey).is_string())
-    {
-        throw std::runtime_error(rContext + ": '" + rKey + "' must be a string");
-    }
-    return rJson.at(rKey).get_ref<const std::string&>();
 }
 
 std::vector<std::string> Split_(const std::string& rText, char separator)
@@ -146,29 +127,21 @@ bool IsCandidateSource_(const TalkValueSource_t& rSource)
 }
 
 // Keys are string slots "0"–"9" and number slots "#0"–"#9", as `$<#n:…>` names them.
-void AddSlots_(TalkBinding_t& rBinding, const nlohmann::json& rJson, const std::string& rContext)
+void AddSlots_(TalkBinding_t& rBinding, const ConfigReader& rSlots)
 {
-    if (!rJson.is_object())
+    for (const auto& [rKey, rUnused] : rSlots.Json().items())
     {
-        throw std::runtime_error(rContext + ": a binding must be an object");
-    }
-    for (const auto& [rKey, rSource] : rJson.items())
-    {
-        if (!rSource.is_string())
-        {
-            throw std::runtime_error(rContext + ": slot '" + rKey + "' must name a value source");
-        }
+        const std::string sourceName = rSlots.String(rKey);
         const bool bNumber = rKey.starts_with('#');
-        const int slot = ParseIndex_(bNumber ? rKey.substr(1) : rKey, rContext);
+        const int slot = ParseIndex_(bNumber ? rKey.substr(1) : rKey, rSlots.Context());
         if (slot > 9)
         {
-            throw std::runtime_error(rContext + ": slot '" + rKey + "' is past slot 9");
+            rSlots.FailKey(rKey, "is past slot 9");
         }
-        const TalkValueSource_t source = ParseSource_(rSource.get<std::string>(), rContext);
+        const TalkValueSource_t source = ParseSource_(sourceName, rSlots.Context());
         if (IsNumberSource_(source) != bNumber)
         {
-            throw std::runtime_error(rContext + ": slot '" + rKey + "' and '"
-                                     + rSource.get<std::string>() + "' disagree on number");
+            rSlots.FailKey(rKey, "and '" + sourceName + "' disagree on number");
         }
         (bNumber ? rBinding.numbers : rBinding.strings)[slot] = source;
     }
@@ -177,42 +150,33 @@ void AddSlots_(TalkBinding_t& rBinding, const nlohmann::json& rJson, const std::
 class TalkScriptParser_
 {
 public:
-    TalkScriptParser_(const nlohmann::json& rJson, std::string context)
-        : m_rJson(rJson)
-        , m_context(std::move(context))
+    explicit TalkScriptParser_(const ConfigReader& rReader)
+        : m_reader(rReader)
     {
-        ConfigFields::RejectUnknownKeys(
-            rJson, {"portrait", "credit_offers", "bindings", "start", "scenes"}, m_context);
-        for (const auto& [rName, rSlots] : RequireObject_(rJson, "bindings", m_context).items())
+        rReader.RejectUnknownKeys({"portrait", "credit_offers", "bindings", "start", "scenes"});
+        const ConfigReader bindings = rReader.Object("bindings");
+        for (const auto& [rName, rUnused] : bindings.Json().items())
         {
-            AddSlots_(m_bindings[rName], rSlots, m_context + " binding '" + rName + "'");
+            AddSlots_(m_bindings[rName], bindings.Object(rName));
         }
     }
 
     TalkPortrait_t Portrait() const
     {
-        const nlohmann::json& rPortrait = RequireObject_(m_rJson, "portrait", m_context);
-        const std::string context = m_context + " 'portrait'";
-        ConfigFields::RejectUnknownKeys(rPortrait, {"mood", "reputation", "integrity"}, context);
-        return TalkPortrait_t{ConfigFields::RequireIntAtLeast(rPortrait, "mood", 0, context),
-                              ConfigFields::RequireIntAtLeast(rPortrait, "reputation", 0, context),
-                              ConfigFields::RequireIntAtLeast(rPortrait, "integrity", 0, context)};
+        const ConfigReader portrait = m_reader.Object("portrait");
+        portrait.RejectUnknownKeys({"mood", "reputation", "integrity"});
+        return TalkPortrait_t{portrait.IntAtLeast("mood", 0), portrait.IntAtLeast("reputation", 0),
+                              portrait.IntAtLeast("integrity", 0)};
     }
 
     std::vector<int> CreditOffers() const
     {
-        const std::string context = m_context + " 'credit_offers'";
-        if (!m_rJson.contains("credit_offers") || !m_rJson.at("credit_offers").is_array()
-            || m_rJson.at("credit_offers").empty())
-        {
-            throw std::runtime_error(context + ": must be a non-empty array");
-        }
         std::vector<int> offers;
-        for (const nlohmann::json& rOffer : m_rJson.at("credit_offers"))
+        for (const nlohmann::json& rOffer : m_reader.NonEmptyArray("credit_offers"))
         {
             if (!rOffer.is_number_integer() || rOffer.get<int>() <= 0)
             {
-                throw std::runtime_error(context + ": each offer must be a positive integer");
+                m_reader.FailKey("credit_offers", "must hold only positive integers");
             }
             offers.push_back(rOffer.get<int>());
         }
@@ -221,215 +185,192 @@ public:
 
     TalkOutcome_t Start() const
     {
-        const nlohmann::json& rStart = RequireObject_(m_rJson, "start", m_context);
-        const std::string context = m_context + " 'start'";
-        ConfigFields::RejectUnknownKeys(rStart, {"say", "then"}, context);
-        return Outcome_(rStart, context);
+        const ConfigReader start = m_reader.Object("start");
+        start.RejectUnknownKeys({"say", "then"});
+        return Outcome_(start);
     }
 
     std::map<std::string, TalkScene_t> Scenes() const
     {
+        const ConfigReader scenesReader = m_reader.Object("scenes");
         std::map<std::string, TalkScene_t> scenes;
-        for (const auto& [rName, rScene] : RequireObject_(m_rJson, "scenes", m_context).items())
+        for (const auto& [rName, rUnused] : scenesReader.Json().items())
         {
-            scenes.emplace(rName, Scene_(rScene, m_context + " scene '" + rName + "'"));
+            scenes.emplace(rName, Scene_(scenesReader.Object(rName)));
         }
         return scenes;
     }
 
 private:
-    TalkScene_t Scene_(const nlohmann::json& rJson, const std::string& rContext) const
+    TalkScene_t Scene_(const ConfigReader& rScene) const
     {
-        ConfigFields::RejectUnknownKeys(rJson, {"prompt", "choices", "draft"}, rContext);
-        const nlohmann::json& rPrompt = RequireObject_(rJson, "prompt", rContext);
-        TalkScene_t scene{TextRef_(rPrompt, rContext + " prompt"), {}, std::nullopt};
-        if (!rJson.contains("choices") || !rJson.at("choices").is_array())
+        rScene.RejectUnknownKeys({"prompt", "choices", "draft"});
+        TalkScene_t scene{TextRef_(rScene.Object("prompt")), {}, std::nullopt};
+        for (const ConfigReader& rChoice : rScene.Objects("choices"))
         {
-            throw std::runtime_error(rContext + ": 'choices' must be an array");
+            scene.choices.push_back(Choice_(rChoice));
         }
-        for (const nlohmann::json& rChoice : rJson.at("choices"))
+        if (rScene.Has("draft"))
         {
-            scene.choices.push_back(Choice_(rChoice, rContext + " choice"));
-        }
-        if (rJson.contains("draft"))
-        {
-            scene.draft = Draft_(rJson.at("draft"), rContext + " draft");
+            scene.draft = Draft_(rScene.Object("draft"));
         }
         return scene;
     }
 
-    TalkDraftLabels_t Draft_(const nlohmann::json& rJson, const std::string& rContext) const
+    TalkDraftLabels_t Draft_(const ConfigReader& rDraft) const
     {
-        ConfigFields::RejectUnknownKeys(rJson, {"offer", "ask"}, rContext);
-        const nlohmann::json& rOffer = RequireObject_(rJson, "offer", rContext);
-        const nlohmann::json& rAsk = RequireObject_(rJson, "ask", rContext);
-        return TalkDraftLabels_t{TextRef_(rOffer, rContext), TextRef_(rAsk, rContext)};
+        rDraft.RejectUnknownKeys({"offer", "ask"});
+        return TalkDraftLabels_t{TextRef_(rDraft.Object("offer")), TextRef_(rDraft.Object("ask"))};
     }
 
-    TalkChoice_t Choice_(const nlohmann::json& rJson, const std::string& rContext) const
+    TalkChoice_t Choice_(const ConfigReader& rChoice) const
     {
-        if (!rJson.is_object())
+        if (!rChoice.Has("from"))
         {
-            throw std::runtime_error(rContext + ": must be an object");
+            return FixedChoice_(rChoice);
         }
-        if (!rJson.contains("from"))
+        const std::string from = rChoice.String("from");
+        if (from == "trade_kinds")
         {
-            return FixedChoice_(rJson, rContext);
+            rChoice.RejectUnknownKeys({"from", "side", "labels", "then"});
+            const TradeSide_t side = rChoice.Enum<TradeSide_t>("side", "trade side");
+            return TalkKindRows_t{side, KindLabels_(rChoice), rChoice.String("then")};
         }
-        const std::string& rFrom = RequireString_(rJson, "from", rContext);
-        if (rFrom == "trade_kinds")
+        if (from == "trade_candidates")
         {
-            ConfigFields::RejectUnknownKeys(rJson, {"from", "side", "labels", "then"}, rContext);
-            const TradeSide_t side = ParseEnum_<TradeSide_t>(rJson.at("side"), rContext);
-            return TalkKindRows_t{side, KindLabels_(rJson, rContext),
-                                  RequireString_(rJson, "then", rContext)};
+            rChoice.RejectUnknownKeys({"from", "labels", "then"});
+            return TalkCandidateRows_t{KindLabels_(rChoice), rChoice.String("then")};
         }
-        if (rFrom == "trade_candidates")
-        {
-            ConfigFields::RejectUnknownKeys(rJson, {"from", "labels", "then"}, rContext);
-            return TalkCandidateRows_t{KindLabels_(rJson, rContext),
-                                       RequireString_(rJson, "then", rContext)};
-        }
-        throw std::runtime_error(rContext + ": unknown generator '" + rFrom + "'");
+        rChoice.FailKey("from", "is not a known generator: '" + from + "'");
     }
 
-    std::map<TradeKind_t, TalkTextRef_t> KindLabels_(const nlohmann::json& rJson,
-                                                    const std::string& rContext) const
+    std::map<TradeKind_t, TalkTextRef_t> KindLabels_(const ConfigReader& rChoice) const
     {
+        const ConfigReader labelsReader = rChoice.Object("labels");
         std::map<TradeKind_t, TalkTextRef_t> labels;
-        for (const auto& [rKind, rLabel] : RequireObject_(rJson, "labels", rContext).items())
+        for (const auto& [rKind, rUnused] : labelsReader.Json().items())
         {
-            const nlohmann::json kindName(rKind);
-            const TradeKind_t kind = ParseEnum_<TradeKind_t>(kindName, rContext);
-            labels.emplace(kind, TextRef_(rLabel, rContext + " label '" + rKind + "'"));
+            const TradeKind_t kind = EnumFromKey_<TradeKind_t>(labelsReader, rKind, "trade kind");
+            labels.emplace(kind, TextRef_(labelsReader.Object(rKind)));
         }
         return labels;
     }
 
-    TalkFixedChoice_t FixedChoice_(const nlohmann::json& rJson, const std::string& rContext) const
+    TalkFixedChoice_t FixedChoice_(const ConfigReader& rChoice) const
     {
-        ConfigFields::RejectUnknownKeys(rJson, {"label", "when", "do", "say", "then", "on"},
-                                        rContext);
-        const nlohmann::json& rLabel = RequireObject_(rJson, "label", rContext);
-        TalkFixedChoice_t choice{TextRef_(rLabel, rContext + " label"), std::nullopt,
-                                 std::nullopt, {}};
-        if (rJson.contains("when"))
+        rChoice.RejectUnknownKeys({"label", "when", "do", "say", "then", "on"});
+        TalkFixedChoice_t choice{TextRef_(rChoice.Object("label")), std::nullopt, std::nullopt,
+                                 {}};
+        if (rChoice.Has("when"))
         {
-            choice.when = ParseEnum_<DiplomaticActionKind_t>(rJson.at("when"), rContext);
+            choice.when = rChoice.Enum<DiplomaticActionKind_t>("when", "diplomatic action");
         }
-        if (rJson.contains("do"))
+        if (rChoice.Has("do"))
         {
-            choice.action = ParseEnum_<TalkAction_t>(rJson.at("do"), rContext);
+            choice.action = rChoice.Enum<TalkAction_t>("do", "talk action");
         }
-        choice.outcomes = Outcomes_(rJson, choice.action, rContext);
+        choice.outcomes = Outcomes_(rChoice, choice.action);
         return choice;
     }
 
     // `then` sends every result one way; `on` gives each result its own.
-    std::map<TalkResult_t, TalkOutcome_t> Outcomes_(const nlohmann::json& rJson,
-                                                    std::optional<TalkAction_t> action,
-                                                    const std::string& rContext) const
+    std::map<TalkResult_t, TalkOutcome_t> Outcomes_(const ConfigReader& rChoice,
+                                                    std::optional<TalkAction_t> action) const
     {
         const std::vector<TalkResult_t> results =
             action ? TalkScript::ResultsOf(*action) : std::vector{TalkResult_t::Done};
         std::map<TalkResult_t, TalkOutcome_t> outcomes;
-        if (rJson.contains("on") == rJson.contains("then"))
+        if (rChoice.Has("on") == rChoice.Has("then"))
         {
-            throw std::runtime_error(rContext + ": needs exactly one of 'then' and 'on'");
+            rChoice.Fail("needs exactly one of 'then' and 'on'");
         }
-        if (rJson.contains("then"))
+        if (rChoice.Has("then"))
         {
-            const TalkOutcome_t outcome = Outcome_(rJson, rContext);
+            const TalkOutcome_t outcome = Outcome_(rChoice);
             for (const TalkResult_t result : results)
             {
                 outcomes.emplace(result, outcome);
             }
             return outcomes;
         }
-        for (const auto& [rResult, rOutcome] : RequireObject_(rJson, "on", rContext).items())
+        const ConfigReader on = rChoice.Object("on");
+        for (const auto& [rResult, rUnused] : on.Json().items())
         {
-            const std::string context = rContext + " on '" + rResult + "'";
-            ConfigFields::RejectUnknownKeys(rOutcome, {"say", "then"}, context);
-            const nlohmann::json resultName(rResult);
-            const TalkResult_t result = ParseEnum_<TalkResult_t>(resultName, context);
-            outcomes.emplace(result, Outcome_(rOutcome, context));
+            const ConfigReader outcomeReader = on.Object(rResult);
+            outcomeReader.RejectUnknownKeys({"say", "then"});
+            const TalkResult_t result = EnumFromKey_<TalkResult_t>(on, rResult, "talk result");
+            outcomes.emplace(result, Outcome_(outcomeReader));
         }
         for (const TalkResult_t result : results)
         {
             if (!outcomes.contains(result))
             {
-                throw std::runtime_error(rContext + ": 'on' has no "
-                                         + std::string(magic_enum::enum_name(result)));
+                on.Fail("has no " + std::string(magic_enum::enum_name(result)));
             }
         }
         if (outcomes.size() != results.size())
         {
-            throw std::runtime_error(rContext + ": 'on' names a result its action never returns");
+            on.Fail("names a result its action never returns");
         }
         return outcomes;
     }
 
-    TalkOutcome_t Outcome_(const nlohmann::json& rJson, const std::string& rContext) const
+    TalkOutcome_t Outcome_(const ConfigReader& rOutcome) const
     {
-        TalkOutcome_t outcome{{}, RequireString_(rJson, "then", rContext)};
-        if (!rJson.contains("say"))
+        TalkOutcome_t outcome{{}, rOutcome.String("then")};
+        if (!rOutcome.Has("say"))
         {
             return outcome;
         }
-        const nlohmann::json& rSay = rJson.at("say");
-        if (rSay.is_array())
+        if (rOutcome.Json().at("say").is_array())
         {
-            for (const nlohmann::json& rRef : rSay)
+            for (const ConfigReader& rRef : rOutcome.Objects("say"))
             {
-                outcome.say.push_back(TextRef_(rRef, rContext + " say"));
+                outcome.say.push_back(TextRef_(rRef));
             }
         }
         else
         {
-            outcome.say.push_back(TextRef_(rSay, rContext + " say"));
+            outcome.say.push_back(TextRef_(rOutcome.Object("say")));
         }
         if (outcome.say.empty())
         {
-            throw std::runtime_error(rContext + ": 'say' lists no line");
+            rOutcome.FailKey("say", "lists no line");
         }
         return outcome;
     }
 
-    TalkTextRef_t TextRef_(const nlohmann::json& rJson, const std::string& rContext) const
+    TalkTextRef_t TextRef_(const ConfigReader& rRef) const
     {
-        if (!rJson.is_object())
+        rRef.RejectUnknownKeys({"text", "item", "args", "extra"});
+        TalkTextRef_t ref{rRef.String("text"), std::nullopt, {}};
+        if (rRef.Has("item"))
         {
-            throw std::runtime_error(rContext + ": a text reference must be an object");
+            ref.item = rRef.IntAtLeast("item", 0);
         }
-        ConfigFields::RejectUnknownKeys(rJson, {"text", "item", "args", "extra"}, rContext);
-        TalkTextRef_t ref{RequireString_(rJson, "text", rContext), std::nullopt, {}};
-        if (rJson.contains("item"))
+        if (rRef.Has("args"))
         {
-            ref.item = ConfigFields::RequireIntAtLeast(rJson, "item", 0, rContext);
+            ref.binding = NamedBinding_(rRef);
         }
-        if (rJson.contains("args"))
+        if (rRef.Has("extra"))
         {
-            ref.binding = NamedBinding_(RequireString_(rJson, "args", rContext), rContext);
-        }
-        if (rJson.contains("extra"))
-        {
-            AddSlots_(ref.binding, rJson.at("extra"), rContext + " extra");
+            AddSlots_(ref.binding, rRef.Object("extra"));
         }
         return ref;
     }
 
-    const TalkBinding_t& NamedBinding_(const std::string& rName, const std::string& rContext) const
+    const TalkBinding_t& NamedBinding_(const ConfigReader& rRef) const
     {
-        const auto it = m_bindings.find(rName);
+        const std::string name = rRef.String("args");
+        const auto it = m_bindings.find(name);
         if (it == m_bindings.end())
         {
-            throw std::runtime_error(rContext + ": no binding '" + rName + "'");
+            rRef.FailKey("args", "names no binding '" + name + "'");
         }
         return it->second;
     }
 
-    const nlohmann::json& m_rJson;
-    std::string m_context;
+    ConfigReader m_reader;
     std::map<std::string, TalkBinding_t> m_bindings;
 };
 
@@ -643,18 +584,15 @@ TalkScript TalkScript::Load(const std::string& rPath, const TextPack& rText,
 {
     return JsonConfigLoader::LoadObjectFile<TalkScript>(
         rPath, "talk script",
-        [&](const ConfigReader& rReader) {
-            return Parse_(rReader.Json(), rPath, rText, rFactions);
-        });
+        [&](const ConfigReader& rReader) { return Parse_(rReader, rText, rFactions); });
 }
 
-TalkScript TalkScript::Parse_(const nlohmann::json& rJson, const std::string& rPath,
-                              const TextPack& rText, const FactionRegistry& rFactions)
+TalkScript TalkScript::Parse_(const ConfigReader& rReader, const TextPack& rText,
+                              const FactionRegistry& rFactions)
 {
-    const std::string context = "Talk script '" + rPath + "'";
-    const TalkScriptParser_ parser(rJson, context);
+    const TalkScriptParser_ parser(rReader);
     TalkScript script(parser.Portrait(), parser.CreditOffers(), parser.Start(), parser.Scenes());
-    TalkScriptValidator_(rText, context)
+    TalkScriptValidator_(rText, rReader.Context())
         .Validate(script.m_portrait, script.m_start, script.m_scenes, rFactions);
     return script;
 }

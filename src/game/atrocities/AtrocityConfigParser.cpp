@@ -36,7 +36,7 @@ AtrocitiesConfig_t ParseAtrocities_(const ConfigReader& rReader)
 
     AtrocitiesConfig_t config;
     config.severities =
-        ConfigFields::ParseEnumKeyedObject<AtrocitySeverityId_t, AtrocitySeverityConfig_t>(
+        ConfigSets::ParseEnumKeyedObject<AtrocitySeverityId_t, AtrocitySeverityConfig_t>(
             rReader.Object("severities"), "atrocity severity",
             [](const ConfigReader& rEntry, AtrocitySeverityId_t) {
                 return ParseSeverity_(rEntry);

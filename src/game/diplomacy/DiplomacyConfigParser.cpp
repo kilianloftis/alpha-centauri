@@ -255,7 +255,7 @@ DiplomacyConfig_t ParseDiplomacy_(const ConfigReader& rReader)
     config.baseValue = ParseBaseValue_(rReader.Object("base_value"));
     config.gifts = ParseGifts_(rReader.Object("gifts"));
     config.statuses =
-        ConfigFields::ParseEnumKeyedObject<DiplomaticStatus_t, DiplomaticStatusRules_t>(
+        ConfigSets::ParseEnumKeyedObject<DiplomaticStatus_t, DiplomaticStatusRules_t>(
             rReader.Object("statuses"), "diplomatic status", ParseStatus_);
     return config;
 }

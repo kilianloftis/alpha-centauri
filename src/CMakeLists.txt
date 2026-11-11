@@ -126,7 +126,6 @@ add_library(ac-core STATIC
     game/stages/TurnProcessor.cpp
     lib/EventBus.cpp
     lib/LuaRuntime.cpp
-    lib/config/ConfigFields.cpp
     lib/config/ConfigReader.cpp
     lib/config/JsonConfigLoader.cpp
     lib/config/LuaConfigLoader.cpp

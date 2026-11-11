@@ -3,7 +3,7 @@
 #include "game/diplomacy/DiplomacyActions.h"
 #include "game/diplomacy/TradeItem.h"
 
-#include <nlohmann/json_fwd.hpp>
+#include "lib/config/ConfigReader.h"
 
 #include <map>
 #include <optional>
@@ -164,8 +164,8 @@ private:
     TalkScript(TalkPortrait_t portrait, std::vector<int> creditOffers, TalkOutcome_t start,
                std::map<std::string, TalkScene_t> scenes);
 
-    static TalkScript Parse_(const nlohmann::json& rJson, const std::string& rPath,
-                             const TextPack& rText, const FactionRegistry& rFactions);
+    static TalkScript Parse_(const ConfigReader& rReader, const TextPack& rText,
+                             const FactionRegistry& rFactions);
 
     TalkPortrait_t m_portrait;
     std::vector<int> m_creditOffers;

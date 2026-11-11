@@ -124,8 +124,8 @@ NativeLifeConfig_t ParseNativeLifeJson_(const ConfigReader& rReader)
                      "ambush_near_base_min_dist", config.ambushNearBaseMinDist);
     config.boatEmptyOceanMinRegionTiles =
         RequireNonNegativeInt_(rReader, "boat_empty_ocean_min_region_tiles");
-    ConfigFields::LevelSet_t<NativeLifeLevel_t> set =
-        ConfigFields::ParseLevelSet<NativeLifeLevel_t>(rReader, ParseLevel_);
+    ConfigSets::LevelSet_t<NativeLifeLevel_t> set =
+        ConfigSets::ParseLevelSet<NativeLifeLevel_t>(rReader, ParseLevel_);
     config.defaultId = std::move(set.defaultId);
     config.levels = std::move(set.levels);
     return config;

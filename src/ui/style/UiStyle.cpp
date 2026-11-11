@@ -1,8 +1,10 @@
 #include "ui/style/UiStyle.h"
 
+#include "lib/config/ConfigReader.h"
+#include "lib/config/JsonConfigLoader.h"
+
 #include <nlohmann/json.hpp>
 
-#include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -17,6 +19,19 @@ namespace
 
 UiStyle g_style{};
 bool g_loaded = false;
+
+constexpr const char* k_Context = "UI style";
+
+// Float fields take a number or a fraction string ("1/3"), as every config number does.
+float ReadFloat_(const nlohmann::json& j, const char* key)
+{
+    return ConfigReader(j, k_Context).Float(key);
+}
+
+float FloatAt_(const nlohmann::json& arr, std::size_t index)
+{
+    return static_cast<float>(ConfigReader::NumberFromJson(arr.at(index)));
+}
 
 Color_t ParseColorValue_(const nlohmann::json& arr, const std::string& key)
 {
@@ -46,10 +61,10 @@ RatioLayout_t ParseLayout_(const nlohmann::json& j, const char* key)
         throw std::runtime_error(std::string("Expected [x,y,w,h] layout for '") + key + "'");
     }
     return RatioLayout_t{
-        arr.at(0).get<float>(),
-        arr.at(1).get<float>(),
-        arr.at(2).get<float>(),
-        arr.at(3).get<float>()};
+        FloatAt_(arr, 0),
+        FloatAt_(arr, 1),
+        FloatAt_(arr, 2),
+        FloatAt_(arr, 3)};
 }
 
 FixedLayout_t ParseFixedLayout_(const nlohmann::json& j, const char* key)
@@ -65,8 +80,8 @@ FixedLayout_t ParseFixedLayout_(const nlohmann::json& j, const char* key)
     {
         throw std::runtime_error(std::string("Expected [x,y] align for '") + key + "'");
     }
-    const float alignX = align.at(0).get<float>();
-    const float alignY = align.at(1).get<float>();
+    const float alignX = FloatAt_(align, 0);
+    const float alignY = FloatAt_(align, 1);
     if (alignX < 0.0f || alignX > 1.0f || alignY < 0.0f || alignY > 1.0f)
     {
         throw std::runtime_error(std::string("align for '") + key + "' must be in [0, 1]");
@@ -84,20 +99,20 @@ FixedLayout_t ParseFixedLayout_(const nlohmann::json& j, const char* key)
     for (const auto& rVariant : variants)
     {
         FixedLayoutVariant_t variant{};
-        variant.width = rVariant.at("width").get<float>();
-        variant.height = rVariant.at("height").get<float>();
+        variant.width = ReadFloat_(rVariant, "width");
+        variant.height = ReadFloat_(rVariant, "height");
         if (variant.width <= 0.0f || variant.height <= 0.0f)
         {
             throw std::runtime_error(std::string("variant size for '") + key
                                      + "' must be positive");
         }
-        variant.mapOverlap = rVariant.at("map_overlap").get<float>();
+        variant.mapOverlap = ReadFloat_(rVariant, "map_overlap");
         if (variant.mapOverlap < 0.0f || variant.mapOverlap > variant.height)
         {
             throw std::runtime_error(std::string("map_overlap for '") + key
                                      + "' must be in [0, height]");
         }
-        variant.spriteOffsetX = rVariant.value("sprite_offset_x", 0.0f);
+        variant.spriteOffsetX = ConfigReader(rVariant, k_Context).FloatOr("sprite_offset_x", 0.0f);
         variant.sprite = rVariant.at("sprite").get<std::string>();
         s.variants.push_back(std::move(variant));
     }
@@ -124,8 +139,8 @@ LayoutsStyle_t ParseLayoutsStyle_(const nlohmann::json& j)
 ViewFactoryStyle_t ParseViewFactoryStyle_(const nlohmann::json& j)
 {
     ViewFactoryStyle_t s{};
-    s.fullscreenOriginX = j.at("fullscreen_origin_x").get<float>();
-    s.fullscreenOriginY = j.at("fullscreen_origin_y").get<float>();
+    s.fullscreenOriginX = ReadFloat_(j, "fullscreen_origin_x");
+    s.fullscreenOriginY = ReadFloat_(j, "fullscreen_origin_y");
     return s;
 }
 
@@ -146,7 +161,7 @@ WaterShadingStyle_t ParseWaterShadingStyle_(const nlohmann::json& j)
         }
     }
     s.coastShades = j.at("coast_shades").get<std::string>();
-    s.detailMeters = j.at("detail_meters").get<float>();
+    s.detailMeters = ReadFloat_(j, "detail_meters");
     if (s.detailMeters <= 0.0f)
     {
         throw std::runtime_error("tile_renderer.water_shading.detail_meters must be positive");
@@ -164,10 +179,10 @@ WaterShadingStyle_t ParseWaterShadingStyle_(const nlohmann::json& j)
 ReliefStyle_t ParseReliefStyle_(const nlohmann::json& j)
 {
     ReliefStyle_t s{};
-    s.liftPerLevelRatio = j.at("lift_per_level_ratio").get<float>();
-    s.levelMeters = j.at("level_meters").get<float>();
-    s.fullShadeRiseMeters = j.at("full_shade_rise_meters").get<float>();
-    s.altitudeLightSteps = j.at("altitude_light_steps").get<float>();
+    s.liftPerLevelRatio = ReadFloat_(j, "lift_per_level_ratio");
+    s.levelMeters = ReadFloat_(j, "level_meters");
+    s.fullShadeRiseMeters = ReadFloat_(j, "full_shade_rise_meters");
+    s.altitudeLightSteps = ReadFloat_(j, "altitude_light_steps");
     if (s.liftPerLevelRatio <= 0.0f || s.levelMeters <= 0.0f || s.fullShadeRiseMeters <= 0.0f)
     {
         throw std::runtime_error(
@@ -188,8 +203,8 @@ TileRendererStyle_t ParseTileRendererStyle_(const nlohmann::json& j)
     s.waterHighColor = ParseColor_(j, "water_high_color");
     s.landLowColor = ParseColor_(j, "land_low_color");
     s.landHighColor = ParseColor_(j, "land_high_color");
-    s.fogFillDimRatio = j.at("fog_fill_dim_ratio").get<float>();
-    s.fogLandShade = j.at("fog_land_shade").get<float>();
+    s.fogFillDimRatio = ReadFloat_(j, "fog_fill_dim_ratio");
+    s.fogLandShade = ReadFloat_(j, "fog_land_shade");
     if (s.fogLandShade < 0.0f)
     {
         throw std::runtime_error("tile_renderer.fog_land_shade must not be negative");
@@ -209,7 +224,7 @@ TileRendererStyle_t ParseTileRendererStyle_(const nlohmann::json& j)
     s.relief = ParseReliefStyle_(j.at("relief"));
     s.missingArtColor = ParseColor_(j, "missing_art_color");
     s.missingArtAltColor = ParseColor_(j, "missing_art_alt_color");
-    s.missingArtSizeRatio = j.at("missing_art_size_ratio").get<float>();
+    s.missingArtSizeRatio = ReadFloat_(j, "missing_art_size_ratio");
     if (s.missingArtSizeRatio <= 0.0f)
     {
         throw std::runtime_error("tile_renderer.missing_art_size_ratio must be positive");
@@ -223,20 +238,20 @@ MapRendererStyle_t ParseMapRendererStyle_(const nlohmann::json& j)
     MapRendererStyle_t s{};
     s.gridLandColor = ParseColor_(j, "grid_land_color");
     s.gridWaterColor = ParseColor_(j, "grid_water_color");
-    s.gridLineWidth = j.at("grid_line_width").get<float>();
+    s.gridLineWidth = ReadFloat_(j, "grid_line_width");
     if (s.gridLineWidth <= 0.0f)
     {
         throw std::runtime_error("map_renderer.grid_line_width must be positive");
     }
-    s.baseSpriteOverhangRatio = j.at("base_sprite_overhang_ratio").get<float>();
+    s.baseSpriteOverhangRatio = ReadFloat_(j, "base_sprite_overhang_ratio");
     if (!(s.baseSpriteOverhangRatio >= 0.0f))
     {
         throw std::runtime_error("map_renderer.base_sprite_overhang_ratio must be >= 0");
     }
-    s.baseNameFontSizeRatio = j.at("base_name_font_size_ratio").get<float>();
-    s.baseNameOffsetXRatio = j.at("base_name_offset_x_ratio").get<float>();
-    s.baseNameOffsetYRatio = j.at("base_name_offset_y_ratio").get<float>();
-    s.baseNameWidthRatio = j.at("base_name_width_ratio").get<float>();
+    s.baseNameFontSizeRatio = ReadFloat_(j, "base_name_font_size_ratio");
+    s.baseNameOffsetXRatio = ReadFloat_(j, "base_name_offset_x_ratio");
+    s.baseNameOffsetYRatio = ReadFloat_(j, "base_name_offset_y_ratio");
+    s.baseNameWidthRatio = ReadFloat_(j, "base_name_width_ratio");
     s.baseNameColor = ParseColor_(j, "base_name_color");
     return s;
 }
@@ -244,9 +259,9 @@ MapRendererStyle_t ParseMapRendererStyle_(const nlohmann::json& j)
 WorldDisplayStyle_t ParseWorldDisplayStyle_(const nlohmann::json& j)
 {
     WorldDisplayStyle_t s{};
-    s.defaultTileScale = j.at("default_tile_scale").get<float>();
+    s.defaultTileScale = ReadFloat_(j, "default_tile_scale");
     s.pathPreviewColor = ParseColor_(j, "path_preview_color");
-    s.pathPreviewLineThicknessRatio = j.at("path_preview_line_thickness_ratio").get<float>();
+    s.pathPreviewLineThicknessRatio = ReadFloat_(j, "path_preview_line_thickness_ratio");
     s.airdropCursorPath = j.at("airdrop_cursor_path").get<std::string>();
     const auto& hotspot = j.at("airdrop_cursor_hotspot");
     if (!hotspot.is_array() || hotspot.size() != 2)
@@ -271,26 +286,26 @@ MinimapDisplayStyle_t ParseMinimapDisplayStyle_(const nlohmann::json& j)
     MinimapDisplayStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
     s.viewportBorderColor = ParseColor_(j, "viewport_border_color");
-    s.viewportBorderWidth = j.at("viewport_border_width").get<float>();
+    s.viewportBorderWidth = ReadFloat_(j, "viewport_border_width");
     return s;
 }
 
 UnitMarkerStyle_t ParseUnitMarkerStyle_(const nlohmann::json& j)
 {
     UnitMarkerStyle_t s{};
-    s.fontSizeRatio = j.at("font_size_ratio").get<float>();
-    s.widthRatio = j.at("width_ratio").get<float>();
-    s.heightRatio = j.at("height_ratio").get<float>();
-    s.spacingRatio = j.at("spacing_ratio").get<float>();
+    s.fontSizeRatio = ReadFloat_(j, "font_size_ratio");
+    s.widthRatio = ReadFloat_(j, "width_ratio");
+    s.heightRatio = ReadFloat_(j, "height_ratio");
+    s.spacingRatio = ReadFloat_(j, "spacing_ratio");
     s.markerColor = ParseColor_(j, "marker_color");
     s.exhaustedColor = ParseColor_(j, "exhausted_color");
-    s.selectionBorderOffset = j.at("selection_border_offset").get<float>();
-    s.selectionBorderExpansion = j.at("selection_border_expansion").get<float>();
-    s.selectionBorderWidth = j.at("selection_border_width").get<float>();
+    s.selectionBorderOffset = ReadFloat_(j, "selection_border_offset");
+    s.selectionBorderExpansion = ReadFloat_(j, "selection_border_expansion");
+    s.selectionBorderWidth = ReadFloat_(j, "selection_border_width");
     s.selectionBorderColor = ParseColor_(j, "selection_border_color");
     s.hitOverlayFill = ParseColor_(j, "hit_overlay_fill");
     s.hitOverlayBorder = ParseColor_(j, "hit_overlay_border");
-    s.hitOverlayBorderWidth = j.at("hit_overlay_border_width").get<float>();
+    s.hitOverlayBorderWidth = ReadFloat_(j, "hit_overlay_border_width");
     s.initialTextColor = ParseColor_(j, "initial_text_color");
     return s;
 }
@@ -306,14 +321,14 @@ SelectedUnitPanelStyle_t ParseSelectedUnitPanelStyle_(const nlohmann::json& j)
     s.iconExhaustedColor = ParseColor_(j, "icon_exhausted_color");
     s.bodyTextColor = ParseColor_(j, "body_text_color");
     s.iconInitialTextColor = ParseColor_(j, "icon_initial_text_color");
-    s.paddingRatio = j.at("padding_ratio").get<float>();
-    s.iconSizeRatio = j.at("icon_size_ratio").get<float>();
-    s.iconInitialFontRatio = j.at("icon_initial_font_ratio").get<float>();
-    s.textFontRatio = j.at("text_font_ratio").get<float>();
-    s.textGapRatio = j.at("text_gap_ratio").get<float>();
-    s.iconInitialOffsetXRatio = j.at("icon_initial_offset_x_ratio").get<float>();
-    s.iconInitialOffsetYRatio = j.at("icon_initial_offset_y_ratio").get<float>();
-    s.iconCenterRatio = j.at("icon_center_ratio").get<float>();
+    s.paddingRatio = ReadFloat_(j, "padding_ratio");
+    s.iconSizeRatio = ReadFloat_(j, "icon_size_ratio");
+    s.iconInitialFontRatio = ReadFloat_(j, "icon_initial_font_ratio");
+    s.textFontRatio = ReadFloat_(j, "text_font_ratio");
+    s.textGapRatio = ReadFloat_(j, "text_gap_ratio");
+    s.iconInitialOffsetXRatio = ReadFloat_(j, "icon_initial_offset_x_ratio");
+    s.iconInitialOffsetYRatio = ReadFloat_(j, "icon_initial_offset_y_ratio");
+    s.iconCenterRatio = ReadFloat_(j, "icon_center_ratio");
     return s;
 }
 
@@ -325,10 +340,10 @@ LocationPanelStyle_t ParseLocationPanelStyle_(const nlohmann::json& j)
     s.backgroundSprite = j.value("background_sprite", "");
     s.mutedTextColor = ParseColor_(j, "muted_text_color");
     s.bodyTextColor = ParseColor_(j, "body_text_color");
-    s.paddingRatio = j.at("padding_ratio").get<float>();
-    s.previewSizeRatio = j.at("preview_size_ratio").get<float>();
-    s.textFontRatio = j.at("text_font_ratio").get<float>();
-    s.textGapRatio = j.at("text_gap_ratio").get<float>();
+    s.paddingRatio = ReadFloat_(j, "padding_ratio");
+    s.previewSizeRatio = ReadFloat_(j, "preview_size_ratio");
+    s.textFontRatio = ReadFloat_(j, "text_font_ratio");
+    s.textGapRatio = ReadFloat_(j, "text_gap_ratio");
     return s;
 }
 
@@ -339,10 +354,10 @@ UnitStackPanelStyle_t ParseUnitStackPanelStyle_(const nlohmann::json& j)
     s.borderColor = ParseColor_(j, "border_color");
     s.backgroundSprite = j.value("background_sprite", "");
     s.statTextColor = ParseColor_(j, "stat_text_color");
-    s.paddingRatio = j.at("padding_ratio").get<float>();
-    s.slotGapRatio = j.at("slot_gap_ratio").get<float>();
-    s.iconHeightRatio = j.at("icon_height_ratio").get<float>();
-    s.statFontRatio = j.at("stat_font_ratio").get<float>();
+    s.paddingRatio = ReadFloat_(j, "padding_ratio");
+    s.slotGapRatio = ReadFloat_(j, "slot_gap_ratio");
+    s.iconHeightRatio = ReadFloat_(j, "icon_height_ratio");
+    s.statFontRatio = ReadFloat_(j, "stat_font_ratio");
     return s;
 }
 
@@ -353,9 +368,9 @@ InfoPanelStyle_t ParseInfoPanelStyle_(const nlohmann::json& j)
     s.borderColor = ParseColor_(j, "border_color");
     s.backgroundSprite = j.value("background_sprite", "");
     s.defaultLineColor = ParseColor_(j, "default_line_color");
-    s.textHeightEstimate = j.at("text_height_estimate").get<float>();
-    s.textVerticalCenterRatio = j.at("text_vertical_center_ratio").get<float>();
-    s.textHorizontalPadding = j.at("text_horizontal_padding").get<float>();
+    s.textHeightEstimate = ReadFloat_(j, "text_height_estimate");
+    s.textVerticalCenterRatio = ReadFloat_(j, "text_vertical_center_ratio");
+    s.textHorizontalPadding = ReadFloat_(j, "text_horizontal_padding");
     s.fontSize = j.at("font_size").get<unsigned int>();
     return s;
 }
@@ -369,8 +384,8 @@ EndTurnButtonStyle_t ParseEndTurnButtonStyle_(const nlohmann::json& j)
     s.readyBorderColor = ParseColor_(j, "ready_border_color");
     s.labelColor = ParseColor_(j, "label_color");
     s.fontSize = j.at("font_size").get<unsigned int>();
-    s.textPadX = j.at("text_pad_x").get<float>();
-    s.textPadY = j.at("text_pad_y").get<float>();
+    s.textPadX = ReadFloat_(j, "text_pad_x");
+    s.textPadY = ReadFloat_(j, "text_pad_y");
     s.layout = ParseLayout_(j, "layout");
     return s;
 }
@@ -382,8 +397,8 @@ CommlinksButtonStyle_t ParseCommlinksButtonStyle_(const nlohmann::json& j)
     s.borderColor = ParseColor_(j, "border_color");
     s.labelColor = ParseColor_(j, "label_color");
     s.fontSize = j.at("font_size").get<unsigned int>();
-    s.textPadX = j.at("text_pad_x").get<float>();
-    s.textPadY = j.at("text_pad_y").get<float>();
+    s.textPadX = ReadFloat_(j, "text_pad_x");
+    s.textPadY = ReadFloat_(j, "text_pad_y");
     return s;
 }
 
@@ -429,22 +444,22 @@ BombardPresentationStyle_t ParseBombardPresentationStyle_(const nlohmann::json& 
     BombardPresentationStyle_t s{};
     s.overlayFill = ParseColor_(j, "overlay_fill");
     s.overlayBorder = ParseColor_(j, "overlay_border");
-    s.overlayBorderWidth = j.at("overlay_border_width").get<float>();
+    s.overlayBorderWidth = ReadFloat_(j, "overlay_border_width");
     return s;
 }
 
 CameraInputStyle_t ParseCameraInputStyle_(const nlohmann::json& j)
 {
     CameraInputStyle_t s{};
-    s.edgeZone = j.at("edge_zone").get<float>();
-    s.relativeMin = j.at("relative_min").get<float>();
-    s.relativeMax = j.at("relative_max").get<float>();
+    s.edgeZone = ReadFloat_(j, "edge_zone");
+    s.relativeMin = ReadFloat_(j, "relative_min");
+    s.relativeMax = ReadFloat_(j, "relative_max");
     s.cameraScrollStep = j.at("camera_scroll_step").get<int>();
     s.initialCameraOffset = j.at("initial_camera_offset").get<int>();
-    s.edgeScrollSpeed = j.at("edge_scroll_speed").get<float>();
-    s.zoomFactor = j.at("zoom_factor").get<float>();
-    s.minTileScale = j.at("min_tile_scale").get<float>();
-    s.maxTileScale = j.at("max_tile_scale").get<float>();
+    s.edgeScrollSpeed = ReadFloat_(j, "edge_scroll_speed");
+    s.zoomFactor = ReadFloat_(j, "zoom_factor");
+    s.minTileScale = ReadFloat_(j, "min_tile_scale");
+    s.maxTileScale = ReadFloat_(j, "max_tile_scale");
     if (!(s.zoomFactor > 1.0f))
     {
         throw std::runtime_error("camera_input.zoom_factor must be greater than 1");
@@ -474,16 +489,16 @@ CommlinksPanelStyle_t ParseCommlinksPanelStyle_(const nlohmann::json& j)
     s.statusColor = ParseColor_(j, "status_color");
     s.titleFontSize = j.at("title_font_size").get<unsigned int>();
     s.rowFontSize = j.at("row_font_size").get<unsigned int>();
-    s.titlePadX = j.at("title_pad_x").get<float>();
-    s.titlePadY = j.at("title_pad_y").get<float>();
-    s.rowStartY = j.at("row_start_y").get<float>();
-    s.rowHeight = j.at("row_height").get<float>();
-    s.rowPadX = j.at("row_pad_x").get<float>();
-    s.statusPadX = j.at("status_pad_x").get<float>();
-    s.integrityPadY = j.at("integrity_pad_y").get<float>();
-    s.columnLabelPadY = j.at("column_label_pad_y").get<float>();
-    s.moodPadX = j.at("mood_pad_x").get<float>();
-    s.reputePadX = j.at("repute_pad_x").get<float>();
+    s.titlePadX = ReadFloat_(j, "title_pad_x");
+    s.titlePadY = ReadFloat_(j, "title_pad_y");
+    s.rowStartY = ReadFloat_(j, "row_start_y");
+    s.rowHeight = ReadFloat_(j, "row_height");
+    s.rowPadX = ReadFloat_(j, "row_pad_x");
+    s.statusPadX = ReadFloat_(j, "status_pad_x");
+    s.integrityPadY = ReadFloat_(j, "integrity_pad_y");
+    s.columnLabelPadY = ReadFloat_(j, "column_label_pad_y");
+    s.moodPadX = ReadFloat_(j, "mood_pad_x");
+    s.reputePadX = ReadFloat_(j, "repute_pad_x");
     s.councilButtonLayout = ParseLayout_(j, "council_button_layout");
     return s;
 }
@@ -499,15 +514,15 @@ TalkPopupStyle_t ParseTalkPopupStyle_(const nlohmann::json& j)
     s.highlightColor = ParseColor_(j, "highlight_color");
     s.captionFontSize = j.at("caption_font_size").get<unsigned int>();
     s.textFontSize = j.at("text_font_size").get<unsigned int>();
-    s.padX = j.at("pad_x").get<float>();
-    s.valuePadX = j.at("value_pad_x").get<float>();
-    s.captionPadY = j.at("caption_pad_y").get<float>();
-    s.moodPadY = j.at("mood_pad_y").get<float>();
-    s.reputePadY = j.at("repute_pad_y").get<float>();
-    s.integrityPadY = j.at("integrity_pad_y").get<float>();
-    s.speechPadY = j.at("speech_pad_y").get<float>();
-    s.lineHeight = j.at("line_height").get<float>();
-    s.draftPadY = j.at("draft_pad_y").get<float>();
+    s.padX = ReadFloat_(j, "pad_x");
+    s.valuePadX = ReadFloat_(j, "value_pad_x");
+    s.captionPadY = ReadFloat_(j, "caption_pad_y");
+    s.moodPadY = ReadFloat_(j, "mood_pad_y");
+    s.reputePadY = ReadFloat_(j, "repute_pad_y");
+    s.integrityPadY = ReadFloat_(j, "integrity_pad_y");
+    s.speechPadY = ReadFloat_(j, "speech_pad_y");
+    s.lineHeight = ReadFloat_(j, "line_height");
+    s.draftPadY = ReadFloat_(j, "draft_pad_y");
     s.menuLayout = ParseLayout_(j, "menu_layout");
     return s;
 }
@@ -529,8 +544,8 @@ CouncilVoteViewStyle_t ParseCouncilVoteViewStyle_(const nlohmann::json& j)
     s.headerFontSize = j.at("header_font_size").get<unsigned int>();
     s.nameFontSize = j.at("name_font_size").get<unsigned int>();
     s.tallyFontSize = j.at("tally_font_size").get<unsigned int>();
-    s.paddingRatio = j.at("padding_ratio").get<float>();
-    s.lineHeightRatio = j.at("line_height_ratio").get<float>();
+    s.paddingRatio = ReadFloat_(j, "padding_ratio");
+    s.lineHeightRatio = ReadFloat_(j, "line_height_ratio");
     s.voteButtonLayout = ParseLayout_(j, "vote_button_layout");
     return s;
 }
@@ -592,11 +607,11 @@ BuildQueueDisplayStyle_t ParseBuildQueueDisplayStyle_(const nlohmann::json& j)
     s.hurryBorderColor = ParseColor_(j, "hurry_border_color");
     s.hurryLabelColor = ParseColor_(j, "hurry_label_color");
     s.hurryDisabledLabelColor = ParseColor_(j, "hurry_disabled_label_color");
-    s.headerFontSizeRatio = j.at("header_font_size_ratio").get<float>();
-    s.leftPaddingRatio = j.at("left_padding_ratio").get<float>();
-    s.hurryFontSizeRatio = j.at("hurry_font_size_ratio").get<float>();
-    s.hurryTextPadXRatio = j.at("hurry_text_pad_x_ratio").get<float>();
-    s.hurryTextPadYRatio = j.at("hurry_text_pad_y_ratio").get<float>();
+    s.headerFontSizeRatio = ReadFloat_(j, "header_font_size_ratio");
+    s.leftPaddingRatio = ReadFloat_(j, "left_padding_ratio");
+    s.hurryFontSizeRatio = ReadFloat_(j, "hurry_font_size_ratio");
+    s.hurryTextPadXRatio = ReadFloat_(j, "hurry_text_pad_x_ratio");
+    s.hurryTextPadYRatio = ReadFloat_(j, "hurry_text_pad_y_ratio");
     s.hurryButtonLayout = ParseLayout_(j, "hurry_button_layout");
     return s;
 }
@@ -614,12 +629,12 @@ HurryProductionPopupStyle_t ParseHurryProductionPopupStyle_(const nlohmann::json
     s.buttonFillColor = ParseColor_(j, "button_fill_color");
     s.buttonBorderColor = ParseColor_(j, "button_border_color");
     s.buttonLabelColor = ParseColor_(j, "button_label_color");
-    s.headerFontSizeRatio = j.at("header_font_size_ratio").get<float>();
-    s.entryFontSizeRatio = j.at("entry_font_size_ratio").get<float>();
-    s.paddingRatio = j.at("padding_ratio").get<float>();
-    s.buttonFontSizeRatio = j.at("button_font_size_ratio").get<float>();
-    s.buttonTextPadXRatio = j.at("button_text_pad_x_ratio").get<float>();
-    s.buttonTextPadYRatio = j.at("button_text_pad_y_ratio").get<float>();
+    s.headerFontSizeRatio = ReadFloat_(j, "header_font_size_ratio");
+    s.entryFontSizeRatio = ReadFloat_(j, "entry_font_size_ratio");
+    s.paddingRatio = ReadFloat_(j, "padding_ratio");
+    s.buttonFontSizeRatio = ReadFloat_(j, "button_font_size_ratio");
+    s.buttonTextPadXRatio = ReadFloat_(j, "button_text_pad_x_ratio");
+    s.buttonTextPadYRatio = ReadFloat_(j, "button_text_pad_y_ratio");
     s.fieldLayout = ParseLayout_(j, "field_layout");
     s.okButtonLayout = ParseLayout_(j, "ok_button_layout");
     s.cancelButtonLayout = ParseLayout_(j, "cancel_button_layout");
@@ -632,16 +647,16 @@ ResourceLinesPanelStyle_t ParseResourceLinesPanelStyle_(const nlohmann::json& j)
     s.backgroundColor = ParseColor_(j, "background_color");
     s.backgroundSprite = j.value("background_sprite", "");
     s.textColor = ParseColor_(j, "text_color");
-    s.headerFontSizeRatio = j.at("header_font_size_ratio").get<float>();
-    s.entryFontSizeRatio = j.at("entry_font_size_ratio").get<float>();
-    s.lineHeightRatio = j.at("line_height_ratio").get<float>();
-    s.leftPaddingRatio = j.at("left_padding_ratio").get<float>();
-    s.stockpileLineIndex = j.at("stockpile_line_index").get<float>();
-    s.requiredLineIndex = j.at("required_line_index").get<float>();
-    s.productionLineIndex = j.at("production_line_index").get<float>();
-    s.turnsLineIndex = j.at("turns_line_index").get<float>();
-    s.iconSizeRatio = j.at("icon_size_ratio").get<float>();
-    s.iconGapRatio = j.at("icon_gap_ratio").get<float>();
+    s.headerFontSizeRatio = ReadFloat_(j, "header_font_size_ratio");
+    s.entryFontSizeRatio = ReadFloat_(j, "entry_font_size_ratio");
+    s.lineHeightRatio = ReadFloat_(j, "line_height_ratio");
+    s.leftPaddingRatio = ReadFloat_(j, "left_padding_ratio");
+    s.stockpileLineIndex = ReadFloat_(j, "stockpile_line_index");
+    s.requiredLineIndex = ReadFloat_(j, "required_line_index");
+    s.productionLineIndex = ReadFloat_(j, "production_line_index");
+    s.turnsLineIndex = ReadFloat_(j, "turns_line_index");
+    s.iconSizeRatio = ReadFloat_(j, "icon_size_ratio");
+    s.iconGapRatio = ReadFloat_(j, "icon_gap_ratio");
     return s;
 }
 
@@ -650,15 +665,15 @@ PopulationDisplayStyle_t ParsePopulationDisplayStyle_(const nlohmann::json& j)
     PopulationDisplayStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
     s.headerTextColor = ParseColor_(j, "header_text_color");
-    s.headerFontSizeRatio = j.at("header_font_size_ratio").get<float>();
-    s.popBoxSizeRatio = j.at("pop_box_size_ratio").get<float>();
-    s.popBoxSpacingRatio = j.at("pop_box_spacing_ratio").get<float>();
-    s.leftPaddingRatio = j.at("left_padding_ratio").get<float>();
-    s.popBoxFontSizeRatio = j.at("pop_box_font_size_ratio").get<float>();
-    s.popRowYOffsetRatio = j.at("pop_row_y_offset_ratio").get<float>();
-    s.popBoxTextXOffsetRatio = j.at("pop_box_text_x_offset_ratio").get<float>();
-    s.popBoxTextYOffsetRatio = j.at("pop_box_text_y_offset_ratio").get<float>();
-    s.popBoxBorderWidth = j.at("pop_box_border_width").get<float>();
+    s.headerFontSizeRatio = ReadFloat_(j, "header_font_size_ratio");
+    s.popBoxSizeRatio = ReadFloat_(j, "pop_box_size_ratio");
+    s.popBoxSpacingRatio = ReadFloat_(j, "pop_box_spacing_ratio");
+    s.leftPaddingRatio = ReadFloat_(j, "left_padding_ratio");
+    s.popBoxFontSizeRatio = ReadFloat_(j, "pop_box_font_size_ratio");
+    s.popRowYOffsetRatio = ReadFloat_(j, "pop_row_y_offset_ratio");
+    s.popBoxTextXOffsetRatio = ReadFloat_(j, "pop_box_text_x_offset_ratio");
+    s.popBoxTextYOffsetRatio = ReadFloat_(j, "pop_box_text_y_offset_ratio");
+    s.popBoxBorderWidth = ReadFloat_(j, "pop_box_border_width");
     s.popBoxFillColor = ParseColor_(j, "pop_box_fill_color");
     s.popBoxBorderColor = ParseColor_(j, "pop_box_border_color");
     s.popLetterColor = ParseColor_(j, "pop_letter_color");
@@ -670,9 +685,9 @@ SupportDisplayStyle_t ParseSupportDisplayStyle_(const nlohmann::json& j)
     SupportDisplayStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
-    s.paddingRatio = j.at("padding_ratio").get<float>();
-    s.iconSizeRatio = j.at("icon_size_ratio").get<float>();
-    s.iconGapRatio = j.at("icon_gap_ratio").get<float>();
+    s.paddingRatio = ReadFloat_(j, "padding_ratio");
+    s.iconSizeRatio = ReadFloat_(j, "icon_size_ratio");
+    s.iconGapRatio = ReadFloat_(j, "icon_gap_ratio");
     return s;
 }
 
@@ -683,13 +698,13 @@ BuildingsDisplayStyle_t ParseBuildingsDisplayStyle_(const nlohmann::json& j)
     s.backgroundSprite = j.value("background_sprite", "");
     s.textColor = ParseColor_(j, "text_color");
     s.grantedTextColor = ParseColor_(j, "granted_text_color");
-    s.headerFontSizeRatio = j.at("header_font_size_ratio").get<float>();
-    s.entryFontSizeRatio = j.at("entry_font_size_ratio").get<float>();
-    s.lineHeightRatio = j.at("line_height_ratio").get<float>();
-    s.leftPaddingRatio = j.at("left_padding_ratio").get<float>();
-    s.headerLineOffset = j.at("header_line_offset").get<float>();
-    s.iconSizeRatio = j.at("icon_size_ratio").get<float>();
-    s.iconGapRatio = j.at("icon_gap_ratio").get<float>();
+    s.headerFontSizeRatio = ReadFloat_(j, "header_font_size_ratio");
+    s.entryFontSizeRatio = ReadFloat_(j, "entry_font_size_ratio");
+    s.lineHeightRatio = ReadFloat_(j, "line_height_ratio");
+    s.leftPaddingRatio = ReadFloat_(j, "left_padding_ratio");
+    s.headerLineOffset = ReadFloat_(j, "header_line_offset");
+    s.iconSizeRatio = ReadFloat_(j, "icon_size_ratio");
+    s.iconGapRatio = ReadFloat_(j, "icon_gap_ratio");
     return s;
 }
 
@@ -719,14 +734,14 @@ NoticePopupStyle_t ParseNoticePopupStyle_(const nlohmann::json& j)
 ListSelectorPopupStyle_t ParseListSelectorPopupStyle_(const nlohmann::json& j)
 {
     ListSelectorPopupStyle_t s{};
-    s.headerFontSizeRatio = j.at("header_font_size_ratio").get<float>();
-    s.entryFontSizeRatio = j.at("entry_font_size_ratio").get<float>();
-    s.lineHeightRatio = j.at("line_height_ratio").get<float>();
-    s.paddingRatio = j.at("padding_ratio").get<float>();
-    s.headerLineOffset = j.at("header_line_offset").get<float>();
-    s.borderWidth = j.at("border_width").get<float>();
-    s.iconSizeRatio = j.at("icon_size_ratio").get<float>();
-    s.iconGapRatio = j.at("icon_gap_ratio").get<float>();
+    s.headerFontSizeRatio = ReadFloat_(j, "header_font_size_ratio");
+    s.entryFontSizeRatio = ReadFloat_(j, "entry_font_size_ratio");
+    s.lineHeightRatio = ReadFloat_(j, "line_height_ratio");
+    s.paddingRatio = ReadFloat_(j, "padding_ratio");
+    s.headerLineOffset = ReadFloat_(j, "header_line_offset");
+    s.borderWidth = ReadFloat_(j, "border_width");
+    s.iconSizeRatio = ReadFloat_(j, "icon_size_ratio");
+    s.iconGapRatio = ReadFloat_(j, "icon_gap_ratio");
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
     s.backgroundSprite = j.value("background_sprite", "");
@@ -748,23 +763,23 @@ SocialEngineeringDisplayStyle_t ParseSocialEngineeringDisplayStyle_(const nlohma
     s.hiddenPolicySlotColor = ParseColor_(j, "hidden_policy_slot_color");
     s.scoreValueColor = ParseColor_(j, "score_value_color");
     s.factionBonusBodyColor = ParseColor_(j, "faction_bonus_body_color");
-    s.scoresPanelWidthRatio = j.at("scores_panel_width_ratio").get<float>();
-    s.categoryRowHeightRatio = j.at("category_row_height_ratio").get<float>();
-    s.categoryNameRowRatio = j.at("category_name_row_ratio").get<float>();
-    s.policyNameRowRatio = j.at("policy_name_row_ratio").get<float>();
-    s.policyBonusRowRatio = j.at("policy_bonus_row_ratio").get<float>();
-    s.horizontalPaddingRatio = j.at("horizontal_padding_ratio").get<float>();
-    s.verticalPaddingRatio = j.at("vertical_padding_ratio").get<float>();
-    s.headerFontSizeRatio = j.at("header_font_size_ratio").get<float>();
-    s.categoryFontSizeRatio = j.at("category_font_size_ratio").get<float>();
-    s.policyFontSizeRatio = j.at("policy_font_size_ratio").get<float>();
-    s.bonusFontSizeRatio = j.at("bonus_font_size_ratio").get<float>();
-    s.scoreFontSizeRatio = j.at("score_font_size_ratio").get<float>();
-    s.factionBonusSectionRatio = j.at("faction_bonus_section_ratio").get<float>();
-    s.factionNameRowRatio = j.at("faction_name_row_ratio").get<float>();
-    s.factionBonusRowRatio = j.at("faction_bonus_row_ratio").get<float>();
-    s.factionNameFontSizeRatio = j.at("faction_name_font_size_ratio").get<float>();
-    s.factionBonusFontSizeRatio = j.at("faction_bonus_font_size_ratio").get<float>();
+    s.scoresPanelWidthRatio = ReadFloat_(j, "scores_panel_width_ratio");
+    s.categoryRowHeightRatio = ReadFloat_(j, "category_row_height_ratio");
+    s.categoryNameRowRatio = ReadFloat_(j, "category_name_row_ratio");
+    s.policyNameRowRatio = ReadFloat_(j, "policy_name_row_ratio");
+    s.policyBonusRowRatio = ReadFloat_(j, "policy_bonus_row_ratio");
+    s.horizontalPaddingRatio = ReadFloat_(j, "horizontal_padding_ratio");
+    s.verticalPaddingRatio = ReadFloat_(j, "vertical_padding_ratio");
+    s.headerFontSizeRatio = ReadFloat_(j, "header_font_size_ratio");
+    s.categoryFontSizeRatio = ReadFloat_(j, "category_font_size_ratio");
+    s.policyFontSizeRatio = ReadFloat_(j, "policy_font_size_ratio");
+    s.bonusFontSizeRatio = ReadFloat_(j, "bonus_font_size_ratio");
+    s.scoreFontSizeRatio = ReadFloat_(j, "score_font_size_ratio");
+    s.factionBonusSectionRatio = ReadFloat_(j, "faction_bonus_section_ratio");
+    s.factionNameRowRatio = ReadFloat_(j, "faction_name_row_ratio");
+    s.factionBonusRowRatio = ReadFloat_(j, "faction_bonus_row_ratio");
+    s.factionNameFontSizeRatio = ReadFloat_(j, "faction_name_font_size_ratio");
+    s.factionBonusFontSizeRatio = ReadFloat_(j, "faction_bonus_font_size_ratio");
     return s;
 }
 
@@ -774,10 +789,10 @@ SocialEngineeringBottomPanelStyle_t ParseSocialEngineeringBottomPanelStyle_(cons
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
     s.valueColor = ParseColor_(j, "value_color");
-    s.rowHeightRatio = j.at("row_height_ratio").get<float>();
-    s.horizontalPaddingRatio = j.at("horizontal_padding_ratio").get<float>();
-    s.verticalPaddingRatio = j.at("vertical_padding_ratio").get<float>();
-    s.valueFontSizeRatio = j.at("value_font_size_ratio").get<float>();
+    s.rowHeightRatio = ReadFloat_(j, "row_height_ratio");
+    s.horizontalPaddingRatio = ReadFloat_(j, "horizontal_padding_ratio");
+    s.verticalPaddingRatio = ReadFloat_(j, "vertical_padding_ratio");
+    s.valueFontSizeRatio = ReadFloat_(j, "value_font_size_ratio");
     return s;
 }
 
@@ -794,14 +809,14 @@ SlotColumnPanelStyle_t ParseSlotColumnPanelStyle_(const nlohmann::json& j)
 {
     SlotColumnPanelStyle_t s{};
     s.visibleSlots = j.at("visible_slots").get<int>();
-    s.arrowHeightRatio = j.at("arrow_height_ratio").get<float>();
-    s.labelFontSizeRatio = j.at("label_font_size_ratio").get<float>();
-    s.nameFontSizeRatio = j.at("name_font_size_ratio").get<float>();
-    s.paddingRatio = j.at("padding_ratio").get<float>();
-    s.arrowAreaMultiplier = j.at("arrow_area_multiplier").get<float>();
-    s.arrowFontSizeRatio = j.at("arrow_font_size_ratio").get<float>();
-    s.arrowPadXRatio = j.at("arrow_pad_x_ratio").get<float>();
-    s.nameLabelSpacingMultiplier = j.at("name_label_spacing_multiplier").get<float>();
+    s.arrowHeightRatio = ReadFloat_(j, "arrow_height_ratio");
+    s.labelFontSizeRatio = ReadFloat_(j, "label_font_size_ratio");
+    s.nameFontSizeRatio = ReadFloat_(j, "name_font_size_ratio");
+    s.paddingRatio = ReadFloat_(j, "padding_ratio");
+    s.arrowAreaMultiplier = ReadFloat_(j, "arrow_area_multiplier");
+    s.arrowFontSizeRatio = ReadFloat_(j, "arrow_font_size_ratio");
+    s.arrowPadXRatio = ReadFloat_(j, "arrow_pad_x_ratio");
+    s.nameLabelSpacingMultiplier = ReadFloat_(j, "name_label_spacing_multiplier");
     s.arrowFillColor = ParseColor_(j, "arrow_fill_color");
     s.arrowBorderColor = ParseColor_(j, "arrow_border_color");
     s.disabledArrowColor = ParseColor_(j, "disabled_arrow_color");
@@ -825,13 +840,13 @@ DesignStatsDisplayStyle_t ParseDesignStatsDisplayStyle_(const nlohmann::json& j)
     s.headerColor = ParseColor_(j, "header_color");
     s.saveButtonBorderColor = ParseColor_(j, "save_button_border_color");
     s.saveButtonTextColor = ParseColor_(j, "save_button_text_color");
-    s.headerFontSizeRatio = j.at("header_font_size_ratio").get<float>();
-    s.statFontSizeRatio = j.at("stat_font_size_ratio").get<float>();
-    s.lineHeightRatio = j.at("line_height_ratio").get<float>();
-    s.paddingRatio = j.at("padding_ratio").get<float>();
-    s.saveButtonHeightRatio = j.at("save_button_height_ratio").get<float>();
-    s.saveButtonTextYOffsetRatio = j.at("save_button_text_y_offset_ratio").get<float>();
-    s.horizontalPaddingMultiplier = j.at("horizontal_padding_multiplier").get<float>();
+    s.headerFontSizeRatio = ReadFloat_(j, "header_font_size_ratio");
+    s.statFontSizeRatio = ReadFloat_(j, "stat_font_size_ratio");
+    s.lineHeightRatio = ReadFloat_(j, "line_height_ratio");
+    s.paddingRatio = ReadFloat_(j, "padding_ratio");
+    s.saveButtonHeightRatio = ReadFloat_(j, "save_button_height_ratio");
+    s.saveButtonTextYOffsetRatio = ReadFloat_(j, "save_button_text_y_offset_ratio");
+    s.horizontalPaddingMultiplier = ReadFloat_(j, "horizontal_padding_multiplier");
     return s;
 }
 
@@ -846,14 +861,14 @@ DesignListPanelStyle_t ParseDesignListPanelStyle_(const nlohmann::json& j)
     s.unselectedBoxFillColor = ParseColor_(j, "unselected_box_fill_color");
     s.unselectedBoxBorderColor = ParseColor_(j, "unselected_box_border_color");
     s.selectedBoxBorderColor = ParseColor_(j, "selected_box_border_color");
-    s.boxWidthRatio = j.at("box_width_ratio").get<float>();
-    s.boxPaddingRatio = j.at("box_padding_ratio").get<float>();
-    s.fontSizeRatio = j.at("font_size_ratio").get<float>();
-    s.labelFontRatio = j.at("label_font_ratio").get<float>();
-    s.emptyListPaddingMultiplier = j.at("empty_list_padding_multiplier").get<float>();
-    s.verticalPaddingMultiplier = j.at("vertical_padding_multiplier").get<float>();
-    s.textPadRatio = j.at("text_pad_ratio").get<float>();
-    s.textVerticalRatio = j.at("text_vertical_ratio").get<float>();
+    s.boxWidthRatio = ReadFloat_(j, "box_width_ratio");
+    s.boxPaddingRatio = ReadFloat_(j, "box_padding_ratio");
+    s.fontSizeRatio = ReadFloat_(j, "font_size_ratio");
+    s.labelFontRatio = ReadFloat_(j, "label_font_ratio");
+    s.emptyListPaddingMultiplier = ReadFloat_(j, "empty_list_padding_multiplier");
+    s.verticalPaddingMultiplier = ReadFloat_(j, "vertical_padding_multiplier");
+    s.textPadRatio = ReadFloat_(j, "text_pad_ratio");
+    s.textVerticalRatio = ReadFloat_(j, "text_vertical_ratio");
     return s;
 }
 
@@ -865,13 +880,13 @@ UnitStatusPanelStyle_t ParseUnitStatusPanelStyle_(const nlohmann::json& j)
     s.mutedTextColor = ParseColor_(j, "muted_text_color");
     s.textColor = ParseColor_(j, "text_color");
     s.headerColor = ParseColor_(j, "header_color");
-    s.headerFontSizeRatio = j.at("header_font_size_ratio").get<float>();
-    s.statFontSizeRatio = j.at("stat_font_size_ratio").get<float>();
-    s.lineHeightRatio = j.at("line_height_ratio").get<float>();
-    s.paddingRatio = j.at("padding_ratio").get<float>();
-    s.designNameLineIndex = j.at("design_name_line_index").get<float>();
-    s.activeCountLineIndex = j.at("active_count_line_index").get<float>();
-    s.inProdLineIndex = j.at("in_prod_line_index").get<float>();
+    s.headerFontSizeRatio = ReadFloat_(j, "header_font_size_ratio");
+    s.statFontSizeRatio = ReadFloat_(j, "stat_font_size_ratio");
+    s.lineHeightRatio = ReadFloat_(j, "line_height_ratio");
+    s.paddingRatio = ReadFloat_(j, "padding_ratio");
+    s.designNameLineIndex = ReadFloat_(j, "design_name_line_index");
+    s.activeCountLineIndex = ReadFloat_(j, "active_count_line_index");
+    s.inProdLineIndex = ReadFloat_(j, "in_prod_line_index");
     return s;
 }
 
@@ -891,9 +906,9 @@ SatelliteViewStyle_t ParseSatelliteViewStyle_(const nlohmann::json& j)
     s.headerFontSize = j.at("header_font_size").get<unsigned int>();
     s.factionFontSize = j.at("faction_font_size").get<unsigned int>();
     s.cellFontSize = j.at("cell_font_size").get<unsigned int>();
-    s.paddingRatio = j.at("padding_ratio").get<float>();
-    s.tabTextPadX = j.at("tab_text_pad_x").get<float>();
-    s.tabTextPadY = j.at("tab_text_pad_y").get<float>();
+    s.paddingRatio = ReadFloat_(j, "padding_ratio");
+    s.tabTextPadX = ReadFloat_(j, "tab_text_pad_x");
+    s.tabTextPadY = ReadFloat_(j, "tab_text_pad_y");
     s.summaryTabLayout = ParseLayout_(j, "summary_tab_layout");
     s.attackTabLayout = ParseLayout_(j, "attack_tab_layout");
     s.contentLayout = ParseLayout_(j, "content_layout");
@@ -901,11 +916,11 @@ SatelliteViewStyle_t ParseSatelliteViewStyle_(const nlohmann::json& j)
     s.attackerListLayout = ParseLayout_(j, "attacker_list_layout");
     s.attackerConfirmLayout = ParseLayout_(j, "attacker_confirm_layout");
     s.attackerCancelLayout = ParseLayout_(j, "attacker_cancel_layout");
-    s.listButtonHeight = j.at("list_button_height").get<float>();
-    s.listButtonGap = j.at("list_button_gap").get<float>();
-    s.listHeaderHeight = j.at("list_header_height").get<float>();
-    s.listPadX = j.at("list_pad_x").get<float>();
-    s.listPadY = j.at("list_pad_y").get<float>();
+    s.listButtonHeight = ReadFloat_(j, "list_button_height");
+    s.listButtonGap = ReadFloat_(j, "list_button_gap");
+    s.listHeaderHeight = ReadFloat_(j, "list_header_height");
+    s.listPadX = ReadFloat_(j, "list_pad_x");
+    s.listPadY = ReadFloat_(j, "list_pad_y");
     return s;
 }
 
@@ -915,14 +930,7 @@ void UiStyle::Load(const std::string& filePath)
 {
     std::cout << "Loading UI style from: " << filePath << "\n";
 
-    std::ifstream file(filePath);
-    if (!file.is_open())
-    {
-        throw std::runtime_error("Could not open UI style file: " + filePath);
-    }
-
-    nlohmann::json root;
-    file >> root;
+    const nlohmann::json root = JsonConfigLoader::ReadFile(filePath);
     if (!root.is_object())
     {
         throw std::runtime_error("UI style root must be a JSON object");
@@ -930,7 +938,7 @@ void UiStyle::Load(const std::string& filePath)
 
     UiStyle style{};
     style.layouts = ParseLayoutsStyle_(root.at("layouts"));
-    style.outline.width = root.at("outline").at("width").get<float>();
+    style.outline.width = ReadFloat_(root.at("outline"), "width");
     style.viewFactory = ParseViewFactoryStyle_(root.at("view_factory"));
     style.tileRenderer = ParseTileRendererStyle_(root.at("tile_renderer"));
     style.mapRenderer = ParseMapRendererStyle_(root.at("map_renderer"));
