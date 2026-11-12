@@ -201,6 +201,12 @@ int PopulationManager::GetNutrientsRequired(const BaseEffects_t& rBaseEffects) c
     return ComputeNutrientsRequired(m_rGrowthConfig, GetSize(), rBaseEffects);
 }
 
+void PopulationManager::PrimeNutrientTanks(int nutrientProduction)
+{
+    const int net = nutrientProduction - GetCitizenNutrientIntake();
+    m_nutrientStockpile = ::ac::PrimeNutrientTanks(m_nutrientStockpile, net);
+}
+
 GrowthOutcome_t PopulationManager::ResolveGrowth_(int nutrientProduction,
                                                   const BaseEffects_t& rBaseEffects) const
 {
@@ -211,6 +217,8 @@ GrowthOutcome_t PopulationManager::ResolveGrowth_(int nutrientProduction,
     inputs.boxNow = ComputeNutrientsRequired(m_rGrowthConfig, size, rBaseEffects);
     inputs.boxNext = ComputeNutrientsRequired(m_rGrowthConfig, size + 1, rBaseEffects);
     inputs.bRoomToGrow = CanGrow();
+    inputs.bPopulationBoom = ResolveFlag(rBaseEffects, RuleFlagId_t::PopulationBoom);
+    inputs.bNearZeroGrowth = ResolveFlag(rBaseEffects, RuleFlagId_t::NearZeroGrowth);
     return ResolveGrowth(inputs, m_rGrowthConfig);
 }
 

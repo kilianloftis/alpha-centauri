@@ -920,8 +920,10 @@ grants fewer units and reports the real count rather than throwing.
   `ComputeNutrientsRequired` (`GrowthRules`) resolves per base — so the SE Growth score
   directly scales each base's growth threshold, both at turn end (`ApplyGrowth`) and in the
   UI (`GrowthDisplay` → `GetNutrientsRequired()`, which uses the same memoized
-  `BuildBaseEffects_()` as turn resolution). The extreme
-  levels emit `NearZeroGrowth` / `PopulationBoom` rule flags instead (see Known Gaps).
+  `BuildBaseEffects_()` as turn resolution). Extreme levels also emit
+  `NearZeroGrowth` / `PopulationBoom` (with the neighbor level's `GrowthRate`), which
+  `ResolveGrowth` consumes: boom grows every turn on sufficient surplus without emptying
+  tanks; near-zero pins full tanks with no threshold growth.
 - **Industry rating → production cost**: the industry axis's levels map to `CostMultiplier`
   `AddPercent` modifiers (±10% per level, matching SMAC's ±10% mineral-cost change), which
   `ComputeProductionCost` (`ProductionRules`) resolves from the base effect list
@@ -1345,10 +1347,6 @@ selector pass won't compile against the raw pool.
   (production, growth, each live-unit stat read). Fine at current scale; a per-turn cache
   with explicit invalidation is a future optimization if profiling warrants it.
 
-- **`NearZeroGrowth` / `PopulationBoom` rule flags are emitted but not consumed**: the growth
-  rating's extreme levels (and the `population_boom` project) declare them, and they reach the
-  base pool, but `ComputeNutrientsRequired` doesn't check them yet — their gameplay rules are undefined
-  (TODO at the resolve site).
 - **TileDefense vs unit Defense**: tile bonuses use `TileDefense`; `Unit::GetDefense()` /
   design stats remain unit armor. Combat multiplies unit Defense by
   `ResolveTileDefenseMultiplier`.

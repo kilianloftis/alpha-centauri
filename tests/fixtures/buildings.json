@@ -521,6 +521,14 @@
             }
           }
         }
+      },
+      {
+        "type": "SocialRatingModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "rating": "growth",
+          "amount": 2
+        }
       }
     ],
     "category": "build"
@@ -1715,6 +1723,42 @@
           "stat": "upgrade_cost_scale",
           "amount": 0.5,
           "op": "MultiplyGeometric"
+        }
+      }
+    ]
+  },
+  {
+    "id": "Hab_Complex",
+    "name": "Hab Complex",
+    "mineral_cost": 80,
+    "upkeep": 2,
+    "category": "build",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "max_base_size",
+          "amount": 7,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "Habitation_Dome",
+    "name": "Habitation Dome",
+    "mineral_cost": 160,
+    "upkeep": 4,
+    "category": "build",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "max_base_size",
+          "amount": 113,
+          "op": "Add"
         }
       }
     ]

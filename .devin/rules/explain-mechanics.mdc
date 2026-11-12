@@ -1,0 +1,28 @@
+---
+description: Keep mechanic explanations coherent — unpack state changes, do not compress into opaque shorthand
+alwaysApply: true
+---
+
+# Explain mechanics coherently
+
+Stay pointed and short, but **do not compress a multi-step mechanic into a slogan**.
+
+When explaining turn order, growth, combat, production pop costs, or any rule that
+touches more than one store or write:
+
+1. **Name the stores** (e.g. resource nutrient bank vs growth tanks) before the verbs.
+2. **Say each write in order** — what becomes what, then what happens next.
+3. **Prefer one concrete example** (size, tanks, net) over a chain of undefined jargon
+   (“clamps then pops”, “primes then deposits”).
+4. If a phrase needs a glossary entry to be understood, expand it inline instead.
+
+```text
+# BAD — opaque shorthand
+Pod cost clamps to 0, then pops.
+
+# GOOD — same fact, readable
+If tanks are negative (usually −1 from priming), set them to 0, then remove one citizen.
+```
+
+Concision still applies to the *answer shape* (lead with the point; no padding). It does
+not license dropping the subjects of state changes.

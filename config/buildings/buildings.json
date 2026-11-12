@@ -145,6 +145,14 @@
           "amount": 0.5,
           "op": "MultiplyGeometric"
         }
+      },
+      {
+        "type": "SocialRatingModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "rating": "growth",
+          "amount": 2
+        }
       }
     ]
   },
@@ -516,7 +524,18 @@
     "secret_project": false,
     "category": "build",
     "required_tech": "industrial_automation",
-    "icon": "assets/sprites/facilities/fac023.png"
+    "icon": "assets/sprites/facilities/fac023.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "max_base_size",
+          "amount": 7,
+          "op": "Add"
+        }
+      }
+    ]
   },
   {
     "id": "Habitation_Dome",
@@ -526,7 +545,18 @@
     "secret_project": false,
     "category": "build",
     "required_tech": "super_tensile_solids",
-    "icon": "assets/sprites/facilities/fac024.png"
+    "icon": "assets/sprites/facilities/fac024.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "max_base_size",
+          "amount": 113,
+          "op": "Add"
+        }
+      }
+    ]
   },
   {
     "id": "Pressure_Dome",

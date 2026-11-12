@@ -164,6 +164,10 @@ public:
     // rBaseEffects is this base's final effect list (BaseEffectsCache::Get).
     int GetNutrientsRequired(const BaseEffects_t& rBaseEffects) const;
 
+    // After ResourceCollection, before BaseProduction: rewrite tanks from this turn's net
+    // (gross − intake). Does not move nutrients out of the resource bank.
+    void PrimeNutrientTanks(int nutrientProduction);
+
     // Applies ResolveGrowth (GrowthRules) to this turn's gross nutrient production.
     void ApplyGrowth(int nutrientProduction, const BaseEffects_t& rBaseEffects);
 

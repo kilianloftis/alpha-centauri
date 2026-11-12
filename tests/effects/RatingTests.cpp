@@ -84,18 +84,20 @@ TEST_CASE("ResolveSocialRatingLevelEffects: maps accumulated levels through the 
 
     SECTION("totals above the highest configured level clamp to that extreme")
     {
-        // Fixture growth levels: {2, 3}. Total 5 clamps to 3 -> +3 nutrients.
+        // Fixture growth levels: {2, 3, 4, 6}. Total 8 clamps to 6 -> boom +50% GrowthRate.
         const BaseEffects_t ratingSource{base, {
-            Active(pool.RatingMod(SocialRatingId_t::Growth, 5), "policy"),
+            Active(pool.RatingMod(SocialRatingId_t::Growth, 8), "policy"),
         }};
         const std::vector<ActiveEffect_t> levelEffects =
             ResolveSocialRatingLevelEffects(ratingSource, fixture.socialRatings());
-        CHECK(ResolveStatModifiers(FilterByStatId(levelEffects, StatId_t::Nutrients), 0.0, nullptr).total == Approx(3.0));
+        CHECK(ResolveStatModifiers(FilterByStatId(levelEffects, StatId_t::GrowthRate), 100.0, nullptr).total
+              == Approx(150.0));
+        CHECK(ResolveFlag(BaseEffects_t{base, levelEffects}, RuleFlagId_t::PopulationBoom));
 
         bool foundClampedSource = false;
         for (const ActiveEffect_t& rEffect : levelEffects)
         {
-            if (rEffect.sourceId == "se_rating_growth_3")
+            if (rEffect.sourceId == "se_rating_growth_6")
             {
                 foundClampedSource = true;
             }
@@ -207,6 +209,25 @@ TEST_CASE("Growth rating affects the growth threshold via GrowthRate modifiers",
 
     CHECK(plainBase.GetNutrientsRequired() == 33);      // 40 / 1.2
     CHECK(baseWithShrine.GetNutrientsRequired() == 30); // 40 / 1.3
+}
+
+TEST_CASE("Childrens Creche Growth +2 can tip a base into population boom",
+          "[effects][rating][growth]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& withCreche = fixture.MakeFactionBase(faction, 8, 4);
+    BaseManager& without = fixture.MakeFactionBase(faction, 8, 12);
+
+    // Policy +2 and one faction shrine +2 → level 4 (no boom). Creche +2 → level 6 (boom).
+    faction.GetSocialEngineering().SetActivePolicy(fixture.socialPolicies().Get("growth_policy"));
+    withCreche.GetBuildingManager().AddBuilding("faction_growth_shrine");
+    withCreche.GetBuildingManager().AddBuilding("Childrens_Creche");
+
+    CHECK(withCreche.GetEffectiveSocialRating(SocialRatingId_t::Growth) == 6);
+    CHECK(without.GetEffectiveSocialRating(SocialRatingId_t::Growth) == 4);
+    CHECK(ResolveFlag(withCreche, RuleFlagId_t::PopulationBoom));
+    CHECK_FALSE(ResolveFlag(without, RuleFlagId_t::PopulationBoom));
 }
 
 TEST_CASE("Industry rating affects production cost via CostMultiplier modifiers",

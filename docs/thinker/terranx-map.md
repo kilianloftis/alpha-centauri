@@ -44,10 +44,11 @@ disassembly for its address.
 
 ### `base_upkeep` (`0x4F79C0`)
 
-Calls, in order: `base_nutrient`, `base_minerals`, `base_energy`, then **`base_production`**
-(`0x4F7A2F`), `base_hurry` (`0x4F7A34`), then **`base_growth`** (`0x4F7A52`), then
-`base_check_support` and the recompute. Production always runs before growth. Nothing grows a
-base early.
+Calls, in order: `base_support`, `base_yield`, `base_nutrient` (`0x4F7A20`), `base_minerals`,
+`base_energy`, then **`base_production`** (`0x4F7A2F`), `base_hurry` (`0x4F7A34`), then
+**`base_growth`** (`0x4F7A52`), then `base_check_support` and the recompute. Production always
+runs before growth. Nothing grows a base early. If `base_growth` returns 1 (base starved to
+death), `base_upkeep` returns 1 at once (`0x4F7A5B`).
 
 ### `base_production` (`0x4F07E0`)
 
@@ -92,11 +93,68 @@ Terminus +1. `has_abil` (`0x5BF1F0`) of `ABL_TRAINED` (`0x4000`, High Morale) in
 the same accumulator, then prototype does, then a final +1. The result is written to
 `VEH.morale` (`0x95284c`). High Morale is not a live combat modifier.
 
+### `base_nutrient` (`0x4E9B70`)
+
+Sets `BaseGrowthRate` (`0x90E918`) to `Faction.SE_growth_pending` (+0x264), +2 if the base has
+the Children's Creche (facility 2), +2 if `state_flags` bit `0x4` (golden age) is set. Convoyed-in
+nutrients (`0x90E93C`) are added to `nutrient_intake_2` (+0xC0, `0x4E9BF4`). Surplus (+0xD0) is
+intake − (`pop_size × nutrient_intake_req_citizen` + convoyed-out `0x90E904`). A surplus ≥ 0
+lifts negative tanks to 0 (`0x4E9C55`); a negative surplus on exactly 0 tanks sets them to −1
+(`0x4E9C62`); a negative surplus leaves positive or already-negative tanks alone. Thinker's
+`mod_base_nutrient` matches.
+
+### `cost_factor` (`0x4E4430`), nutrient branch
+
+Growth is the same `SE_growth_pending` + Creche 2 + golden age 2 (when `base_id ≥ 0`), clamped
+to −2..5 (`0x4E4572`): `factor = (factor × (10 − growth) + 9) / 10`. Growth −3 or lower costs
+the same as −2 (+20%); +6 or higher costs the same as +5 (−50%). Thinker's `mod_cost_factor`
+adds `max(value, 1)` (`Fix:` underflow).
+
 ### `base_growth` (`0x4EF1C0`)
 
+`nutrient_cost = cost_factor(faction, 0, base) × (pop_size + 1)` is computed once, before any
+growth (`0x4EF36A`). Branches in order:
+
+1. **Starvation** (`nutrients_accumulated < 0`, `0x4EF1EA`). Skipped, apart from the final
+   write, while `GameState` has `0x1` (game done) without `0x8` (final score shown)
+   (`0x4EF1F0`). Supply crawlers of this base (`plan` 0xA) on `ORDER_CONVOY` (3), not yet moved,
+   standing on a base tile, get `ORDER_NONE` (`0x4EF28E`), only when convoyed-out nutrients ≠ 0.
+   `STARVE` popup (`0x4000`; `starv_sm.pcx` / `al_starv_sm.pcx`). Then `pop_size−−`
+   (`0x4EF302`) unless `is_objective` and `pop_size ≤ 1`. At `pop_size ≤ 0`: `base_kill`,
+   `draw_map(1)`, `eliminate_player(faction, 0)`, return 1. Otherwise
+   `nutrients_accumulated = nutrient_surplus` (`0x4EF345`), the surplus computed before the pop
+   was lost, and return 0. Exactly one pop is lost per turn. Thinker `mod_base_growth` matches.
+2. **Population boom** (`0x4EF382`–`0x4EF4E9`): if the faction owns Cloning Vats
+   (`SecretProjects[24]` at `0x9A6574` held by a base of this faction) **or**
+   `BaseGrowthRate ≥ 6`, and `nutrient_intake_req_citizen ≠ 0`, and
+   `nutrient_surplus ≥ nutrient_intake_req_citizen`, and the Hab Complex / Dome limit allows it:
+   `pop_size++` (capped at 127), recompute, then clamp tanks **down** to the pre-growth
+   `nutrient_cost` if above it, and return. Tanks are not emptied and this turn's surplus is
+   not added. Cloning Vats skips only the rate test; it still needs the surplus. A boom blocked
+   by the size limit falls through to branch 3.
+3. **Full tanks** (`nutrients_accumulated ≥ nutrient_cost`, `0x4EF4F0`):
+   - `BaseGrowthRate ≤ −3` (near-zero growth, `0x4EF4F9`): set tanks to `nutrient_cost` and
+     return. No growth, no surplus added, no population-limit notice.
+   - Size limit blocks (`0x4EF5D6`): tanks = `cost_factor × (pop_size + 1) / 2` (signed),
+     `parse_says` the missing facility, `POPULATIONLIMIT` popup (`0x800`), then add surplus.
+   - Otherwise (`0x4EF677`): tanks = 0, `pop_size++` (no 127 cap here), recompute, add surplus.
+     There is no surplus ≥ 0 test before growing.
+4. **Not full**: add `nutrient_surplus` (`0x4EF6C6`), then only `LOWNUTRIENT*` popups. They
+   are skipped if surplus ≥ 0, pre-deposit tanks < 0, `tanks + 5 × surplus ≥ 0` after the
+   deposit (`0x4EF6FC`), or the governor manages citizens (`governor_flags` +0x38
+   `0x80000040`). No population is lost here; tanks driven below 0 starve in branch 1 next turn.
+
+"Recompute" in branches 2 and 3 is `ComputeBaseID = base` then `base_support`, `base_yield`,
+`base_nutrient`, `base_minerals`, `base_energy` (`0x4EF4A5`, `0x4EF695`). The surplus added after
+a grow is therefore the new population's surplus, and the re-run `base_nutrient` sets emptied
+tanks to −1 first if that surplus is negative. Thinker calls `base_compute(1)` (`0x4EC3B0`), which
+starts with the same five calls.
+
 At the population limit it checks Hab Complex and Habitation Dome directly with `has_fac`
-(`0x421670`; facility 24 at `0x4EF448`, 25 at `0x4EF479`). A Hab Complex or Dome finished in
-`base_production` the same turn therefore lets the base grow that turn.
+(`0x421670`; facility 24 at `0x4EF448`/`0x4EF585`, 25 at `0x4EF479`/`0x4EF5C1`). A Hab Complex
+or Dome finished in `base_production` the same turn therefore lets the base grow that turn. The
+limit test is `pop_size − 2·[Ascetic Virtues] + rule_population ≥ limit`; past the Complex limit
+a Complex is required even if a Dome exists. Thinker's `allow_growth` lets a Dome alone pass.
 
 ## Unit morale
 

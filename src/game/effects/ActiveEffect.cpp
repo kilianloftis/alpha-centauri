@@ -1324,7 +1324,12 @@ bool ResolveFlag(const Faction& rFaction, RuleFlagId_t flagId)
 
 bool ResolveFlag(const BaseManager& rBase, RuleFlagId_t flagId)
 {
-    return ResolveFlagFromEffects_(rBase.GetBaseEffects().effects, flagId);
+    return ResolveFlag(rBase.GetBaseEffects(), flagId);
+}
+
+bool ResolveFlag(const BaseEffects_t& rBaseEffects, RuleFlagId_t flagId)
+{
+    return ResolveFlagFromEffects_(rBaseEffects.effects, flagId);
 }
 
 bool ResolveFlag(std::span<const EffectConfig_t> effects, RuleFlagId_t flagId)

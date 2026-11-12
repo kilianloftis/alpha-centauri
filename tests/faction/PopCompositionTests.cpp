@@ -387,11 +387,12 @@ TEST_CASE("Golden age grants +1 econ and +2% growth via pop_composition effects"
     REQUIRE(pops.IsInGoldenAge());
 
     CHECK(resolveEcon(4.0) == Approx(5.0));
-    CHECK(resolveGrowthRate() == Approx(102.0));
+    // Golden age +2 Growth rating → fixture level 2 (+20% GrowthRate).
+    CHECK(resolveGrowthRate() == Approx(120.0));
 
     GrowthConfig_t growthConfig = actest::FixtureGrowthConfig();
     growthConfig.nutrientsPerPop = 10;
-    CHECK(ComputeNutrientsRequired(growthConfig, 3, base.GetBaseEffects()) == 39);
+    CHECK(ComputeNutrientsRequired(growthConfig, 3, base.GetBaseEffects()) == 33);
 
     pops.AddPop("Worker");
     pops.ForecastMood();

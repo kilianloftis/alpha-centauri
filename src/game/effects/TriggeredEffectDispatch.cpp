@@ -980,6 +980,12 @@ int ApplyModifyPopulation_(BaseManager& rBase, const ModifyPopulationEffect_t& r
 
     if (delta < 0)
     {
+        // Colony-pod (and other) pop costs: if ResourceCollection primed tanks to -1, wipe
+        // that mark to 0 before RemovePop so BaseGrowth does not starve the leftover citizens.
+        if (rPops.GetNutrientStockpile() < 0)
+        {
+            rPops.SetNutrientStockpile(0);
+        }
         const int toRemove = -delta;
         int removed = 0;
         while (removed < toRemove && rPops.GetSize() > rEffect.minSize)

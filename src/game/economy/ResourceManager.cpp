@@ -142,6 +142,11 @@ int ResourceManager::GetMineralBank() const
     return m_minerals;
 }
 
+int ResourceManager::GetNutrientBank() const
+{
+    return m_nutrients;
+}
+
 void ResourceManager::SpendMinerals(int amount)
 {
     if (amount < 0)

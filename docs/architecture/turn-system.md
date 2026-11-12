@@ -210,8 +210,13 @@ about a pending riot without being a yielding stage.
   it happens, not swept for here, so it has already dropped out of `Faction::Bases()` before the
   loop reaches it (see "Object lifetime" in `high-level.md`).
 - **`ResourceCollection`**: `ProduceBaseResources(GameState&)` — computes Treaty/Pact
-  commerce from the injected `CommerceCache`, then each base's `ProduceResources` adds that commerce to
-  raw energy before inefficiency and the econ/labs/psych split.
+  commerce from the injected `CommerceCache`, then each base's `ProduceResources` adds that
+  commerce to raw energy before inefficiency and the econ/labs/psych split. After banking
+  this turn’s gross nutrients, each base also **primes** growth tanks (`PrimeNutrientTanks`):
+  lift negative tanks to 0 when net ≥ 0, or set empty tanks to −1 when net < 0. That is not
+  depositing the bank into the tanks; the bank stays until `BaseGrowth`. Priming must run
+  before `BaseProduction` so a colony-pod pop cost can clear a −1 mark before removing
+  citizens — see `docs/thinker/nutrient-growth.md`.
 - **`UnitSupport`**: `ApplyMineralSupport` — home-unit support charged against the mineral
   bank ResourceCollection just filled; surplus units disband. A native-life home unit
   standing on fungus is charged nothing.
@@ -224,7 +229,8 @@ about a pending riot without being a yielding stage.
   before `BaseGrowth` so Hab Complex / Dome raise `MaxBaseSize` before growth, and before
   `IncomeCollection` / `ResearchAccumulation` so converted econ and labs are spent this turn.
   The colony-pod abandon prompt judges the base's current size, as SMAC's does, and a pop cost
-  stops at size 1 at a difficulty that preserves size-1 bases. Leftovers after a completion
+  stops at size 1 at a difficulty that preserves size-1 bases. A shrinking `ModifyPopulation`
+  (colony pod) sets negative tanks to 0 before removing citizens. Leftovers after a completion
   stay on the next item and convert only on a later turn if that item is a stockpile.
   Stockpiles are their own config family (`config/stockpiles.json`, `StockpileRegistry`);
   conversion delegates to `ApplyStockpileConversionAtBase`, which resolves the stockpile
@@ -233,10 +239,10 @@ about a pending riot without being a yielding stage.
   `TryCompleteReadyProduction` (`bNewTurn=false`) — finishes funded queues (e.g. hurried during
   the player window) without banking leftover minerals or clearing same-turn abandon deferrals.
   Shares yield / abandon / pick-next handling with `BaseProduction`. Ordered before `Mood`.
-- **`BaseGrowth`**: `ApplyBaseGrowth` — spends the gross nutrient bank `ResourceCollection`
-  filled; `PopulationManager` subtracts citizen intake, then grows when tanks were already
-  full and net ≥ 0, starves when net exhausts storage, halves tanks when full at the
-  population limit, then deposits and caps. Ordered *after* `BaseProduction` so a
+- **`BaseGrowth`**: `ApplyBaseGrowth` — drains the gross nutrient bank into `ResolveGrowth`
+  (citizen intake subtracted there). Grows when tanks were already full and net ≥ 0; starves
+  only when tanks are already `< 0` on entry; halves tanks when full at the population limit;
+  otherwise deposits (tanks may go negative). Ordered *after* `BaseProduction` so a
   cap-raising facility unlocks growth the same turn.
 - **`Upkeep`**: deploy-record pruning and facility energy upkeep (after income). A facility
   completed earlier in this turn is present for upkeep.

@@ -19,6 +19,8 @@ struct GrowthInputs_t
     int boxNow = 0;
     int boxNext = 0;
     bool bRoomToGrow = false;
+    bool bPopulationBoom = false;
+    bool bNearZeroGrowth = false;
 };
 
 struct GrowthOutcome_t
@@ -30,6 +32,15 @@ struct GrowthOutcome_t
     // After this turn's deposit.
     int stockpileAfter = 0;
 };
+
+// Boom needs net surplus of at least one citizen's intake (intake 0 disables boom).
+bool MeetsPopulationBoomSurplus(int netNutrients, const GrowthConfig_t& rConfig);
+
+// Rewrites tank state from this turn's net without depositing nutrients: lift a negative
+// stockpile to 0 when net >= 0; set an empty stockpile to -1 when net < 0. Must run after
+// ResourceCollection and before BaseProduction so a colony-pod pop cost can clear -1 to 0
+// before removing citizens (docs/thinker/nutrient-growth.md).
+int PrimeNutrientTanks(int stockpile, int netNutrients);
 
 GrowthOutcome_t ResolveGrowth(const GrowthInputs_t& rInputs, const GrowthConfig_t& rConfig);
 

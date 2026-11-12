@@ -39,6 +39,35 @@
             "op": "AddPercent"
           }
         }
+      ],
+      "4": [
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "growth_rate",
+            "amount": 40,
+            "op": "AddPercent"
+          }
+        }
+      ],
+      "6": [
+        {
+          "type": "RuleFlag",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "flag": "population_boom"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "growth_rate",
+            "amount": 50,
+            "op": "AddPercent"
+          }
+        }
       ]
     }
   },

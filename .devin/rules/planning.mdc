@@ -18,6 +18,15 @@ plan never includes a step to confirm, check or verify the binary, Thinker, or t
 behaviour. A question the binary cannot answer is settled with the user before the plan is
 presented.
 
+## Original behaviour through our system
+
+Match the original game's mechanics as confirmed from the binary. The binary answers *what*
+happens; the plan answers *how we make it happen* in our architecture. Do not plan a
+step-by-step port of the binary's control flow, data layout, call order, or internals. Design
+through Rules, Calculators, config, effects, and Lua so shipping config reproduces the original
+behaviour and existing seams stay open for mods and documented deviations. Speculative hooks
+are still forbidden (`coding-guidelines.mdc` "Nothing speculative").
+
 When a rename deletes an in-repo-only config key or API, the plan is “use the new name; update every config.” Do not plan parser migration shims or “reject old key with a helpful message” branches — see coding-guidelines.
 
 ```text

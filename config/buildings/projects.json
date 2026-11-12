@@ -7,16 +7,7 @@
     "secret_project": true,
     "category": "grow",
     "required_tech": "biogenetics",
-    "icon": "assets/sprites/projects/proj000.png",
-    "effects": [
-      {
-        "type": "RuleFlag",
-        "scope": "FactionGlobal",
-        "parameters": {
-          "flag": "population_boom"
-        }
-      }
-    ]
+    "icon": "assets/sprites/projects/proj000.png"
   },
   {
     "id": "Command_Nexus",
@@ -314,6 +305,13 @@
     "required_tech": "biomachinery",
     "icon": "assets/sprites/projects/proj024.png",
     "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "flag": "population_boom"
+        }
+      },
       {
         "type": "SocialPolicyImpunity",
         "scope": "FactionGlobal",

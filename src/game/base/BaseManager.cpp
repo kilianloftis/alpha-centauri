@@ -610,6 +610,8 @@ int BaseManager::GetEffectiveSocialRating(SocialRatingId_t rating) const
 void BaseManager::ProduceResources()
 {
     m_pResources->ProduceResources(m_effects.Get());
+    // Peek only: the bank is drained later in ApplyGrowth. Priming must precede production.
+    m_pPopulation->PrimeNutrientTanks(m_pResources->GetNutrientBank());
 }
 
 std::vector<BuildingUpkeepLine_t> BaseManager::GetBuildingUpkeepByType() const

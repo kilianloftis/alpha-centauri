@@ -1,6 +1,6 @@
 # Thinker behaviour backlog
 
-Notes from [induktio/thinker](https://github.com/induktio/thinker) (SMACX engine reconstruction) that are **not** in the Nutrients / Base wiki specs we treat as primary. Implement later when we want engine-parity quirks or optional rules.
+Notes from [induktio/thinker](https://github.com/induktio/thinker) (SMACX engine reconstruction). Confirmed binary behaviour is in `terranx-map.md` (`base_nutrient`, `base_growth`, pod pop cost).
 
 Source files of interest: `src/base.cpp` — `mod_base_nutrient`, `mod_base_growth`.
 
@@ -14,34 +14,65 @@ When `nutrients_accumulated >= nutrient_cost` but the base cannot grow (over hab
 2. Still add this turn’s `nutrient_surplus` afterward.
 3. Original UI shows a population-limit notice (`POPULATIONLIMIT`).
 
-The [Nutrients wiki](https://alphacentauri.miraheze.org/wiki/Nutrients) does not describe this. **In scope** for the base-size-limits plan: with BaseProduction before BaseGrowth, half inside `ApplyGrowth` when still full and blocked (Hab/Dome already had their chance). Integer `/ 2` toward zero. The `POPULATIONLIMIT` notice remains deferred.
+**Implemented** in `ResolveStalled_` (`GrowthRules`). The `POPULATIONLIMIT` notice remains deferred.
 
 ### No “net ≥ 0” gate on normal growth
 
 Wiki: grow from a full tank only if net gain is neutral or positive.
 
-Thinker: if tanks are full and growth is allowed, grow and empty even when `nutrient_surplus < 0`, then apply surplus (tanks can go negative immediately after).
+Binary: if tanks are full and growth is allowed, grow and empty even when `nutrient_surplus < 0`, then apply surplus (tanks can go negative immediately after).
 
-We follow the wiki. Recorded here if we ever need a fidelity toggle.
+**We follow the wiki** (`IsNutrientBoxFull_` requires `net >= 0`). Recorded here if we ever need a fidelity toggle.
 
 ### Starvation timing
 
-Wiki: if net loss exhausts storage, population decreases as part of the opening upkeep beat.
+Two stores matter:
 
-Thinker: primarily starves when entering `mod_base_growth` with `nutrients_accumulated < 0` (often primed when surplus &lt; 0 and tanks were empty). If tanks were ≥ 0 and adding surplus would go negative, it often warns (`LOWNUTRIENT*`) and returns without starving that call.
+- **Resource nutrient bank** — this turn’s gross tile nutrients (`ResourceManager`), filled in
+  `ResourceCollection` and drained in `BaseGrowth`.
+- **Nutrient tanks** — the persistent growth stockpile (`PopulationManager`). Priming and
+  deposit change only this.
 
-Edge-case differences vs a strict wiki reading — revisit with playtesting.
+Priming is **not** a transfer from the bank into the tanks. It only rewrites tank state using
+this turn’s net (gross − citizen intake) as a signal, before production runs:
+
+| Current tanks | This turn’s net | After priming |
+|---------------|-----------------|---------------|
+| negative      | ≥ 0             | 0             |
+| exactly 0     | < 0             | −1            |
+| anything else | (any)           | unchanged     |
+
+Turn order (binary and ours):
+
+1. **ResourceCollection** — fill the bank; run `PrimeNutrientTanks` (signal only).
+2. **BaseProduction** — finishing a colony pod (or any `ModifyPopulation` shrink) first sets
+   tanks to **0 if they were negative**, then removes the citizen(s). That wipe is what
+   “clamps to 0, then pops” means: clear a −1 starvation mark so growth will not treat the
+   base as already starving after the pop cost.
+3. **BaseGrowth** — `ConsumeNutrients` drains the bank into `ResolveGrowth` as gross production.
+   Starvation fires only if tanks are already `< 0` on entry. Otherwise boom / near-zero /
+   threshold grow / deposit run; deposit may leave tanks negative for a **later** turn.
+
+Why priming cannot live only inside `ResolveGrowth`: growth runs after production. A size-2
+base with empty tanks and a food deficit must become −1 **before** the pod completes, so the
+pod can clear that −1 to 0. If priming waited until growth, the leftover size-1 base would
+be primed to −1 and starve in the same turn — harsher than SMAC.
+
+**Implemented:** `PrimeNutrientTanks` after `ProduceResources`; stockpile wipe on
+`ModifyPopulation` shrink; `ResolveStarvation_` when `stockpile < 0`; deposit upper-clamps
+only (no floor at 0).
 
 ### Recompute surplus after growth before deposit
 
-After a successful grow, Thinker calls `base_compute(1)` so the surplus added that turn uses the **new** population’s intake. Our stage order (ResourceCollection before BaseGrowth) may approximate by subtracting one citizen’s intake from net when a pop is born; full recompute parity can land here later.
+After a successful grow, binary recomputes so the surplus uses the new population’s intake. We approximate by subtracting one citizen’s intake on the threshold-growth path; full recompute parity can land later.
 
-### Population boom path clamps
+### Population boom / near-zero
 
-Under pop boom / Cloning Vats, Thinker may clamp `nutrients_accumulated` to `nutrient_cost` rather than emptying. Separate from normal growth; track with boom implementation.
+Under pop boom (Growth ≥ 6) or Cloning Vats, a base whose surplus is at least one citizen's intake grows every turn regardless of tank level. Tanks are not emptied: they are clamped down to the pre-growth `nutrient_cost` if above it, and that turn's surplus is not added. At Growth ≤ −3 full tanks are pinned to `nutrient_cost` and the base never grows from tanks. Confirmed in the binary; consumed via `PopulationBoom` / `NearZeroGrowth` rule flags in `ResolveGrowth`.
 
 ## References
 
 - Thinker `mod_base_growth` / `mod_base_nutrient` in `src/base.cpp`
-- [Nutrients wiki](https://alphacentauri.miraheze.org/wiki/Nutrients) (primary for our growth plan)
+- `docs/thinker/terranx-map.md` (`base_nutrient`, `base_growth`, pod pop cost)
+- [Nutrients wiki](https://alphacentauri.miraheze.org/wiki/Nutrients)
 - [Base wiki — Growth](https://alphacentauri2.info/wiki/Base.html)

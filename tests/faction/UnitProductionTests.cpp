@@ -512,6 +512,34 @@ TEST_CASE("A size-2 colony pod completes without asking even when the base is st
     CHECK(base.GetPopulation().GetSize() == 1);
 }
 
+TEST_CASE("A size-2 pod with primed empty tanks does not starve the leftover citizen same turn",
+          "[production][unit][population][abandon][growth]")
+{
+    UnitProductionGame_ game;
+    BaseManager& base = game.MakeBase(8, 8);
+    PopulationManager& rPops = base.GetPopulation();
+    rPops.RemovePop();
+    REQUIRE(rPops.GetSize() == 2);
+    rPops.SetNutrientStockpile(0);
+    // Empty tanks + negative net before production (ResourceCollection priming).
+    rPops.PrimeNutrientTanks(0);
+    REQUIRE(rPops.GetNutrientStockpile() == -1);
+
+    const UnitDesign& rPod =
+        game.AddDesign({"test_chassis", "test_colony_pod", "test_armor"});
+    base.GetProduction().SetProduction(&rPod, base.GetBaseEffects());
+    base.GetProduction().SetMineralStockpile(base.GetMineralCost());
+    REQUIRE(ApplyAndComplete_(base).kind == ProductionApplyKind_t::Completed);
+    CHECK(rPops.GetSize() == 1);
+    CHECK(rPops.GetNutrientStockpile() == 0);
+
+    // Growth deposits the new size's deficit; no same-turn starve after the pod clamp.
+    base.ApplyGrowth();
+    CHECK(rPops.GetSize() == 1);
+    CHECK_FALSE(base.IsRazed());
+    CHECK(rPops.GetNutrientStockpile() < 0);
+}
+
 TEST_CASE("At Citizen a colony pod completes in a size-1 base, which keeps its citizen",
           "[production][unit][population][abandon][difficulty]")
 {

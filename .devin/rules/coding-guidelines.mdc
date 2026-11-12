@@ -122,6 +122,13 @@ value-line per array, not one element per line). Do not rewrite them with
   it belongs in. A class can be described in one sentence without "and".
 - Derived classes are substitutable for their base. Interfaces stay narrow.
 - Depend on an interface only when it has two implementations, or a test double needs one.
+- **Original behaviour through our system.** Match the original game's mechanics as confirmed
+  from the binary. Do not mirror its structure, call sequence, or hard-coded constants in C++.
+  The binary answers *what* happens; our Rules, Calculators, config, effects, and Lua answer
+  *how*. Express numbers, formulas, ids, and switches through those seams so shipping config
+  reproduces the original behaviour and mods or documented deviations can change it. The
+  thinker map records SMAC behaviour; it is not an implementation blueprint. See also
+  `planning.mdc` and `smac-reverse-engineering.mdc`.
 - **Display copy lives in the UI layer.** Titles, bodies, captions, button labels, and other
   player-facing strings are formatted by views and `InteractionPresenter`. The game layer
   reports outcomes (ids, enums, amounts). It does not build a sentence for the player.
@@ -137,8 +144,9 @@ value-line per array, not one element per line). Do not rewrite them with
   ```
 
 ## Moddability
-- Numbers, ids and switches a modder would change live in config, not C++. Calculator
-  coefficients follow `calculators.mdc`.
+- Numbers, ids and switches a modder would change live in config, not C++ — including values
+  the binary inlined. Calculator coefficients follow `calculators.mdc`. Prefer existing
+  config, effects, Lua, and rule-switch seams over new speculative hooks.
 - A Lua or plugin hook is added with the mod feature that calls it.
 
 ## Code Formatting

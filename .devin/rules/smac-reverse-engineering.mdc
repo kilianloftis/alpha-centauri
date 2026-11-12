@@ -36,7 +36,9 @@ When a question is "what does SMAC do", answer it from the binary, not from the 
 - **Check the map first.** [`docs/thinker/terranx-map.md`](docs/thinker/terranx-map.md) and
   topic files under `docs/thinker/` record what has already been confirmed, with addresses.
   Add to them whenever you confirm something. Record the address, what the code does, and
-  where Thinker differs.
+  where Thinker differs. The map describes SMAC; it is not an implementation blueprint —
+  implement through our architecture and config (`planning.mdc`, `coding-guidelines.mdc`).
+
 - **Addresses and symbols stay in the thinker docs.** Code comments may cite a thinker path
   and section name. They must not paste `0x…` addresses or SMAC / Thinker symbol names
   (`world_fungus`, `MapNativeLifeForms`, …). See `coding-guidelines.mdc` on comments.

@@ -525,6 +525,9 @@ bool ResolveFlag(const Faction& rFaction, RuleFlagId_t flagId);
 // From the base's full effect list, social ratings included. Context-free.
 bool ResolveFlag(const BaseManager& rBase, RuleFlagId_t flagId);
 
+// Same walk over an already-built base effect list. Context-free.
+bool ResolveFlag(const BaseEffects_t& rBaseEffects, RuleFlagId_t flagId);
+
 // A config's declared flags (a building's or tech's effects), whatever their scope.
 // Context-free.
 bool ResolveFlag(std::span<const EffectConfig_t> effects, RuleFlagId_t flagId);

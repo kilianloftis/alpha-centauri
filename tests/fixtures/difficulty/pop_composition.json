@@ -41,12 +41,11 @@
       }
     },
     {
-      "type": "StatModifier",
+      "type": "SocialRatingModifier",
       "scope": "ThisBase",
       "parameters": {
-        "stat": "growth_rate",
-        "amount": 2,
-        "op": "AddPercent"
+        "rating": "growth",
+        "amount": 2
       }
     }
   ],

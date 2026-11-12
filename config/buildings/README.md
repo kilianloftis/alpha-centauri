@@ -180,12 +180,12 @@ most once per subject — and only an entry that actually changed something spen
 
 ```json
 {
-  "id": "Human_Genome_Project",
-  "name": "Human Genome Project",
-  "mineral_cost": 200,
-  "upkeep": 2,
+  "id": "Cloning_Vats",
+  "name": "Cloning Vats",
+  "mineral_cost": 500,
+  "upkeep": 0,
   "secret_project": true,
-  "required_tech": "biogenetics",
+  "required_tech": "biomachinery",
   "effects": [
     {
       "type": "RuleFlag",

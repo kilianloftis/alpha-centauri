@@ -877,6 +877,15 @@
           "parameters": {
             "flag": "near_zero_growth"
           }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "growth_rate",
+            "amount": -20,
+            "op": "AddPercent"
+          }
         }
       ],
       "-2": [
@@ -962,6 +971,15 @@
           "scope": "AllOwnerBases",
           "parameters": {
             "flag": "population_boom"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "growth_rate",
+            "amount": 50,
+            "op": "AddPercent"
           }
         }
       ]

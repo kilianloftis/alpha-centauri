@@ -58,6 +58,8 @@ public:
     // Current per-turn mineral bank (filled by ProduceResources; drained by support /
     // BaseProduction when enabled).
     int GetMineralBank() const;
+    // Current per-turn nutrient bank (filled by ProduceResources; drained by BaseGrowth).
+    int GetNutrientBank() const;
     // Deduct up to `amount` from the mineral bank. `amount` must be >= 0 and <= bank.
     void SpendMinerals(int amount);
 
