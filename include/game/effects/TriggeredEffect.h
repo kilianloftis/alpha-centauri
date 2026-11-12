@@ -4,6 +4,7 @@
 #include "game/atrocities/AtrocityConfig.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
+#include "lib/Formula.h"
 #include "lib/Rational.h"
 
 #include <optional>
@@ -44,7 +45,7 @@ struct GrantUnitEffect_t
 struct GrantEnergyEffect_t
 {
     std::optional<int> amount;
-    std::optional<std::string> formula;
+    std::optional<Formula_t> formula;
 };
 
 // Places one improvement occupant on the context tile when CanBuildImprovement allows.

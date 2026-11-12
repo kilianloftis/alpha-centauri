@@ -1,5 +1,7 @@
 #pragma once
 
+#include "lib/Formula.h"
+
 #include <string>
 
 namespace ac
@@ -9,9 +11,9 @@ namespace ac
 struct AllocationImbalanceConfig_t
 {
     // Lua expressions from energy_allocation.lua (e.g. "labs_loss_formula()").
-    std::string labsLossFormula;
-    std::string econLossFormula;
-    std::string psychLossFormula;
+    Formula_t labsLossFormula;
+    Formula_t econLossFormula;
+    Formula_t psychLossFormula;
 };
 
 } // namespace ac

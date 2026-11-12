@@ -1,5 +1,7 @@
 #pragma once
 
+#include "lib/Formula.h"
+
 #include <string>
 
 namespace ac
@@ -9,7 +11,7 @@ namespace ac
 struct UpheavalCostConfig_t
 {
     // Evaluated with `changed_categories`. Shipping: (changed_categories + 1) ^ 3.
-    std::string costFormula;
+    Formula_t costFormula;
 };
 
 } // namespace ac

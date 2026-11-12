@@ -151,7 +151,8 @@ MoraleConfig_t ParseMorale_(const ConfigReader& rReader)
     config.defenseFloorIndex = rReader.IntOr("defense_floor_index", 1);
     config.percentPerLevel = rReader.Number("percent_per_level");
     config.baselineIndex = rReader.Int("baseline_index");
-    config.promotionEligibilityFormula = rReader.NonEmptyString("promotion_eligibility_formula");
+    config.promotionEligibilityFormula =
+        rReader.Formula("promotion_eligibility_formula", {"our_strength", "their_strength"});
     config.levels = ParseLevels_(rReader);
 
     ValidateContiguousLevels_(config);

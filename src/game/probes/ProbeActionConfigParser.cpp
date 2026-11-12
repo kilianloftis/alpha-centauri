@@ -72,9 +72,10 @@ std::optional<DrainFormulas_t> ParseDrainFormulas_(const ConfigReader& rReader,
     {
         return std::nullopt;
     }
-    return DrainFormulas_t{rReader.NonEmptyString("share_formula"),
-                           rReader.NonEmptyString("floor_formula"),
-                           rReader.NonEmptyString("amount_formula")};
+    return DrainFormulas_t{
+        rReader.Formula("share_formula", {"treasury", "population", "faction_population"}),
+        rReader.Formula("floor_formula", {"share", "morale"}),
+        rReader.Formula("amount_formula", {"floor_amount", "draw"})};
 }
 
 std::optional<PlagueFormulas_t> ParsePlagueFormulas_(const ConfigReader& rReader,
@@ -85,9 +86,11 @@ std::optional<PlagueFormulas_t> ParsePlagueFormulas_(const ConfigReader& rReader
     {
         return std::nullopt;
     }
-    return PlagueFormulas_t{rReader.NonEmptyString("kill_formula"),
-                            rReader.NonEmptyString("garrison_damage_bound_formula"),
-                            rReader.NonEmptyString("garrison_damage_formula")};
+    return PlagueFormulas_t{
+        rReader.Formula("kill_formula",
+                        {"population", "defense_techs", "known_defense_techs", "repeated"}),
+        rReader.Formula("garrison_damage_bound_formula", {"hp"}),
+        rReader.Formula("garrison_damage_formula", {"hp", "draw", "repeated"})};
 }
 
 void ParseActionNumbers_(const ConfigReader& rReader, ProbeActionConfig_t& rAction)
@@ -149,6 +152,17 @@ bool HasNonNull_(const ConfigReader& rReader, const char* pKey)
     return rReader.Has(pKey) && !rReader.Json().at(pKey).is_null();
 }
 
+// A base target's cost is a mind-control price, a unit target's a subversion price.
+std::vector<std::string> CostVariables_(ProbeTargetKind_t target)
+{
+    if (target == ProbeTargetKind_t::Unit)
+    {
+        return {"mineral_cost", "energy", "distance"};
+    }
+    return {"garrison_weight", "garrison_multiplier", "mind_control_total", "population",
+            "energy", "distance"};
+}
+
 ProbeActionConfig_t ParseAction_(const ConfigReader& rReader)
 {
     ProbeActionConfig_t action;
@@ -178,7 +192,8 @@ ProbeActionConfig_t ParseAction_(const ConfigReader& rReader)
     ParseActionNumbers_(rReader, action);
     if (HasNonNull_(rReader, "cost"))
     {
-        action.cost = ProbeCostConfig_t{rReader.Object("cost").NonEmptyString("formula")};
+        action.cost = ProbeCostConfig_t{
+            rReader.Object("cost").Formula("formula", CostVariables_(action.target))};
     }
     action.effects = ParseActionEffects_(rReader, action.id);
     const std::string sourceId(magic_enum::enum_name(action.id));
@@ -200,9 +215,9 @@ ProbeActionConfig_t ParseAction_(const ConfigReader& rReader)
 ProbeSuccessFormula_t ParseSuccessFormula_(const ConfigReader& rReader)
 {
     ProbeSuccessFormula_t formula;
-    formula.defense = rReader.NonEmptyString("defense");
-    formula.missionStrength = rReader.NonEmptyString("mission_strength");
-    formula.escapeStrength = rReader.NonEmptyString("escape_strength");
+    formula.defense = rReader.Formula("defense", {"probe_defense"});
+    formula.missionStrength = rReader.Formula("mission_strength", {"morale", "defense"});
+    formula.escapeStrength = rReader.Formula("escape_strength", {"morale", "defense"});
     return formula;
 }
 

@@ -31,7 +31,10 @@ ProductionConfig_t SmacHurryConfig()
     ProductionConfig_t config;
     const auto kind = [](std::string formula, int mineralThreshold = 10,
                          int belowThresholdMultiplier = 2) {
-        return HurryKindConfig_t{std::move(formula), mineralThreshold, belowThresholdMultiplier};
+        const Formula_t hurry{std::move(formula),
+                              {"minerals", "remaining", "stockpile", "mineral_threshold",
+                               "below_threshold_multiplier"}};
+        return HurryKindConfig_t{hurry, mineralThreshold, belowThresholdMultiplier};
     };
     config.kinds[ConstructableKind_t::Building].hurry = kind("2 * minerals");
     config.kinds[ConstructableKind_t::SecretProject].hurry = kind("4 * minerals");
@@ -267,7 +270,8 @@ TEST_CASE("Production config groups hurry under kinds", "[production][hurry][con
         })");
         const ProductionConfig_t config = ProductionConfigParser::ParseConfig(file.Path());
         REQUIRE(config.kinds.at(ConstructableKind_t::Building).hurry.has_value());
-        CHECK(config.kinds.at(ConstructableKind_t::Building).hurry->formula == "2 * minerals");
+        CHECK(config.kinds.at(ConstructableKind_t::Building).hurry->formula.expression
+              == "2 * minerals");
         CHECK(config.kinds.at(ConstructableKind_t::Building).hurry->mineralThreshold == 8);
         CHECK(config.kinds.at(ConstructableKind_t::Building).hurry->belowThresholdMultiplier == 3);
     }

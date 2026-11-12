@@ -1,5 +1,7 @@
 #pragma once
 
+#include "lib/Formula.h"
+
 #include <string>
 
 namespace ac
@@ -26,7 +28,7 @@ struct TechCostInputs_t
 
 struct TechCostConfig_t
 {
-    std::string costFormula;
+    Formula_t costFormula;
 };
 
 class TechCostConfigParser

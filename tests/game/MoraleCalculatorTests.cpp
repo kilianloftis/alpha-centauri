@@ -43,7 +43,7 @@ TEST_CASE("MoraleConfigParser loads SMAC defaults", "[morale][config]")
     CHECK(config.defenseFloorIndex == 1);
     CHECK(config.percentPerLevel == Catch::Approx(12.5));
     CHECK(config.baselineIndex == 2);
-    CHECK(config.promotionEligibilityFormula
+    CHECK(config.promotionEligibilityFormula.expression
           == "(our_strength + their_strength) > 0 and their_strength / "
              "(our_strength + their_strength) or 0");
     CHECK(config.levels.size() == 7);

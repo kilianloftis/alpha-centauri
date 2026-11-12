@@ -88,7 +88,7 @@ void ParseGrantEnergy_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEf
     }
     else
     {
-        grant.formula = rParams.NonEmptyString("formula");
+        grant.formula = rParams.Formula("formula", {"turn"});
     }
     rEffect.effect = grant;
 }

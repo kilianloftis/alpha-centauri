@@ -89,10 +89,18 @@ PopCompositionConfig_t ParseComposition_(const ConfigReader& rReader)
         "effects", "golden_age_effects", "riot_tiers", "rebel_selection",
     });
     PopCompositionConfig_t config;
-    config.bureaucracyLimitFormula = rReader.NonEmptyString("bureaucracy_limit_formula");
-    config.bureaucracyDroneFormula = rReader.NonEmptyString("bureaucracy_drone_formula");
-    config.sizeDroneFormula = rReader.NonEmptyString("size_drone_formula");
-    config.occupationDroneFormula = rReader.NonEmptyString("occupation_drone_formula");
+    config.bureaucracyLimitFormula = rReader.Formula(
+        "bureaucracy_limit_formula", {"bureaucracy", "map_width", "map_height"});
+    config.bureaucracyDroneFormula = rReader.Formula(
+        "bureaucracy_drone_formula",
+        {"bureaucracy", "map_width", "map_height", "base_id", "faction_base_count",
+         "bureaucracy_limit", "residue"});
+    config.sizeDroneFormula =
+        rReader.Formula("size_drone_formula", {"base_size", "size_free_drones"});
+    config.occupationDroneFormula = rReader.Formula(
+        "occupation_drone_formula",
+        {"base_size", "turns_since_conquered", "assimilation_duration", "assimilation_peak",
+         "conquered_drone_cap"});
     config.droneTypeId = rReader.NonEmptyString("drone_type");
     config.talentTypeId = rReader.NonEmptyString("talent_type");
     config.assimilationDrones = rReader.IntAtLeast("assimilation_drones", 1);

@@ -44,8 +44,12 @@ EcoDamageConfig_t EcoDamageConfigParser::ParseConfig(const std::string& rConfigP
     EcoDamageConfig_t config = JsonConfigLoader::LoadObjectFile<EcoDamageConfig_t>(
         rConfigPath, "eco damage", ParseEcoDamage_);
     const sol::table formulas = LuaConfigLoader::RunScript(rLua, rFormulaPath, "eco damage");
-    config.damageFormula =
-        LuaConfigLoader::RequireFormula(formulas, "damage_formula", rFormulaPath, "eco damage");
+    config.damageFormula = LuaConfigLoader::RequireFormula(
+        rLua, formulas, "damage_formula",
+        {"terraform_raw", "terraform_scale", "minerals", "mineral_offset", "clean_minerals",
+         "fungal_blooms", "clean_mineral_grants", "virtual_minerals", "damage_reduction", "techs",
+         "eco_scale"},
+        rFormulaPath, "eco damage");
     return config;
 }
 

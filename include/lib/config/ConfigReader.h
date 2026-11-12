@@ -1,5 +1,6 @@
 #pragma once
 
+#include "lib/Formula.h"
 #include "lib/Rational.h"
 #include "lib/config/EnumNames.h"
 
@@ -63,6 +64,9 @@ public:
     std::string StringOr(const std::string& rKey, const std::string& rFallback) const;
     // Absent is an empty list.
     std::vector<std::string> StringArray(const std::string& rKey) const;
+    // A Lua expression reading only rVariables, checked by LuaRuntime::CheckFormula. It can
+    // use Lua's libraries but nothing a config script defines.
+    Formula_t Formula(const std::string& rKey, std::vector<std::string> variables) const;
 
     // Case-insensitive by enumerator name; rWhat names the enum in the error.
     template <typename Enum_t>

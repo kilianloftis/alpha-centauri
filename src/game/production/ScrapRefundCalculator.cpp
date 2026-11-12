@@ -36,7 +36,7 @@ ScrapQuote_t ScrapRefundCalculator::Quote(int mineralCost,
         return {};
     }
 
-    const std::string& rFormula = rOverride.formula ? *rOverride.formula : pKind->formula;
+    const Formula_t& rFormula = rOverride.formula ? *rOverride.formula : pKind->formula;
     const int formulaAmount = FormulaRefund_(rFormula, mineralCost);
     const int bonusAmount = WithRefundBonus_(formulaAmount, rBonusEffects);
     const int ceiling = mineralCost * pKind->refundCeilingPercent / 100;
@@ -49,14 +49,14 @@ ScrapQuote_t ScrapRefundCalculator::Quote(int mineralCost,
     return quote;
 }
 
-int ScrapRefundCalculator::FormulaRefund_(const std::string& rFormula, int mineralCost) const
+int ScrapRefundCalculator::FormulaRefund_(const Formula_t& rFormula, int mineralCost) const
 {
     const std::unordered_map<std::string, double> vars = {
         {"minerals", static_cast<double>(mineralCost)}};
     const int amount = m_pLua->EvalInt(rFormula, vars);
     if (amount < 0)
     {
-        throw std::runtime_error("Scrap formula '" + rFormula + "' produced "
+        throw std::runtime_error("Scrap formula '" + rFormula.expression + "' produced "
                                  + std::to_string(amount) + "; refund must not be negative");
     }
     return amount;

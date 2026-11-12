@@ -8,6 +8,7 @@
 #include <cmath>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace ac
@@ -86,14 +87,18 @@ NativeLifeLevel_t ParseLevel_(const ConfigReader& rReader)
 void LoadFormulas_(const std::string& rFormulaPath, LuaRuntime& rLua, NativeLifeConfig_t& rConfig)
 {
     const sol::table table = LuaConfigLoader::RunScript(rLua, rFormulaPath, k_ScriptNoun);
-    const auto requireFormula = [&](const char* pKey) {
-        return LuaConfigLoader::RequireFormula(table, pKey, rFormulaPath, k_ScriptNoun);
+    const auto requireFormula = [&](const char* pKey, std::vector<std::string> variables) {
+        return LuaConfigLoader::RequireFormula(rLua, table, pKey, std::move(variables),
+                                               rFormulaPath, k_ScriptNoun);
     };
-    rConfig.boatPeriodFormula = requireFormula("boat_period_formula");
-    rConfig.earlyLimitThresholdFormula = requireFormula("early_limit_threshold_formula");
-    rConfig.boatCargoFormula = requireFormula("boat_cargo_formula");
-    rConfig.ambushAttemptsFormula = requireFormula("ambush_attempts_formula");
-    rConfig.swarmYearThresholdFormula = requireFormula("swarm_year_threshold_formula");
+    rConfig.boatPeriodFormula = requireFormula("boat_period_formula", {"fauna_forms"});
+    rConfig.earlyLimitThresholdFormula =
+        requireFormula("early_limit_threshold_formula", {"fauna_forms", "fauna_diff"});
+    rConfig.boatCargoFormula = requireFormula(
+        "boat_cargo_formula", {"turn", "fauna_forms", "fauna_diff", "cargo_scale"});
+    rConfig.ambushAttemptsFormula = requireFormula("ambush_attempts_formula", {"fauna_forms"});
+    rConfig.swarmYearThresholdFormula =
+        requireFormula("swarm_year_threshold_formula", {"fauna_forms"});
 }
 
 NativeLifeConfig_t ParseNativeLifeJson_(const ConfigReader& rReader)

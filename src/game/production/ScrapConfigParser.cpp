@@ -18,6 +18,11 @@ std::optional<std::string> OptionalString_(const ConfigReader& rReader, const ch
     return rReader.NonEmptyString(pKey);
 }
 
+Formula_t RefundFormula_(const ConfigReader& rReader)
+{
+    return rReader.Formula("formula", {"minerals"});
+}
+
 std::optional<StatId_t> OptionalRefundType_(const ConfigReader& rReader)
 {
     const std::optional<std::string> type = OptionalString_(rReader, "refund_type");
@@ -48,7 +53,7 @@ ScrapKindConfig_t ScrapConfigParser::ParseKindConfig(const ConfigReader& rReader
     rReader.RejectUnknownKeys({"formula", "refund_type", "refund_ceiling_percent"});
 
     ScrapKindConfig_t kind;
-    kind.formula = rReader.NonEmptyString("formula");
+    kind.formula = RefundFormula_(rReader);
     const std::optional<StatId_t> refundType = OptionalRefundType_(rReader);
     if (!refundType)
     {
@@ -70,11 +75,11 @@ ScrapOverride_t ScrapConfigParser::ParseOverride(const ConfigReader& rReader)
         {
             rReader.Fail("a null formula denies scrap; omit refund_type");
         }
-        override.formula = "";
+        override.formula = Formula_t{};
     }
-    else
+    else if (rReader.Has("formula"))
     {
-        override.formula = OptionalString_(rReader, "formula");
+        override.formula = RefundFormula_(rReader);
     }
     override.refundType = OptionalRefundType_(rReader);
     if (!override.formula && !override.refundType)

@@ -166,7 +166,7 @@ TEST_CASE("Production config loads unit default_scrap as minerals", "[unit][scra
     const ProductionConfig_t config = ProductionConfigParser::ParseConfig(file.Path());
     REQUIRE(config.kinds.at(ConstructableKind_t::Unit).defaultScrap.has_value());
     const ScrapKindConfig_t& rScrap = *config.kinds.at(ConstructableKind_t::Unit).defaultScrap;
-    CHECK(rScrap.formula == "floor(minerals / 2)");
+    CHECK(rScrap.formula.expression == "floor(minerals / 2)");
     CHECK(rScrap.refundType == StatId_t::Minerals);
     CHECK(rScrap.refundCeilingPercent == 100);
 }
@@ -258,6 +258,6 @@ TEST_CASE("Unit component scrap parses formula and refund_type overrides", "[uni
     })json");
     const UnitComponentConfig_t config = actest::ParseOneComponent(j);
     REQUIRE(config.scrap.has_value());
-    CHECK(config.scrap->formula == "minerals");
+    CHECK(config.scrap->formula->expression == "minerals");
     CHECK(config.scrap->refundType == StatId_t::EnergyCredits);
 }

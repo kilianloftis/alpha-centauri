@@ -3,6 +3,7 @@
 #include "game/effects/EffectConfig.h"
 #include "game/effects/TriggeredEffect.h"
 #include "game/probes/ProbeActionId.h"
+#include "lib/Formula.h"
 
 #include <optional>
 #include <stdexcept>
@@ -23,9 +24,9 @@ enum class ProbeTargetKind_t
 // that defense. The shown rates are the draws' probabilities, so they need no formulas.
 struct ProbeSuccessFormula_t
 {
-    std::string defense;
-    std::string missionStrength;
-    std::string escapeStrength;
+    Formula_t defense;
+    Formula_t missionStrength;
+    Formula_t escapeStrength;
 };
 
 // A paid action's cost before the effect multipliers: a Lua expression ProbeCalculator
@@ -33,24 +34,24 @@ struct ProbeSuccessFormula_t
 // SubvertCostInputs_t's.
 struct ProbeCostConfig_t
 {
-    std::string formula;
+    Formula_t formula;
 };
 
 // Drain Energy's formulas, Lua expressions ProbeCalculator evaluates: the target base's share of
 // the treasury, the floor a probe of this morale takes of it, and the amount for a remainder draw.
 struct DrainFormulas_t
 {
-    std::string share;
-    std::string floor;
-    std::string amount;
+    Formula_t share;
+    Formula_t floor;
+    Formula_t amount;
 };
 
 // Genetic Plague's formulas: pop killed, and each garrison unit's damage and its draw bound.
 struct PlagueFormulas_t
 {
-    std::string kills;
-    std::string garrisonDamageBound;
-    std::string garrisonDamage;
+    Formula_t kills;
+    Formula_t garrisonDamageBound;
+    Formula_t garrisonDamage;
 };
 
 struct ProbeActionConfig_t

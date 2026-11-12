@@ -143,8 +143,9 @@ int HurryProductionCalculator::FinishCost_(const HurryKindConfig_t& rKind, int r
     const int cost = m_pLua->EvalInt(rKind.formula, vars);
     if (cost <= 0)
     {
-        throw std::runtime_error("Hurry production formula '" + rKind.formula + "' produced "
-                                 + std::to_string(cost) + "; credit cost must be positive");
+        throw std::runtime_error("Hurry production formula '" + rKind.formula.expression
+                                 + "' produced " + std::to_string(cost)
+                                 + "; credit cost must be positive");
     }
     return cost;
 }

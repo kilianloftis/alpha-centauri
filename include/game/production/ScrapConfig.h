@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/effects/EffectEnums.h"
+#include "lib/Formula.h"
 
 #include <optional>
 #include <string>
@@ -14,7 +15,7 @@ struct ScrapKindConfig_t
 {
     // Lua expression returning a whole refund amount. Variable `minerals` is the item's
     // listed mineral cost. A non-integer result is a config error (use floor).
-    std::string formula;
+    Formula_t formula;
     // IsScrapRefundStat whitelist: energy_credits, minerals, nutrients, energy, econ, labs,
     // psych.
     StatId_t refundType = StatId_t::EnergyCredits;
@@ -26,13 +27,13 @@ struct ScrapKindConfig_t
 // Partial scrap override: given keys replace the kind default. `"formula": null` denies scrap.
 struct ScrapOverride_t
 {
-    std::optional<std::string> formula;
+    std::optional<Formula_t> formula;
     std::optional<StatId_t> refundType;
 };
 
 inline bool ScrapOverrideDenies(const ScrapOverride_t& rOverride)
 {
-    return rOverride.formula.has_value() && rOverride.formula->empty();
+    return rOverride.formula.has_value() && rOverride.formula->expression.empty();
 }
 
 // Layer rFrom over rInto key by key: a key rFrom leaves unset keeps rInto's value. Unit

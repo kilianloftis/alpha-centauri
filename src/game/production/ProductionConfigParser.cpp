@@ -18,7 +18,9 @@ HurryKindConfig_t ParseHurry_(const ConfigReader& rReader)
 {
     rReader.RejectUnknownKeys({"formula", "mineral_threshold", "below_threshold_multiplier"});
     HurryKindConfig_t kind;
-    kind.formula = rReader.NonEmptyString("formula");
+    kind.formula = rReader.Formula("formula",
+                                   {"minerals", "remaining", "stockpile", "mineral_threshold",
+                                    "below_threshold_multiplier"});
     kind.mineralThreshold = rReader.IntAtLeast("mineral_threshold", 0);
     kind.belowThresholdMultiplier = rReader.IntAtLeast("below_threshold_multiplier", 1);
     return kind;

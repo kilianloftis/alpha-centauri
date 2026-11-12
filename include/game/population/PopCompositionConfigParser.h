@@ -2,6 +2,7 @@
 
 #include "game/effects/EffectConfig.h"
 #include "game/effects/TriggeredEffect.h"
+#include "lib/Formula.h"
 #include <optional>
 #include <string>
 #include <vector>
@@ -66,11 +67,11 @@ struct RebelSelectionConfig_t
 
 struct PopCompositionConfig_t
 {
-    std::string bureaucracyLimitFormula;
+    Formula_t bureaucracyLimitFormula;
     // One formula per drone source, so a mod can replace one without restating the others.
-    std::string bureaucracyDroneFormula;
-    std::string sizeDroneFormula;
-    std::string occupationDroneFormula;
+    Formula_t bureaucracyDroneFormula;
+    Formula_t sizeDroneFormula;
+    Formula_t occupationDroneFormula;
     std::string droneTypeId;
     std::string talentTypeId;
     // Peak extra drones on the capture turn, decaying by 1 every assimilationDecayTurns.

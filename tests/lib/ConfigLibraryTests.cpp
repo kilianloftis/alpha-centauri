@@ -1,7 +1,10 @@
+#include "TempConfigFile.h"
+
 #include "lib/LuaRuntime.h"
 #include "lib/Rational.h"
 #include "lib/Registry.h"
 #include "lib/config/ConfigReader.h"
+#include "lib/config/LuaConfigLoader.h"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -194,33 +197,54 @@ TEST_CASE("LuaRuntime::EvalInt fails loudly rather than returning zero", "[lib][
     SECTION("an empty formula is a config error")
     {
         // Returned 0, which TechCostCalculator's floor then turned into research cost 1.
-        CHECK_THROWS_WITH(lua.EvalInt("", {}), Catch::Matchers::ContainsSubstring("empty"));
+        CHECK_THROWS_WITH(lua.EvalInt(Formula_t{"", {}}, {}),
+                          Catch::Matchers::ContainsSubstring("did not return a number"));
     }
 
     SECTION("a broken formula carries the Lua diagnostic")
     {
-        CHECK_THROWS_WITH(lua.EvalInt("this is not lua", {}),
+        CHECK_THROWS_WITH(lua.EvalInt(Formula_t{"this is not lua", {}}, {}),
                           Catch::Matchers::ContainsSubstring("this is not lua"));
     }
 
     SECTION("a fractional result is rejected")
     {
-        CHECK_THROWS_WITH(lua.EvalInt("7 / 2", {}),
+        CHECK_THROWS_WITH(lua.EvalInt(Formula_t{"7 / 2", {}}, {}),
                           Catch::Matchers::ContainsSubstring("whole number"));
-        CHECK(lua.EvalInt("floor(7 / 2)", {}) == 3);
+        CHECK(lua.EvalInt(Formula_t{"floor(7 / 2)", {}}, {}) == 3);
     }
 
     SECTION("fractional inputs are accepted when the result is whole")
     {
-        CHECK(lua.EvalInt("floor(factor * 8 + 0.5)", {{"factor", 0.5}}) == 4);
-        CHECK(lua.EvalInt("floor(bureaucracy * 0.5 + 0.5)", {{"bureaucracy", 12.0}}) == 6);
+        CHECK(lua.EvalInt(Formula_t{"floor(factor * 8 + 0.5)", {"factor"}}, {{"factor", 0.5}})
+              == 4);
     }
 
     SECTION("a non-numeric result is rejected")
     {
-        CHECK_THROWS_WITH(lua.EvalInt("'text'", {}),
+        CHECK_THROWS_WITH(lua.EvalInt(Formula_t{"'text'", {}}, {}),
                           Catch::Matchers::ContainsSubstring("did not return a number"));
     }
+}
+
+TEST_CASE("LuaRuntime rejects a formula reading a variable it was not given", "[lib][lua]")
+{
+    // An unset global read as nil, so `is_ai ~= 0` with a misspelt is_ai was silently true.
+    LuaRuntime lua;
+    const Formula_t misspelt{"(is_aii ~= 0) and 1 or 2", {"is_ai"}};
+
+    CHECK_THROWS_WITH(lua.EvalInt(misspelt, {{"is_ai", 0.0}}),
+                      Catch::Matchers::ContainsSubstring("unknown variable 'is_aii'"));
+}
+
+TEST_CASE("LuaRuntime requires exactly the variables a formula declares", "[lib][lua]")
+{
+    LuaRuntime lua;
+    const Formula_t formula{"size * 2", {"size"}};
+
+    CHECK(lua.EvalInt(formula, {{"size", 5.0}}) == 10);
+    CHECK_THROWS_AS(lua.EvalInt(formula, {}), std::logic_error);
+    CHECK_THROWS_AS(lua.EvalInt(formula, {{"size", 5.0}, {"extra", 1.0}}), std::logic_error);
 }
 
 TEST_CASE("LuaRuntime::EvalInt does not leak variables between calls", "[lib][lua]")
@@ -229,12 +253,12 @@ TEST_CASE("LuaRuntime::EvalInt does not leak variables between calls", "[lib][lu
     // silently read the previous formula's value for it.
     LuaRuntime lua;
 
-    CHECK(lua.EvalInt("size * 2", {{"size", 5}}) == 10);
-    CHECK_THROWS(lua.EvalInt("size * 2", {}));
+    CHECK(lua.EvalInt(Formula_t{"size * 2", {"size"}}, {{"size", 5}}) == 10);
+    CHECK_THROWS(lua.EvalInt(Formula_t{"size * 2", {}}, {}));
 
     // The failing call must not leave its own inputs behind either.
-    CHECK_THROWS(lua.EvalInt("nope +", {{"leftover", 3}}));
-    CHECK_THROWS(lua.EvalInt("leftover", {}));
+    CHECK_THROWS(lua.EvalInt(Formula_t{"nope +", {"leftover"}}, {{"leftover", 3}}));
+    CHECK_THROWS(lua.EvalInt(Formula_t{"leftover", {}}, {}));
 }
 
 TEST_CASE("LuaRuntime::EvalInt reuses a compiled formula without reusing its inputs",
@@ -243,14 +267,63 @@ TEST_CASE("LuaRuntime::EvalInt reuses a compiled formula without reusing its inp
     // The chunk for a formula is compiled once and kept; it must still read whatever globals
     // the current call set, not the ones it was first compiled against.
     LuaRuntime lua;
+    const Formula_t formula{"size * 2", {"size"}};
 
-    CHECK(lua.EvalInt("size * 2", {{"size", 5}}) == 10);
-    CHECK(lua.EvalInt("size * 2", {{"size", 21}}) == 42);
-    CHECK(lua.EvalInt("size * 2", {{"size", 0}}) == 0);
+    CHECK(lua.EvalInt(formula, {{"size", 5}}) == 10);
+    CHECK(lua.EvalInt(formula, {{"size", 21}}) == 42);
+    CHECK(lua.EvalInt(formula, {{"size", 0}}) == 0);
 
     // A formula that does not compile is not kept, so it fails the same way every time.
-    CHECK_THROWS_WITH(lua.EvalInt("still not lua", {}),
-                      Catch::Matchers::ContainsSubstring("still not lua"));
-    CHECK_THROWS_WITH(lua.EvalInt("still not lua", {}),
-                      Catch::Matchers::ContainsSubstring("still not lua"));
+    const Formula_t broken{"still not lua", {}};
+    CHECK_THROWS_WITH(lua.EvalInt(broken, {}), Catch::Matchers::ContainsSubstring("still not lua"));
+    CHECK_THROWS_WITH(lua.EvalInt(broken, {}), Catch::Matchers::ContainsSubstring("still not lua"));
+}
+
+TEST_CASE("ConfigReader::Formula rejects a formula that cannot run at load", "[lib][config][lua]")
+{
+    const nlohmann::json j = {{"cost", {{"good", "floor(minerals / 2)"},
+                                        {"misspelt", "floor(mineral / 2)"},
+                                        {"broken", "floor(minerals /"},
+                                        {"text", "'minerals'"}}}};
+    const ConfigReader cost = ConfigReader(j, "thing config 'thing.json'").Object("cost");
+
+    CHECK(cost.Formula("good", {"minerals"}).expression == "floor(minerals / 2)");
+    CHECK_THROWS_WITH(cost.Formula("misspelt", {"minerals"}),
+                      Catch::Matchers::ContainsSubstring("'cost.misspelt' is not a valid formula")
+                          && Catch::Matchers::ContainsSubstring("unknown variable 'mineral'"));
+    CHECK_THROWS_WITH(cost.Formula("broken", {"minerals"}),
+                      Catch::Matchers::ContainsSubstring("'cost.broken' is not a valid formula"));
+    CHECK_THROWS_WITH(cost.Formula("text", {"minerals"}),
+                      Catch::Matchers::ContainsSubstring("did not return a number"));
+}
+
+TEST_CASE("ConfigReader::Formula leaves the result's range to the evaluation", "[lib][config][lua]")
+{
+    // Only the real inputs say whether a value is valid; a variable dividing must still load.
+    const nlohmann::json j = {{"share", "treasury / (population - 1)"}};
+    const ConfigReader reader(j, "test");
+
+    CHECK_NOTHROW(reader.Formula("share", {"treasury", "population"}));
+}
+
+TEST_CASE("A script formula is checked against its variables at load", "[lib][config][lua]")
+{
+    // The misspelling sits in a function the expression calls, where only running it shows it.
+    const actest::TempConfigFile script("ac_formula_script.lua", R"lua(
+function cost_formula()
+    return techs * 2 + turn
+end
+return { cost_formula = "cost_formula()" }
+)lua");
+    LuaRuntime lua;
+    const sol::table table = LuaConfigLoader::RunScript(lua, script.Path(), "test");
+
+    CHECK(LuaConfigLoader::RequireFormula(lua, table, "cost_formula", {"techs", "turn"},
+                                          script.Path(), "test")
+              .expression
+          == "cost_formula()");
+    CHECK_THROWS_WITH(LuaConfigLoader::RequireFormula(lua, table, "cost_formula",
+                                                      {"techs", "turns"}, script.Path(), "test"),
+                      Catch::Matchers::ContainsSubstring("cost_formula is not a valid formula")
+                          && Catch::Matchers::ContainsSubstring("unknown variable 'turn'"));
 }

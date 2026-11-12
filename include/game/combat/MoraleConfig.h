@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/effects/EffectConfig.h"
+#include "lib/Formula.h"
 
 #include <string>
 #include <vector>
@@ -27,7 +28,7 @@ struct MoraleConfig_t
     double percentPerLevel = 0.0;
     int baselineIndex = 0;
     // Lua seed for StatId PromotionEligibilityChance. Vars: our_strength, their_strength.
-    std::string promotionEligibilityFormula;
+    Formula_t promotionEligibilityFormula;
     std::vector<MoraleLevel_t> levels;
 
     int MinLevel() const;

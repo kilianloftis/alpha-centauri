@@ -1,5 +1,7 @@
 #pragma once
 
+#include "lib/Formula.h"
+
 #include <string>
 
 namespace ac
@@ -14,7 +16,7 @@ struct CommerceConfig_t
 
     // Shipping SMAC pipeline (ceil pair → tech ratio). CommerceRate (faction effects plus the
     // pair's diplomatic status effects) and the flat bonus are applied in C++ after eval.
-    std::string formula;
+    Formula_t formula;
 };
 
 } // namespace ac

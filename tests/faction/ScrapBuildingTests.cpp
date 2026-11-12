@@ -45,7 +45,7 @@ ProductionConfig_t ScrapConfig(std::string formula, int ceilingPercent = 100)
 {
     ProductionConfig_t config;
     ScrapKindConfig_t scrap;
-    scrap.formula = std::move(formula);
+    scrap.formula = Formula_t{std::move(formula), {"minerals"}};
     scrap.refundType = StatId_t::EnergyCredits;
     scrap.refundCeilingPercent = ceilingPercent;
     config.kinds[ConstructableKind_t::Building].defaultScrap = std::move(scrap);
@@ -81,7 +81,7 @@ TEST_CASE("Scrap refund applies config override, bonuses, then the ceiling", "[b
     const ScrapRefundCalculator calculator(config, lua);
 
     ScrapOverride_t fullCost;
-    fullCost.formula = "minerals";
+    fullCost.formula = Formula_t{"minerals", {"minerals"}};
     const ScrapQuote_t overridden = calculator.Quote(21, ConstructableKind_t::Building, fullCost, std::vector<ActiveEffect_t>{});
     CHECK(overridden.amount == 21);
     CHECK(overridden.refundType == StatId_t::EnergyCredits);
@@ -125,7 +125,7 @@ TEST_CASE("A null formula override denies scrap even when the kind has a default
     REQUIRE(calculator.Quote(20, ConstructableKind_t::Building, ScrapOverride_t{}, std::vector<ActiveEffect_t>{}).bAvailable);
 
     ScrapOverride_t deny;
-    deny.formula = "";
+    deny.formula = Formula_t{};
     CHECK(ScrapOverrideDenies(deny));
     CHECK_FALSE(calculator.Quote(20, ConstructableKind_t::Building, deny, std::vector<ActiveEffect_t>{}).bAvailable);
 }
@@ -303,7 +303,7 @@ TEST_CASE("Production config groups default_scrap under kinds", "[building][scra
         const ProductionConfig_t config = ProductionConfigParser::ParseConfig(file.Path());
         REQUIRE(config.kinds.at(ConstructableKind_t::Building).defaultScrap.has_value());
         const ScrapKindConfig_t& rScrap = *config.kinds.at(ConstructableKind_t::Building).defaultScrap;
-        CHECK(rScrap.formula == "floor(minerals / 4)");
+        CHECK(rScrap.formula.expression == "floor(minerals / 4)");
         CHECK(rScrap.refundType == StatId_t::EnergyCredits);
         CHECK(rScrap.refundCeilingPercent == 100);
     }
@@ -476,7 +476,6 @@ TEST_CASE("A scrap override may clear the formula to deny scrap", "[building][sc
     const ScrapOverride_t deny =
         ScrapConfigParser::ParseOverride(ConfigReader(nlohmann::json::parse(R"({"formula": null})"), "test"));
     CHECK(ScrapOverrideDenies(deny));
-    CHECK(deny.formula == "");
 
     CHECK_THROWS_WITH(
         ScrapConfigParser::ParseOverride(ConfigReader(

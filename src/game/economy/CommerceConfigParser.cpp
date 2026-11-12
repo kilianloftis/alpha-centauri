@@ -13,7 +13,9 @@ CommerceConfig_t ParseCommerce_(const ConfigReader& rReader)
 {
     rReader.RejectUnknownKeys({"pair_multiplier", "formula"});
     CommerceConfig_t config;
-    config.formula = rReader.NonEmptyString("formula");
+    config.formula = rReader.Formula(
+        "formula",
+        {"energy_ours", "energy_theirs", "pair_multiplier", "commerce_tech", "tech_denominator"});
     config.pairMultiplier = rReader.NumberAbove("pair_multiplier", 0.0);
     return config;
 }

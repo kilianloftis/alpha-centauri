@@ -210,7 +210,7 @@ DiplomaticStatus_t PlayerStatusWithAi_(ProbeGame_& rGame)
 // seats occupation drones; this term is 1 while an occupier window is active.
 void UseActiveWindowOccupationDrone_(SessionInputs& rInputs)
 {
-    rInputs.dataContext.popCompositionConfig->occupationDroneFormula =
+    rInputs.dataContext.popCompositionConfig->occupationDroneFormula.expression =
         "((assimilation_peak > 0 and assimilation_duration > 0 and "
         "turns_since_conquered < assimilation_duration) and 1 or 0)";
 }
@@ -1644,8 +1644,8 @@ TEST_CASE("Sabotage's protected risk and the drain and plague formulas come from
     const int share = bySix.floor + bySix.remainderBound;
     CHECK(bySix.floor == share * 5 / 6);
     CHECK(StealEnergyAmount(rDrain, bySix, 9) == bySix.floor + 4);
-    rDrain.drain->floor = "floor(share * max(1, morale) / 10)";
-    rDrain.drain->amount = "floor_amount + floor(draw / 3)";
+    rDrain.drain->floor.expression = "floor(share * max(1, morale) / 10)";
+    rDrain.drain->amount.expression = "floor_amount + floor(draw / 3)";
     const StealEnergyQuote_t byTen = QuoteStealEnergy(rDrain, hq, *game.pAi, 5);
     CHECK(byTen.floor == share * 5 / 10);
     CHECK(StealEnergyAmount(rDrain, byTen, 9) == byTen.floor + 3);
@@ -1653,8 +1653,9 @@ TEST_CASE("Sabotage's protected risk and the drain and plague formulas come from
     ProbeActionConfig_t& rPlague = MutableAction_(game, ProbeActionId_t::GeneticPlague);
     CHECK(PlagueGarrisonDrawBound(rPlague, 10) == 5);
     CHECK(PlagueGarrisonDamage(rPlague, hq, 10, 1) == 6);
-    rPlague.plague->garrisonDamageBound = "max(1, floor(hp / 5))";
-    rPlague.plague->garrisonDamage = "floor((floor(hp / 5) + draw) / (repeated * 2 + 1))";
+    rPlague.plague->garrisonDamageBound.expression = "max(1, floor(hp / 5))";
+    rPlague.plague->garrisonDamage.expression =
+        "floor((floor(hp / 5) + draw) / (repeated * 2 + 1))";
     CHECK(PlagueGarrisonDrawBound(rPlague, 10) == 2);
     CHECK(PlagueGarrisonDamage(rPlague, hq, 10, 1) == 3);
     hq.SetPlagueIntroduced();
@@ -1709,7 +1710,8 @@ TEST_CASE("A quote follows its action's cost formula", "[probe][cost][config]")
     Unit& probe = game.MakeUnit(*game.pPlayer, 7, 9, {"test_chassis", "Probe_Team"});
     Unit& pod = game.MakeUnit(*game.pAi, 8, 8,
                               {"test_slow_chassis", "test_colony_pod", "test_costly_armor"});
-    MutableAction_(game, ProbeActionId_t::SubvertUnit).cost->formula = "mineral_cost * 10";
+    MutableAction_(game, ProbeActionId_t::SubvertUnit).cost->formula.expression =
+        "mineral_cost * 10";
     CHECK(QuoteSubvert_(game, probe, pod) == std::max(1, pod.GetDesign().GetBaseCost()) * 10);
 }
 
@@ -1727,8 +1729,8 @@ TEST_CASE("A probe's draw strengths follow success_formula", "[probe][config]")
     REQUIRE(TargetProbeDefenseEffect(target, rOdds) == 0);
     const ProbeChance_t before = ProbeChancesFor(probe, target, /*risk=*/1);
 
-    rOdds.missionStrength = "max(1, morale) + 5";
-    rOdds.escapeStrength = "max(1, morale) * 3";
+    rOdds.missionStrength.expression = "max(1, morale) + 5";
+    rOdds.escapeStrength.expression = "max(1, morale) * 3";
     const ProbeChance_t after = ProbeChancesFor(probe, target, /*risk=*/1);
     CHECK(after.probeStrength == before.escapeStrength + 5);
     CHECK(after.escapeStrength == before.escapeStrength * 3);

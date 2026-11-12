@@ -3,6 +3,7 @@
 #include "lib/LuaRuntime.h"
 
 #include <stdexcept>
+#include <utility>
 
 namespace ac
 {
@@ -22,14 +23,24 @@ sol::table RunScript(LuaRuntime& rLua, const std::string& rScriptPath, const cha
     return result;
 }
 
-std::string RequireFormula(const sol::table& rTable, const char* pKey,
-                           const std::string& rScriptPath, const char* noun)
+Formula_t RequireFormula(LuaRuntime& rLua, const sol::table& rTable, const char* pKey,
+                         std::vector<std::string> variables, const std::string& rScriptPath,
+                         const char* noun)
 {
-    std::string formula = rTable.get_or(pKey, std::string(""));
-    if (formula.empty())
+    Formula_t formula{rTable.get_or(pKey, std::string("")), std::move(variables)};
+    if (formula.expression.empty())
     {
         throw std::runtime_error(std::string(noun) + " script '" + rScriptPath + "' must set "
                                  + pKey + " to a non-empty Lua expression");
+    }
+    try
+    {
+        rLua.CheckFormula(formula);
+    }
+    catch (const std::runtime_error& e)
+    {
+        throw std::runtime_error(std::string(noun) + " script '" + rScriptPath + "': " + pKey
+                                 + " is not a valid formula: " + e.what());
     }
     return formula;
 }

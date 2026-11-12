@@ -9,11 +9,13 @@
 #include "game/economy/EconomyManager.h"
 #include "game/faction/FactionConfig.h"
 #include "game/units/UnitDesign.h"
+#include "lib/Formula.h"
 
 #include <deque>
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace ac
@@ -50,10 +52,18 @@ constexpr uint32_t k_TestFactionSeed = 1234u;
 // std::random_device made every roll-dependent test a coin flip across runs.
 constexpr uint32_t k_TestRngSeed = 4321u;
 
+// expression as a tech cost formula, over the variables TechCostCalculator passes.
+inline ac::Formula_t TestTechCostFormula(std::string expression)
+{
+    return ac::Formula_t{std::move(expression),
+                         {"techs", "most_techs", "diff", "catch_up_diff", "turns", "is_ai",
+                          "turn_lag", "research", "map_area_sq_root"}};
+}
+
 // Tech cost formula for fixtures that do not care about research cost: a fixed positive
 // value. A formula is required config, so "no formula" is not expressible. Per-tech cost
 // lives in ThisTech TechCost effects (or the shipping Lua formula), not a base_cost field.
-inline const std::string k_TestTechCostFormula = "10";
+inline const ac::Formula_t k_TestTechCostFormula = TestTechCostFormula("10");
 
 // Additive base_conquest baselines: tests set one by rewriting that Add's amount in place.
 // CaptureFacilitiesDestroyed is RawScaled (MultiplyGeometric); edit its amount the same way.

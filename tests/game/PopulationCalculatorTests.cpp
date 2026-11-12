@@ -321,8 +321,7 @@ TEST_CASE("A negative drone contribution is a config error", "[population][compo
     LuaRuntime lua;
 
     PopCompositionConfig_t config;
-    config.bureaucracyLimitFormula = "1";
-    config.sizeDroneFormula = "base_size - 10";
+    config.sizeDroneFormula = Formula_t{"base_size - 10", {"base_size", "size_free_drones"}};
     config.droneTypeId = "Drone";
     DroneCalculator droneCalculator(config, lua);
 
@@ -361,12 +360,20 @@ namespace
 PopCompositionConfig_t BureaucracyConfig_()
 {
     PopCompositionConfig_t config;
-    config.bureaucracyLimitFormula =
+    config.bureaucracyLimitFormula.variables = {"bureaucracy", "map_width", "map_height"};
+    config.bureaucracyLimitFormula.expression =
         "math.floor(bureaucracy * math.sqrt(map_width * map_height / 2) / math.sqrt(12800) + 0.5)";
-    config.bureaucracyDroneFormula =
+    config.bureaucracyDroneFormula.variables = {"bureaucracy", "map_width", "map_height",
+                                                "base_id", "faction_base_count",
+                                                "bureaucracy_limit", "residue"};
+    config.bureaucracyDroneFormula.expression =
         "max(0, floor((residue + faction_base_count - bureaucracy_limit) / bureaucracy_limit))";
-    config.sizeDroneFormula = "max(0, base_size - size_free_drones)";
-    config.occupationDroneFormula =
+    config.sizeDroneFormula =
+        Formula_t{"max(0, base_size - size_free_drones)", {"base_size", "size_free_drones"}};
+    config.occupationDroneFormula.variables = {"base_size", "turns_since_conquered",
+                                               "assimilation_duration", "assimilation_peak",
+                                               "conquered_drone_cap"};
+    config.occupationDroneFormula.expression =
         "((assimilation_peak > 0 and assimilation_duration > 0 and turns_since_conquered < assimilation_duration) and 1 or 0) * min(max(0, assimilation_peak - floor(turns_since_conquered / max(1, floor(assimilation_duration / max(1, assimilation_peak))))), max(0, floor(base_size / 4 + conquered_drone_cap)))";
     config.droneTypeId = "Drone";
     config.talentTypeId = "Talent";
@@ -611,7 +618,7 @@ TEST_CASE("A non-positive bureaucracy limit is a config error", "[population][dr
 {
     LuaRuntime lua;
     PopCompositionConfig_t config = BureaucracyConfig_();
-    config.bureaucracyLimitFormula = "0";
+    config.bureaucracyLimitFormula.expression = "0";
     DroneCalculator calculator(config, lua);
 
     CHECK_THROWS_WITH(TotalDrones_(calculator, StandardMapInputs_()),

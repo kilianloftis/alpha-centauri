@@ -1,5 +1,7 @@
 #pragma once
 
+#include "lib/Formula.h"
+
 #include <string>
 
 namespace ac
@@ -8,7 +10,7 @@ namespace ac
 // energy_cost_formula expression from unit_upgrade.lua (returns energy credits).
 struct UpgradeCostConfig_t
 {
-    std::string energyCostFormula;
+    Formula_t energyCostFormula;
 };
 
 } // namespace ac

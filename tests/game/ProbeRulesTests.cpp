@@ -59,9 +59,9 @@ TEST_CASE("ProbeActionConfigParser loads SMAC defaults", "[probe][config]")
     const ProbeActionsConfig_t config =
         ProbeActionConfigParser::ParseConfig(FixturePath("probe_actions.json"));
 
-    CHECK_FALSE(config.successFormula.defense.empty());
-    CHECK_FALSE(config.successFormula.missionStrength.empty());
-    CHECK_FALSE(config.successFormula.escapeStrength.empty());
+    CHECK_FALSE(config.successFormula.defense.expression.empty());
+    CHECK_FALSE(config.successFormula.missionStrength.expression.empty());
+    CHECK_FALSE(config.successFormula.escapeStrength.expression.empty());
     REQUIRE(config.Find(ProbeActionId_t::Infiltrate) != nullptr);
     CHECK(config.Find(ProbeActionId_t::Infiltrate)->risk == 0);
     REQUIRE(config.Find(ProbeActionId_t::Infiltrate)->onSuccessEffects.size() == 1);
@@ -84,7 +84,7 @@ TEST_CASE("ProbeActionConfigParser loads SMAC defaults", "[probe][config]")
     CHECK_FALSE(config.Find(ProbeActionId_t::MindControlBase)->bMayKeepAgreement);
     CHECK(config.Find(ProbeActionId_t::MindControlBase)->bHostileActOnBreak);
     REQUIRE(config.Find(ProbeActionId_t::MindControlBase)->cost.has_value());
-    CHECK_FALSE(config.Find(ProbeActionId_t::MindControlBase)->cost->formula.empty());
+    CHECK_FALSE(config.Find(ProbeActionId_t::MindControlBase)->cost->formula.expression.empty());
     CHECK(config.Find(ProbeActionId_t::SabotageFacility)->protectedRisk == 2);
     CHECK(config.Find(ProbeActionId_t::DrainEnergy)->drain.has_value());
     CHECK(config.Find(ProbeActionId_t::GeneticPlague)->plague.has_value());
@@ -99,7 +99,7 @@ TEST_CASE("ProbeActionConfigParser loads SMAC defaults", "[probe][config]")
     CHECK_FALSE(config.Find(ProbeActionId_t::Infiltrate)->cost.has_value());
     REQUIRE(config.Find(ProbeActionId_t::SubvertUnit) != nullptr);
     REQUIRE(config.Find(ProbeActionId_t::SubvertUnit)->cost.has_value());
-    CHECK_FALSE(config.Find(ProbeActionId_t::SubvertUnit)->cost->formula.empty());
+    CHECK_FALSE(config.Find(ProbeActionId_t::SubvertUnit)->cost->formula.expression.empty());
     CHECK(config.Find(ProbeActionId_t::SubvertUnit)->target == ProbeTargetKind_t::Unit);
     const auto& rSubvertSuccess = config.Find(ProbeActionId_t::SubvertUnit)->onSuccessEffects;
     REQUIRE(rSubvertSuccess.size() == 1);

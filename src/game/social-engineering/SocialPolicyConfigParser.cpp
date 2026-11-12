@@ -21,7 +21,7 @@ SocialCategory_t ParseCategory_(const ConfigReader& rReader)
 UpheavalCostConfig_t ParseUpheaval_(const ConfigReader& rReader)
 {
     UpheavalCostConfig_t config;
-    config.costFormula = rReader.NonEmptyString("cost_formula");
+    config.costFormula = rReader.Formula("cost_formula", {"changed_categories"});
     return config;
 }
 

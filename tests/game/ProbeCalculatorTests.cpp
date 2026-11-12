@@ -64,7 +64,8 @@ TEST_CASE("A cost formula naming an unknown variable throws", "[probe][calculato
 {
     LuaRuntime lua;
     const ProbeCalculator calculator(lua);
-    const ProbeCostConfig_t cost{.formula = "upkeep * 2"};
+    const ProbeCostConfig_t cost{
+        .formula = {"upkeep * 2", {"mineral_cost", "energy", "distance"}}};
     CHECK_THROWS(calculator.SubvertCost(cost, SubvertCostInputs_t{}));
 }
 
@@ -134,8 +135,8 @@ TEST_CASE("The fixture's odds formulas give the wiki's strengths", "[probe][calc
 TEST_CASE("A draw strength formula below 1 throws", "[probe][calculator]")
 {
     ProbeSuccessFormula_t odds;
-    odds.missionStrength = "morale - 1";
-    odds.escapeStrength = "defense";
+    odds.missionStrength = Formula_t{"morale - 1", {"morale", "defense"}};
+    odds.escapeStrength = Formula_t{"defense", {"morale", "defense"}};
     LuaRuntime lua;
     const ProbeCalculator calculator(lua);
 

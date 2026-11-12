@@ -13,7 +13,7 @@ namespace ac
 namespace
 {
 
-int EvalLossPercent_(LuaRuntime& rLua, const std::string& rFormula,
+int EvalLossPercent_(LuaRuntime& rLua, const Formula_t& rFormula,
                      const std::unordered_map<std::string, double>& rVars,
                      const char* pName)
 {

@@ -61,7 +61,7 @@ public:
     int CalculateOccupationDrones(const OccupationDroneInputs_t& rInputs) const;
 
 private:
-    int EvalNonNegative_(const std::string& rFormula, const char* pTermName,
+    int EvalNonNegative_(const Formula_t& rFormula, const char* pTermName,
                          const std::unordered_map<std::string, double>& rVars) const;
 
     const PopCompositionConfig_t& m_rConfig;

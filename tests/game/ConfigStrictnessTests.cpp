@@ -1,3 +1,4 @@
+#include "GameFixtures.h"
 #include "TempConfigFile.h"
 #include "TestHelpers.h"
 
@@ -129,18 +130,16 @@ TEST_CASE("Tech cost refuses to invent a number", "[config][tech]")
     LuaRuntime lua;
     const TechCostInputs_t inputs;
 
-    SECTION("an empty formula throws rather than costing 1")
+    SECTION("an empty formula fails to load rather than costing 1")
     {
-        const TechCostConfig_t config;
-        REQUIRE(config.costFormula.empty());
-        const TechCostCalculator calculator(config, lua);
-        CHECK_THROWS_WITH(calculator.CalculateCost(inputs),
-                          Catch::Matchers::ContainsSubstring("empty"));
+        const TempConfigFile script("ac_tech_cost_empty.lua", R"(return { cost_formula = "" })");
+        CHECK_THROWS_WITH(TechCostConfigParser::ParseConfig(script.Path(), lua),
+                          Catch::Matchers::ContainsSubstring("non-empty"));
     }
 
     SECTION("a formula yielding zero throws rather than costing 1")
     {
-        const TechCostConfig_t config{"0"};
+        const TechCostConfig_t config{actest::TestTechCostFormula("0")};
         const TechCostCalculator calculator(config, lua);
         CHECK_THROWS_WITH(calculator.CalculateCost(inputs),
                           Catch::Matchers::ContainsSubstring("must be positive"));
@@ -148,7 +147,7 @@ TEST_CASE("Tech cost refuses to invent a number", "[config][tech]")
 
     SECTION("a working formula is returned as-is")
     {
-        const TechCostConfig_t config{"40 * 2"};
+        const TechCostConfig_t config{actest::TestTechCostFormula("40 * 2")};
         const TechCostCalculator calculator(config, lua);
         CHECK(calculator.CalculateCost(inputs) == 80);
     }

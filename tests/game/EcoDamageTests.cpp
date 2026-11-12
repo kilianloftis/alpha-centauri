@@ -65,7 +65,7 @@ struct EcoFixture_
     // Set before the first score read: the formula is not a memo input.
     void Formula(const char* pFormula)
     {
-        fixtures.dataContext.ecoDamageConfig->damageFormula = pFormula;
+        fixtures.dataContext.ecoDamageConfig->damageFormula.expression = pFormula;
     }
 
     void Improve(int x, int y, const char* pId)
@@ -464,7 +464,7 @@ TEST_CASE("Eco damage calculator rejects a negative result", "[ecology][formula]
 {
     LuaRuntime lua;
     EcoDamageConfig_t config = LoadFixtureConfig_(lua);
-    config.damageFormula = "-1";
+    config.damageFormula.expression = "-1";
     const EcoDamageCalculator calculator(config, lua);
     CHECK_THROWS_WITH(calculator.Calculate(EcoDamageInputs_t{}), ContainsSubstring("negative"));
 }
@@ -477,7 +477,7 @@ TEST_CASE("EcoDamageConfigParser reads the fixture", "[ecology][parser]")
     CHECK(config.effects.size() == 1);
     REQUIRE(config.onPopEffects.size() == 1);
     CHECK(std::holds_alternative<FungalBloomEffect_t>(config.onPopEffects[0].effect));
-    CHECK(config.damageFormula == "eco_damage_formula()");
+    CHECK(config.damageFormula.expression == "eco_damage_formula()");
 }
 
 TEST_CASE("EcoDamageConfigParser rejects bad configs", "[ecology][parser]")

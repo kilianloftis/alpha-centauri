@@ -393,6 +393,10 @@ Every file and class is one kind. The kind says what the code may read, change a
   - Every non-integer number field reads through `ConfigReader::Number` / `Float`, so it accepts a
     JSON number, a decimal string, or a fraction string such as `"1/3"`. Integer fields require
     JSON integers; exact ratios use `ConfigReader::Rational`.
+  - A formula field is a `Formula_t`: the Lua expression and the variables its parser lists,
+    read through `ConfigReader::Formula` or, from a script, `LuaConfigLoader::RequireFormula`.
+    Reading any other name is a Lua error, and each formula runs once at load with every variable
+    at 1, so a misspelt variable fails at load. A calculator must pass exactly those variables.
 - **The effects system** (`effects/`) follows the same split: resolving effects is rules, and dispatching triggered effects is mutations.
 - **UI copy** is not a game kind. Titles, bodies and labels are formatted in `src/ui/`. The game
   reports what happened (ids, enums, amounts) on `PlayerInteraction_t` arms; `InteractionPresenter`

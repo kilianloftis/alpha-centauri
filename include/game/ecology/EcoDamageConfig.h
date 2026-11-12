@@ -2,6 +2,7 @@
 
 #include "game/effects/EffectConfig.h"
 #include "game/effects/TriggeredEffect.h"
+#include "lib/Formula.h"
 
 #include <string>
 #include <vector>
@@ -21,7 +22,7 @@ struct EcoDamageConfig_t
     // Applied at a base whose roll hit, with base, owner and pop tile stamped.
     std::vector<TriggeredEffectConfig_t> onPopEffects;
     // Lua expression evaluating to the eco-damage percentage.
-    std::string damageFormula;
+    Formula_t damageFormula;
 };
 
 class EcoDamageConfigParser

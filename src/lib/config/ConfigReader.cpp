@@ -1,5 +1,7 @@
 #include "lib/config/ConfigReader.h"
 
+#include "lib/LuaRuntime.h"
+
 #include <algorithm>
 #include <charconv>
 #include <cmath>
@@ -350,6 +352,21 @@ std::vector<std::string> ConfigReader::StringArray(const std::string& rKey) cons
         values.push_back(rEntry.get<std::string>());
     }
     return values;
+}
+
+Formula_t ConfigReader::Formula(const std::string& rKey, std::vector<std::string> variables) const
+{
+    Formula_t formula{NonEmptyString(rKey), std::move(variables)};
+    try
+    {
+        LuaRuntime lua;
+        lua.CheckFormula(formula);
+    }
+    catch (const std::runtime_error& e)
+    {
+        FailKey(rKey, std::string("is not a valid formula: ") + e.what());
+    }
+    return formula;
 }
 
 std::string ConfigReader::Quoted_(const std::string& rKey) const

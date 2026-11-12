@@ -4,6 +4,7 @@
 #include "game/effects/TriggeredEffect.h"
 #include "game/production/ScrapConfig.h"
 #include "game/production/ConstructableKind.h"
+#include "lib/Formula.h"
 
 #include <optional>
 #include <stdexcept>
@@ -19,7 +20,7 @@ struct HurryKindConfig_t
 {
     // Lua returning a whole credit cost from `minerals` (billed, with the below-threshold extra)
     // and remaining, stockpile, mineral_threshold, below_threshold_multiplier.
-    std::string formula;
+    Formula_t formula;
     // Below this many minerals, a base pays extra for the shortfall; per kind.
     // TODO: confirm SMAC's real mineral_threshold.
     int mineralThreshold = 10;

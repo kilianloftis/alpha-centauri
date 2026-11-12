@@ -298,7 +298,7 @@ TEST_CASE("Population forecasts and Mood commits riot and golden-age state",
     // Population reseats the extra drone, so the pending warning does not become a riot.
     CHECK_FALSE(pBase->GetPopulation().IsRioting());
 
-    game.fixtures.dataContext.popCompositionConfig->occupationDroneFormula =
+    game.fixtures.dataContext.popCompositionConfig->occupationDroneFormula.expression =
         "((assimilation_peak > 0 and assimilation_duration > 0 and "
         "turns_since_conquered < assimilation_duration) and 1 or 0)";
     pBase->GetPopulation().ApplyIncite(/*turnsAdded=*/10, /*capFactor=*/2.5);

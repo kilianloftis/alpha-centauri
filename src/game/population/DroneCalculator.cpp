@@ -23,13 +23,13 @@ DroneCalculator::DroneCalculator(const PopCompositionConfig_t& rConfig, LuaRunti
 {
 }
 
-int DroneCalculator::EvalNonNegative_(const std::string& rFormula, const char* pTermName,
+int DroneCalculator::EvalNonNegative_(const Formula_t& rFormula, const char* pTermName,
                                       const std::unordered_map<std::string, double>& rVars) const
 {
     const int value = m_rLua.EvalInt(rFormula, rVars);
     if (value < 0)
     {
-        throw std::runtime_error(std::string(pTermName) + " formula ('" + rFormula
+        throw std::runtime_error(std::string(pTermName) + " formula ('" + rFormula.expression
                                  + "') produced " + std::to_string(value)
                                  + "; a drone contribution must not be negative");
     }
@@ -48,7 +48,7 @@ int DroneCalculator::CalculateBureaucracyLimit(const BureaucracyDroneInputs_t& r
     if (limit <= 0)
     {
         throw std::runtime_error("Bureaucracy limit formula ('"
-                                 + m_rConfig.bureaucracyLimitFormula + "') produced "
+                                 + m_rConfig.bureaucracyLimitFormula.expression + "') produced "
                                  + std::to_string(limit) + "; limit must be positive");
     }
     return limit;

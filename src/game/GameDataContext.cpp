@@ -162,19 +162,6 @@ void ValidateCompositionPopTypes_(const GameDataContext& rData)
     }
 }
 
-// Evaluated once at load, so a broken formula fails here and not at the first promotion.
-void CheckPromotionFormulaEvaluates_(const GameDataContext& rData)
-{
-    const std::unordered_map<std::string, double> kSmokeCases[] = {
-        {{"our_strength", 1.0}, {"their_strength", 1.0}},
-        {{"our_strength", 0.0}, {"their_strength", 0.0}},
-    };
-    for (const auto& vars : kSmokeCases)
-    {
-        (void)rData.luaRuntime->EvalDouble(rData.moraleConfig->promotionEligibilityFormula, vars);
-    }
-}
-
 std::vector<LandmarkConfig_t> LoadLandmarks_(const GameDataContext& rData)
 {
     std::vector<std::string> occupantIds;
@@ -291,7 +278,6 @@ void LoadFormulasAndCalculators_(GameDataContext& rData)
 {
     const GameDataPaths& rPaths = rData.paths;
     LuaRuntime& rLua = *rData.luaRuntime;
-    CheckPromotionFormulaEvaluates_(rData);
     rData.droneCalculator = std::make_unique<DroneCalculator>(*rData.popCompositionConfig, rLua);
     rData.popCompositionCalculator = std::make_unique<PopCompositionCalculator>(
         *rData.popCompositionConfig, *rData.popTypeRegistry);

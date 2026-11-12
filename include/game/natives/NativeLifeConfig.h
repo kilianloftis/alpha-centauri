@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/effects/EffectConfig.h"
+#include "lib/Formula.h"
 
 #include <array>
 #include <string>
@@ -42,11 +43,11 @@ struct NativeLifeConfig_t
     // Empty-ocean boat sites need this many tiles in the water region (SMAC Continents.tile_count).
     int boatEmptyOceanMinRegionTiles = 0;
 
-    std::string boatPeriodFormula;
-    std::string earlyLimitThresholdFormula;
-    std::string boatCargoFormula;
-    std::string ambushAttemptsFormula;
-    std::string swarmYearThresholdFormula;
+    Formula_t boatPeriodFormula;
+    Formula_t earlyLimitThresholdFormula;
+    Formula_t boatCargoFormula;
+    Formula_t ambushAttemptsFormula;
+    Formula_t swarmYearThresholdFormula;
 
     std::string defaultId;
     std::vector<NativeLifeLevel_t> levels;
