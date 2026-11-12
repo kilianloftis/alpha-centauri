@@ -48,9 +48,9 @@ A weapon with `"attack": { "base": 10 }` combined with a reactor providing `"att
 | `defense` | armour | Base defensive value |
 | `movement` | chassis | Movement points per turn |
 | `hit_points` | reactor | Unit HP |
-| `disengage_chance` | chassis | % chance to disengage from combat |
 | `board_chance` | ability | % chance per qualifying lost round that a boarding takes the defender's tile (Marine Detachment) |
 | `board_hp_limit` | ability | Share of the defender's starting HP it must lose before boarding rolls start (a fraction, e.g. `0.6667`) |
+| `disengage_hp_limit` | chassis | Share of starting HP the unit must lose before a one-try withdrawal (`ceil(HP × limit)`; `0.5` = SMAC `(HP+1)/2`; `0` = cannot) |
 | `turns_of_fuel` | chassis | Turns of fuel; max fuel = turns × movement. Omit or `0` = unlimited (no fuel tracking) |
 | `damage_from_out_of_fuel` | chassis | Percent of max HP applied when ending a turn at 0 fuel away from a refuel site |
 | `cargo_capacity` | chassis | Number of units that can be transported |
@@ -135,7 +135,6 @@ New tables can be added freely in JSON without any code changes.
   "stats": {
     "movement":              { "base": 2 },
     "difficult_terrain_cost":{ "base": 2 },
-    "disengage_chance":      { "base": 10 },
     "attack":                { "additive_mult": 0.25 }
   },
   "flags": {

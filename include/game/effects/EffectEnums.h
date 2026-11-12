@@ -61,13 +61,16 @@ enum class StatId_t
     // Energy credits paid to the killer for a destroyed wild native. The design Adds the
     // base; the intrinsic lifecycle level MultiplyGeometrics it (10, 20, 30, …).
     PlanetPearls,
-    DisengageChance,
     // Percent chance per qualifying round that a Marine Detachment boarding succeeds; 0 cannot
     // board.
     BoardChance,
     // Share of the defender's starting HP it must lose before boarding rolls start (a fraction,
     // read unrounded).
     BoardHpLimit,
+    // Share of the unit's starting HP it must lose before a one-try combat withdrawal
+    // (a fraction; 0 cannot disengage). Speeder / Hover Tank / Foil Add 0.5 for SMAC's
+    // (HP+1)/2 via ceil(HP × limit).
+    DisengageHpLimit,
     // Turns of fuel capacity; max fuel pool = TurnsOfFuel × Movement. 0 = unlimited / no tracking.
     TurnsOfFuel,
     // Percent of max HP applied when a fueled unit ends a turn at 0 fuel away from a refuel site.
@@ -329,9 +332,9 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::FungalBloomTiles:
         case StatId_t::ExplosionRadius:
         case StatId_t::PlanetPearls:
-        case StatId_t::DisengageChance:
         case StatId_t::BoardChance:
         case StatId_t::BoardHpLimit:
+        case StatId_t::DisengageHpLimit:
         case StatId_t::TurnsOfFuel:
         case StatId_t::DamageFromOutOfFuel:
         case StatId_t::AirdropRange:
@@ -518,9 +521,9 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::ExplosionRadius:
         case StatId_t::CollateralSusceptibility:
         case StatId_t::PlanetPearls:
-        case StatId_t::DisengageChance:
         case StatId_t::BoardChance:
         case StatId_t::BoardHpLimit:
+        case StatId_t::DisengageHpLimit:
         case StatId_t::TurnsOfFuel:
         case StatId_t::DamageFromOutOfFuel:
         case StatId_t::AirdropRange:
@@ -581,9 +584,9 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "explosion_radius")        return StatId_t::ExplosionRadius;
     if (rStat == "collateral_susceptibility") return StatId_t::CollateralSusceptibility;
     if (rStat == "planet_pearls")           return StatId_t::PlanetPearls;
-    if (rStat == "disengage_chance")        return StatId_t::DisengageChance;
     if (rStat == "board_chance")            return StatId_t::BoardChance;
     if (rStat == "board_hp_limit")          return StatId_t::BoardHpLimit;
+    if (rStat == "disengage_hp_limit")      return StatId_t::DisengageHpLimit;
     if (rStat == "turns_of_fuel")           return StatId_t::TurnsOfFuel;
     if (rStat == "damage_from_out_of_fuel") return StatId_t::DamageFromOutOfFuel;
     if (rStat == "airdrop_range")           return StatId_t::AirdropRange;

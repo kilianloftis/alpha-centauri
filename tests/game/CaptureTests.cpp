@@ -295,7 +295,7 @@ TEST_CASE("Boarding is checked before disengage in the round both become possibl
     // A 3 HP defender may board or disengage once it has lost 2.
     CaptureGame_ game;
     const std::vector<std::string> runner = {"test_sea_chassis", "test_weak_weapon",
-                                             "test_extra_movement", "test_always_disengages"};
+                                             "test_extra_movement"};
 
     SECTION("without a Marine Detachment the defender disengages")
     {

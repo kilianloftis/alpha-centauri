@@ -11,6 +11,7 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitOrder.h"
 
+#include <cmath>
 #include <variant>
 
 namespace ac
@@ -83,6 +84,28 @@ bool DisengageRules::CanDisengage(const Unit& rCandidate, const Unit& rOpponent)
     return true;
 }
 
+std::optional<int> DisengageRules::DisengageThreshold(const Unit& rCandidate,
+                                                      const Unit& rOpponent) const
+{
+    if (!CanDisengage(rCandidate, rOpponent))
+    {
+        return std::nullopt;
+    }
+    const EffectContext_t ctx{&rCandidate.GetTile(), CombatRole_t::Defender};
+    const UnitEffects_t effects = CollectLiveUnitEffects(rCandidate);
+    const StatId_t stat = StatId_t::DisengageHpLimit;
+    const double limit = ResolveUnitStat(effects, stat, SeedFor(stat), &ctx);
+    const int startHp = rCandidate.GetCurrentHp();
+    // ceil so 0.5 matches SMAC (HP+1)/2; floor(HP×0.5) would undershoot odd HP.
+    const int threshold =
+        static_cast<int>(std::ceil(static_cast<double>(startHp) * limit - 1e-12));
+    if (threshold <= 0)
+    {
+        return std::nullopt;
+    }
+    return threshold;
+}
+
 std::vector<const Tile*> DisengageRules::CollectRetreatTiles(const Unit& rUnit) const
 {
     std::vector<const Tile*> candidates;
@@ -104,11 +127,6 @@ std::vector<const Tile*> DisengageRules::CollectRetreatTiles(const Unit& rUnit) 
             candidates.push_back(pTile);
         });
     return candidates;
-}
-
-bool PastDisengageThreshold(const Unit& rUnit, int startHp)
-{
-    return (startHp - rUnit.GetCurrentHp()) * 2 >= startHp;
 }
 
 } // namespace ac

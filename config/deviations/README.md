@@ -305,16 +305,6 @@ absent.
   `allied_territory_battle_friction` in `config/diplomacy.json`.
 - **Missing:** the original land-only version and a switch.
 
-### Disengage is a chance roll for either side `[Ours]`
-
-- **Original:** only a defender faster than its attacker withdraws, with one deterministic try
-  once it has lost `(HP + 1) / 2` ("Disengage").
-- **Ours:** either side may withdraw, rolling `disengage_chance` every round once it has lost
-  half its starting HP.
-- **Where:** `CombatResolver::TryDisengage_`, `DisengageRules::CanDisengage`,
-  `PastDisengageThreshold`; `disengage_chance` in `config/unit_components/chassis.json`.
-- **Missing:** the original version and a switch.
-
 ### Defender selection ignores unit plan and weapon `[Ours]`
 
 - **Original:** `best_defender` ranks each unit by defense against this attacker, scaled by its

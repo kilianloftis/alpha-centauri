@@ -48,9 +48,9 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("explosion_radius") == StatId_t::ExplosionRadius);
     CHECK(ParseStatId("collateral_susceptibility") == StatId_t::CollateralSusceptibility);
     CHECK(ParseStatId("planet_pearls") == StatId_t::PlanetPearls);
-    CHECK(ParseStatId("disengage_chance") == StatId_t::DisengageChance);
     CHECK(ParseStatId("board_chance") == StatId_t::BoardChance);
     CHECK(ParseStatId("board_hp_limit") == StatId_t::BoardHpLimit);
+    CHECK(ParseStatId("disengage_hp_limit") == StatId_t::DisengageHpLimit);
     CHECK(ParseStatId("turns_of_fuel") == StatId_t::TurnsOfFuel);
     CHECK(ParseStatId("damage_from_out_of_fuel") == StatId_t::DamageFromOutOfFuel);
     CHECK(ParseStatId("cargo_capacity") == StatId_t::CargoCapacity);

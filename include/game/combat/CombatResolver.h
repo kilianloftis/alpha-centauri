@@ -49,7 +49,7 @@ struct CombatResult_t
     CombatSide_t victor = CombatSide_t::Defender;
     bool bAttackerDestroyed = false;
     bool bDefenderDestroyed = false;
-    // Whichever side withdrew mid-combat (see DisengageRules). The retreat move to
+    // The defender withdrew mid-combat (see DisengageRules). The retreat move to
     // pRetreatTile has already happened; the UI plays it after the last round.
     bool bAttackerDisengaged = false;
     bool bDefenderDisengaged = false;
@@ -86,7 +86,7 @@ public:
                    const MoraleCalculator& rMorale,
                    std::mt19937& rRng);
 
-    // A melee fight: rounds until a unit dies, withdraws (disengage_chance) or is boarded
+    // A melee fight: rounds until a unit dies, the defender withdraws, or is boarded
     // (board_chance). A killed defender goes through RemoveDefeatedUnit and a killed attacker is
     // destroyed. What follows a kill for anyone else (collateral, promotion) is the caller's.
     CombatResult_t Resolve(Unit& rAttacker, Unit& rDefender);
@@ -98,20 +98,12 @@ public:
     CombatResult_t Strike(Unit& rAttacker, Unit& rTarget);
 
 private:
-    // One side of the fight, as the withdrawal check needs it.
-    struct Combatant_t
-    {
-        Unit& rUnit;
-        CombatSide_t side;
-        int startHp;
-        bool bMayDisengage;
-    };
-
     // How a fight may end before a death, decided before the first round.
     struct FightExits_t
     {
-        bool bAttackerMayDisengage = false;
-        bool bDefenderMayDisengage = false;
+        // HP the defender must lose before a one-try retreat search (`disengage_hp_limit`);
+        // unset when ineligible or the try already ran (terranx-map.md "Disengage").
+        std::optional<int> disengageHpToLose;
         // HP the defender must lose before boarding rolls start; unset when it cannot be boarded.
         std::optional<int> boardingHpToLose;
     };
@@ -137,16 +129,16 @@ private:
     CombatResult_t Fight_(Unit& rAttacker, Unit& rDefender, CombatEngagement_t engagement,
                           const FightExits_t& rExits);
     // Plays rounds into rResult until a unit dies or EarlyEnd_ ends the fight. Changes only HP.
-    FightEnd_t FightRounds_(const Combatant_t& rAttacker, const Combatant_t& rDefender,
-                            std::optional<int> boardingHpToLose, CombatResult_t& rResult);
-    // After a round both survived: a boarding when the defender was hit, then a withdrawal by the
-    // side just hit (it may have newly crossed the threshold), then by the other.
-    std::optional<FightEnd_t> EarlyEnd_(const Combatant_t& rAttacker, const Combatant_t& rDefender,
-                                        const CombatRound_t& rRound,
-                                        std::optional<int>& rBoardingHpToLose);
-    // Eligible, past the threshold, with a retreat tile and a won disengage_chance roll: the
-    // withdrawal and its tile.
-    std::optional<FightEnd_t> ChooseWithdrawal_(const Combatant_t& rCandidate);
+    FightEnd_t FightRounds_(Unit& rAttacker, Unit& rDefender, std::optional<int> boardingHpToLose,
+                            std::optional<int> disengageHpToLose, CombatResult_t& rResult);
+    // After a round both survived: boarding when the defender was hit, then a defender-only
+    // one-try withdrawal on that same lost round.
+    std::optional<FightEnd_t> EarlyEnd_(Unit& rAttacker, Unit& rDefender, const CombatRound_t& rRound,
+                                        std::optional<int>& rBoardingHpToLose,
+                                        std::optional<int>& rDisengageHpToLose);
+    // Wear the defender's (HP+1)/2 budget; at <= 0 clear it and search retreat tiles once.
+    std::optional<FightEnd_t> TryDisengage_(Unit& rDefender, int damage,
+                                            std::optional<int>& rDisengageHpToLose);
     // Wears rHpToLose down by the round's damage and, once it is spent, rolls board_chance. Unset
     // rHpToLose never boards.
     bool BoardingRollWon_(const Unit& rAttacker, const Unit& rDefender, int damage,

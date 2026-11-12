@@ -176,9 +176,9 @@ static_assert(KindFor(StatId_t::FungalBloomTiles) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::ExplosionRadius) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::CollateralSusceptibility) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::PlanetPearls) == StatKind_t::Additive);
-static_assert(KindFor(StatId_t::DisengageChance) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::BoardChance) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::BoardHpLimit) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::DisengageHpLimit) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::TurnsOfFuel) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::DamageFromOutOfFuel) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::AirdropRange) == StatKind_t::Additive);
@@ -320,6 +320,7 @@ static_assert(DomainFor(StatId_t::BombardRange) == ResolveDomain_t::Unit);
 static_assert(DomainFor(StatId_t::BombardMinHpPercent) == ResolveDomain_t::Tile);
 static_assert(DomainFor(StatId_t::BoardChance) == ResolveDomain_t::Unit);
 static_assert(DomainFor(StatId_t::BoardHpLimit) == ResolveDomain_t::Unit);
+static_assert(DomainFor(StatId_t::DisengageHpLimit) == ResolveDomain_t::Unit);
 
 TEST_CASE("ValidateEffectReferences: GrantBuilding targets must exist", "[effects][validation]")
 {

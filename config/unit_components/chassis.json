@@ -91,8 +91,8 @@
         "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": {
-          "stat": "disengage_chance",
-          "amount": 25,
+          "stat": "disengage_hp_limit",
+          "amount": 0.5,
           "op": "Add"
         }
       }
@@ -132,6 +132,15 @@
         "parameters": {
           "stat": "vision",
           "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "disengage_hp_limit",
+          "amount": 0.5,
           "op": "Add"
         }
       },
@@ -188,6 +197,15 @@
         "scope": "ThisUnit",
         "parameters": {
           "flag": "ignores_difficult_terrain"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "disengage_hp_limit",
+          "amount": 0.5,
+          "op": "Add"
         }
       }
     ],

@@ -391,8 +391,8 @@ TEST_CASE("An artillery duel rates the defender with attack and can destroy eith
     CHECK_FALSE(defenderDies.bAttackerDisengaged);
     CHECK_FALSE(defenderDies.bDefenderDisengaged);
 
-    Unit& fast = fixture.MakeUnit(player, 8, 2,
-                                  {"test_chassis", "test_weapon", "bombard", "test_always_disengages"});
+    // A fast wounded attacker that would be eligible to withdraw in melee still cannot in a duel.
+    Unit& fast = fixture.MakeUnit(player, 8, 2, {"test_chassis", "test_weapon", "bombard"});
     Unit& slow = fixture.MakeUnit(enemy, 7, 3, {"test_slow_chassis", "test_weapon", "bombard"});
     fast.SetCurrentHp(2);
     CombatHarness_ noRetreat(fixture, 3);

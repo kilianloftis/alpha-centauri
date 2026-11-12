@@ -579,10 +579,7 @@ TEST_CASE("Conventional combat keeps fixed one damage despite psi tier", "[comba
 // Baseline eligible defender: a combat unit (test_weapon), strictly faster than the slow
 // attacker (2 vs 1 movement), alone on its tile, no attack history, no hold order, on open
 // land. Attack 4 vs Defense 0 means the defender loses HP nearly every round and hits the
-// 50% threshold long before dying.
-//
-// Baseline eligible attacker: fast chassis + weak weapon vs a slow, heavily armored defender
-// so the attacker loses rounds and can withdraw.
+// (HP+1)/2 budget long before dying.
 
 namespace
 {
@@ -595,16 +592,10 @@ struct DisengageSetup_
     Unit* pAttacker = nullptr;
     Unit* pDefender = nullptr;
 
-    // Both sides carry test_always_disengages (disengage_chance 100) so these cases stay about
-    // *eligibility* — half HP, retreat tiles, ZOC, Comm Jammer, terrain — rather than the
-    // percentage roll. The roll itself is covered separately below; before it existed, every
-    // eligible unit withdrew unconditionally.
     explicit DisengageSetup_(std::vector<std::string> attackerParts = {"test_slow_chassis",
-                                                                       "test_weapon",
-                                                                       "test_always_disengages"},
+                                                                       "test_weapon"},
                              std::vector<std::string> defenderParts = {"test_chassis",
-                                                                       "test_weapon",
-                                                                       "test_always_disengages"})
+                                                                       "test_weapon"})
     {
         FillLand_(fixture);
         pPlayer = &fixture.MakeFaction();
@@ -630,7 +621,7 @@ TEST_CASE("Eligible defender disengages at half HP to an adjacent tile", "[comba
     CHECK_FALSE(result.bAttackerDestroyed);
     CHECK(result.victor == CombatSide_t::Attacker);
 
-    // Withdrew exactly when its combat damage reached half its starting HP.
+    // Withdrew once combat damage reached the (HP+1)/2 budget.
     CHECK((startHp - setup.pDefender->GetCurrentHp()) * 2 >= startHp);
     CHECK(setup.pDefender->GetCurrentHp() > 0);
 
@@ -643,37 +634,28 @@ TEST_CASE("Eligible defender disengages at half HP to an adjacent tile", "[comba
     CHECK(ChebyshevDistance(*result.pRetreatTile, setup.fixture.At(9, 9), width) > 1);
 }
 
-TEST_CASE("Eligible attacker disengages at half HP to an adjacent tile", "[combat][disengage]")
+TEST_CASE("Attacker never disengages", "[combat][disengage]")
 {
     // Fast attacker (move 2) with weak gun vs slow armored defender — attacker loses rounds.
-    DisengageSetup_ setup({"test_chassis", "test_weak_weapon", "test_always_disengages"},
-                          {"test_slow_chassis", "test_armor", "test_always_disengages"});
-    const int startHp = setup.pAttacker->GetCurrentHp();
-    const int attackerX = setup.pAttacker->GetTile().GetX();
+    DisengageSetup_ setup({"test_chassis", "test_weak_weapon"},
+                          {"test_slow_chassis", "test_armor"});
 
     CombatHarness_ harness(setup.fixture, /*seed*/ 11);
     const CombatResult_t result = harness.combat.Resolve(*setup.pAttacker, *setup.pDefender);
 
-    REQUIRE(result.bAttackerDisengaged);
+    CHECK_FALSE(result.bAttackerDisengaged);
     CHECK_FALSE(result.bDefenderDisengaged);
-    CHECK_FALSE(result.bAttackerDestroyed);
-    CHECK_FALSE(result.bDefenderDestroyed);
-    CHECK(result.victor == CombatSide_t::Defender);
-
-    CHECK((startHp - setup.pAttacker->GetCurrentHp()) * 2 >= startHp);
-    CHECK(setup.pAttacker->GetCurrentHp() > 0);
-    REQUIRE(result.pRetreatTile != nullptr);
-    CHECK(&setup.pAttacker->GetTile() == result.pRetreatTile);
-    CHECK(result.pRetreatTile->GetX() != attackerX);
+    CHECK(result.pRetreatTile == nullptr);
+    CHECK((result.bAttackerDestroyed || result.bDefenderDestroyed));
 }
 
 TEST_CASE("Nobody withdraws from a fight that has just ended in a death", "[combat][disengage]")
 {
-    // A wounded attacker past its own threshold that fails its rolls can still land the kill.
+    // A wounded attacker can still land the kill; death ends the fight with no exit.
     bool bKilledWhileWounded = false;
     for (uint32_t seed = 1; seed <= 200; ++seed)
     {
-        DisengageSetup_ setup({"test_chassis", "test_weapon", "test_coin_disengages"},
+        DisengageSetup_ setup({"test_chassis", "test_weapon"},
                               {"test_slow_chassis", "test_armor"});
         setup.pAttacker->SetCurrentHp(4);
         setup.pDefender->SetCurrentHp(3);
@@ -684,6 +666,7 @@ TEST_CASE("Nobody withdraws from a fight that has just ended in a death", "[comb
         if (result.bDefenderDestroyed)
         {
             CHECK_FALSE(result.bAttackerDisengaged);
+            CHECK_FALSE(result.bDefenderDisengaged);
             CHECK(result.victor == CombatSide_t::Attacker);
             bKilledWhileWounded = bKilledWhileWounded || setup.pAttacker->GetCurrentHp() <= 2;
         }
@@ -695,7 +678,19 @@ TEST_CASE("Disengage criteria each block withdrawal", "[combat][disengage]")
 {
     SECTION("defender not faster than attacker")
     {
-        DisengageSetup_ setup({"test_chassis", "test_weapon", "test_always_disengages"}); // same speed
+        DisengageSetup_ setup({"test_chassis", "test_weapon"}); // same speed
+        CombatHarness_ harness(setup.fixture, /*seed*/ 11);
+        const CombatResult_t result =
+            harness.combat.Resolve(*setup.pAttacker, *setup.pDefender);
+        CHECK_FALSE(result.bDefenderDisengaged);
+        CHECK(result.bDefenderDestroyed);
+    }
+
+    SECTION("defender has no disengage_hp_limit")
+    {
+        // Faster via extra movement, but no disengage_hp_limit on the chassis.
+        DisengageSetup_ setup({"test_slow_chassis", "test_weapon"},
+                              {"test_slow_chassis", "test_weapon", "test_extra_movement"});
         CombatHarness_ harness(setup.fixture, /*seed*/ 11);
         const CombatResult_t result =
             harness.combat.Resolve(*setup.pAttacker, *setup.pDefender);
@@ -705,25 +700,12 @@ TEST_CASE("Disengage criteria each block withdrawal", "[combat][disengage]")
 
     SECTION("opponent has PreventsDisengage (Comm Jammer)")
     {
-        DisengageSetup_ setup({"test_slow_chassis", "test_weapon", "comm_jammer",
-                               "test_always_disengages"});
+        DisengageSetup_ setup({"test_slow_chassis", "test_weapon", "comm_jammer"});
         CombatHarness_ harness(setup.fixture, /*seed*/ 11);
         const CombatResult_t result =
             harness.combat.Resolve(*setup.pAttacker, *setup.pDefender);
         CHECK_FALSE(result.bDefenderDisengaged);
         CHECK(result.bDefenderDestroyed);
-    }
-
-    SECTION("defender's Comm Jammer blocks attacker disengage")
-    {
-        DisengageSetup_ setup({"test_chassis", "test_weak_weapon", "test_always_disengages"},
-                              {"test_slow_chassis", "test_armor", "comm_jammer",
-                               "test_always_disengages"});
-        CombatHarness_ harness(setup.fixture, /*seed*/ 11);
-        const CombatResult_t result =
-            harness.combat.Resolve(*setup.pAttacker, *setup.pDefender);
-        CHECK_FALSE(result.bAttackerDisengaged);
-        CHECK(result.bAttackerDestroyed);
     }
 
     SECTION("non-combat defender (attack 0)")
@@ -817,7 +799,7 @@ TEST_CASE("Air units never take part in disengage", "[combat][disengage]")
     CHECK_FALSE(result.bAttackerDisengaged);
 }
 
-TEST_CASE("No valid retreat square means fighting on", "[combat][disengage]")
+TEST_CASE("No valid retreat square means one try then fighting on", "[combat][disengage]")
 {
     DisengageSetup_ setup;
     // Water everywhere except the two combat tiles: a land defender has nowhere to go.
@@ -829,37 +811,8 @@ TEST_CASE("No valid retreat square means fighting on", "[combat][disengage]")
     const CombatResult_t result = harness.combat.Resolve(*setup.pAttacker, *setup.pDefender);
     CHECK_FALSE(result.bDefenderDisengaged);
     CHECK(result.bDefenderDestroyed);
-}
-
-TEST_CASE("DisengageChance gates the withdrawal", "[combat][disengage]")
-{
-    // The stat was defined, shipped on the Speeder chassis (disengage_chance: 25) and
-    // documented as a percent, but never read — so an eligible unit always withdrew. The roll
-    // must gate the move, not follow it.
-    SECTION("a fully eligible unit with 0% chance fights on")
-    {
-        // Identical to the passing eligibility case except for the chance.
-        DisengageSetup_ setup({"test_slow_chassis", "test_weapon", "test_never_disengages"},
-                              {"test_chassis", "test_weapon", "test_never_disengages"});
-        CombatHarness_ harness(setup.fixture, /*seed*/ 11);
-        const CombatResult_t result = harness.combat.Resolve(*setup.pAttacker, *setup.pDefender);
-
-        CHECK_FALSE(result.bDefenderDisengaged);
-        CHECK_FALSE(result.bAttackerDisengaged);
-        CHECK(result.pRetreatTile == nullptr);
-        // It stayed and died rather than slipping away.
-        CHECK(result.bDefenderDestroyed);
-    }
-
-    SECTION("the same unit at 100% withdraws")
-    {
-        DisengageSetup_ setup;
-        CombatHarness_ harness(setup.fixture, /*seed*/ 11);
-        const CombatResult_t result = harness.combat.Resolve(*setup.pAttacker, *setup.pDefender);
-
-        CHECK(result.bDefenderDisengaged);
-        CHECK_FALSE(result.bDefenderDestroyed);
-    }
+    // Budget was spent mid-fight; later lost rounds never reopen a retreat search.
+    REQUIRE(result.rounds.size() > 1);
 }
 
 TEST_CASE("Fungus blocks retreat unless it has a road", "[combat][disengage]")

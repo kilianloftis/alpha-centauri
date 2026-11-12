@@ -4,7 +4,6 @@
 #include "game/combat/CollateralRules.h"
 #include "game/combat/CombatResolver.h"
 #include "game/combat/CombatRules.h"
-#include "game/combat/DisengageRules.h"
 #include "game/combat/MoraleRules.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/effects/WorldRulesConfigParser.h"
@@ -85,18 +84,6 @@ TEST_CASE("A strike spares a losing attacker and stops the defender at the floor
     CHECK(hitAt(10) == k_CombatRoundDamage);
     CHECK(hitAt(floor) == 0);
     CHECK(hitAt(floor - 2) == 0);
-}
-
-TEST_CASE("A unit may disengage once it has lost half its starting HP", "[combat][disengage]")
-{
-    FactionFixture fixture;
-    FillLand_(fixture);
-    Unit& unit = fixture.MakeUnit(fixture.MakeFaction(), 8, 8, {"test_chassis"});
-
-    unit.SetCurrentHp(6);
-    CHECK_FALSE(PastDisengageThreshold(unit, 10));
-    unit.SetCurrentHp(5);
-    CHECK(PastDisengageThreshold(unit, 10));
 }
 
 TEST_CASE("Planning collateral marks base occupants immune and changes no unit",

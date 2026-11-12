@@ -1,7 +1,5 @@
 #include "game/combat/CombatResolver.h"
 
-#include "game/effects/ActiveEffect.h"
-#include "game/effects/EffectEnums.h"
 #include "game/faction/Faction.h"
 #include "game/units/UnitManager.h"
 #include "game/map/Tile.h"
@@ -78,9 +76,10 @@ CombatResolver::CombatResolver(const MoveCostRules& rMoveCosts,
 
 CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender)
 {
-    const FightExits_t exits{.bAttackerMayDisengage = m_disengage.CanDisengage(rAttacker, rDefender),
-                             .bDefenderMayDisengage = m_disengage.CanDisengage(rDefender, rAttacker),
-                             .boardingHpToLose = BoardingThreshold(rAttacker, rDefender)};
+    FightExits_t exits;
+    exits.boardingHpToLose = BoardingThreshold(rAttacker, rDefender);
+    // Defender only; budget from disengage_hp_limit (terranx-map.md "Disengage").
+    exits.disengageHpToLose = m_disengage.DisengageThreshold(rDefender, rAttacker);
     return Fight_(rAttacker, rDefender, CombatEngagement_t::Standard, exits);
 }
 
@@ -125,26 +124,23 @@ CombatResult_t CombatResolver::Fight_(Unit& rAttacker, Unit& rDefender,
                                       CombatEngagement_t engagement, const FightExits_t& rExits)
 {
     CombatResult_t result = BeginResult_(rAttacker, rDefender, engagement);
-    const Combatant_t attacker{rAttacker, CombatSide_t::Attacker, rAttacker.GetCurrentHp(),
-                               rExits.bAttackerMayDisengage};
-    const Combatant_t defender{rDefender, CombatSide_t::Defender, rDefender.GetCurrentHp(),
-                               rExits.bDefenderMayDisengage};
-    const FightEnd_t end = FightRounds_(attacker, defender, rExits.boardingHpToLose, result);
+    const FightEnd_t end =
+        FightRounds_(rAttacker, rDefender, rExits.boardingHpToLose, rExits.disengageHpToLose, result);
     Finish_(rAttacker, rDefender, end, result);
     return result;
 }
 
-CombatResolver::FightEnd_t CombatResolver::FightRounds_(const Combatant_t& rAttacker,
-                                                        const Combatant_t& rDefender,
+CombatResolver::FightEnd_t CombatResolver::FightRounds_(Unit& rAttacker, Unit& rDefender,
                                                         std::optional<int> boardingHpToLose,
+                                                        std::optional<int> disengageHpToLose,
                                                         CombatResult_t& rResult)
 {
-    while (rAttacker.rUnit.GetCurrentHp() > 0 && rDefender.rUnit.GetCurrentHp() > 0)
+    while (rAttacker.GetCurrentHp() > 0 && rDefender.GetCurrentHp() > 0)
     {
-        const CombatRound_t round = PlayRound_(rAttacker.rUnit, rDefender.rUnit, rResult);
+        const CombatRound_t round = PlayRound_(rAttacker, rDefender, rResult);
         rResult.rounds.push_back(round);
         const std::optional<FightEnd_t> early =
-            EarlyEnd_(rAttacker, rDefender, round, boardingHpToLose);
+            EarlyEnd_(rAttacker, rDefender, round, boardingHpToLose, disengageHpToLose);
         if (early)
         {
             return *early;
@@ -154,58 +150,49 @@ CombatResolver::FightEnd_t CombatResolver::FightRounds_(const Combatant_t& rAtta
 }
 
 std::optional<CombatResolver::FightEnd_t> CombatResolver::EarlyEnd_(
-    const Combatant_t& rAttacker, const Combatant_t& rDefender, const CombatRound_t& rRound,
-    std::optional<int>& rBoardingHpToLose)
+    Unit& rAttacker, Unit& rDefender, const CombatRound_t& rRound,
+    std::optional<int>& rBoardingHpToLose, std::optional<int>& rDisengageHpToLose)
 {
     // A death ends the fight on its own.
-    if (rAttacker.rUnit.GetCurrentHp() <= 0 || rDefender.rUnit.GetCurrentHp() <= 0)
+    if (rAttacker.GetCurrentHp() <= 0 || rDefender.GetCurrentHp() <= 0)
     {
         return std::nullopt;
     }
     const bool bDefenderHit = rRound.roundWinner == CombatSide_t::Attacker;
-    if (bDefenderHit
-        && BoardingRollWon_(rAttacker.rUnit, rDefender.rUnit, rRound.damage, rBoardingHpToLose))
+    if (bDefenderHit && BoardingRollWon_(rAttacker, rDefender, rRound.damage, rBoardingHpToLose))
     {
         return FightEnd_t{.kind = FightEndKind_t::Boarding};
     }
-    const Combatant_t& rHit = bDefenderHit ? rDefender : rAttacker;
-    const Combatant_t& rOther = bDefenderHit ? rAttacker : rDefender;
-    const std::optional<FightEnd_t> hitWithdraws = ChooseWithdrawal_(rHit);
-    if (hitWithdraws)
-    {
-        return hitWithdraws;
-    }
-    return ChooseWithdrawal_(rOther);
-}
-
-std::optional<CombatResolver::FightEnd_t> CombatResolver::ChooseWithdrawal_(
-    const Combatant_t& rCandidate)
-{
-    const Unit& rUnit = rCandidate.rUnit;
-    if (!rCandidate.bMayDisengage || !PastDisengageThreshold(rUnit, rCandidate.startHp))
+    // Only the defender, and only on a round it lost (terranx-map.md "Disengage").
+    if (!bDefenderHit)
     {
         return std::nullopt;
     }
-    const std::vector<const Tile*> retreats = m_disengage.CollectRetreatTiles(rUnit);
+    return TryDisengage_(rDefender, rRound.damage, rDisengageHpToLose);
+}
+
+std::optional<CombatResolver::FightEnd_t> CombatResolver::TryDisengage_(
+    Unit& rDefender, int damage, std::optional<int>& rDisengageHpToLose)
+{
+    if (!rDisengageHpToLose)
+    {
+        return std::nullopt;
+    }
+    *rDisengageHpToLose -= damage;
+    if (*rDisengageHpToLose > 0)
+    {
+        return std::nullopt;
+    }
+    // One try: clear before the search so an empty retreat never retries.
+    rDisengageHpToLose.reset();
+    const std::vector<const Tile*> retreats = m_disengage.CollectRetreatTiles(rDefender);
     if (retreats.empty())
     {
         return std::nullopt;
     }
-
-    // Rolled with a combat context so conditioned disengage_chance modifiers apply.
-    // TODO: SMAC has no disengage roll and only the defender withdraws: one deterministic try
-    // once it has lost (HP + 1) / 2, with no attacker withdrawal (terranx-map.md "Disengage").
-    // Ours rolls disengage_chance every round past the gate, for either side.
-    const CombatRole_t role = rCandidate.side == CombatSide_t::Attacker ? CombatRole_t::Attacker
-                                                                        : CombatRole_t::Defender;
-    const EffectContext_t disengageCtx{&rUnit.GetTile(), role};
-    if (!RollPercent(ResolveStat(rUnit, StatId_t::DisengageChance, disengageCtx), m_rRng))
-    {
-        return std::nullopt;
-    }
     return FightEnd_t{.kind = FightEndKind_t::Withdrawal,
-                      .withdrawingSide = rCandidate.side,
-                      .pRetreatTile = retreats[PickUniformIndex(retreats.size(), m_rRng)]};
+                      .withdrawingSide = CombatSide_t::Defender,
+                      .pRetreatTile = retreats.front()};
 }
 
 bool CombatResolver::BoardingRollWon_(const Unit& rAttacker, const Unit& rDefender, int damage,
