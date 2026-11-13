@@ -2506,6 +2506,22 @@ TEST_CASE("ParseEffectConfig: required balance keys", "[effects][parser][orbital
     CHECK(pIntercept->cooldownTurns == -1);
 
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "Intercept", "scope": "ThisPop",
+        "parameters": { "chance": 50 },
+        "condition": { "kind": "AttackerDomain", "domains": ["orbital"] }
+    })")));
+    CHECK_NOTHROW(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "Intercept", "scope": "FactionUnits",
+        "parameters": { "chance": 50 },
+        "condition": { "kind": "AttackerDomain", "domains": ["orbital"] }
+    })")));
+    CHECK_NOTHROW(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "Intercept", "scope": "ProducedAtThisBase",
+        "parameters": { "chance": 50 },
+        "condition": { "kind": "AttackerDomain", "domains": ["orbital"] }
+    })")));
+
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "Scramble", "scope": "ThisUnit"
     })")));
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({

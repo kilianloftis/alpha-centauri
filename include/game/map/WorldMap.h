@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/base/BaseTypes.h"
 #include "game/map/MapRulesConfig.h"
 #include "game/map/RegionCache.h"
 #include "game/map/Tile.h"
@@ -42,12 +43,15 @@ public:
     // Y out of bounds returns nullptr. Odd parity throws.
     Tile* GetTile(int x, int y);
     const Tile* GetTile(int x, int y) const;
+    Tile* GetTile(TileCoord_t coord);
+    const Tile* GetTile(TileCoord_t coord) const;
     // This map's own tile at rTile's position, for callers that hold it const. Throws when no
     // tile is there.
     Tile& MutableTile(const Tile& rTile);
 
     // Row-major index into GetTiles() for an in-bounds even-parity (x, y). Throws on odd parity.
     int GetTileIndex(int x, int y) const;
+    int GetTileIndex(TileCoord_t coord) const;
     int GetTileIndex(const Tile& rTile) const;
 
     // Row-major. A const span, so tile addresses that units and indexes hold cannot move.

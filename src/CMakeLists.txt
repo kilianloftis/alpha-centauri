@@ -100,6 +100,7 @@ add_library(ac-core STATIC
     game/economy/AllocationImbalanceCalculator.cpp
     game/base/BaseEffectsCache.cpp
     game/buildings/BuildingMutations.cpp
+    game/buildings/BuildingDeployLedger.cpp
     game/base/BaseMoodEffects.cpp
     game/base/BaseRules.cpp
     game/base/BaseRuleset.cpp
@@ -199,6 +200,7 @@ add_library(ac-core STATIC
     game/movement/TerritoryEntryMutations.cpp
     game/combat/InterceptMutations.cpp
     game/combat/InterceptRules.cpp
+    game/combat/TileInterceptDeployLedger.cpp
     game/combat/ScrambleRules.cpp
     game/movement/MovementRules.cpp
     game/movement/TransportRules.cpp

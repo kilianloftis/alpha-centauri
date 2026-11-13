@@ -10,6 +10,7 @@
 #include "game/effects/IEffectsProvider.h"
 #include "game/effects/IWorldEffectsSource.h"
 #include "game/buildings/BuildingConfig.h"
+#include "game/buildings/BuildingDeployLedger.h"
 #include "game/buildings/BuildingUpkeep.h"
 #include "game/base/BaseTypes.h"
 #include "game/base/BaseManager.h"
@@ -151,17 +152,11 @@ public:
     const BaseManager* FindBaseWithBuilding(const BuildingId_t& buildingId) const;
     // Config of any owned copy, or nullptr when the faction has none.
     const BuildingConfig_t* FindOwnedBuildingConfig(const BuildingId_t& buildingId) const;
-    // Copies not on deploy cooldown at missionYear. A pure query; PruneExpiredDeploys retires
-    // expired records.
+    // Owned copies not on deploy cooldown at missionYear (inventory minus the ledger).
     int CountReadyBuildings(const BuildingId_t& buildingId, int missionYear) const;
-    // Retires records ready at missionYear, so the ledger cannot grow without bound. Changes no
-    // CountReadyBuildings answer.
-    void PruneExpiredDeploys(int missionYear);
-    // Marks one copy at baseId deployed until readyMissionYear. Keyed by base, so records move or
-    // drop with the base.
-    void DeployBuilding(BaseId_t baseId, const BuildingId_t& buildingId, int readyMissionYear);
-    // Drops the record for the copy at baseId; a no-op if it was not cooling.
-    void NotifyBuildingDestroyed(BaseId_t baseId, const BuildingId_t& buildingId);
+    // ASAT / Intercept building-copy cooldowns for this faction.
+    BuildingDeployLedger& GetBuildingDeploys();
+    const BuildingDeployLedger& GetBuildingDeploys() const;
 
     // Fired when a secret project is permanently lost (destroyed or razed with the base).
     // GameState tombstones the id so it cannot be rebuilt.
@@ -371,25 +366,13 @@ private:
     // Recomputed with m_composedEffects, so it can never go stale independently.
     mutable InteractionGridMask_t m_composedInteractionMask = 0;
 
-    // Moves baseId's deploy records to rReceiver, so cooldowns follow the base.
-    void MigrateBuildingDeploys_(BaseId_t baseId, Faction& rReceiver);
-    // Drop every deploy record for baseId (base destroyed: razed on capture).
-    void DropBuildingDeploys_(BaseId_t baseId);
     // Revision, observers and visibility follow every change to the base list.
     void NoteBaseListChanged_();
     // Each snapshot production id as a building, stockpile or design; throws on an unknown one.
     std::vector<const IConstructable*> ResolveProductionItems_(
         const std::vector<std::string>& rItemIds) const;
 
-    // ASAT and intercept cooldowns, keyed by (base, building); unavailable while missionYear <
-    // readyMissionYear.
-    struct BuildingDeploy_t
-    {
-        BaseId_t baseId = 0;
-        BuildingId_t buildingId;
-        int readyMissionYear = 0;
-    };
-    std::vector<BuildingDeploy_t> m_buildingDeploys;
+    BuildingDeployLedger m_buildingDeploys;
 };
 
 } // namespace ac

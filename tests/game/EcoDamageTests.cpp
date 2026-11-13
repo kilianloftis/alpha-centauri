@@ -13,6 +13,8 @@
 #include "game/ecology/EcoDamageConfig.h"
 #include "game/ecology/EcologyLedger.h"
 #include "game/ecology/EcologyRules.h"
+#include "game/combat/TileInterceptDeployLedger.h"
+#include "game/effects/TileEffectsContext.h"
 #include "game/effects/TriggeredEffectDispatch.h"
 #include "game/base/BaseManager.h"
 #include "game/buildings/BuildingManager.h"
@@ -337,10 +339,12 @@ TEST_CASE("The score needs the faction bound to a session", "[ecology]")
     // No WorldFixture: scoring reads CurrentGameState(), which must be absent here.
     SessionInputs inputs;
     WorldMap map(k_TestMapWidth, k_TestMapHeight, TestMapRules(), Rainfall_t::Average);
+    TileInterceptDeployLedger tileInterceptDeploys;
     TileEffectsContext ctx(map, inputs.improvements, &inputs.unitComponents,
                            inputs.dataContext.tileYieldRules,
                            inputs.dataContext.interactionGrids,
-                           inputs.dataContext.worldGenDecorationConfig->moisture);
+                           inputs.dataContext.worldGenDecorationConfig->moisture,
+                           tileInterceptDeploys);
     inputs.ownerDefinition.id = "test_base_owner";
     IdAllocator unitIds;
     Faction owner(/*factionId*/ 1, /*bIsPlayerControlled*/ true, inputs.ownerDefinition,

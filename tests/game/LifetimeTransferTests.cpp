@@ -345,7 +345,8 @@ TEST_CASE("Deploy cooldown migrates with a transferred base and does not leak to
 
     BaseManager& coolingBase = fixture.MakeFactionBase(giver, 8, 4);
     coolingBase.GetBuildingManager().AddBuilding("test_facility_a");
-    giver.DeployBuilding(coolingBase.GetBaseId(), "test_facility_a", /*readyMissionYear*/ 100);
+    giver.GetBuildingDeploys().Deploy(coolingBase.GetBaseId(), "test_facility_a",
+                                      /*readyMissionYear*/ 100);
 
     BaseManager& readyBase = fixture.MakeFactionBase(giver, 8, 12);
     readyBase.GetBuildingManager().AddBuilding("test_facility_a");
@@ -373,7 +374,8 @@ TEST_CASE("Extracting (razing) a base drops its deploy cooldown instead of leaki
 
     BaseManager& doomedBase = fixture.MakeFactionBase(faction, 8, 4);
     doomedBase.GetBuildingManager().AddBuilding("test_facility_a");
-    faction.DeployBuilding(doomedBase.GetBaseId(), "test_facility_a", /*readyMissionYear*/ 100);
+    faction.GetBuildingDeploys().Deploy(doomedBase.GetBaseId(), "test_facility_a",
+                                        /*readyMissionYear*/ 100);
 
     BaseManager& survivingBase = fixture.MakeFactionBase(faction, 8, 12);
     survivingBase.GetBuildingManager().AddBuilding("test_facility_a");
@@ -385,7 +387,7 @@ TEST_CASE("Extracting (razing) a base drops its deploy cooldown instead of leaki
     CHECK(faction.CountReadyBuildings("test_facility_a", /*missionYear*/ 1) == 1);
 }
 
-TEST_CASE("NotifyBuildingDestroyed only drops the record for its own base",
+TEST_CASE("BuildingDeployLedger::NotifyDestroyed only drops the record for its own base",
           "[base][lifetime][deploy]")
 {
     FactionFixture fixture;
@@ -393,11 +395,13 @@ TEST_CASE("NotifyBuildingDestroyed only drops the record for its own base",
 
     BaseManager& baseA = fixture.MakeFactionBase(faction, 8, 4);
     baseA.GetBuildingManager().AddBuilding("test_facility_a");
-    faction.DeployBuilding(baseA.GetBaseId(), "test_facility_a", /*readyMissionYear*/ 100);
+    faction.GetBuildingDeploys().Deploy(baseA.GetBaseId(), "test_facility_a",
+                                        /*readyMissionYear*/ 100);
 
     BaseManager& baseB = fixture.MakeFactionBase(faction, 8, 12);
     baseB.GetBuildingManager().AddBuilding("test_facility_a");
-    faction.DeployBuilding(baseB.GetBaseId(), "test_facility_a", /*readyMissionYear*/ 100);
+    faction.GetBuildingDeploys().Deploy(baseB.GetBaseId(), "test_facility_a",
+                                        /*readyMissionYear*/ 100);
 
     // Destroy baseA's copy specifically; baseB's still-cooling copy must be unaffected.
     baseA.GetBuildingManager().DestroyBuilding("test_facility_a");
@@ -406,7 +410,7 @@ TEST_CASE("NotifyBuildingDestroyed only drops the record for its own base",
     CHECK(faction.CountReadyBuildings("test_facility_a", /*missionYear*/ 100) == 1);
 }
 
-TEST_CASE("NotifyBuildingDestroyed retires the still-cooling record, not an expired one",
+TEST_CASE("BuildingDeployLedger::NotifyDestroyed retires the still-cooling record, not an expired one",
           "[base][lifetime][deploy]")
 {
     FactionFixture fixture;
@@ -418,8 +422,10 @@ TEST_CASE("NotifyBuildingDestroyed retires the still-cooling record, not an expi
     BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
     base.GetBuildingManager().AddBuilding("test_facility_a");
     base.GetBuildingManager().AddBuilding("test_facility_a");
-    faction.DeployBuilding(base.GetBaseId(), "test_facility_a", /*readyMissionYear*/ 10);
-    faction.DeployBuilding(base.GetBaseId(), "test_facility_a", /*readyMissionYear*/ 100);
+    faction.GetBuildingDeploys().Deploy(base.GetBaseId(), "test_facility_a",
+                                        /*readyMissionYear*/ 10);
+    faction.GetBuildingDeploys().Deploy(base.GetBaseId(), "test_facility_a",
+                                        /*readyMissionYear*/ 100);
 
     REQUIRE(faction.CountBuildings("test_facility_a") == 2);
     // At year 50 the first record has expired, so exactly one copy is ready.
@@ -442,7 +448,8 @@ TEST_CASE("CountReadyBuildings is a pure query: asking about a future year chang
 
     BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
     base.GetBuildingManager().AddBuilding("test_facility_a");
-    faction.DeployBuilding(base.GetBaseId(), "test_facility_a", /*readyMissionYear*/ 100);
+    faction.GetBuildingDeploys().Deploy(base.GetBaseId(), "test_facility_a",
+                                        /*readyMissionYear*/ 100);
 
     // Ask about a year past the cooldown first (what a "ready in N years" UI preview does).
     CHECK(faction.CountReadyBuildings("test_facility_a", /*missionYear*/ 100) == 1);
@@ -452,7 +459,7 @@ TEST_CASE("CountReadyBuildings is a pure query: asking about a future year chang
     CHECK(faction.CountReadyBuildings("test_facility_a", /*missionYear*/ 1) == 0);
 }
 
-TEST_CASE("PruneExpiredDeploys retires elapsed records without changing any answer",
+TEST_CASE("BuildingDeployLedger::PruneExpired retires elapsed records without changing any answer",
           "[base][lifetime][deploy]")
 {
     FactionFixture fixture;
@@ -460,17 +467,18 @@ TEST_CASE("PruneExpiredDeploys retires elapsed records without changing any answ
 
     BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
     base.GetBuildingManager().AddBuilding("test_facility_a");
-    faction.DeployBuilding(base.GetBaseId(), "test_facility_a", /*readyMissionYear*/ 10);
+    faction.GetBuildingDeploys().Deploy(base.GetBaseId(), "test_facility_a",
+                                        /*readyMissionYear*/ 10);
 
     REQUIRE(faction.CountReadyBuildings("test_facility_a", /*missionYear*/ 1) == 0);
 
     // Before expiry the record must survive the per-turn sweep.
-    faction.PruneExpiredDeploys(/*missionYear*/ 5);
+    faction.GetBuildingDeploys().PruneExpired(/*missionYear*/ 5);
     CHECK(faction.CountReadyBuildings("test_facility_a", /*missionYear*/ 5) == 0);
 
     // After expiry it is retired — and the copy reads ready either way, so pruning is
     // observationally neutral (it only bounds ledger growth).
-    faction.PruneExpiredDeploys(/*missionYear*/ 10);
+    faction.GetBuildingDeploys().PruneExpired(/*missionYear*/ 10);
     CHECK(faction.CountReadyBuildings("test_facility_a", /*missionYear*/ 10) == 1);
     CHECK(faction.CountReadyBuildings("test_facility_a", /*missionYear*/ 5) == 1);
 }

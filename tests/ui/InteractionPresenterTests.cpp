@@ -293,7 +293,7 @@ TEST_CASE("Incite notice presents a modal for a known base",
     ProbeNoticeInteraction_t notice;
     notice.targetFactionId = rBase.GetFactionId();
     notice.subjectName = rBase.GetName();
-    notice.cameraTile = TileCoord_t{rBase.GetTile().GetX(), rBase.GetTile().GetY()};
+    notice.cameraTile = rBase.GetTile().GetCoord();
     notice.actionId = ProbeActionId_t::InciteDroneRiots;
     notice.result.detail = ProbeRiot_t{};
     harness.Enqueue(notice);

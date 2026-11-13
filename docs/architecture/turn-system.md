@@ -244,8 +244,8 @@ about a pending riot without being a yielding stage.
   only when tanks are already `< 0` on entry; halves tanks when full at the population limit;
   otherwise deposits (tanks may go negative). Ordered *after* `BaseProduction` so a
   cap-raising facility unlocks growth the same turn.
-- **`Upkeep`**: deploy-record pruning and facility energy upkeep (after income). A facility
-  completed earlier in this turn is present for upkeep.
+- **`Upkeep`**: `BuildingDeployLedger` / `TileInterceptDeployLedger` prune and facility energy
+  upkeep (after income). A facility completed earlier in this turn is present for upkeep.
 
   Mineral support and production are separate stages because support must claim the bank first,
   and `turn_stages.json` is where that order is expressed. Exactly one drain of the leftover

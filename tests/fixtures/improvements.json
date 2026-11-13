@@ -860,6 +860,7 @@
   {
     "id": "test_sam_battery",
     "name": "Test SAM Battery",
+    "owned_by_territory": true,
     "effects": [
       {
         "type": "Intercept",
@@ -868,9 +869,125 @@
           "chance": 100
         },
         "condition": {
-          "kind": "AttackerDomain",
-          "domains": [
-            "orbital"
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "AttackerDomain",
+              "domains": [
+                "orbital"
+              ]
+            },
+            { "kind": "SubjectIsOwner" }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_sam_battery_cooldown",
+    "name": "Test SAM Battery Cooldown",
+    "owned_by_territory": true,
+    "effects": [
+      {
+        "type": "Intercept",
+        "scope": "ThisTile",
+        "parameters": {
+          "chance": 100,
+          "cooldown_turns": 1
+        },
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "AttackerDomain",
+              "domains": [
+                "orbital"
+              ]
+            },
+            { "kind": "SubjectIsOwner" }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_sam_battery_misfire",
+    "name": "Test SAM Battery Misfire",
+    "owned_by_territory": true,
+    "effects": [
+      {
+        "type": "Intercept",
+        "scope": "ThisTile",
+        "parameters": {
+          "chance": 0,
+          "chance_of_destruction_on_fail": 100
+        },
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "AttackerDomain",
+              "domains": [
+                "orbital"
+              ]
+            },
+            { "kind": "SubjectIsOwner" }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_sam_battery_aura",
+    "name": "Test SAM Battery Aura",
+    "owned_by_territory": true,
+    "effects": [
+      {
+        "type": "Intercept",
+        "scope": "ThisTile",
+        "radius": 1,
+        "parameters": {
+          "chance": 100,
+          "cooldown_turns": 1
+        },
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "AttackerDomain",
+              "domains": [
+                "orbital"
+              ]
+            },
+            { "kind": "SubjectIsOwner" }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_sam_battery_aura_misfire",
+    "name": "Test SAM Battery Aura Misfire",
+    "owned_by_territory": true,
+    "effects": [
+      {
+        "type": "Intercept",
+        "scope": "ThisTile",
+        "radius": 1,
+        "parameters": {
+          "chance": 0,
+          "chance_of_destruction_on_fail": 100
+        },
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "AttackerDomain",
+              "domains": [
+                "orbital"
+              ]
+            },
+            { "kind": "SubjectIsOwner" }
           ]
         }
       }

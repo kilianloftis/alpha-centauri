@@ -71,7 +71,7 @@ Tile* EcoDamage::PickPopTile_(GameState& rGameState, const BaseManager& rBase,
         return nullptr;
     }
     const Tile& rPicked = *candidates[PickUniformIndex(candidates.size(), rRng)];
-    return rGameState.GetWorldMap().GetTile(rPicked.GetX(), rPicked.GetY());
+    return rGameState.GetWorldMap().GetTile(rPicked.GetCoord());
 }
 
 void EcoDamage::Pop_(GameState& rGameState, BaseManager& rBase, Tile& rPopTile)
@@ -87,7 +87,7 @@ void EcoDamage::Pop_(GameState& rGameState, BaseManager& rBase, Tile& rPopTile)
                              "Fungal Bloom",
                              "Ecological damage near " + rBase.GetName()
                                  + " has triggered a fungal bloom.",
-                             TileCoord_t{rPopTile.GetX(), rPopTile.GetY()},
+                             rPopTile.GetCoord(),
                          });
     }
 

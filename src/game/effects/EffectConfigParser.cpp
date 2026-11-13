@@ -702,6 +702,13 @@ void ParseOrbitalAttack_(const ConfigReader& rParams, EffectConfig_t& rEffect)
 
 void ParseIntercept_(const ConfigReader& rParams, EffectConfig_t& rEffect)
 {
+    RequireScope_(
+        rEffect.scope,
+        {EffectScope_t::FactionGlobal, EffectScope_t::AllOwnerBases, EffectScope_t::ThisBase,
+         EffectScope_t::ThisUnit, EffectScope_t::FactionUnits, EffectScope_t::ProducedAtThisBase,
+         EffectScope_t::WorldGlobal, EffectScope_t::ThisTile},
+        "Intercept scope must be FactionGlobal, AllOwnerBases, ThisBase, ThisUnit, "
+        "FactionUnits, ProducedAtThisBase, WorldGlobal, or ThisTile");
     if (!rEffect.condition)
     {
         throw std::runtime_error("Intercept requires a condition");

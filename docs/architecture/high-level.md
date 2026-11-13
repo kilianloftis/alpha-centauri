@@ -351,7 +351,8 @@ Each thread has a current game state (`include/game/CurrentGameState.h`), so cod
    - Exception: `ProbeActionExecutor`'s queries keep `GameState&`, because they build `ProbeTarget_t`, which holds mutable references for `TryProbeAction`.
 5. **Writes.** Code that changes state outside its own object takes `GameState&`. A `GameState&` parameter means the function may write.
 6. **Game objects never hold a `GameState`.** That covers factions, bases, units and their parts.
-   - Services that `GameState` owns keep the reference it gives them: `TileEffectsContext`, `Pathfinder`, `StepEvaluator` and the executors.
+   - Services that `GameState` owns keep the reference it gives them: `TileEffectsContext`,
+     `TileInterceptDeployLedger`, `Pathfinder`, `StepEvaluator` and the executors.
 7. **Objects never cross game states by pointer.** Anything handed between game states or threads names factions, bases and units by id. Only the thread that installed a game state writes to it.
 8. **Nothing reads `CurrentGameState()` during `GameState`'s own constructor.**
 
@@ -433,7 +434,7 @@ One directory under `include/game/` and `src/game/` per domain. The filename suf
 - (root): session and ruleset plumbing — `Engine`, `GameState`, `CurrentGameState`, `GameDataContext`, `GameSettings` and its setting structs, difficulty, player interactions, cross-domain validators, `GameCategory`
 - `atrocities/`: atrocity records, sanctions and their consequences
 - `base/`: the base aggregate, its ruleset bundle and effects cache, founding, conquest and rebellion
-- `buildings/`: facility and secret-project definitions, a base's buildings, upkeep, destruction, orbital facilities
+- `buildings/`: facility and secret-project definitions, a base's buildings, upkeep, destruction, orbital facilities, `BuildingDeployLedger` (ASAT / building-intercept cooldowns)
 - `combat/`: attack legality, combat resolution, morale, interception, scramble, collateral, explosions
 - `council/`: the Planetary Council, proposals and votes
 - `diplomacy/`: statuses, the ledger, friction/blemishes clamp, standing writers, proposals and trade, transitions, permissions, first contact, infiltration
@@ -560,7 +561,7 @@ seed. (Persisting that seed into save state is still open — see the world-gene
   `Faction::RazeBase`, which does everything the rest of the game can observe: tombstones any
   secret project the base held, orphans every `HomeBaseIndex` claim into it (units keep existing,
   just lose that home), releases the base's tile improvement, drops deploy-cooldown records for
-  that `baseId` (`Faction::DropBuildingDeploys_`), emits `OnDestroyed` (while the object is still
+  that `baseId` (`BuildingDeployLedger::DropBase`), emits `OnDestroyed` (while the object is still
   fully valid, so an open `BaseView` can pop before the reference dangles), and marks the base
   razed. `Faction::Bases()` filters razed bases out and `FindBase` stops returning them, so every
   existing loop drops it at once with no call-site changes.
@@ -577,7 +578,7 @@ seed. (Persisting that seed into save state is still open — see the world-gene
   dependency the base resolves through — effects provider, `ResearchManager` for tech-gated
   buildings/pop fallback, `EconomyManager` for the energy split — so the next resolve reads the
   new owner) → receiver `AddBase`. Deploy-cooldown records for that `baseId` migrate with the
-  base (`Faction::MigrateBuildingDeploys_`) rather than leaking on the giver or vanishing on the
+  base (`BuildingDeployLedger::MigrateTo`) rather than leaking on the giver or vanishing on the
   receiver. The caller still recalculates composition/worker assignment afterward, since psych
   may differ under the new owner — but the `BaseManager*` itself never changes. The
   `HomeBaseIndex` moves with the object rather than the faction, so claims held by units the

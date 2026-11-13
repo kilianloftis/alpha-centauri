@@ -271,6 +271,34 @@
     ]
   },
   {
+    "id": "test_sam_tile_aura",
+    "name": "Test SAM Tile Aura",
+    "type": "ability",
+    "mineral_cost": 0,
+    "effects": [
+      {
+        "type": "Intercept",
+        "scope": "ThisTile",
+        "radius": 1,
+        "parameters": {
+          "chance": 100
+        },
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "AttackerDomain",
+              "domains": [
+                "orbital"
+              ]
+            },
+            { "kind": "SubjectIsOwner" }
+          ]
+        }
+      }
+    ]
+  },
+  {
     "id": "test_sam_misfire",
     "name": "Test SAM Misfire",
     "type": "ability",

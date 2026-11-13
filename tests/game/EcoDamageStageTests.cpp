@@ -144,7 +144,7 @@ TEST_CASE("A base at 100% eco damage blooms inside its radius", "[ecology][stage
     const auto* pNotice = std::get_if<NoticeInteraction_t>(&rQueue.Front()->payload);
     REQUIRE(pNotice);
     CHECK(pNotice->event == PauseOnEventId_t::FungalBloom);
-    CHECK(pNotice->cameraTile == TileCoord_t{fungus[0]->GetX(), fungus[0]->GetY()});
+    CHECK(pNotice->cameraTile == fungus[0]->GetCoord());
 }
 
 TEST_CASE("A base at 0% eco damage never blooms", "[ecology][stage]")

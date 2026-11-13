@@ -11,12 +11,14 @@
 #include "game/buildings/OrbitalCensus.h"
 #include "game/combat/InterceptMutations.h"
 #include "game/combat/InterceptRules.h"
+#include "game/combat/TileInterceptDeployLedger.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfigParser.h"
 #include "game/effects/EffectEnums.h"
 #include "game/units/UnitManager.h"
 #include "game/buildings/BuildingManager.h"
 #include "game/economy/ResourceManager.h"
+#include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/movement/MovementConstants.h"
 #include "game/movement/MovementRules.h"
@@ -24,12 +26,14 @@
 #include "game/units/UnitOrderExecutor.h"
 #include "game/units/UnitAttackExecutor.h"
 #include "game/units/UnitComponentRegistry.h"
+#include "game/units/UnitOrigin.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <algorithm>
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <ranges>
+#include <variant>
 
 using namespace ac;
 using namespace actest;
@@ -88,6 +92,20 @@ struct OrbitalGame_
                    const std::vector<std::string>& rComponentIds,
                    BaseManager* pHomeBase = nullptr)
     {
+        return MakeUnitWithOrigin_(rFaction, x, y, rComponentIds, UnitOrigin::Gift(pHomeBase));
+    }
+
+    Unit& MakeBuiltUnit(Faction& rFaction, int x, int y,
+                        const std::vector<std::string>& rComponentIds, BaseManager& rBuiltAt)
+    {
+        return MakeUnitWithOrigin_(rFaction, x, y, rComponentIds, UnitOrigin::Built(rBuiltAt));
+    }
+
+private:
+    Unit& MakeUnitWithOrigin_(Faction& rFaction, int x, int y,
+                              const std::vector<std::string>& rComponentIds,
+                              const UnitOrigin& rOrigin)
+    {
         std::vector<UnitSlotConfig_t> slots;
         std::unordered_map<std::string, const UnitComponentConfig_t*> assigned;
         int slotIndex = 0;
@@ -108,7 +126,7 @@ struct OrbitalGame_
         REQUIRE(pTile);
         return rFaction.GetUnitManager().CreateUnit(
             fixtures.state.AllocateUnitId(), fixtures.designs.back(),
-            fixtures.state.GetWorldMap().GetUnitPositions(), *pTile, ac::UnitOrigin::Gift(pHomeBase));
+            fixtures.state.GetWorldMap().GetUnitPositions(), *pTile, rOrigin);
     }
 };
 
@@ -517,6 +535,8 @@ TEST_CASE("ThisTile Intercept fires on the battery tile", "[orbital][intercept]"
 {
     OrbitalGame_ game;
     BaseManager& playerBase = game.MakeBase(*game.pPlayer, 8, 8);
+    REQUIRE(game.fixtures.state.GetWorldMap().GetTerritory().GetOwner(8, 8)
+            == game.pPlayer->GetFactionId());
     game.fixtures.state.GetTileEffects().AddOccupantWithEffects(
         *game.fixtures.state.GetWorldMap().GetTile(8, 8), "test_sam_battery");
 
@@ -529,6 +549,172 @@ TEST_CASE("ThisTile Intercept fires on the battery tile", "[orbital][intercept]"
     REQUIRE(result);
     CHECK(result->bAttackerDestroyed);
     CHECK(result->rounds.empty());
+}
+
+TEST_CASE("ThisTile Intercept with SubjectIsOwner ignores a foreign defender", "[orbital][intercept]")
+{
+    OrbitalGame_ game;
+    game.MakeBase(*game.pPlayer, 8, 8);
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(
+        *game.fixtures.state.GetWorldMap().GetTile(8, 8), "test_sam_battery_aura");
+    Unit& missile = game.MakeUnit(*game.pPlayer, 10, 10, {"test_orbital_chassis", "test_weapon"});
+    Unit& foreignDefender = game.MakeUnit(*game.pAi, 9, 9, {"test_chassis", "test_armor"});
+
+    const std::vector<InterceptSource_t> sources =
+        CollectInterceptSources(missile, foreignDefender);
+    const bool bHasTile = std::ranges::any_of(sources, [](const InterceptSource_t& rSource) {
+        return InterceptPhysicalKind(rSource) == InterceptSourceKind_t::Tile;
+    });
+    CHECK_FALSE(bHasTile);
+}
+
+TEST_CASE("Foreign unit ThisTile Intercept aura does not help the defender", "[orbital][intercept]")
+{
+    OrbitalGame_ game;
+    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 8, 8);
+    Unit& missile = game.MakeUnit(*game.pAi, 10, 10, {"test_orbital_chassis", "test_weapon"});
+    Unit& garrison = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_armor"}, &playerBase);
+    game.MakeUnit(*game.pAi, 9, 9, {"test_chassis", "test_armor", "test_sam_tile_aura"});
+
+    const std::vector<InterceptSource_t> sources = CollectInterceptSources(missile, garrison);
+    const bool bHasAura = std::ranges::any_of(sources, [](const InterceptSource_t& rSource) {
+        return InterceptSourceId(rSource) == "test_sam_tile_aura";
+    });
+    CHECK_FALSE(bHasAura);
+}
+
+TEST_CASE("FactionUnits Intercept fires for every defending unit", "[orbital][intercept]")
+{
+    OrbitalGame_ game;
+    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 8, 8);
+    playerBase.GetBuildingManager().AddBuilding("test_faction_units_intercept");
+    Unit& missile = game.MakeUnit(*game.pAi, 9, 9, {"test_orbital_chassis", "test_weapon"});
+    Unit& garrison = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_armor"}, &playerBase);
+    missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
+
+    const std::vector<InterceptSource_t> sources = CollectInterceptSources(missile, garrison);
+    REQUIRE(sources.size() == 1);
+    CHECK(InterceptPhysicalKind(sources[0]) == InterceptSourceKind_t::Unit);
+    CHECK(InterceptSourceId(sources[0]) == "test_faction_units_intercept");
+    const auto* pUnit = std::get_if<InterceptUnitIdentity_t>(&sources[0].identity);
+    REQUIRE(pUnit);
+    CHECK(pUnit->unitId == garrison.GetUnitId());
+
+    auto result = game.fixtures.state.GetUnitAttacks().TryAttack(missile, garrison);
+    REQUIRE(result);
+    CHECK(result->bAttackerDestroyed);
+    CHECK(result->rounds.empty());
+}
+
+TEST_CASE("ProducedAtThisBase Intercept stamps onto units built there", "[orbital][intercept]")
+{
+    OrbitalGame_ game;
+    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 8, 8);
+    playerBase.GetBuildingManager().AddBuilding("test_produced_intercept");
+    Unit& missile = game.MakeUnit(*game.pAi, 9, 9, {"test_orbital_chassis", "test_weapon"});
+    Unit& garrison =
+        game.MakeBuiltUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_armor"}, playerBase);
+    missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
+
+    const std::vector<InterceptSource_t> sources = CollectInterceptSources(missile, garrison);
+    REQUIRE(sources.size() == 1);
+    CHECK(InterceptPhysicalKind(sources[0]) == InterceptSourceKind_t::Unit);
+    CHECK(InterceptSourceId(sources[0]) == "test_produced_intercept");
+
+    auto result = game.fixtures.state.GetUnitAttacks().TryAttack(missile, garrison);
+    REQUIRE(result);
+    CHECK(result->bAttackerDestroyed);
+    CHECK(result->rounds.empty());
+}
+
+TEST_CASE("ThisTile Intercept cooldown arms the host tile ledger", "[orbital][intercept]")
+{
+    OrbitalGame_ game;
+    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 8, 8);
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(
+        *game.fixtures.state.GetWorldMap().GetTile(8, 8), "test_sam_battery_cooldown");
+    Unit& missile = game.MakeUnit(*game.pAi, 9, 9, {"test_orbital_chassis", "test_weapon"});
+    Unit& garrison = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_armor"}, &playerBase);
+
+    const std::vector<InterceptSource_t> sources = CollectInterceptSources(missile, garrison);
+    REQUIRE(sources.size() == 1);
+    CHECK(sources[0].deployKind == InterceptSourceKind_t::Tile);
+    const auto* pTile = std::get_if<InterceptTileIdentity_t>(&sources[0].identity);
+    REQUIRE(pTile);
+    CHECK(pTile->hostTile == TileCoord_t{8, 8});
+
+    const int year = game.fixtures.state.GetMissionYear();
+    CHECK(InterceptSourceReady(sources[0], year));
+    game.fixtures.state.GetTileInterceptDeploys().Deploy(TileCoord_t{8, 8},
+                                                       "test_sam_battery_cooldown", year + 1);
+    CHECK_FALSE(InterceptSourceReady(sources[0], year));
+    CHECK(InterceptSourceReady(sources[0], year + 1));
+}
+
+TEST_CASE("ThisTile Intercept fail-destroy removes the host improvement", "[orbital][intercept]")
+{
+    OrbitalGame_ game;
+    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 8, 8);
+    Tile& rBatteryTile = *game.fixtures.state.GetWorldMap().GetTile(8, 8);
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rBatteryTile,
+                                                             "test_sam_battery_misfire");
+    REQUIRE(rBatteryTile.HasFeature("test_sam_battery_misfire"));
+
+    Unit& missile = game.MakeUnit(*game.pAi, 9, 9, {"test_orbital_chassis", "test_weapon"});
+    Unit& garrison = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_armor"}, &playerBase);
+
+    const std::optional<CombatResult_t> result =
+        TryInterceptAttack(game.fixtures.state, missile, garrison, game.fixtures.state.GetRng());
+    CHECK_FALSE(result.has_value());
+    CHECK_FALSE(rBatteryTile.HasFeature("test_sam_battery_misfire"));
+}
+
+TEST_CASE("Neighbor ThisTile Intercept aura cools on the host tile", "[orbital][intercept]")
+{
+    OrbitalGame_ game;
+    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 8, 8);
+    Tile& rHost = *game.fixtures.state.GetWorldMap().GetTile(9, 9);
+    REQUIRE(game.fixtures.state.GetWorldMap().GetTerritory().GetOwner(rHost)
+            == game.pPlayer->GetFactionId());
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rHost, "test_sam_battery_aura");
+    Unit& missile = game.MakeUnit(*game.pAi, 10, 10, {"test_orbital_chassis", "test_weapon"});
+    Unit& garrison = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_armor"}, &playerBase);
+
+    const std::vector<InterceptSource_t> sources = CollectInterceptSources(missile, garrison);
+    REQUIRE(sources.size() == 1);
+    CHECK(InterceptPhysicalKind(sources[0]) == InterceptSourceKind_t::Tile);
+    const auto* pTile = std::get_if<InterceptTileIdentity_t>(&sources[0].identity);
+    REQUIRE(pTile);
+    CHECK(pTile->hostTile == TileCoord_t{9, 9});
+    CHECK(sources[0].deployKind == InterceptSourceKind_t::Tile);
+
+    const int year = game.fixtures.state.GetMissionYear();
+    game.fixtures.state.GetTileInterceptDeploys().Deploy(TileCoord_t{9, 9}, "test_sam_battery_aura",
+                                                       year + 1);
+    CHECK_FALSE(InterceptSourceReady(sources[0], year));
+    CHECK(game.fixtures.state.GetTileInterceptDeploys().IsReady(
+        TileCoord_t{8, 8}, "test_sam_battery_aura", year));
+}
+
+TEST_CASE("Neighbor ThisTile Intercept fail-destroy removes the host improvement",
+          "[orbital][intercept]")
+{
+    OrbitalGame_ game;
+    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 8, 8);
+    Tile& rHost = *game.fixtures.state.GetWorldMap().GetTile(9, 9);
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rHost,
+                                                             "test_sam_battery_aura_misfire");
+    REQUIRE(rHost.HasFeature("test_sam_battery_aura_misfire"));
+    Tile& rDefenderTile = *game.fixtures.state.GetWorldMap().GetTile(8, 8);
+
+    Unit& missile = game.MakeUnit(*game.pAi, 10, 10, {"test_orbital_chassis", "test_weapon"});
+    Unit& garrison = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_armor"}, &playerBase);
+
+    const std::optional<CombatResult_t> result =
+        TryInterceptAttack(game.fixtures.state, missile, garrison, game.fixtures.state.GetRng());
+    CHECK_FALSE(result.has_value());
+    CHECK_FALSE(rHost.HasFeature("test_sam_battery_aura_misfire"));
+    CHECK(rDefenderTile.HasFeature("Base"));
 }
 
 TEST_CASE("Parse OrbitalAttack and Intercept effects", "[effects][parser][orbital]")
@@ -640,18 +826,26 @@ TEST_CASE("Intercept sources run faction pool, design, then tile, each charge re
         CollectInterceptSources(missile, escort);
     REQUIRE(sources.size() == 3);
     CHECK(sources[0].deployKind == InterceptSourceKind_t::Building);
-    CHECK(sources[0].sourceId == "test_odp_always_hit");
+    CHECK(InterceptSourceId(sources[0]) == "test_odp_always_hit");
     CHECK(InterceptChargeBase(sources[0]) == playerBase.GetBaseId());
-    CHECK(sources[1].sourceKind == InterceptSourceKind_t::Unit);
+    CHECK(InterceptPhysicalKind(sources[1]) == InterceptSourceKind_t::Unit);
     CHECK(sources[1].deployKind == InterceptSourceKind_t::None);
-    CHECK(sources[2].sourceKind == InterceptSourceKind_t::None);
+    const auto* pUnit = std::get_if<InterceptUnitIdentity_t>(&sources[1].identity);
+    REQUIRE(pUnit);
+    CHECK(pUnit->unitId == escort.GetUnitId());
+    CHECK(InterceptPhysicalKind(sources[2]) == InterceptSourceKind_t::Tile);
+    CHECK(sources[2].deployKind == InterceptSourceKind_t::None);
+    const auto* pTile = std::get_if<InterceptTileIdentity_t>(&sources[2].identity);
+    REQUIRE(pTile);
+    CHECK(pTile->hostTile == TileCoord_t{8, 8});
 
     const int year = game.fixtures.state.GetMissionYear();
-    CHECK(InterceptSourceReady(sources[0], escort, year));
-    game.pPlayer->DeployBuilding(playerBase.GetBaseId(), "test_odp_always_hit", year + 1);
-    CHECK_FALSE(InterceptSourceReady(sources[0], escort, year));
-    CHECK(InterceptSourceReady(sources[0], escort, year + 1));
-    CHECK(InterceptSourceReady(sources[1], escort, year));
+    CHECK(InterceptSourceReady(sources[0], year));
+    game.pPlayer->GetBuildingDeploys().Deploy(playerBase.GetBaseId(), "test_odp_always_hit",
+                                              year + 1);
+    CHECK_FALSE(InterceptSourceReady(sources[0], year));
+    CHECK(InterceptSourceReady(sources[0], year + 1));
+    CHECK(InterceptSourceReady(sources[1], year));
 }
 
 TEST_CASE("A satellite attack needs a ready copy and an orbital target the defender owns",

@@ -2,6 +2,7 @@
 
 #include "game/CurrentGameState.h"
 #include "game/GameState.h"
+#include "game/combat/TileInterceptDeployLedger.h"
 #include "game/faction/Faction.h"
 #include "game/effects/IWorldEffectsSource.h"
 #include "game/map/ImprovementConfigParser.h"
@@ -64,12 +65,22 @@ int MaxEffectReach_(const ImprovementConfig_t& rConfig)
     return reach;
 }
 
+void StampHostTile_(std::vector<ActiveEffect_t>& rOut, size_t from, const Tile& rHostTile)
+{
+    const TileCoord_t host = rHostTile.GetCoord();
+    for (size_t i = from; i < rOut.size(); ++i)
+    {
+        rOut[i].hostTile = host;
+    }
+}
+
 void AppendOwnedImprovementEffects_(const Tile& rHostTile, const ImprovementConfig_t& rConfig,
                                     int distance, const WorldMap& rWorldMap,
                                     std::vector<ActiveEffect_t>& rOut)
 {
     const size_t before = rOut.size();
     AppendTileEffects(rConfig.effects, rConfig.id, distance, rOut);
+    StampHostTile_(rOut, before, rHostTile);
     if (!rConfig.ownedByTerritory)
     {
         return;
@@ -88,7 +99,9 @@ void AppendOccupantEffects_(const Tile& rTile, int distance, const WorldMap& rWo
     {
         if (pFeature)
         {
+            const size_t before = rOut.size();
             AppendTileEffects(pFeature->effects, pFeature->id, distance, rOut);
+            StampHostTile_(rOut, before, rTile);
         }
     }
     for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
@@ -107,11 +120,15 @@ void AppendUnitAuraEffects_(const Tile& rTile, int distance, const WorldMap& rWo
             continue;
         }
         const FactionId_t owner = pUnit->GetFaction().GetFactionId();
+        const int projectingUnitId = pUnit->GetUnitId();
+        const TileCoord_t host = rTile.GetCoord();
         for (ActiveEffect_t& rActive : pUnit->GetDesign().CollectEffects())
         {
             if (TileEffectReaches(*rActive.config, distance))
             {
                 rActive.ownerFaction = owner;
+                rActive.hostTile = host;
+                rActive.projectingUnitId = projectingUnitId;
                 rOut.push_back(std::move(rActive));
             }
         }
@@ -281,13 +298,15 @@ TileEffectsContext::TileEffectsContext(WorldMap& rWorldMap, const ImprovementReg
                                        const UnitComponentRegistry* pUnitComponents,
                                        const TileYieldRulesConfig_t& rYieldRules,
                                        const InteractionGridsConfig_t& rInteractionGrids,
-                                       const MoistureDecorationConfig_t& rMoisture)
+                                       const MoistureDecorationConfig_t& rMoisture,
+                                       TileInterceptDeployLedger& rTileInterceptDeploys)
     : m_rWorldMap(rWorldMap)
     , m_rImprovements(rImprovements)
     , m_rYieldRules(rYieldRules)
     , m_rInteractionGrids(rInteractionGrids)
     , m_rMoisture(rMoisture)
     , m_maxRadius(MaxAuraRadius_(rImprovements, pUnitComponents))
+    , m_rTileInterceptDeploys(rTileInterceptDeploys)
 {
     for (const std::unique_ptr<Tile>& pTile : rWorldMap.GetTiles())
     {
@@ -527,6 +546,7 @@ void TileEffectsContext::RemoveOccupantWithEffects(Tile& rTile, const std::strin
     const bool bTerminatesRiver = pConfig->terminatesRiver;
 
     rTile.RemoveOccupant(*pConfig);
+    m_rTileInterceptDeploys.Drop(rTile.GetCoord(), occupantId);
     RecomputeMoistureInRadius_(rTile, radius, *this, m_rWorldMap);
     if (bTerminatesRiver)
     {

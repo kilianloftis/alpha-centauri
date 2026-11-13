@@ -1012,6 +1012,46 @@
     "category": "conquer"
   },
   {
+    "id": "test_faction_units_intercept",
+    "name": "Test Faction Units Intercept",
+    "effects": [
+      {
+        "type": "Intercept",
+        "scope": "FactionUnits",
+        "parameters": {
+          "chance": 100
+        },
+        "condition": {
+          "kind": "AttackerDomain",
+          "domains": [
+            "orbital"
+          ]
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "test_produced_intercept",
+    "name": "Test Produced Intercept",
+    "effects": [
+      {
+        "type": "Intercept",
+        "scope": "ProducedAtThisBase",
+        "parameters": {
+          "chance": 100
+        },
+        "condition": {
+          "kind": "AttackerDomain",
+          "domains": [
+            "orbital"
+          ]
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
     "id": "Perimeter_Defense",
     "name": "Perimeter Defense",
     "effects": [

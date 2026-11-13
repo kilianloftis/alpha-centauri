@@ -6,13 +6,18 @@
 #include "game/combat/InterceptRules.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/DeployCooldown.h"
+#include "game/combat/TileInterceptDeployLedger.h"
+#include "game/effects/TileEffectsContext.h"
 #include "game/faction/Faction.h"
+#include "game/map/Tile.h"
+#include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitManager.h"
 #include "lib/RandomRoll.h"
 
 #include <stdexcept>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace ac
@@ -21,9 +26,9 @@ namespace ac
 namespace
 {
 
-Faction& Ledger_(GameState& rGameState, const InterceptSource_t& rSource)
+Faction& Ledger_(GameState& rGameState, const InterceptBuildingIdentity_t& rBuilding)
 {
-    Faction* pLedger = rGameState.FindFaction(rSource.ledgerFactionId);
+    Faction* pLedger = rGameState.FindFaction(rBuilding.ledgerFactionId);
     if (pLedger == nullptr)
     {
         throw std::logic_error("Intercept source bills a faction that is not in the game");
@@ -31,8 +36,23 @@ Faction& Ledger_(GameState& rGameState, const InterceptSource_t& rSource)
     return *pLedger;
 }
 
-void DeployInterceptSource_(GameState& rGameState, Unit& rDefender,
-                            const InterceptSource_t& rSource, int missionYear)
+Unit& InterceptUnit_(GameState& rGameState, const InterceptUnitIdentity_t& rUnitId)
+{
+    for (Faction& rFaction : rGameState.Factions())
+    {
+        for (Unit& rUnit : rFaction.GetUnitManager().Units())
+        {
+            if (rUnit.GetUnitId() == rUnitId.unitId)
+            {
+                return rUnit;
+            }
+        }
+    }
+    throw std::logic_error("Intercept source names a unit that is not in the game");
+}
+
+void DeployInterceptSource_(GameState& rGameState, const InterceptSource_t& rSource,
+                            int missionYear)
 {
     const int readyYear = ReadyYearAfterDeploy(missionYear, rSource.pIntercept->cooldownTurns);
     switch (rSource.deployKind)
@@ -40,13 +60,24 @@ void DeployInterceptSource_(GameState& rGameState, Unit& rDefender,
     case InterceptSourceKind_t::None:
         return;
     case InterceptSourceKind_t::Unit:
-        rDefender.Latches().DeployIntercept(readyYear);
+    {
+        const auto& rUnit = std::get<InterceptUnitIdentity_t>(rSource.identity);
+        InterceptUnit_(rGameState, rUnit).Latches().DeployIntercept(readyYear);
         return;
+    }
     case InterceptSourceKind_t::Building:
     {
+        const auto& rBuilding = std::get<InterceptBuildingIdentity_t>(rSource.identity);
         const std::optional<BaseId_t> baseId = InterceptChargeBase(rSource);
-        Ledger_(rGameState, rSource)
-            .DeployBuilding(baseId.value_or(BaseId_t{}), rSource.sourceId, readyYear);
+        Ledger_(rGameState, rBuilding)
+            .GetBuildingDeploys()
+            .Deploy(baseId.value_or(BaseId_t{}), rBuilding.sourceId, readyYear);
+        return;
+    }
+    case InterceptSourceKind_t::Tile:
+    {
+        const auto& rTile = std::get<InterceptTileIdentity_t>(rSource.identity);
+        rGameState.GetTileInterceptDeploys().Deploy(rTile.hostTile, rTile.sourceId, readyYear);
         return;
     }
     }
@@ -80,30 +111,57 @@ std::optional<CombatResult_t> LoseInterceptSource_(GameState& rGameState, Unit& 
                                                    Unit& rDefender,
                                                    const InterceptSource_t& rSource)
 {
-    switch (rSource.sourceKind)
+    switch (InterceptPhysicalKind(rSource))
     {
     case InterceptSourceKind_t::None:
         return std::nullopt;
     case InterceptSourceKind_t::Building:
     {
+        const auto& rBuilding = std::get<InterceptBuildingIdentity_t>(rSource.identity);
         const std::optional<BaseId_t> baseId = InterceptChargeBase(rSource);
         BaseManager* pBase =
-            baseId ? Ledger_(rGameState, rSource).FindBase(*baseId) : nullptr;
+            baseId ? Ledger_(rGameState, rBuilding).FindBase(*baseId) : nullptr;
         if (pBase == nullptr)
         {
             throw std::logic_error("DestroyInterceptSource_: no base holds intercept source '"
-                                   + rSource.sourceId + "'");
+                                   + rBuilding.sourceId + "'");
         }
-        if (!pBase->GetBuildingManager().HasBuilding(rSource.sourceId))
+        if (!pBase->GetBuildingManager().HasBuilding(rBuilding.sourceId))
         {
             throw std::logic_error("DestroyInterceptSource_: base does not hold intercept source '"
-                                   + rSource.sourceId + "'");
+                                   + rBuilding.sourceId + "'");
         }
-        pBase->GetBuildingManager().DestroyBuilding(rSource.sourceId);
+        pBase->GetBuildingManager().DestroyBuilding(rBuilding.sourceId);
         return std::nullopt;
     }
     case InterceptSourceKind_t::Unit:
-        return LoseDefenderToItsIntercept_(rAttacker, rDefender);
+    {
+        const auto& rUnitId = std::get<InterceptUnitIdentity_t>(rSource.identity);
+        Unit& rLost = InterceptUnit_(rGameState, rUnitId);
+        if (&rLost == &rDefender)
+        {
+            return LoseDefenderToItsIntercept_(rAttacker, rDefender);
+        }
+        rLost.GetFaction().GetUnitManager().DestroyUnit(rLost);
+        return std::nullopt;
+    }
+    case InterceptSourceKind_t::Tile:
+    {
+        const auto& rTileId = std::get<InterceptTileIdentity_t>(rSource.identity);
+        Tile* pHost = rGameState.GetWorldMap().GetTile(rTileId.hostTile);
+        if (pHost == nullptr)
+        {
+            throw std::logic_error("Tile intercept lose names a host tile that is not on the map");
+        }
+        if (!pHost->HasFeature(rTileId.sourceId))
+        {
+            throw std::logic_error("DestroyInterceptSource_: host tile does not hold intercept "
+                                   "source '"
+                                   + rTileId.sourceId + "'");
+        }
+        rGameState.GetTileEffects().RemoveOccupantWithEffects(*pHost, rTileId.sourceId);
+        return std::nullopt;
+    }
     }
     throw std::logic_error("LoseInterceptSource_: unknown intercept source kind");
 }
@@ -120,11 +178,11 @@ std::optional<CombatResult_t> TryInterceptAttack(GameState& rGameState,
 
     for (const InterceptSource_t& rSource : sources)
     {
-        if (!InterceptSourceReady(rSource, rDefender, year))
+        if (!InterceptSourceReady(rSource, year))
         {
             continue;
         }
-        DeployInterceptSource_(rGameState, rDefender, rSource, year);
+        DeployInterceptSource_(rGameState, rSource, year);
         if (RollPercent(rSource.pIntercept->chance, rRng))
         {
             return ResolveInterceptKill_(rAttacker, rDefender);

@@ -458,7 +458,7 @@ bool TeleportUnit_(TriggeredEffectContext_t& rCtx, const TeleportUnitEffect_t& r
     Tile& rDest = *candidates[PickUniformIndex(candidates.size(), rCtx.Rng())];
     rWorldMap.GetUnitPositions().MoveUnit(*rCtx.pUnit, rDest);
     rCtx.pTile = &rDest;
-    rOut.push_back(UnitTeleported_t{TileCoord_t{rDest.GetX(), rDest.GetY()}});
+    rOut.push_back(UnitTeleported_t{rDest.GetCoord()});
     return true;
 }
 
@@ -484,7 +484,7 @@ bool FinishProduction_(TriggeredEffectContext_t& rCtx, Faction& rFaction,
     ProductionFinished_t finished;
     finished.baseName = pBase->GetName();
     finished.itemName = pItem->GetName();
-    finished.cameraTile = TileCoord_t{pBase->GetTile().GetX(), pBase->GetTile().GetY()};
+    finished.cameraTile = pBase->GetTile().GetCoord();
     rOut.push_back(std::move(finished));
     return true;
 }

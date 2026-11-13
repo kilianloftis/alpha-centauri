@@ -130,7 +130,7 @@ SupplyPodOpenResult_t OpenSupplyPod(GameState& rGameState, Unit& rVisitor, std::
 
     result.bOpened = true;
     result.eventId = pick.eventId;
-    result.cameraTile = TileCoord_t{rTile.GetX(), rTile.GetY()};
+    result.cameraTile = rTile.GetCoord();
     result.noticeKey = pick.pNotice->script;
     result.imagePath = pick.pNotice->image;
 

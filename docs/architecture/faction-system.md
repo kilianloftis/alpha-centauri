@@ -25,6 +25,7 @@ graph TB
         UnitManager[UnitManager<br/>owns Unit]
         Bases[m_bases<br/>vector of BaseManager]
         FactionEffectsPool[FactionEffectsPool]
+        BuildingDeployLedger[BuildingDeployLedger<br/>ASAT / building-intercept cooldowns]
         FactionExploredMap[FactionExploredMap]
         FactionVisibleMap[FactionVisibleMap]
         FactionRevealedUnits[FactionRevealedUnits]
@@ -70,6 +71,7 @@ graph TB
     Faction --> UnitManager
     Faction --> Bases
     Faction --> FactionEffectsPool
+    Faction --> BuildingDeployLedger
     Faction --> FactionExploredMap
     Faction --> FactionVisibleMap
     Faction --> FactionRevealedUnits

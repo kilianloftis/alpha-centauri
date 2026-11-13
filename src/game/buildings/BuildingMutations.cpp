@@ -85,13 +85,13 @@ OrbitalAttackResult_t TryAttackSatellite(GameState& rGameState,
     }
 
     // The faction-wide ready count does not track which copy fires, so the deploy is billed to
-    // the first base holding one (see Faction::DeployBuilding).
+    // the first base holding one (see BuildingDeployLedger::Deploy).
     const BaseManager* pAttackerBase = rAttacker.FindBaseWithBuilding(attackerBuildingId);
     const BaseId_t attackerBaseId = pAttackerBase ? pAttackerBase->GetBaseId() : BaseId_t{};
 
     result.bAttempted = true;
-    rAttacker.DeployBuilding(attackerBaseId, attackerBuildingId,
-                             ReadyYearAfterDeploy(year, pEffect->cooldownTurns));
+    rAttacker.GetBuildingDeploys().Deploy(attackerBaseId, attackerBuildingId,
+                                          ReadyYearAfterDeploy(year, pEffect->cooldownTurns));
 
     result.bHit = RollPercent(pEffect->chance, rRng);
     if (result.bHit)

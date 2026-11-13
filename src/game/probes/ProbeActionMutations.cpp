@@ -68,7 +68,7 @@ TriggeredEffectContext_t UnitMissionContext_(Faction& rActor, Unit& rTargetUnit,
                                              GameState& rGameState, std::mt19937& rRng)
 {
     const Tile& rTile = rTargetUnit.GetTile();
-    Tile* const pTile = rGameState.GetWorldMap().GetTile(rTile.GetX(), rTile.GetY());
+    Tile* const pTile = rGameState.GetWorldMap().GetTile(rTile.GetCoord());
     if (!pTile)
     {
         throw std::runtime_error("UnitMissionContext_: target unit tile is not on the world map");

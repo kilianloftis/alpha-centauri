@@ -130,7 +130,7 @@ void AnnounceProbe_(GameState& rGameState, const Faction& rActor, ProbeActionId_
     notice.actor = FactionCopy_(rActor);
     notice.target = FactionCopy_(rTarget.rFaction);
     notice.subjectName = ProbeSubjectName_(rTarget);
-    notice.cameraTile = TileCoord_t{rTile.GetX(), rTile.GetY()};
+    notice.cameraTile = rTile.GetCoord();
     notice.actionId = actionId;
     notice.result = rResult;
     FillNoticeNames_(rGameState, notice);

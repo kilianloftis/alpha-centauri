@@ -20,7 +20,13 @@ graph TD
         AttackRules[AttackRules<br/>CanAttackTile / targeting /<br/>FindAttackableHostileOnTile]
         InterceptRules[InterceptRules<br/>sources, readiness, charge base]
         InterceptMutations[InterceptMutations<br/>deploy, roll, kill or lose source]
+        TileInterceptDeployLedger[TileInterceptDeployLedger<br/>ThisTile intercept cooldowns]
+        BuildingDeployLedger[BuildingDeployLedger<br/>ASAT / building-intercept cooldowns]
         InterceptMutations --> InterceptRules
+        InterceptMutations --> TileInterceptDeployLedger
+        InterceptMutations --> BuildingDeployLedger
+        InterceptRules --> TileInterceptDeployLedger
+        InterceptRules --> BuildingDeployLedger
         ScrambleRules[ScrambleRules<br/>FindScrambler]
         AttackRules --> MovementRules
         EvacuateTerritoryRules[EvacuateTerritoryRules<br/>on-host / nearest own tile]
@@ -302,13 +308,21 @@ rolled against has its order cleared.
 **Intercept vs scramble vs airdrop interdiction.** Three related but distinct paths:
 
 1. **`Intercept`** (ODP / SAM-style) — rolled in `TryInterceptAttack` before combat.
-   `CollectInterceptSources` lists the defender side's charges in the order they are tried,
+   `CollectInterceptSources` lists the defender side's charges in the order they are tried
+   (faction pool, own-base ThisBase, live unit effects — ThisUnit / FactionUnits /
+   ProducedAtThisBase — WorldGlobal grantors, council, ThisTile area),
    `InterceptSourceReady` says which are off cooldown, and `InterceptChargeBase` names the base
    a building charge is billed to and lost from. Each ready source deploys and rolls its
    chance; a miss rolls `chance_of_destruction_on_fail`. Success destroys the attacker with
-   empty rounds. A miss that loses the defender's own design loses the defender: the attack
-   ends with empty rounds, spent but with no kill, so no promotion and no last-defender loss.
-   Stock filters orbital attackers on base tiles.
+   empty rounds. A miss that loses the defending unit ends the attack with empty rounds,
+   spent but with no kill, so no promotion and no last-defender loss. Identity is a variant
+   (building / unit / tile / none); unit charges always name the unit id. ThisTile charges
+   use Sensor-style polarity (`ActiveEffectContext` + authored `SubjectIsOwner` /
+   `SubjectIsForeign`).    Building charges deploy on the owner's `BuildingDeployLedger` (keyed by base +
+   building; migrates/drops with the base). Occupant charges deploy on
+   `TileInterceptDeployLedger` (cleared when `RemoveOccupantWithEffects` drops the host)
+   and fail-destroy via that remove; unit and unit-aura charges deploy and fail-destroy
+   on the named unit. Stock filters orbital attackers on base tiles.
 2. **`Scramble`** — after Intercept misses/skips, `ResolveScrambleDefender_`
    picks a same-faction unit with a matching `condition` against the attacker, Chebyshev
    distance within the effect's `range`, and a `Pathfinder` path whose `totalCostFragments`

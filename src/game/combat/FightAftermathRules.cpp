@@ -13,7 +13,7 @@ namespace ac
 std::optional<FactionId_t> AlliedTerritoryOwner(FactionId_t attacker, FactionId_t defender,
                                                 const Tile& rBattleTile)
 {
-    // TODO: SMAC's other territory site, +3 against a faction that refused the defender's demand
+    // TODO: AI motivations required: SMAC's other territory site, +3 against a faction that refused the defender's demand
     // to attack (0x5078BB), waits on AI-initiated #DEMANDATTACK.
     const GameState& rGame = CurrentGameState();
     const FactionId_t owner = rGame.GetWorldMap().GetTerritory().GetOwner(rBattleTile);

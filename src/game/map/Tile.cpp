@@ -80,6 +80,11 @@ int Tile::GetY() const
     return m_y;
 }
 
+TileCoord_t Tile::GetCoord() const
+{
+    return TileCoord_t{m_x, m_y};
+}
+
 void Tile::SetMoisture(Moisture_t moisture)
 {
     if (m_moisture == moisture)

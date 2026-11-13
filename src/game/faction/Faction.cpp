@@ -267,75 +267,17 @@ const BuildingConfig_t* Faction::FindOwnedBuildingConfig(const BuildingId_t& bui
 
 int Faction::CountReadyBuildings(const BuildingId_t& buildingId, int missionYear) const
 {
-    int cooling = 0;
-    for (const BuildingDeploy_t& rDeploy : m_buildingDeploys)
-    {
-        if (rDeploy.buildingId == buildingId && missionYear < rDeploy.readyMissionYear)
-        {
-            ++cooling;
-        }
-    }
-    const int total = CountBuildings(buildingId);
-    return total > cooling ? total - cooling : 0;
+    return m_buildingDeploys.CountReady(buildingId, missionYear, CountBuildings(buildingId));
 }
 
-void Faction::PruneExpiredDeploys(int missionYear)
+BuildingDeployLedger& Faction::GetBuildingDeploys()
 {
-    std::erase_if(m_buildingDeploys, [missionYear](const BuildingDeploy_t& rDeploy)
-    {
-        return missionYear >= rDeploy.readyMissionYear;
-    });
+    return m_buildingDeploys;
 }
 
-void Faction::DeployBuilding(BaseId_t baseId, const BuildingId_t& buildingId, int readyMissionYear)
+const BuildingDeployLedger& Faction::GetBuildingDeploys() const
 {
-    m_buildingDeploys.push_back(BuildingDeploy_t{baseId, buildingId, readyMissionYear});
-}
-
-void Faction::NotifyBuildingDestroyed(BaseId_t baseId, const BuildingId_t& buildingId)
-{
-    // This base's records only, dropping its most-cooling copy: a destroyed copy takes a
-    // suppression with it, and retiring an expired one instead would under-count ready copies.
-    auto latest = m_buildingDeploys.end();
-    for (auto it = m_buildingDeploys.begin(); it != m_buildingDeploys.end(); ++it)
-    {
-        if (it->baseId != baseId || it->buildingId != buildingId)
-        {
-            continue;
-        }
-        if (latest == m_buildingDeploys.end() || it->readyMissionYear > latest->readyMissionYear)
-        {
-            latest = it;
-        }
-    }
-    if (latest != m_buildingDeploys.end())
-    {
-        m_buildingDeploys.erase(latest);
-    }
-}
-
-void Faction::MigrateBuildingDeploys_(BaseId_t baseId, Faction& rReceiver)
-{
-    for (auto it = m_buildingDeploys.begin(); it != m_buildingDeploys.end();)
-    {
-        if (it->baseId == baseId)
-        {
-            rReceiver.m_buildingDeploys.push_back(*it);
-            it = m_buildingDeploys.erase(it);
-        }
-        else
-        {
-            ++it;
-        }
-    }
-}
-
-void Faction::DropBuildingDeploys_(BaseId_t baseId)
-{
-    std::erase_if(m_buildingDeploys, [baseId](const BuildingDeploy_t& rDeploy)
-    {
-        return rDeploy.baseId == baseId;
-    });
+    return m_buildingDeploys;
 }
 
 int Faction::GetResearchPerTurn_() const
@@ -385,7 +327,7 @@ std::optional<BaseSnapshot_t> Faction::ExtractBase(BaseId_t baseId)
             std::unique_ptr<BaseManager> pExtracted = std::move(*it);
             m_bases.erase(it);
             pExtracted.reset();
-            DropBuildingDeploys_(baseId);
+            m_buildingDeploys.DropBase(baseId);
             NoteBaseListChanged_();
             return snapshot;
         }
@@ -589,7 +531,7 @@ void Faction::RazeBase(BaseManager& rBase)
 
     DropAllHomeClaims_(rBase);
     rBase.MarkRazed_();
-    DropBuildingDeploys_(rBase.GetBaseId());
+    m_buildingDeploys.DropBase(rBase.GetBaseId());
     NoteBaseListChanged_();
 }
 
@@ -625,7 +567,7 @@ void Faction::TransferBaseTo(BaseId_t baseId, Faction& rReceiver)
     BaseManager& rBase = *pBase;
     DropHeadquarters_(rBase);
     rBase.RebindFaction(rReceiver);
-    MigrateBuildingDeploys_(baseId, rReceiver);
+    m_buildingDeploys.MigrateTo(baseId, rReceiver.GetBuildingDeploys());
     rReceiver.AddBase(std::move(pBase));
 
     // A claim on a base its owner does not own is invalid, so the previous owner's units lose

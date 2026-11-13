@@ -17,6 +17,7 @@ class IWorldEffectsSource;
 struct MoistureDecorationConfig_t;
 class Tile;
 struct ImprovementConfig_t;
+class TileInterceptDeployLedger;
 class UnitComponentRegistry;
 class WorldMap;
 struct TileYieldRulesConfig_t;
@@ -28,12 +29,13 @@ class TileEffectsContext : public TileChangeListener
 {
 public:
     // pUnitComponents sizes the aura scan; nullptr if units never project auras. rYieldRules,
-    // rInteractionGrids and rMoisture must outlive this.
+    // rInteractionGrids, rMoisture and rTileInterceptDeploys must outlive this.
     TileEffectsContext(WorldMap& rWorldMap, const ImprovementRegistry& rImprovements,
                        const UnitComponentRegistry* pUnitComponents,
                        const TileYieldRulesConfig_t& rYieldRules,
                        const InteractionGridsConfig_t& rInteractionGrids,
-                       const MoistureDecorationConfig_t& rMoisture);
+                       const MoistureDecorationConfig_t& rMoisture,
+                       TileInterceptDeployLedger& rTileInterceptDeploys);
     ~TileEffectsContext() override;
 
     // Session WorldGlobal source. Unbound contexts resolve tile-local effects only.
@@ -76,7 +78,8 @@ public:
 
     void OnTileChanged(Tile& rTile, std::string_view keepId) override;
 
-    // Removes occupantId and recomputes moisture over its radius. An unknown id removes nothing.
+    // Removes occupantId and recomputes moisture over its radius. An unknown id removes nothing.0
+    // Also drops that tile's Intercept deploy records for occupantId.
     void RemoveOccupantWithEffects(Tile& rTile, const std::string& occupantId);
 
 private:
@@ -112,6 +115,7 @@ private:
     IWorldEffectsSource* m_pWorldEffects = nullptr;
     bool m_bSweepingOccupancy = false;
     std::vector<Tile*> m_pendingOccupancy;
+    TileInterceptDeployLedger& m_rTileInterceptDeploys;
 };
 
 } // namespace ac

@@ -68,7 +68,7 @@ Rainfall_t WorldMap::GetRainfall() const
 
 Tile& WorldMap::MutableTile(const Tile& rTile)
 {
-    Tile* pTile = GetTile(rTile.GetX(), rTile.GetY());
+    Tile* pTile = GetTile(rTile.GetCoord());
     if (!pTile)
     {
         throw std::logic_error("WorldMap::MutableTile: the tile is not on this map");
@@ -96,6 +96,16 @@ const Tile* WorldMap::GetTile(int x, int y) const
     return m_tiles[GetTileIndex(x, y)].get();
 }
 
+Tile* WorldMap::GetTile(TileCoord_t coord)
+{
+    return GetTile(coord.first, coord.second);
+}
+
+const Tile* WorldMap::GetTile(TileCoord_t coord) const
+{
+    return GetTile(coord.first, coord.second);
+}
+
 std::span<const std::unique_ptr<Tile>> WorldMap::GetTiles() const
 {
     return m_tiles;
@@ -106,9 +116,14 @@ int WorldMap::GetTileIndex(int x, int y) const
     return TileIndex(x, y, m_width);
 }
 
+int WorldMap::GetTileIndex(TileCoord_t coord) const
+{
+    return GetTileIndex(coord.first, coord.second);
+}
+
 int WorldMap::GetTileIndex(const Tile& rTile) const
 {
-    return GetTileIndex(rTile.GetX(), rTile.GetY());
+    return GetTileIndex(rTile.GetCoord());
 }
 
 UnitPositionIndex& WorldMap::GetUnitPositions()

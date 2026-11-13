@@ -21,6 +21,7 @@
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/WorldMap.h"
 #include "game/effects/ActiveEffect.h"
+#include "game/combat/TileInterceptDeployLedger.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/effects/TriggeredEffectDispatch.h"
 #include "game/effects/TriggeredEffectRules.h"
@@ -182,10 +183,11 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     m_pCouncil = std::make_unique<PlanetaryCouncil>(*rGameData.councilProposalRegistry,
                                                     *rGameData.councilRules);
     m_pCouncilVotes = std::make_unique<CouncilVoteExecutor>(*m_pCouncil);
+    m_pTileInterceptDeploys = std::make_unique<TileInterceptDeployLedger>();
     m_pTileEffects = std::make_unique<TileEffectsContext>(
         *m_worldMap, *rGameData.improvementRegistry, rGameData.unitComponentRegistry.get(),
         rGameData.tileYieldRules, rGameData.interactionGrids,
-        rGameData.worldGenDecorationConfig->moisture);
+        rGameData.worldGenDecorationConfig->moisture, *m_pTileInterceptDeploys);
     m_pTileEffects->BindWorldEffects(*this);
     m_pMoveCosts = std::make_unique<MoveCostRules>(*rGameData.improvementRegistry,
                                                    MovementConstants_t{});
@@ -760,6 +762,16 @@ TileEffectsContext& GameState::GetTileEffects()
 const TileEffectsContext& GameState::GetTileEffects() const
 {
     return *m_pTileEffects;
+}
+
+TileInterceptDeployLedger& GameState::GetTileInterceptDeploys()
+{
+    return *m_pTileInterceptDeploys;
+}
+
+const TileInterceptDeployLedger& GameState::GetTileInterceptDeploys() const
+{
+    return *m_pTileInterceptDeploys;
 }
 
 Pathfinder& GameState::GetPathfinder()

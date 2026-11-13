@@ -160,7 +160,7 @@ const IConstructable* BaseManager::FallbackProduction_() const
 
 void BaseManager::OnBuildingDestroyed_(const BuildingConfig_t& rBuilding)
 {
-    m_pFaction->NotifyBuildingDestroyed(m_baseId, rBuilding.id);
+    m_pFaction->GetBuildingDeploys().NotifyDestroyed(m_baseId, rBuilding.id);
     if (rBuilding.bIsSecretProject)
     {
         m_pFaction->OnSecretProjectDestroyed.Emit(rBuilding.id);

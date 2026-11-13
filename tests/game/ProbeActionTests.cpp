@@ -223,7 +223,7 @@ const ProbeNoticeInteraction_t& RequireProbeNotice_(GameState& rState, const Bas
     REQUIRE(pNotice);
     CHECK(pNotice->subjectName == rBase.GetName());
     REQUIRE(pNotice->cameraTile.has_value());
-    CHECK(*pNotice->cameraTile == TileCoord_t{rBase.GetTile().GetX(), rBase.GetTile().GetY()});
+    CHECK(*pNotice->cameraTile == rBase.GetTile().GetCoord());
     CHECK(pNotice->targetFactionId == rBase.GetFactionId());
     CHECK(pNotice->actionId == ProbeActionId_t::InciteDroneRiots);
     return *pNotice;
@@ -664,7 +664,8 @@ TEST_CASE("Sabotage retires the destroyed copy's deploy record", "[probe][action
     BaseManager& enemySecond = game.MakeBase(*game.pAi, 8, 14);
     enemy.GetBuildingManager().AddBuilding("test_facility_a");
     enemySecond.GetBuildingManager().AddBuilding("test_facility_a");
-    game.pAi->DeployBuilding(enemy.GetBaseId(), "test_facility_a", /*readyMissionYear*/ 100);
+    game.pAi->GetBuildingDeploys().Deploy(enemy.GetBaseId(), "test_facility_a",
+                                          /*readyMissionYear*/ 100);
     REQUIRE(game.pAi->CountBuildings("test_facility_a") == 2);
     REQUIRE(game.pAi->CountReadyBuildings("test_facility_a", /*missionYear*/ 1) == 1);
 

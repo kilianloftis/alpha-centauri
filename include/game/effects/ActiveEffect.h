@@ -55,6 +55,10 @@ struct ActiveEffect_t
     // Set for FactionPair effects: the other faction of the pair. They match only a context
     // whose pPartner is that faction.
     std::optional<FactionId_t> partnerFaction;
+    // Host tile of a ThisTile effect from CollectAreaEffects (occupant or unit aura).
+    std::optional<TileCoord_t> hostTile;
+    // Projecting unit (UnitId_t) for a unit-aura ThisTile effect.
+    std::optional<int> projectingUnitId;
 };
 
 // The faction-wide pool, with other factions' WorldGlobal and council extras when bound to a

@@ -22,7 +22,7 @@ bool TrySpreadTerraformFromTile(Tile& rOrigin, WorldMap& rWorldMap,
     {
         return false;
     }
-    Tile* pTarget = rWorldMap.GetTile(spread->pTarget->GetX(), spread->pTarget->GetY());
+    Tile* pTarget = rWorldMap.GetTile(spread->pTarget->GetCoord());
     if (pTarget == nullptr)
     {
         throw std::logic_error("TrySpreadTerraformFromTile: spread target is off this world");

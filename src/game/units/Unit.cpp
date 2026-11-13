@@ -25,7 +25,8 @@ namespace
 {
 
 // ProducedAtThisBase grants from the base that built rUnit, with no origin, so a later transfer
-// or razed base is never consulted.
+// or razed base is never consulted. Situational conditions (AttackerDomain, …) wait for the
+// consumer's context, same as CollectLiveUnitEffects.
 std::vector<ActiveEffect_t> ProductionGrants_(const Unit& rUnit, const Faction& rFaction,
                                               const BaseManager& rBuiltAt)
 {
@@ -34,12 +35,18 @@ std::vector<ActiveEffect_t> ProductionGrants_(const Unit& rUnit, const Faction& 
     std::vector<ActiveEffect_t> grants;
     for (const ActiveEffect_t& rEffect : rFaction.GetActiveEffects().effects)
     {
-        if (rEffect.config->scope == EffectScope_t::ProducedAtThisBase
-            && rEffect.originBase == &rBuiltAt
-            && ConditionSatisfied(*rEffect.config, context, rEffect.originBase))
+        if (rEffect.config->scope != EffectScope_t::ProducedAtThisBase
+            || rEffect.originBase != &rBuiltAt)
         {
-            grants.emplace_back(*rEffect.config, rEffect.sourceId, nullptr);
+            continue;
         }
+        if (rEffect.config->condition
+            && !ConditionNeedsSituationalContext(*rEffect.config->condition)
+            && !ConditionSatisfied(*rEffect.config, context, rEffect.originBase))
+        {
+            continue;
+        }
+        grants.emplace_back(*rEffect.config, rEffect.sourceId, nullptr);
     }
     return grants;
 }

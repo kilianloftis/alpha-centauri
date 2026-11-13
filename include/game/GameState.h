@@ -19,6 +19,7 @@ namespace ac
 {
 
 class TileEffectsContext;
+class TileInterceptDeployLedger;
 class EventBus;
 class WorldMap;
 class PlayerInteractionQueue;
@@ -166,6 +167,10 @@ public:
     TileEffectsContext& GetTileEffects();
     const TileEffectsContext& GetTileEffects() const;
 
+    // ThisTile Intercept deploy cooldowns keyed by host tile and source id.
+    TileInterceptDeployLedger& GetTileInterceptDeploys();
+    const TileInterceptDeployLedger& GetTileInterceptDeploys() const;
+
     // Shared path search for order execution and UI preview.
     Pathfinder& GetPathfinder();
     const Pathfinder& GetPathfinder() const;
@@ -237,6 +242,7 @@ private:
     std::set<std::string> m_consumedTriggerKeys;
     // Before m_factions, so they outlive the BaseManagers that reference TileEffectsContext.
     std::unique_ptr<WorldMap> m_worldMap;
+    std::unique_ptr<TileInterceptDeployLedger> m_pTileInterceptDeploys;
     std::unique_ptr<TileEffectsContext> m_pTileEffects;
     std::unique_ptr<MoveCostRules> m_pMoveCosts;
     std::unique_ptr<StepEvaluator> m_pSteps;

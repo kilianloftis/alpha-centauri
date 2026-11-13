@@ -1,10 +1,7 @@
 [
       {
-        "id": "TurnStart",
-        "name": "Turn Start",
-        "repeatForEachFaction": false,
-        "hooks": {
-          "replace": [{ "modId": "m", "scriptPath": "mods/x.lua" }]
-        }
+        "id": "ResourceCollection",
+        "name": "Resource Collection",
+        "repeatForEachFaction": false
       }
     ]

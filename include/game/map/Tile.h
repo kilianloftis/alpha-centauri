@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/base/BaseTypes.h"
 #include "game/map/MapRulesConfig.h"
 
 #include <string>
@@ -62,6 +63,7 @@ public:
 
     int GetX() const;
     int GetY() const;
+    TileCoord_t GetCoord() const;
 
     // The effective moisture, which RecomputeMoisture re-derives from the base moisture world gen
     // set plus Condensers in range.
