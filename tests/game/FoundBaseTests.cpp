@@ -206,7 +206,7 @@ TEST_CASE("FoundBase creates a base; SingleUse expends the colony pod", "[unit][
     CHECK(pNew->GetTile().GetY() == 11);
     CHECK(game.pPlayer->GetBaseCount() == 2);
     CHECK(CountUnits_(*game.pPlayer) == 0);
-    CHECK(game.fixtures.state.FindBaseAt(11, 11) == pNew);
+    CHECK(game.fixtures.state.FindBaseAt(pNew->GetTile()) == pNew);
     // GrantResource minerals 10 (stat starting_minerals) with no base modifiers.
     CHECK(pNew->GetProduction().GetMineralStockpile() == 10);
     CHECK(game.pPlayer->GetHeadquarters() == &home);
@@ -549,7 +549,7 @@ TEST_CASE("An undomed base is razed when its tile flips to water",
     CHECK(flooded.IsRazed());
     CHECK_FALSE(flooded.GetTile().HasImprovement(ImprovementIds::k_Base));
     CHECK_FALSE(flooded.GetTile().HasImprovement("Farm"));
-    CHECK(game.fixtures.state.FindBaseAt(8, 8) == nullptr);
+    CHECK(game.fixtures.state.FindBaseAt(flooded.GetTile()) == nullptr);
 }
 
 TEST_CASE("The last undomed base is still razed on a water flip",
@@ -561,7 +561,7 @@ TEST_CASE("The last undomed base is still razed on a water flip",
     CrossElevation_(game.fixtures.state, last.GetTile(), -500);
     CHECK(last.IsRazed());
     CHECK_FALSE(last.GetTile().HasImprovement(ImprovementIds::k_Base));
-    CHECK(game.fixtures.state.FindBaseAt(4, 4) == nullptr);
+    CHECK(game.fixtures.state.FindBaseAt(last.GetTile()) == nullptr);
 }
 
 TEST_CASE("A flip kills units on the wrong surface unless a standing base shelters them",

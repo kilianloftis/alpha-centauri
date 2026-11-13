@@ -56,7 +56,7 @@ bool DestroyOtherUnits_(WorldMap& rWorldMap, Tile& rTile, const Unit* pSpareUnit
 
 bool RazeBaseOnTile_(GameState& rGameState, Tile& rTile, ExplosionResult_t& rResult)
 {
-    BaseManager* pBase = rGameState.FindBaseAt(rTile.GetX(), rTile.GetY());
+    BaseManager* pBase = rGameState.FindBaseAt(rTile);
     if (!pBase || pBase->IsRazed())
     {
         return false;

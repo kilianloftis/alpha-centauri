@@ -324,7 +324,8 @@ TEST_CASE("A Planet Buster next to a foreign base names that owner even off the 
     game.fixtures.state.RebuildTerritory();
     // Detonation is on a neighboring tile, not the base tile itself. Territory may claim it;
     // the victim still comes from the razed base.
-    REQUIRE(game.fixtures.state.GetWorldMap().GetTerritory().HasOwner(game.At_(9, 9)));
+    REQUIRE(game.fixtures.state.GetWorldMap().GetTerritory().GetOwner(game.At_(9, 9))
+            != k_NoFactionOwner);
 
     Unit& rMissile = game.MakePlanetBuster_(8, 8);
     REQUIRE(ApplyDetonation(game.fixtures.state, rMissile));

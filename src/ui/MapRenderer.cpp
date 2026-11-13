@@ -196,7 +196,7 @@ void MapRenderer::DrawBase_(Graphics& rGraphics, const PlacedTile_t& rPlaced,
     {
         return;
     }
-    const BaseManager* pBase = m_rGameState.FindBaseAt(rTile.GetX(), rTile.GetY());
+    const BaseManager* pBase = m_rGameState.FindBaseAt(rTile);
     if (!pBase || !rContent.showsBase(*pBase))
     {
         return;
@@ -272,7 +272,7 @@ const Unit* MapRenderer::ShownUnit_(const Tile& rTile, const MapAppearance& rApp
     bool bBaseDrawn = false;
     if (rAppearance.CoverOf(rTile) != TileCover_t::Shroud && rContent.showsBase)
     {
-        if (const BaseManager* pBase = m_rGameState.FindBaseAt(rTile.GetX(), rTile.GetY()))
+        if (const BaseManager* pBase = m_rGameState.FindBaseAt(rTile))
         {
             bBaseDrawn = rContent.showsBase(*pBase);
         }

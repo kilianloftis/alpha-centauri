@@ -143,7 +143,7 @@ std::vector<InterceptSource_t> CollectInterceptSources(const Unit& rAttacker,
             return InterceptBuildingIdentity_t{rEffect.sourceId, defenderId, std::nullopt};
         });
 
-    const BaseManager* pBase = rState.FindBaseAt(rTile.GetX(), rTile.GetY());
+    const BaseManager* pBase = rState.FindBaseAt(rTile);
     if (pBase != nullptr && &pBase->GetFaction() == &rDefFaction)
     {
         const BaseId_t baseId = pBase->GetBaseId();

@@ -71,7 +71,7 @@ TEST_CASE("Scrapping a unit outside faction territory grants no minerals", "[uni
     Faction& faction = fixture.MakeFaction();
     BaseManager& base = fixture.MakeFactionBase(faction, 12, 4);
     Unit& unit = fixture.MakeUnit(faction, 7, 13, {"test_chassis", "test_costly_weapon"}, &base);
-    REQUIRE_FALSE(fixture.map.GetTerritory().HasOwner(unit.GetTile()));
+    REQUIRE(fixture.map.GetTerritory().GetOwner(unit.GetTile()) == k_NoFactionOwner);
     REQUIRE(faction.QuoteScrapUnit(unit)->amount == 0);
 
     const UnitId_t id = unit.GetUnitId();

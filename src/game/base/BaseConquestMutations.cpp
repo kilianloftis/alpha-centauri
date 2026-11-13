@@ -254,7 +254,7 @@ BaseConquestResult_t ResolvePostCombatBaseConquest(Unit& rAttacker,
                                                    std::mt19937& rRng)
 {
     RequireCurrentGameState(rGameState);
-    BaseManager* pBase = rGameState.FindBaseAt(rDefenderTile.GetX(), rDefenderTile.GetY());
+    BaseManager* pBase = rGameState.FindBaseAt(rDefenderTile);
     if (!pBase)
     {
         return {};
@@ -284,7 +284,7 @@ BaseConquestResult_t ResolveBaseEntryConquest(Unit& rMover,
 {
     RequireCurrentGameState(rGameState);
     BaseManager* pBase =
-        rGameState.FindBaseAt(rMover.GetTile().GetX(), rMover.GetTile().GetY());
+        rGameState.FindBaseAt(rMover.GetTile());
     if (!pBase)
     {
         return {};

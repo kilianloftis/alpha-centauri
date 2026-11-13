@@ -24,7 +24,7 @@ class IUnitOrderWorld
 public:
     virtual ~IUnitOrderWorld() = default;
 
-    virtual BaseManager* FindBaseAt(int tileX, int tileY) = 0;
+    virtual BaseManager* FindBaseAt(const Tile& rTile) = 0;
 
     virtual std::optional<CombatResult_t> TryInterceptAttack(
         Unit& rAttacker, Unit& rDefender, std::mt19937& rRng) = 0;

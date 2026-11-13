@@ -139,9 +139,9 @@ public:
     WorldMap& GetWorldMap();
     const WorldMap& GetWorldMap() const;
 
-    // Base whose center tile is (tileX, tileY), or nullptr if none.
-    BaseManager* FindBaseAt(int tileX, int tileY) override;
-    const BaseManager* FindBaseAt(int tileX, int tileY) const;
+    // Base whose center tile is rTile, or nullptr if none.
+    BaseManager* FindBaseAt(const Tile& rTile) override;
+    const BaseManager* FindBaseAt(const Tile& rTile) const;
     // Any faction's base closest to rTile by TabletopDiagonalDistance (the binary's base_find
     // and vector_dist), then the lower BaseId. nullptr when no base exists.
     const BaseManager* FindNearestBase(const Tile& rTile) const;

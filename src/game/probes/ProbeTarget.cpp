@@ -63,7 +63,7 @@ std::optional<ProbeTarget_t> ResolveProbeTarget(const Unit& rProbe, const Tile& 
 
     if (kind == ProbeTargetKind_t::Base)
     {
-        BaseManager* pBase = rGameState.FindBaseAt(rTile.GetX(), rTile.GetY());
+        BaseManager* pBase = rGameState.FindBaseAt(rTile);
         if (!pBase || &pBase->GetFaction() == &rProbeFaction)
         {
             return std::nullopt;

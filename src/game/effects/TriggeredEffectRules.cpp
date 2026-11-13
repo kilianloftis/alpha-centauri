@@ -35,7 +35,7 @@ bool HoldOrderActive_(const Unit& rUnit)
 const BaseManager* OwnBaseAt_(const GameState& rGameState, const Unit& rUnit)
 {
     const BaseManager* pBase =
-        rGameState.FindBaseAt(rUnit.GetTile().GetX(), rUnit.GetTile().GetY());
+        rGameState.FindBaseAt(rUnit.GetTile());
     if (!pBase || pBase->GetFaction().GetFactionId() != rUnit.GetFaction().GetFactionId())
     {
         return nullptr;

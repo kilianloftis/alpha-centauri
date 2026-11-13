@@ -53,7 +53,7 @@ TEST_CASE("Land base claims a Euclidean disk of contiguous land", "[territory]")
     CHECK(rTerritory.GetOwner(3, 5) == id); // wrapped dx to x=0 is 4; 16+25=41 <= 50
 
     // Just outside: 2^2+7^2 = 53 > 50.
-    CHECK_FALSE(rTerritory.HasOwner(7, 13));
+    CHECK(rTerritory.GetOwner(7, 13) == k_NoFactionOwner);
     CHECK_FALSE(InEuclideanRadius(2, 7, 7));
 }
 
@@ -81,9 +81,9 @@ TEST_CASE("Land territory does not cross water or claim sea tiles", "[territory]
 
     CHECK(rTerritory.GetOwner(11, 5) == id);
     CHECK(rTerritory.GetOwner(10, 6) == id);
-    CHECK_FALSE(rTerritory.HasOwner(12, 4)); // sea
-    CHECK_FALSE(rTerritory.HasOwner(11, 7)); // water barrier itself
-    CHECK_FALSE(rTerritory.HasOwner(9, 9));  // land beyond the cut
+    CHECK(rTerritory.GetOwner(12, 4) == k_NoFactionOwner); // sea
+    CHECK(rTerritory.GetOwner(11, 7) == k_NoFactionOwner); // water barrier itself
+    CHECK(rTerritory.GetOwner(9, 9) == k_NoFactionOwner);  // land beyond the cut
 }
 
 TEST_CASE("Sea base claims Euclidean radius-3 contiguous sea only", "[territory]")
@@ -110,8 +110,8 @@ TEST_CASE("Sea base claims Euclidean radius-3 contiguous sea only", "[territory]
     CHECK(rTerritory.GetOwner(11, 11) == id);
     CHECK(rTerritory.GetOwner(6, 12) == id); // dx=1,dy=3 -> 10
     // 4^2 = 16 > 10.
-    CHECK_FALSE(rTerritory.HasOwner(12, 4));
-    CHECK_FALSE(rTerritory.HasOwner(6, 10)); // land
+    CHECK(rTerritory.GetOwner(12, 4) == k_NoFactionOwner);
+    CHECK(rTerritory.GetOwner(6, 10) == k_NoFactionOwner); // land
 }
 
 TEST_CASE("Contested tiles go to the nearer base by Euclidean distance", "[territory]")
@@ -155,7 +155,7 @@ TEST_CASE("Founding another base expands territory on rebuild", "[territory]")
     RebuildTerritory_(fixture);
     REQUIRE(fixture.map.GetTerritory().GetOwner(8, 0) == faction.GetFactionId());
     // (8,8) from (0,0): wrapped dx=-1, dy=8 → 65 > 50, outside the first base's disk.
-    REQUIRE_FALSE(fixture.map.GetTerritory().HasOwner(8, 16));
+    REQUIRE(fixture.map.GetTerritory().GetOwner(8, 16) == k_NoFactionOwner);
 
     fixture.MakeFactionBase(faction, 8, 16);
     RebuildTerritory_(fixture);
@@ -192,7 +192,7 @@ TEST_CASE("Territory BFS wraps horizontally when the long path is water", "[terr
     CHECK(rTerritory.GetOwner(0, 4) == id);
     CHECK(rTerritory.GetOwner(width - 2, 4) == id);
     CHECK(rTerritory.GetOwner(width - 1, 5) == id);
-    CHECK_FALSE(rTerritory.HasOwner(4, 4)); // water
+    CHECK(rTerritory.GetOwner(4, 4) == k_NoFactionOwner); // water
 }
 
 TEST_CASE("Contested tiles prefer the wrap-short base", "[territory][wrap]")

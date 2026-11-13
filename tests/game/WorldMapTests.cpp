@@ -124,9 +124,9 @@ TEST_CASE("TerritoryMap and TileFlagMap hold one entry per tile and reject odd p
         CHECK(map.GetTerritory().GetHeight() == 4);
         for (const auto& pTile : map.GetTiles())
         {
-            CHECK_FALSE(map.GetTerritory().HasOwner(*pTile));
+            CHECK(map.GetTerritory().GetOwner(*pTile) == k_NoFactionOwner);
         }
-        CHECK_THROWS_AS(map.GetTerritory().HasOwner(1, 0), std::invalid_argument);
+        CHECK_THROWS_AS(map.GetTerritory().GetOwner(1, 0), std::invalid_argument);
     }
 
     SECTION("a flag lands on its own tile only")

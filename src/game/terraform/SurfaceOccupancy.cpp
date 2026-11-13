@@ -40,8 +40,8 @@ void NoticeSubmergence_(GameState& rGameState, const BaseManager& rBase)
     const std::string whose = bOwn ? "" : rBase.GetFaction().GetDefinition().identity.name + " ";
     const std::string body =
         "The " + whose + "base " + rBase.GetName() + " has been lost beneath the rising sea.";
-    const TileCoord_t at{rBase.GetTile().GetX(), rBase.GetTile().GetY()};
-    EnqueueForPlayer(rGameState, NoticeInteraction_t{std::nullopt, "Base Submerged", body, at});
+    EnqueueForPlayer(rGameState, NoticeInteraction_t{std::nullopt, "Base Submerged", body,
+                                                     rBase.GetTile().GetCoord()});
 }
 
 void DestroyUnits_(const std::vector<Unit*>& rUnits)
@@ -55,7 +55,7 @@ void DestroyUnits_(const std::vector<Unit*>& rUnits)
 void ReconcileTile_(GameState& rGameState, const SurfaceFlip_t& rFlip)
 {
     Tile& rTile = *rFlip.pTile;
-    BaseManager* pBase = rGameState.FindBaseAt(rTile.GetX(), rTile.GetY());
+    BaseManager* pBase = rGameState.FindBaseAt(rTile);
     const SurfaceFlipConsequences_t consequences =
         SurfaceFlipConsequences(rTile, rFlip.bNowWater, pBase);
     bool bBaseStands = pBase != nullptr;

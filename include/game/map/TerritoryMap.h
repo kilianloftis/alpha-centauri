@@ -33,8 +33,6 @@ public:
 
     FactionId_t GetOwner(int x, int y) const;
     FactionId_t GetOwner(const Tile& rTile) const;
-    bool HasOwner(int x, int y) const;
-    bool HasOwner(const Tile& rTile) const;
 
     uint64_t GetRevision() const { return m_revision.Get(); }
 

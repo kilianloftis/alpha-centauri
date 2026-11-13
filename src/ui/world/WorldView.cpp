@@ -772,11 +772,14 @@ void WorldView::SelectAtClick_(const Tile* pClickedTile, int worldX, int worldY)
     SetSelectedTile_(pClickedTile);
     // Base takes priority over garrison selection: the base screen has its own unit stack
     // for picking units on the tile. Matches docs/architecture/ui-system.md.
-    if (BaseManager* pBase = m_rGameState.FindBaseAt(worldX, worldY))
+    if (pClickedTile)
     {
-        PickUnit_(nullptr);
-        m_callbacks.onOpenBase(*pBase);
-        return;
+        if (BaseManager* pBase = m_rGameState.FindBaseAt(*pClickedTile))
+        {
+            PickUnit_(nullptr);
+            m_callbacks.onOpenBase(*pBase);
+            return;
+        }
     }
     // Unit pick uses IsUnitVisibleTo (fog / Conceal / contact reveal), not tile fog alone.
     SelectUnitAtTile_(worldX, worldY);
@@ -1064,7 +1067,7 @@ void WorldView::TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile)
 
 void WorldView::OpenSabotageFacilityPicker_(Unit& rProbe, const Tile& rTargetTile)
 {
-    const BaseManager* pBase = m_rGameState.FindBaseAt(rTargetTile.GetX(), rTargetTile.GetY());
+    const BaseManager* pBase = m_rGameState.FindBaseAt(rTargetTile);
     if (!pBase)
     {
         return;

@@ -93,7 +93,7 @@ TEST_CASE("Evacuate leaves units on own or unowned tiles alone", "[evacuate]")
 
     fixture.MakeFactionBase(guest, 5, 5);
     fixture.MakeFactionBase(host, 11, 11);
-    REQUIRE_FALSE(fixture.map.GetTerritory().HasOwner(12, 0));
+    REQUIRE(fixture.map.GetTerritory().GetOwner(12, 0) == k_NoFactionOwner);
 
     Unit& onOwn = fixture.MakeUnit(guest, 5, 5, {"test_chassis"});
     onOwn.SetOrder(HoldOrder_t{});

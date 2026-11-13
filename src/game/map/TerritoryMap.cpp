@@ -65,14 +65,4 @@ FactionId_t TerritoryMap::GetOwner(const Tile& rTile) const
     return GetOwner(rTile.GetX(), rTile.GetY());
 }
 
-bool TerritoryMap::HasOwner(int x, int y) const
-{
-    return GetOwner(x, y) != k_NoFactionOwner;
-}
-
-bool TerritoryMap::HasOwner(const Tile& rTile) const
-{
-    return HasOwner(rTile.GetX(), rTile.GetY());
-}
-
 } // namespace ac

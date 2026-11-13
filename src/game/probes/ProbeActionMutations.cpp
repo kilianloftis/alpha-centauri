@@ -239,7 +239,7 @@ void TransferCapturedGarrison_(BaseManager& rCaptured, Faction& rOldOwner, Facti
             {
                 return;
             }
-            if (distance == 1 && rGameState.FindBaseAt(pTile->GetX(), pTile->GetY()) != nullptr)
+            if (distance == 1 && rGameState.FindBaseAt(*pTile) != nullptr)
             {
                 return;
             }

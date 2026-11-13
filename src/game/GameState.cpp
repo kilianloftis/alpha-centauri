@@ -118,9 +118,9 @@ void ApplyProductionCompleteEffects_(GameState& rGameState, const ProductionComp
 void NoticeAtBase_(GameState& rGameState, const BaseManager& rBase, PauseOnEventId_t eventId,
                    std::string title, std::string message)
 {
-    const TileCoord_t at{rBase.GetTile().GetX(), rBase.GetTile().GetY()};
     EnqueueForPlayer(rGameState,
-                     NoticeInteraction_t{eventId, std::move(title), std::move(message), at});
+                     NoticeInteraction_t{eventId, std::move(title), std::move(message),
+                                         rBase.GetTile().GetCoord()});
 }
 
 void WireMoodNotices_(GameState& rGameState, BaseManager& rBase)
@@ -662,14 +662,13 @@ const WorldMap& GameState::GetWorldMap() const
     return *m_worldMap;
 }
 
-BaseManager* GameState::FindBaseAt(int tileX, int tileY)
+BaseManager* GameState::FindBaseAt(const Tile& rTile)
 {
     for (Faction& rFaction : Factions())
     {
         for (BaseManager& rBase : rFaction.Bases())
         {
-            const Tile& rTile = rBase.GetTile();
-            if (rTile.GetX() == tileX && rTile.GetY() == tileY)
+            if (&rBase.GetTile() == &rTile)
             {
                 return &rBase;
             }
@@ -678,14 +677,13 @@ BaseManager* GameState::FindBaseAt(int tileX, int tileY)
     return nullptr;
 }
 
-const BaseManager* GameState::FindBaseAt(int tileX, int tileY) const
+const BaseManager* GameState::FindBaseAt(const Tile& rTile) const
 {
     for (const Faction& rFaction : Factions())
     {
         for (const BaseManager& rBase : rFaction.Bases())
         {
-            const Tile& rTile = rBase.GetTile();
-            if (rTile.GetX() == tileX && rTile.GetY() == tileY)
+            if (&rBase.GetTile() == &rTile)
             {
                 return &rBase;
             }

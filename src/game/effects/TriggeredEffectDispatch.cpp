@@ -1439,7 +1439,7 @@ void ApplyUnitProducedTriggers(GameState& rGameState, Unit& rUnit, BaseManager& 
 
 void ApplyVisitEffects(GameState& rGameState, Unit& rMover, std::mt19937& rRng)
 {
-    Tile* pTile = rGameState.GetWorldMap().GetTile(rMover.GetTile().GetX(), rMover.GetTile().GetY());
+    Tile* pTile = rGameState.GetWorldMap().GetTile(rMover.GetTile().GetCoord());
     if (!pTile)
     {
         throw std::runtime_error("ApplyVisitEffects: mover tile is not on the world map");
@@ -1480,13 +1480,13 @@ void ApplyHoldLink(GameState& rGameState, Unit& rUnit)
     {
         return;
     }
-    BaseManager* pBase = rGameState.FindBaseAt(rUnit.GetTile().GetX(), rUnit.GetTile().GetY());
+    BaseManager* pBase = rGameState.FindBaseAt(rUnit.GetTile());
     if (!pBase)
     {
         return;
     }
 
-    Tile* pTile = rGameState.GetWorldMap().GetTile(rUnit.GetTile().GetX(), rUnit.GetTile().GetY());
+    Tile* pTile = rGameState.GetWorldMap().GetTile(rUnit.GetTile().GetCoord());
     TriggeredEffectContext_t context(rGameState, *pBase);
     context.pUnit = &rUnit;
     context.pTile = pTile;
@@ -1505,7 +1505,7 @@ bool ApplyDetonation(GameState& rGameState, Unit& rUnit)
         return false;
     }
 
-    Tile* pTile = rGameState.GetWorldMap().GetTile(rUnit.GetTile().GetX(), rUnit.GetTile().GetY());
+    Tile* pTile = rGameState.GetWorldMap().GetTile(rUnit.GetTile().GetCoord());
     if (!pTile)
     {
         throw std::logic_error("ApplyDetonation: the unit's tile is not on the world map");

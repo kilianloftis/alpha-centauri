@@ -67,7 +67,7 @@ int ScannedDistance_(const BaseManager& rBase, const Faction& rEvaluator,
     int distance = hqDistance;
     ForEachTileInRings(rBase.GetTile(), rMap, radius, [&](const Tile* pTile)
     {
-        const BaseManager* pNear = rGame.FindBaseAt(pTile->GetX(), pTile->GetY());
+        const BaseManager* pNear = rGame.FindBaseAt(*pTile);
         if (!pNear)
         {
             return true;
