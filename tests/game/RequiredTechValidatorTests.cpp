@@ -1,6 +1,6 @@
-// Tests for post-load required_tech validation (RequiredTechValidator) — the same
+// Tests for post-load required_techs validation (RequiredTechValidator) — the same
 // fail-at-startup standard ValidateEffectReferences applies to effect lists, applied to the
-// separate requiredTech field buildings/improvements/unit components/unit slots/social
+// required_techs any/all lists buildings/improvements/unit components/unit slots/social
 // policies/pop types/council proposals/probe actions all carry.
 
 #include "TestTempDir.h"
@@ -13,6 +13,7 @@
 #include "game/map/TerrainOperationRegistry.h"
 #include "game/population/PopTypeRegistry.h"
 #include "game/research/TechRegistry.h"
+#include "game/research/TechRequirement.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/probes/ProbeActionConfig.h"
 #include "game/units/UnitComponentRegistry.h"
@@ -52,7 +53,7 @@ void FillRequiredTechSources(GameDataContext& rData)
 
 } // namespace
 
-TEST_CASE("ValidateRequiredTechReferences: building required_tech must name a known tech",
+TEST_CASE("ValidateRequiredTechReferences: building required_techs must name known techs",
           "[validation][required-tech]")
 {
     const std::filesystem::path techsPath = WriteTempJson("ac_required_tech_techs.json", R"([
@@ -65,11 +66,11 @@ TEST_CASE("ValidateRequiredTechReferences: building required_tech must name a kn
     data.techRegistry->Load(techsPath.string());
     FillRequiredTechSources(data);
 
-    SECTION("known required_tech does not throw")
+    SECTION("known required_techs does not throw")
     {
         const std::filesystem::path buildingsPath = WriteTempJson("ac_required_tech_ok.json", R"([
             { "id": "gated_hall", "name": "Gated Hall", "mineral_cost": 10,
-              "required_tech": "ecology", "category": "grow" }
+              "required_techs": { "any": [{ "tech": "ecology" }] }, "category": "grow" }
         ])");
         data.buildingRegistry = std::make_unique<BuildingRegistry>();
         data.buildingRegistry->Load(buildingsPath.string());
@@ -78,11 +79,11 @@ TEST_CASE("ValidateRequiredTechReferences: building required_tech must name a kn
         std::filesystem::remove(buildingsPath);
     }
 
-    SECTION("unknown required_tech throws naming the building and the tech")
+    SECTION("unknown required_techs throws naming the building and the tech")
     {
         const std::filesystem::path buildingsPath = WriteTempJson("ac_required_tech_bad.json", R"([
             { "id": "gated_hall", "name": "Gated Hall", "mineral_cost": 10,
-              "required_tech": "not_a_tech", "category": "grow" }
+              "required_techs": { "any": [{ "tech": "not_a_tech" }] }, "category": "grow" }
         ])");
         data.buildingRegistry = std::make_unique<BuildingRegistry>();
         data.buildingRegistry->Load(buildingsPath.string());
@@ -93,7 +94,7 @@ TEST_CASE("ValidateRequiredTechReferences: building required_tech must name a kn
         std::filesystem::remove(buildingsPath);
     }
 
-    SECTION("omitted required_tech is always fine")
+    SECTION("omitted required_techs is always fine")
     {
         const std::filesystem::path buildingsPath = WriteTempJson("ac_required_tech_empty.json", R"([
             { "id": "starter_hall", "name": "Starter Hall", "mineral_cost": 5, "category": "grow" }
@@ -135,7 +136,7 @@ TEST_CASE("ValidateRequiredTechReferences: null techRegistry or source registry 
     std::filesystem::remove(techsPath);
 }
 
-TEST_CASE("ValidateRequiredTechReferences: probe action required_tech must name a known tech",
+TEST_CASE("ValidateRequiredTechReferences: probe action required_techs must name a known tech",
           "[validation][required-tech][probe]")
 {
     const std::filesystem::path techsPath = WriteTempJson("ac_probe_required_techs.json", R"([
@@ -148,21 +149,21 @@ TEST_CASE("ValidateRequiredTechReferences: probe action required_tech must name 
     data.techRegistry->Load(techsPath.string());
     FillRequiredTechSources(data);
 
-    SECTION("known required_tech does not throw")
+    SECTION("known required_techs does not throw")
     {
         ProbeActionConfig_t action;
         action.id = ProbeActionId_t::GeneticPlague;
-        action.requiredTech = "gene_splicing";
+        action.requiredTechs = RequireAnyTech("gene_splicing");
         data.probeActionsConfig->actions = {action};
 
         CHECK_NOTHROW(ValidateRequiredTechReferences(data));
     }
 
-    SECTION("unknown required_tech throws naming the probe action and the tech")
+    SECTION("unknown required_techs throws naming the probe action and the tech")
     {
         ProbeActionConfig_t action;
         action.id = ProbeActionId_t::GeneticPlague;
-        action.requiredTech = "not_a_tech";
+        action.requiredTechs = RequireAnyTech("not_a_tech");
         data.probeActionsConfig->actions = {action};
 
         CHECK_THROWS_WITH(ValidateRequiredTechReferences(data),

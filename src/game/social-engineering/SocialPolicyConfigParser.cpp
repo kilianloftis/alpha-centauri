@@ -1,4 +1,5 @@
 #include "game/social-engineering/SocialPolicyConfigParser.h"
+#include "game/research/RequiredTechsParser.h"
 #include "lib/config/JsonConfigLoader.h"
 #include "game/effects/EffectConfigParser.h"
 
@@ -31,7 +32,7 @@ SocialPolicyConfig_t ParsePolicy_(const ConfigReader& rReader)
     config.id = rReader.NonEmptyString("id");
     config.name = rReader.String("name");
     config.category = ParseCategory_(rReader);
-    config.requiredTech = rReader.StringOr("required_tech", "");
+    config.requiredTechs = ParseRequiredTechs(rReader);
     config.bDefault = rReader.BoolOr("default", false);
     config.effects = EffectConfigParser::ParseEffects(
         rReader.Json(), EffectSourceKind_t::SocialPolicy, config.id);

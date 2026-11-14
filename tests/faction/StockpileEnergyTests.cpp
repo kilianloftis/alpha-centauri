@@ -487,7 +487,7 @@ TEST_CASE("The default skips a tech-gated stockpile until the tech is discovered
     registry.Load(WriteTempStockpiles_(
         std::string("[")
         + StockpileJson_("gated", "Gated", "labs", "1", "down",
-                         R"(, "required_tech": "advanced_build", "fallback_priority": 10)")
+                         R"(, "required_techs": { "any": [{ "tech": "advanced_build" }] }, "fallback_priority": 10)")
         + "," + StockpileJson_("open", "Open", "econ", "0.5") + "]"));
 
     FactionFixture fixtures;
@@ -525,7 +525,7 @@ TEST_CASE("With no available stockpile, the queue stays empty and minerals are w
     registry.Load(WriteTempStockpiles_(
         std::string("[")
         + StockpileJson_("gated", "Gated", "econ", "0.5", "down",
-                         R"(, "required_tech": "advanced_build")")
+                         R"(, "required_techs": { "any": [{ "tech": "advanced_build" }] })")
         + "]"));
 
     FactionFixture fixtures;
@@ -548,7 +548,7 @@ TEST_CASE("ApplyProduction on an empty queue wastes the mineral bank", "[product
     registry.Load(WriteTempStockpiles_(
         std::string("[")
         + StockpileJson_("gated", "Gated", "econ", "0.5", "down",
-                         R"(, "required_tech": "advanced_build")")
+                         R"(, "required_techs": { "any": [{ "tech": "advanced_build" }] })")
         + "]"));
 
     FactionFixture fixtures;

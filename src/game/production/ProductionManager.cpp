@@ -71,7 +71,7 @@ std::optional<std::string> ProductionManager::ValidateQueue()
 {
     const IConstructable* pOldCurrent = m_pCurrentItem;
     std::optional<std::string> droppedCurrent;
-    if (m_pCurrentItem && !CanProduceItem(m_rBase, *m_pCurrentItem))
+    if (m_pCurrentItem && !CanRetainCurrentProduction(m_rBase, *m_pCurrentItem))
     {
         droppedCurrent = m_pCurrentItem->GetName();
         m_pCurrentItem = nullptr;
@@ -82,12 +82,17 @@ std::optional<std::string> ProductionManager::ValidateQueue()
 
     if (!m_pCurrentItem)
     {
-        if (!m_queue.Empty())
+        while (!m_queue.Empty())
         {
-            m_pCurrentItem = m_queue.Head();
+            const IConstructable* pCandidate = m_queue.Head();
             m_queue.PopFront();
+            if (pCandidate && CanStartQueuedProduction(m_rBase, *pCandidate))
+            {
+                m_pCurrentItem = pCandidate;
+                break;
+            }
         }
-        else
+        if (!m_pCurrentItem)
         {
             m_pCurrentItem = DefaultItem_();
         }
@@ -267,7 +272,7 @@ bool ProductionManager::IsReadyToComplete() const
     {
         return false;
     }
-    if (!CanProduceItem(m_rBase, *pItem))
+    if (!CanRetainCurrentProduction(m_rBase, *pItem))
     {
         return false;
     }

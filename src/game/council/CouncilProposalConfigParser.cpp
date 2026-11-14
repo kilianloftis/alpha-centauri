@@ -1,4 +1,5 @@
 #include "game/council/CouncilProposalConfigParser.h"
+#include "game/research/RequiredTechsParser.h"
 #include "lib/config/JsonConfigLoader.h"
 #include "game/effects/EffectConfigParser.h"
 #include "game/effects/TriggeredEffectParser.h"
@@ -85,7 +86,7 @@ CouncilProposalConfig_t ParseProposal_(const ConfigReader& rReader)
     config.repeatable = rReader.BoolOr("repeatable", false);
     config.initiallyActive = rReader.BoolOr("initially_active", false);
     config.proposable = rReader.BoolOr("proposable", true);
-    config.requiredTech = rReader.StringOr("required_tech", "");
+    config.requiredTechs = ParseRequiredTechs(rReader);
     config.requiredProposals = rReader.StringArray("required_proposals");
     config.repeals = rReader.StringArray("repeals");
     config.requiresRuleFlags = ParseRuleFlagList_(rReader, "requires_rule_flags");

@@ -56,6 +56,29 @@ int SizeAfterCompletion_(const IConstructable& rItem, int size)
     return size;
 }
 
+bool HoldTechAllowsProduction_(const BaseManager& rBase, const IConstructable& rItem)
+{
+    const Faction& rFaction = rBase.GetFaction();
+    const std::vector<std::string>& rDiscoveredTechs = rFaction.GetResearch().GetDiscoveredTechs();
+    if (const auto* pBuilding = dynamic_cast<const BuildingConfig_t*>(&rItem))
+    {
+        return pBuilding->IsAvailable(rDiscoveredTechs)
+               && MayHoldBuilding(rBase.GetBuildingManager(), *pBuilding);
+    }
+    if (const auto* pStockpile = dynamic_cast<const StockpileConfig_t*>(&rItem))
+    {
+        return pStockpile->IsAvailable(rDiscoveredTechs);
+    }
+    for (const std::unique_ptr<IDesign>& pDesign : rFaction.GetMilitary().GetDesigns())
+    {
+        if (dynamic_cast<const IConstructable*>(pDesign.get()) == &rItem)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 } // namespace
 
 ScrapPayout_t PlanScrapPayout(const ScrapQuote_t& rQuote, std::optional<BaseId_t> destBaseId)
@@ -194,7 +217,10 @@ std::vector<const IConstructable*> ConstructableItems(const BaseManager& rBase)
     const BuildingManager& rBuildings = rBase.GetBuildingManager();
     for (const BuildingConfig_t* pBuilding : rBuildings.GetBuildingsAvailableForConstruction())
     {
-        available.push_back(pBuilding);
+        if (MeetsBuildingProductionPrereqs(rBase, *pBuilding, BuildingPresenceMode_t::BuiltOrQueued))
+        {
+            available.push_back(pBuilding);
+        }
     }
     const Faction& rFaction = rBase.GetFaction();
     const std::vector<std::string>& rDiscoveredTechs = rFaction.GetResearch().GetDiscoveredTechs();
@@ -219,6 +245,25 @@ bool CanProduceItem(const BaseManager& rBase, const IConstructable& rItem)
 {
     const std::vector<const IConstructable*> available = ConstructableItems(rBase);
     return std::ranges::contains(available, &rItem);
+}
+
+bool CanRetainCurrentProduction(const BaseManager& rBase, const IConstructable& rItem)
+{
+    return HoldTechAllowsProduction_(rBase, rItem);
+}
+
+bool CanStartQueuedProduction(const BaseManager& rBase, const IConstructable& rItem)
+{
+    if (!HoldTechAllowsProduction_(rBase, rItem))
+    {
+        return false;
+    }
+    const auto* pBuilding = dynamic_cast<const BuildingConfig_t*>(&rItem);
+    if (!pBuilding)
+    {
+        return true;
+    }
+    return MeetsBuildingProductionPrereqs(rBase, *pBuilding, BuildingPresenceMode_t::BuiltOnly);
 }
 
 int CompletionPopulationFloor()

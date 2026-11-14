@@ -273,7 +273,6 @@
     "upkeep": 0,
     "secret_project": true,
     "category": "conquer",
-    "required_tech": "",
     "effects": [
       {
         "type": "StatModifier",
@@ -369,10 +368,16 @@
   {
     "id": "Centauri_Preserve",
     "name": "Centauri Preserve (+1 starting XP to native life)",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "centauri_meditation"
+        }
+      ]
+    },
     "mineral_cost": 100,
     "upkeep": 1,
     "category": "grow",
-    "required_tech": "centauri_meditation",
     "on_unit_produced_effects": [
       {
         "type": "GrantXp",
@@ -1140,7 +1145,13 @@
   {
     "id": "test_gated_facility",
     "name": "Test Gated Facility",
-    "required_tech": "advanced_build",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "advanced_build"
+        }
+      ]
+    },
     "effects": [],
     "category": "build"
   },
@@ -1311,7 +1322,6 @@
     "name": "Recreation Commons",
     "mineral_cost": 4,
     "category": "build",
-    "required_tech": "",
     "upkeep": 1,
     "effects": [
       {

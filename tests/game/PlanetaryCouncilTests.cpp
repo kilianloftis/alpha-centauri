@@ -137,7 +137,8 @@ TEST_CASE("Council proposals config loads with expected vote weights", "[council
 
     const CouncilProposalConfig_t& rLeader = registry.Get("elect_supreme_leader");
     CHECK(rLeader.voteThreshold == Catch::Approx(0.75));
-    CHECK(rLeader.requiredTech == "mind_machine_interface");
+    REQUIRE(rLeader.requiredTechs.any.size() == 1);
+    CHECK(rLeader.requiredTechs.any[0].tech == "mind_machine_interface");
 
     const CouncilProposalConfig_t& rShade = registry.Get("increase_solar_shade");
     CHECK(rShade.repeatable);

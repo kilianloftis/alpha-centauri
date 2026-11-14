@@ -225,7 +225,7 @@ bool CanStartTerraform(const Unit& rUnit, const TerraformProject_t& rProject)
     {
         return false;
     }
-    if (!MeetsTechRequirement(rProject.project.requiredTech,
+    if (!MeetsTechRequirement(rProject.project.requiredTechs,
                               rUnit.GetFaction().GetResearch().GetDiscoveredTechs()))
     {
         return false;

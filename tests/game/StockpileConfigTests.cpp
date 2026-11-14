@@ -149,11 +149,12 @@ TEST_CASE("The stockpile parser rejects rather than silently defaulting", "[stoc
                               && Catch::Matchers::ContainsSubstring("Add"));
     }
 
-    SECTION("required_tech, fallback_priority and percentage modifiers are allowed")
+    SECTION("required_techs, fallback_priority and percentage modifiers are allowed")
     {
         CHECK_NOTHROW(registry.Load(WriteTempStockpiles_(R"([
             { "id": "gated", "name": "Gated", "rounding": "up",
-              "required_tech": "advanced_build", "fallback_priority": 5,
+              "required_techs": { "any": [{ "tech": "advanced_build" }] },
+              "fallback_priority": 5,
               "effects": [
                 { "type": "StatModifier", "scope": "ThisBase",
                   "parameters": { "stat": "labs", "amount": 1,
@@ -163,7 +164,8 @@ TEST_CASE("The stockpile parser rejects rather than silently defaulting", "[stoc
               ] }
         ])")));
         const StockpileConfig_t& rStockpile = registry.Get("gated");
-        CHECK(rStockpile.requiredTech == "advanced_build");
+        REQUIRE(rStockpile.requiredTechs.any.size() == 1);
+        CHECK(rStockpile.requiredTechs.any[0].tech == "advanced_build");
         CHECK(rStockpile.fallbackPriority == 5);
         CHECK(rStockpile.rounding == StockpileRounding_t::Up);
         CHECK(rStockpile.effects.size() == 2);
@@ -208,7 +210,8 @@ TEST_CASE("StockpileRegistry::FindFallback ranks by priority behind the tech gat
                             "amount_source": { "kind": "MineralsConverted" } }
           }] },
         { "id": "advanced", "name": "Advanced", "rounding": "down",
-          "required_tech": "advanced_build", "fallback_priority": 10,
+          "required_techs": { "any": [{ "tech": "advanced_build" }] },
+          "fallback_priority": 10,
           "effects": [{
             "type": "StatModifier", "scope": "ThisBase",
             "parameters": { "stat": "labs", "amount": 1,
@@ -226,7 +229,8 @@ TEST_CASE("StockpileRegistry::FindFallback returns nullptr when nothing is avail
 {
     StockpileRegistry registry;
     registry.Load(WriteTempStockpiles_(R"([
-        { "id": "gated", "name": "Gated", "rounding": "down", "required_tech": "advanced_build",
+        { "id": "gated", "name": "Gated", "rounding": "down",
+          "required_techs": { "any": [{ "tech": "advanced_build" }] },
           "effects": [{
             "type": "StatModifier", "scope": "ThisBase",
             "parameters": { "stat": "econ", "amount": 0.5,

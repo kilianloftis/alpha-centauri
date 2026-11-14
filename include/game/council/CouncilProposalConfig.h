@@ -47,7 +47,7 @@ struct CouncilProposalConfig_t
     bool initiallyActive = false;
     // When false, the proposal can never be put on the agenda (seed / background entries).
     bool proposable = true;
-    std::string requiredTech; // empty if none; checked on the proposing faction
+    RequiredTechs_t requiredTechs; // checked on the proposing faction
     // Proposals that must have passed once (not still be in force) before this can be proposed.
     // repeal_trade_pact's "still in force" comes from the repeal gate instead.
     std::vector<std::string> requiredProposals;
@@ -64,7 +64,7 @@ struct CouncilProposalConfig_t
 
     bool IsAvailable(const std::vector<std::string>& rDiscoveredTechIds) const
     {
-        return MeetsTechRequirement(requiredTech, rDiscoveredTechIds);
+        return MeetsTechRequirement(requiredTechs, rDiscoveredTechIds);
     }
 };
 

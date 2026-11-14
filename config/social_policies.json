@@ -44,8 +44,14 @@
     {
       "id": "democratic",
       "name": "Democratic",
+      "required_techs": {
+        "any": [
+          {
+            "tech": "ethical_calculus"
+          }
+        ]
+      },
       "category": "politics",
-      "required_tech": "ethical_calculus",
       "effects": [
         {
           "type": "SocialRatingModifier",
@@ -76,8 +82,14 @@
     {
       "id": "fundamentalist",
       "name": "Fundamentalist",
+      "required_techs": {
+        "any": [
+          {
+            "tech": "secrets_of_the_human_brain"
+          }
+        ]
+      },
       "category": "politics",
-      "required_tech": "secrets_of_the_human_brain",
       "effects": [
         {
           "type": "SocialRatingModifier",
@@ -146,8 +158,14 @@
     {
       "id": "planned",
       "name": "Planned",
+      "required_techs": {
+        "any": [
+          {
+            "tech": "planetary_networks"
+          }
+        ]
+      },
       "category": "economics",
-      "required_tech": "planetary_networks",
       "effects": [
         {
           "type": "SocialRatingModifier",
@@ -178,8 +196,14 @@
     {
       "id": "green",
       "name": "Green",
+      "required_techs": {
+        "any": [
+          {
+            "tech": "centauri_empathy"
+          }
+        ]
+      },
       "category": "economics",
-      "required_tech": "centauri_empathy",
       "effects": [
         {
           "type": "SocialRatingModifier",
@@ -248,8 +272,14 @@
     {
       "id": "knowledge",
       "name": "Knowledge",
+      "required_techs": {
+        "any": [
+          {
+            "tech": "cyberethics"
+          }
+        ]
+      },
       "category": "values",
-      "required_tech": "cyberethics",
       "effects": [
         {
           "type": "SocialRatingModifier",
@@ -280,8 +310,14 @@
     {
       "id": "wealth",
       "name": "Wealth",
+      "required_techs": {
+        "any": [
+          {
+            "tech": "industrial_automation"
+          }
+        ]
+      },
       "category": "values",
-      "required_tech": "industrial_automation",
       "effects": [
         {
           "type": "SocialRatingModifier",
@@ -358,8 +394,14 @@
     {
       "id": "eudaimonic",
       "name": "Eudaimonic",
+      "required_techs": {
+        "any": [
+          {
+            "tech": "eudaimonia"
+          }
+        ]
+      },
       "category": "future_society",
-      "required_tech": "eudaimonia",
       "effects": [
         {
           "type": "SocialRatingModifier",
@@ -398,8 +440,14 @@
     {
       "id": "thought_control",
       "name": "Thought Control",
+      "required_techs": {
+        "any": [
+          {
+            "tech": "the_will_to_power"
+          }
+        ]
+      },
       "category": "future_society",
-      "required_tech": "the_will_to_power",
       "effects": [
         {
           "type": "SocialRatingModifier",

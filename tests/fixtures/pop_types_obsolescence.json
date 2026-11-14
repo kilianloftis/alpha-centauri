@@ -93,10 +93,16 @@
   {
     "id": "Engineer",
     "name": "Engineer",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "advanced_build"
+        }
+      ]
+    },
     "display_glyph": "E",
     "can_work_tile": false,
     "player_assignable": true,
-    "required_tech": "advanced_build",
     "fallback_pop_type": "Worker",
     "obsoletes": [
       "Technician"
@@ -106,10 +112,16 @@
   {
     "id": "Transcend",
     "name": "Transcend",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "transcendence"
+        }
+      ]
+    },
     "display_glyph": "T",
     "can_work_tile": false,
     "player_assignable": true,
-    "required_tech": "transcendence",
     "fallback_pop_type": "Worker",
     "obsoletes": [
       "Engineer"

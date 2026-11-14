@@ -66,6 +66,14 @@ std::vector<const IConstructable*> ConstructableItems(const BaseManager& rBase);
 // True when rItem is in ConstructableItems: the player could still queue it at this base.
 bool CanProduceItem(const BaseManager& rBase, const IConstructable& rItem);
 
+// Tech / uniqueness / SP hold only — ignores required_buildings. Used so a mid-build
+// facility can finish after its prerequisite is destroyed (docs/thinker/terranx-map.md
+// § Facility-on-facility).
+bool CanRetainCurrentProduction(const BaseManager& rBase, const IConstructable& rItem);
+
+// Hold rules plus required_buildings with BuiltOnly. Used when promoting a queue head.
+bool CanStartQueuedProduction(const BaseManager& rBase, const IConstructable& rItem);
+
 // The smallest size a completed item's pop cost may leave: 1 at a difficulty that preserves a
 // size-1 base (Citizen), otherwise 0.
 int CompletionPopulationFloor();

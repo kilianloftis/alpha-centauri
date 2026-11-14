@@ -39,7 +39,7 @@ struct UnitComponentConfig_t
     // name (e.g. Hand Weapons → "Scout"); empty omits this component from the design name.
     std::string unitName;
     std::string type; // e.g. "chassis", "weapon" — matches component_type in unit_slot_config.json
-    std::string requiredTech;
+    RequiredTechs_t requiredTechs;
     int mineralCost = 0;
     // upgrade_class tag (not UnitPlan_t). Designs need equal upgrade_class sets to upgrade.
     // Optional on every type; stock tags chassis, combat weapons, specials, Bombard.
@@ -70,7 +70,7 @@ struct UnitComponentConfig_t
 
     bool IsAvailable(const std::vector<std::string>& rDiscoveredTechs) const
     {
-        return MeetsTechRequirement(requiredTech, rDiscoveredTechs);
+        return MeetsTechRequirement(requiredTechs, rDiscoveredTechs);
     }
 };
 

@@ -1042,23 +1042,23 @@ grants fewer units and reports the real count rather than throwing.
   dangling grant ids (to test that expansion skips unknown targets), and single registries
   can't see cross-registry references anyway.
 
-### RequiredTechValidator (post-load required_tech validation)
+### RequiredTechValidator (post-load required_techs validation)
 
 - **Location**: `include/game/RequiredTechValidator.h` / `src/game/RequiredTechValidator.cpp`.
 - **Purpose**: same fail-at-startup standard as `EffectReferenceValidator`, applied to the
-  separate `requiredTech` scalar field (not an effect list) that buildings, improvements,
+  `required_techs` any/all lists (not an effect list) that buildings, improvements,
   unit components, unit slots, social policies, pop types, council proposals, and probe
   actions all carry. Kept as its own component rather than folded into
   `EffectReferenceValidator` — same lifecycle point and `GameDataContext`-shaped entry
   point, but a distinct concern. Runs once from `Engine` right after
   `ValidateEffectReferences`: `ValidateRequiredTechReferences(*m_gameDataContext)`.
-- **Checks**: for every config in each walked source, if `requiredTech` is non-empty it must
-  be a known id in `TechRegistry`; throws naming the source config and the bad tech id
-  otherwise. Throws if `techRegistry` or any walked source registry/config that
-  `LoadGameData` always installs is null — never silently no-ops.
+- **Checks**: for every config in each walked source, every tech id in `required_techs.any`
+  and `required_techs.all` must be a known id in `TechRegistry`; throws naming the source
+  config and the bad tech id otherwise. Throws if `techRegistry` or any walked source
+  registry/config that `LoadGameData` always installs is null — never silently no-ops.
 - **Coverage**: `BuildingRegistry`, `ImprovementRegistry`, `UnitComponentRegistry`,
   `UnitSlotRegistry`, `SocialPolicyRegistry`, `PopTypeRegistry`, `CouncilProposalRegistry`,
-  and `probeActionsConfig` — every source whose config declares a `requiredTech` field.
+  and `probeActionsConfig` — every source whose config declares a `requiredTechs` field.
 
 ### Unit Component Effects
 
@@ -1090,7 +1090,7 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
 ### Tile Improvement Effects
 
 - **Purpose**: Improvements and terrain occupants share `ImprovementConfig_t` **and one `ImprovementRegistry`**, so effect collection walks one pointer type through one lookup. `ImprovementConfig_t::placement` says which of the two an entry is, stamped by the parser from the file it came from: improvements (Farm, Forest, Mine, Base) from `config/improvements.json`, terrain occupants from `config/terrain.json`. An improvement that declares `turns_required` is a former project. `config/terrain.json`'s `operations` half holds former projects that place nothing: they carry an `on_complete_effects` list instead, and live in `TerrainOperationRegistry` rather than in the occupant registry, because they never sit on a tile.
-- **`ImprovementConfig_t`**: `id`, `name`, `description`, `placement`, `turnsRequired` / `energyCost` / `requiredTech` (a former project when `turnsRequired` > 0; rejected outright on a terrain entry), `excludes` (other occupant ids that can't coexist with this one on a tile), `frequency`, `spritePaths` (`sprite_paths`: ordered `land` / `sea` lists; a surface left out has no sprite), `spriteOverhangRatio` (`sprite_overhang_ratio`: object sprites reach this fraction of the tile height above the tile), `effects` (the standard `EffectConfig_t` vector, parsed via `EffectConfigParser::ParseEffects`).
+- **`ImprovementConfig_t`**: `id`, `name`, `description`, `placement`, `turnsRequired` / `energyCost` / `requiredTechs` (a former project when `turnsRequired` > 0; rejected outright on a terrain entry), `excludes` (other occupant ids that can't coexist with this one on a tile), `frequency`, `spritePaths` (`sprite_paths`: ordered `land` / `sea` lists; a surface left out has no sprite), `spriteOverhangRatio` (`sprite_overhang_ratio`: object sprites reach this fraction of the tile height above the tile), `effects` (the standard `EffectConfig_t` vector, parsed via `EffectConfigParser::ParseEffects`).
 - **How a tile holds features**: improvements are `const ImprovementConfig_t*` in `Tile::GetImprovements()`. Axes and flags (rockiness, moisture, water band, river, aquifer) stay on the tile and are mirrored into `GetTerrainFeatures()`. Optional terrain (fungus, landmarks, bonuses, Monolith) is stored separately and appended to that same cache. Both lists point into the same registry. `Tile::HasFeature(id)` answers either. A finished improvement project does not flatten rockiness or remove fungus.
 - **`CollectTileEffects(tile, improvementRegistry)`**: collects a tile's own `ThisTile`-scoped effects into a flat `ActiveEffect_t` list (sourceId = the feature's id) in two passes — each `GetTerrainFeatures()` config, plus each `GetImprovements()` config, both read directly (no lookup). Mirrors `CollectPopEffects`/`CollectUnitEffects`. Only ever resolves a tile's *own* effects (radius 0) — it has no `WorldMap` to look at neighbors.
 - **`radius` (aura effects)**: radius is a **per-effect** property (`EffectConfig_t::radius`, default `0` = the host tile only), declared on the effect entry itself — e.g. `Sensor`'s `+25%` defense effect carries `radius: 2`, `Mirror`'s `+1 energy` carries `radius: 1`, `Condenser`'s `+1 moisture_tier` carries `radius: 1`. There is **no** improvement-level radius default: `ImprovementConfig_t` has no radius member and `ImprovementConfigParser` never reads one, so siblings do not inherit a radius from their container and each effect states its own. Only `ThisTile`-scoped effects take part in aura resolution — neighbor collection applies the exact same scope filter as own-tile collection.
@@ -1333,7 +1333,7 @@ selector pass won't compile against the raw pool.
 - **Static config vs. runtime instances**: `EffectConfig_t` lives in immutable configuration data; `ActiveEffect_t` records the runtime context (source, origin base).
 - **Moddability**: New effect types can be added by extending `EffectVariant_t`, adding a
   focused parse function, and registering it in `EffectConfigParser`'s type dispatch table.
-- **One parser, every source**: `EffectConfigParser` is the single place that knows how to turn JSON into `EffectConfig_t`. Buildings and unit components only differ in which top-level fields they read (`mineral_cost`, `required_tech`, etc.) — the `effects` array itself is parsed identically everywhere.
+- **One parser, every source**: `EffectConfigParser` is the single place that knows how to turn JSON into `EffectConfig_t`. Buildings and unit components only differ in which top-level fields they read (`mineral_cost`, `required_techs`, etc.) — the `effects` array itself is parsed identically everywhere.
 
 ## Known Gaps
 

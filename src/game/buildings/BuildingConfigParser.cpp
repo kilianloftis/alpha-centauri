@@ -1,4 +1,6 @@
 #include "game/buildings/BuildingConfigParser.h"
+#include "game/buildings/RequiredBuildingsParser.h"
+#include "game/research/RequiredTechsParser.h"
 #include "lib/config/JsonConfigLoader.h"
 #include "game/effects/EffectConfigParser.h"
 #include "game/effects/TriggeredEffectParser.h"
@@ -90,10 +92,10 @@ std::vector<EffectConfig_t> ParseDestroyedEffects_(const ConfigReader& rReader,
 BuildingConfig_t ParseBuilding_(const ConfigReader& rReader)
 {
     rReader.RejectUnknownKeys({
-        "id", "name", "category", "mineral_cost", "upkeep", "required_tech",
-        "allow_multiple", "secret_project", "orbital", "effects", "destroyed_effects",
-        "on_complete_effects", "on_unit_produced_effects", "scrap", "icon", "map_overlay",
-        "map_overlay_channel", "map_overlay_priority", "map_overlay_layer",
+        "id", "name", "category", "mineral_cost", "upkeep", "required_techs",
+        "required_buildings", "allow_multiple", "secret_project", "orbital", "effects",
+        "destroyed_effects", "on_complete_effects", "on_unit_produced_effects", "scrap", "icon",
+        "map_overlay", "map_overlay_channel", "map_overlay_priority", "map_overlay_layer",
     });
 
     BuildingConfig_t config;
@@ -108,7 +110,8 @@ BuildingConfig_t ParseBuilding_(const ConfigReader& rReader)
     config.allowMultiple = rReader.BoolOr("allow_multiple", false);
     config.bIsSecretProject = rReader.BoolOr("secret_project", false);
     config.orbital = rReader.BoolOr("orbital", false);
-    config.requiredTech = rReader.StringOr("required_tech", "");
+    config.requiredTechs = ParseRequiredTechs(rReader);
+    config.requiredBuildings = ParseRequiredBuildings(rReader, "required_buildings");
     config.effects =
         EffectConfigParser::ParseEffects(rReader.Json(), EffectSourceKind_t::Building, config.id);
     config.destroyedEffects = ParseDestroyedEffects_(rReader, config);

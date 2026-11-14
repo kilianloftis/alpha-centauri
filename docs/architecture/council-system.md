@@ -161,7 +161,7 @@ graph TB
 ### CouncilProposalRegistry / config
 - **CouncilProposalConfig_t**: one proposal definition — `kind` (Standard/Election),
   `voteWeight` (Representative/Population), `voteThreshold`, `repeatable`, `initiallyActive`,
-  `proposable`, `requiredTech`, `requiredProposals`, `repeals`, `requires/forbidsRuleFlags`,
+  `proposable`, `requiredTechs`, `requiredProposals`, `repeals`, `requires/forbidsRuleFlags`,
   `electionOutcome`, `effects` (standing law) and `onPassedEffects` (one-shot outcomes).
 - **CouncilRulesConfig_t**: standing rules — `governorProposeIntervalYears`,
   `memberProposeIntervalYears`, `governorEffects` (standing) and `onElectedEffects`

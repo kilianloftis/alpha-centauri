@@ -14,7 +14,11 @@
       {
         "type": "StatModifier",
         "scope": "ThisPop",
-        "parameters": { "stat": "golden_age_weight", "amount": -1, "op": "Add" }
+        "parameters": {
+          "stat": "golden_age_weight",
+          "amount": -1,
+          "op": "Add"
+        }
       }
     ]
   },
@@ -33,12 +37,20 @@
       {
         "type": "StatModifier",
         "scope": "ThisPop",
-        "parameters": { "stat": "riot_weight", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "riot_weight",
+          "amount": 1,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisPop",
-        "parameters": { "stat": "golden_age_weight", "amount": -1, "op": "Add" }
+        "parameters": {
+          "stat": "golden_age_weight",
+          "amount": -1,
+          "op": "Add"
+        }
       }
     ]
   },
@@ -57,12 +69,20 @@
       {
         "type": "StatModifier",
         "scope": "ThisPop",
-        "parameters": { "stat": "riot_weight", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "riot_weight",
+          "amount": 1,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisPop",
-        "parameters": { "stat": "golden_age_weight", "amount": -1, "op": "Add" }
+        "parameters": {
+          "stat": "golden_age_weight",
+          "amount": -1,
+          "op": "Add"
+        }
       }
     ]
   },
@@ -78,12 +98,20 @@
       {
         "type": "StatModifier",
         "scope": "ThisPop",
-        "parameters": { "stat": "riot_weight", "amount": -1, "op": "Add" }
+        "parameters": {
+          "stat": "riot_weight",
+          "amount": -1,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisPop",
-        "parameters": { "stat": "golden_age_weight", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "golden_age_weight",
+          "amount": 1,
+          "op": "Add"
+        }
       }
     ]
   },
@@ -98,7 +126,11 @@
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "parameters": { "stat": "psych", "amount": 2, "op": "Add" }
+        "parameters": {
+          "stat": "psych",
+          "amount": 2,
+          "op": "Add"
+        }
       }
     ]
   },
@@ -113,112 +145,195 @@
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "parameters": { "stat": "econ", "amount": 3, "op": "Add" }
+        "parameters": {
+          "stat": "econ",
+          "amount": 3,
+          "op": "Add"
+        }
       }
     ]
   },
   {
     "id": "Librarian",
     "name": "Librarian",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "planetary_networks"
+        }
+      ]
+    },
     "display_glyph": "L",
     "can_work_tile": false,
     "player_assignable": true,
-    "required_tech": "planetary_networks",
     "obsoletes": [],
     "effects": [
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "parameters": { "stat": "labs", "amount": 3, "op": "Add" }
+        "parameters": {
+          "stat": "labs",
+          "amount": 3,
+          "op": "Add"
+        }
       }
     ]
   },
   {
     "id": "Empath",
     "name": "Empath",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "centauri_meditation"
+        }
+      ]
+    },
     "display_glyph": "E",
     "can_work_tile": false,
     "player_assignable": true,
-    "required_tech": "centauri_meditation",
-    "obsoletes": ["Doctor"],
+    "obsoletes": [
+      "Doctor"
+    ],
     "effects": [
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "parameters": { "stat": "econ", "amount": 2, "op": "Add" }
+        "parameters": {
+          "stat": "econ",
+          "amount": 2,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "parameters": { "stat": "psych", "amount": 2, "op": "Add" }
+        "parameters": {
+          "stat": "psych",
+          "amount": 2,
+          "op": "Add"
+        }
       }
     ]
   },
   {
     "id": "Engineer",
     "name": "Engineer",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "fusion_power"
+        }
+      ]
+    },
     "display_glyph": "E",
     "can_work_tile": false,
     "player_assignable": true,
-    "required_tech": "fusion_power",
-    "obsoletes": ["Technician"],
+    "obsoletes": [
+      "Technician"
+    ],
     "effects": [
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "parameters": { "stat": "econ", "amount": 3, "op": "Add" }
+        "parameters": {
+          "stat": "econ",
+          "amount": 3,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "parameters": { "stat": "labs", "amount": 2, "op": "Add" }
+        "parameters": {
+          "stat": "labs",
+          "amount": 2,
+          "op": "Add"
+        }
       }
     ]
   },
   {
     "id": "Thinker",
     "name": "Thinker",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "mind_machine_interface"
+        }
+      ]
+    },
     "display_glyph": "T",
     "can_work_tile": false,
     "player_assignable": true,
-    "required_tech": "mind_machine_interface",
-    "obsoletes": ["Librarian"],
+    "obsoletes": [
+      "Librarian"
+    ],
     "effects": [
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "parameters": { "stat": "labs", "amount": 3, "op": "Add" }
+        "parameters": {
+          "stat": "labs",
+          "amount": 3,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "parameters": { "stat": "psych", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "psych",
+          "amount": 1,
+          "op": "Add"
+        }
       }
     ]
   },
   {
     "id": "Transcend",
     "name": "Transcend",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "secrets_of_alpha_centauri"
+        }
+      ]
+    },
     "display_glyph": "T",
     "can_work_tile": false,
     "player_assignable": true,
-    "required_tech": "secrets_of_alpha_centauri",
-    "obsoletes": ["Empath", "Thinker"],
+    "obsoletes": [
+      "Empath",
+      "Thinker"
+    ],
     "effects": [
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "parameters": { "stat": "econ", "amount": 2, "op": "Add" }
+        "parameters": {
+          "stat": "econ",
+          "amount": 2,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "parameters": { "stat": "labs", "amount": 4, "op": "Add" }
+        "parameters": {
+          "stat": "labs",
+          "amount": 4,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "parameters": { "stat": "psych", "amount": 2, "op": "Add" }
+        "parameters": {
+          "stat": "psych",
+          "amount": 2,
+          "op": "Add"
+        }
       }
     ]
   }

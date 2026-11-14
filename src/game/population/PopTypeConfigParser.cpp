@@ -1,4 +1,5 @@
 #include "game/population/PopTypeConfigParser.h"
+#include "game/research/RequiredTechsParser.h"
 #include "lib/config/JsonConfigLoader.h"
 #include "game/effects/EffectConfigParser.h"
 
@@ -27,7 +28,7 @@ PopTypeConfig_t ParsePopType_(const ConfigReader& rReader)
     config.bIsDefault = rReader.BoolOr("is_default", false);
     config.bCanWorkTile = rReader.BoolOr("can_work_tile", false);
     config.bPlayerAssignable = rReader.BoolOr("player_assignable", false);
-    config.requiredTech = rReader.StringOr("required_tech", "");
+    config.requiredTechs = ParseRequiredTechs(rReader);
     config.fallbackPopTypeId = rReader.StringOr("fallback_pop_type", "");
     config.obsoletes = rReader.StringArray("obsoletes");
     config.effects = EffectConfigParser::ParseEffects(rReader.Json(), EffectSourceKind_t::PopType,

@@ -4,7 +4,6 @@
     "name": "Hand Weapons",
     "unit_name": "Scout",
     "type": "weapon",
-    "required_tech": "",
     "mineral_cost": 0,
     "effects": [
       {
@@ -22,9 +21,15 @@
   {
     "id": "Laser",
     "name": "Laser",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "applied_physics"
+        }
+      ]
+    },
     "unit_name": "Laser",
     "type": "weapon",
-    "required_tech": "applied_physics",
     "mineral_cost": 5,
     "effects": [
       {
@@ -42,9 +47,15 @@
   {
     "id": "Missile_Weapons",
     "name": "Missile Weapons",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "nonlinear_mathematics"
+        }
+      ]
+    },
     "unit_name": "Missile",
     "type": "weapon",
-    "required_tech": "nonlinear_mathematics",
     "mineral_cost": 10,
     "effects": [
       {
@@ -64,7 +75,6 @@
     "name": "Psi Attack",
     "unit_name": "Psi",
     "type": "weapon",
-    "required_tech": "",
     "mineral_cost": 0,
     "effects": [
       {

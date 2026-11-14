@@ -2,6 +2,7 @@
 
 #include "game/buildings/BuildingConfigParser.h"
 #include "game/effects/EffectEnums.h"
+#include "game/research/TechRequirement.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <filesystem>
@@ -26,21 +27,20 @@ std::filesystem::path WriteTempBuildingJson(const std::string& body)
 
 } // namespace
 
-TEST_CASE("Building with no required_tech is always available", "[buildings][tech-gate]")
+TEST_CASE("Building with no required_techs is always available", "[buildings][tech-gate]")
 {
     BuildingConfig_t config;
     config.id = "recycling_tanks";
-    config.requiredTech = "";
 
     CHECK(config.IsAvailable({}));
     CHECK(config.IsAvailable({"unrelated_tech"}));
 }
 
-TEST_CASE("Building with required_tech needs that tech discovered", "[buildings][tech-gate]")
+TEST_CASE("Building with required_techs needs that tech discovered", "[buildings][tech-gate]")
 {
     BuildingConfig_t config;
     config.id = "nutrient_bank";
-    config.requiredTech = "ecology";
+    config.requiredTechs = RequireAnyTech("ecology");
 
     CHECK_FALSE(config.IsAvailable({}));
     CHECK_FALSE(config.IsAvailable({"biogenetics"}));
@@ -48,28 +48,51 @@ TEST_CASE("Building with required_tech needs that tech discovered", "[buildings]
     CHECK(config.IsAvailable({"biogenetics", "ecology"}));
 }
 
-TEST_CASE("BuildingConfigParser reads singular required_tech", "[buildings][tech-gate][parser]")
+TEST_CASE("Building required_techs all needs every listed tech", "[buildings][tech-gate]")
+{
+    BuildingConfig_t config;
+    config.id = "dual_gate";
+    config.requiredTechs.all = {TechRequirement_t{"ecology"}, TechRequirement_t{"biogenetics"}};
+
+    CHECK_FALSE(config.IsAvailable({"ecology"}));
+    CHECK_FALSE(config.IsAvailable({"biogenetics"}));
+    CHECK(config.IsAvailable({"ecology", "biogenetics"}));
+}
+
+TEST_CASE("Building required_techs any is satisfied by one of several", "[buildings][tech-gate]")
+{
+    BuildingConfig_t config;
+    config.id = "or_gate";
+    config.requiredTechs.any = {TechRequirement_t{"ecology"}, TechRequirement_t{"biogenetics"}};
+
+    CHECK_FALSE(config.IsAvailable({}));
+    CHECK(config.IsAvailable({"ecology"}));
+    CHECK(config.IsAvailable({"biogenetics"}));
+}
+
+TEST_CASE("BuildingConfigParser reads required_techs any list", "[buildings][tech-gate][parser]")
 {
     const std::filesystem::path path = WriteTempBuildingJson(R"(
   {
     "id": "gated_hall",
     "name": "Gated Hall",
     "mineral_cost": 10,
-    "required_tech": "ecology",
+    "required_techs": { "any": [{ "tech": "ecology" }] },
     "category": "grow"
   }
 )");
 
     const std::vector<BuildingConfig_t> configs = BuildingConfigParser::ParseConfig(path.string());
     REQUIRE(configs.size() == 1);
-    CHECK(configs[0].requiredTech == "ecology");
+    REQUIRE(configs[0].requiredTechs.any.size() == 1);
+    CHECK(configs[0].requiredTechs.any[0].tech == "ecology");
     CHECK_FALSE(configs[0].IsAvailable({}));
     CHECK(configs[0].IsAvailable({"ecology"}));
 
     std::filesystem::remove(path);
 }
 
-TEST_CASE("BuildingConfigParser treats omitted required_tech as always available",
+TEST_CASE("BuildingConfigParser treats omitted required_techs as always available",
           "[buildings][tech-gate][parser]")
 {
     const std::filesystem::path path = WriteTempBuildingJson(R"(
@@ -83,7 +106,7 @@ TEST_CASE("BuildingConfigParser treats omitted required_tech as always available
 
     const std::vector<BuildingConfig_t> configs = BuildingConfigParser::ParseConfig(path.string());
     REQUIRE(configs.size() == 1);
-    CHECK(configs[0].requiredTech.empty());
+    CHECK_FALSE(HasTechRequirements(configs[0].requiredTechs));
     CHECK(configs[0].IsAvailable({}));
 
     std::filesystem::remove(path);

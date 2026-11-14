@@ -9,31 +9,54 @@
       {
         "type": "RuleFlag",
         "scope": "WorldGlobal",
-        "parameters": { "flag": "atrocities_forbidden" }
+        "parameters": {
+          "flag": "atrocities_forbidden"
+        }
       }
     ]
   },
   {
     "id": "salvage_unity_fusion_core",
     "name": "Salvage Unity Fusion Core",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "orbital_spaceflight"
+        }
+      ]
+    },
     "description": "+500 energy credits for each Council member",
     "vote_weight": "representative",
-    "required_tech": "orbital_spaceflight",
     "on_passed_effects": [
-      { "type": "GrantEnergy", "parameters": { "amount": 500 } }
+      {
+        "type": "GrantEnergy",
+        "parameters": {
+          "amount": 500
+        }
+      }
     ]
   },
   {
     "id": "global_trade_pact",
     "name": "Global Trade Pact",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "planetary_economics"
+        }
+      ]
+    },
     "description": "Commerce rates doubled planet wide",
     "vote_weight": "representative",
-    "required_tech": "planetary_economics",
     "effects": [
       {
         "type": "StatModifier",
         "scope": "WorldGlobal",
-        "parameters": { "stat": "commerce_rate", "amount": 100, "op": "AddPercent" }
+        "parameters": {
+          "stat": "commerce_rate",
+          "amount": 100,
+          "op": "AddPercent"
+        }
       }
     ]
   },
@@ -42,51 +65,104 @@
     "name": "Repeal Trade Pact",
     "description": "Commerce rates return to normal",
     "vote_weight": "representative",
-    "required_proposals": ["global_trade_pact"],
-    "repeals": ["global_trade_pact"],
+    "required_proposals": [
+      "global_trade_pact"
+    ],
+    "repeals": [
+      "global_trade_pact"
+    ],
     "effects": []
   },
   {
     "id": "launch_solar_shade",
     "name": "Launch Solar Shade",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "advanced_spaceflight"
+        }
+      ]
+    },
     "description": "Global cooling; sea levels fall",
     "vote_weight": "representative",
-    "required_tech": "advanced_spaceflight",
     "on_passed_effects": [
-      { "type": "WorldParameter", "parameters": { "parameter": "sea_level", "amount": -1 } }
+      {
+        "type": "WorldParameter",
+        "parameters": {
+          "parameter": "sea_level",
+          "amount": -1
+        }
+      }
     ]
   },
   {
     "id": "increase_solar_shade",
     "name": "Increase Solar Shade",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "advanced_spaceflight"
+        }
+      ]
+    },
     "description": "Global cooling; sea levels drop",
     "vote_weight": "representative",
-    "required_tech": "advanced_spaceflight",
-    "required_proposals": ["launch_solar_shade"],
+    "required_proposals": [
+      "launch_solar_shade"
+    ],
     "repeatable": true,
     "on_passed_effects": [
-      { "type": "WorldParameter", "parameters": { "parameter": "sea_level", "amount": -1 } }
+      {
+        "type": "WorldParameter",
+        "parameters": {
+          "parameter": "sea_level",
+          "amount": -1
+        }
+      }
     ]
   },
   {
     "id": "melt_polar_caps",
     "name": "Melt Polar Caps",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "advanced_ecological_engineering"
+        }
+      ]
+    },
     "description": "Global warming; sea levels rise",
     "vote_weight": "representative",
-    "required_tech": "advanced_ecological_engineering",
     "repeatable": true,
     "on_passed_effects": [
-      { "type": "WorldParameter", "parameters": { "parameter": "sea_level", "amount": 1 } }
+      {
+        "type": "WorldParameter",
+        "parameters": {
+          "parameter": "sea_level",
+          "amount": 1
+        }
+      }
     ]
   },
   {
     "id": "repeal_un_charter",
     "name": "Repeal U.N. Charter",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "advanced_military_algorithms"
+        }
+      ]
+    },
     "description": "Prohibition on the use of atrocity lifted",
     "vote_weight": "representative",
-    "required_tech": "advanced_military_algorithms",
-    "requires_rule_flags": ["atrocities_forbidden"],
-    "repeals": ["un_charter", "reinstate_un_charter"],
+    "requires_rule_flags": [
+      "atrocities_forbidden"
+    ],
+    "repeals": [
+      "un_charter",
+      "reinstate_un_charter"
+    ],
     "effects": []
   },
   {
@@ -94,12 +170,16 @@
     "name": "Reinstate U.N. Charter",
     "description": "Prohibition on the use of atrocity",
     "vote_weight": "representative",
-    "forbids_rule_flags": ["atrocities_forbidden"],
+    "forbids_rule_flags": [
+      "atrocities_forbidden"
+    ],
     "effects": [
       {
         "type": "RuleFlag",
         "scope": "WorldGlobal",
-        "parameters": { "flag": "atrocities_forbidden" }
+        "parameters": {
+          "flag": "atrocities_forbidden"
+        }
       }
     ]
   },
@@ -116,12 +196,18 @@
   {
     "id": "elect_supreme_leader",
     "name": "Elect Supreme Leader",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "mind_machine_interface"
+        }
+      ]
+    },
     "description": "Elect a Supreme Leader; winner achieves diplomatic victory",
     "kind": "election",
     "vote_weight": "population",
     "vote_threshold": 0.75,
     "election_outcome": "supreme_leader",
-    "required_tech": "mind_machine_interface",
     "repeatable": true,
     "effects": []
   },
@@ -141,7 +227,9 @@
         },
         "condition": {
           "kind": "AttackerDomain",
-          "domains": ["land"]
+          "domains": [
+            "land"
+          ]
         }
       }
     ]

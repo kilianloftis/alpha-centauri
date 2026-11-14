@@ -5,7 +5,6 @@
     "unit_name": "Infantry",
     "type": "chassis",
     "domain": "land",
-    "required_tech": "",
     "mineral_cost": 10,
     "effects": [
       {
@@ -54,10 +53,16 @@
   {
     "id": "Speeder",
     "name": "Speeder",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "doctrine_mobility"
+        }
+      ]
+    },
     "unit_name": "Speeder",
     "type": "chassis",
     "domain": "land",
-    "required_tech": "doctrine_mobility",
     "mineral_cost": 20,
     "effects": [
       {
@@ -102,10 +107,16 @@
   {
     "id": "Foil",
     "name": "Foil",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "doctrine_flexibility"
+        }
+      ]
+    },
     "unit_name": "Foil",
     "type": "chassis",
     "domain": "sea",
-    "required_tech": "doctrine_flexibility",
     "mineral_cost": 30,
     "effects": [
       {
@@ -159,10 +170,16 @@
   {
     "id": "HoverTank",
     "name": "Hover Tank",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "mind_machine_interface"
+        }
+      ]
+    },
     "unit_name": "Hovertank",
     "type": "chassis",
     "domain": "land",
-    "required_tech": "mind_machine_interface",
     "mineral_cost": 40,
     "effects": [
       {
@@ -214,10 +231,16 @@
   {
     "id": "Missile",
     "name": "Missile",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "orbital_spaceflight"
+        }
+      ]
+    },
     "unit_name": "Missile",
     "type": "chassis",
     "domain": "orbital",
-    "required_tech": "orbital_spaceflight",
     "mineral_cost": 10,
     "effects": [
       {
@@ -285,10 +308,16 @@
   {
     "id": "Needlejet",
     "name": "Needlejet",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "doctrine_air_power"
+        }
+      ]
+    },
     "unit_name": "Needlejet",
     "type": "chassis",
     "domain": "air",
-    "required_tech": "doctrine_air_power",
     "mineral_cost": 40,
     "effects": [
       {
@@ -365,10 +394,16 @@
   {
     "id": "Copter",
     "name": "Copter",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "doctrine_air_power"
+        }
+      ]
+    },
     "unit_name": "Copter",
     "type": "chassis",
     "domain": "air",
-    "required_tech": "doctrine_air_power",
     "mineral_cost": 30,
     "effects": [
       {
@@ -438,10 +473,16 @@
   {
     "id": "Gravship",
     "name": "Gravship",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "graviton_theory"
+        }
+      ]
+    },
     "unit_name": "Gravship",
     "type": "chassis",
     "domain": "air",
-    "required_tech": "graviton_theory",
     "mineral_cost": 80,
     "effects": [
       {

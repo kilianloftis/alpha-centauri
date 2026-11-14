@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/effects/EffectConfig.h"
+#include "game/research/TechRequirement.h"
 #include <string>
 #include <vector>
 
@@ -35,7 +36,7 @@ struct PopTypeConfig_t
     // before any pop exists.
     int droneWeight = 0;
     std::vector<std::string> obsoletes;
-    std::string requiredTech;
+    RequiredTechs_t requiredTechs;
     std::string fallbackPopTypeId;
     std::vector<EffectConfig_t> effects;
     // Filled by PopTypeRegistry::Validate_, not by the parser.

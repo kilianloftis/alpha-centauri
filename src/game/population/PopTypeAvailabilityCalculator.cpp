@@ -61,7 +61,8 @@ PopTypeAvailabilityCalculator::SuccessorLevel_t PopTypeAvailabilityCalculator::N
             level.ids.push_back(rConfig.id);
             // Intermediate steps are walked whether or not their own tech is discovered;
             // only the answer has to be something the player actually has.
-            if (MeetsTechRequirement(rConfig.requiredTech, rDiscovered) && (!level.bestAvailableId || index < bestIndex))
+            if (MeetsTechRequirement(rConfig.requiredTechs, rDiscovered)
+                && (!level.bestAvailableId || index < bestIndex))
             {
                 level.bestAvailableId = rConfig.id;
                 bestIndex = index;
@@ -78,7 +79,8 @@ std::vector<const PopTypeConfig_t*> PopTypeAvailabilityCalculator::GetAvailable(
     std::vector<const PopTypeConfig_t*> available;
     for (const PopTypeConfig_t& rConfig : m_rRegistry.GetAll())
     {
-        if (!rConfig.bPlayerAssignable || !MeetsTechRequirement(rConfig.requiredTech, rDiscoveredTechs))
+        if (!rConfig.bPlayerAssignable
+            || !MeetsTechRequirement(rConfig.requiredTechs, rDiscoveredTechs))
         {
             continue;
         }

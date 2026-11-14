@@ -3,6 +3,7 @@
 #include "game/effects/EffectConfig.h"
 #include "game/effects/TriggeredEffect.h"
 #include "game/probes/ProbeActionId.h"
+#include "game/research/TechRequirement.h"
 #include "lib/Formula.h"
 
 #include <optional>
@@ -62,7 +63,7 @@ struct ProbeActionConfig_t
     int risk = 0;
     // When set, subsequent attempts at the same base use this RISK (steal tech, etc.).
     std::optional<int> riskRepeat;
-    std::string requiredTech;
+    RequiredTechs_t requiredTechs;
     bool bHqOnly = false;
     bool bNotHq = false;
     // The victim may keep the current status. False: the agreement always breaks (mind-control

@@ -819,6 +819,74 @@ Runs only when the tile crosses the shore line (`(old < 3) != (new < 3)`, `0x591
 Thinker's `alt_set` clamps the reduced pop at 0 before testing it (`Fix:`, the original can
 store a negative byte). Otherwise it follows the same flow.
 
+## Facility-on-facility production prerequisites
+
+### `facility_avail` (`0x5BA0E0`)
+
+Gate for whether a facility (or SP) may be chosen for production. Signature (cdecl):
+`(item_id, faction_id, base_id, queue_count)`. After tech / SP / already-built checks, when
+`base_id ≥ 0`, a switch on `item_id` applies facility-on-facility rules. Most cases inline the
+same bit test as `has_fac` (`0x421670`): `bitmask` (`0x50BA00`) plus `BASE`+0x8C
+(`facilities_built`), then optionally scan `queue_items[0..queue_count)` for `−prereq` when
+`queue_count > 0`. A few cases call `has_fac` directly. Return 1 = available, 0 = not.
+
+**Facility → facility edges (must have prereq at this base, via `has_fac` / inline):**
+
+| Item | Requires |
+|------|----------|
+| Tachyon Field (5) | Perimeter Defense (4), **or** Citizens Defense Force SP (`SecretProjects[5]` at `0x9A6528`) |
+| Hologram Theatre (11) | Recreation Commons (6), **and** not Virtual World SP (`0x9A652C`) |
+| Hybrid Forest (14) | Tree Farm (13) |
+| Quantum Lab (16) | Fusion Lab (15) |
+| Nanohospital (18) | Research Hospital (17) |
+| Nanoreplicator (20) | Robotic Assembly Plant (19) **or** Genejack Factory (22) |
+| Quantum Converter (21) | Robotic Assembly Plant (19) only |
+| Habitation Dome (25) | Hab Complex (24) |
+| Temple of Planet (32) | Centauri Preserve (31) |
+| Geosync Survey Pod (41) and orbitals 65–68 | Aerospace Complex (29), **or** CloudBase Academy SP (index `0x23`) **or** Space Elevator SP (index `0x1B`) |
+
+**Anti-prerequisites (blocked if the other is present at this base):**
+
+| Item | Blocked by |
+|------|------------|
+| Recycling Tanks (3) | Pressure Dome (26) |
+| Punishment Sphere (23) | Paradise Garden (12) |
+
+There is **no** Paradise Garden → !Punishment Sphere check in the binary. Thinker's
+`facility_avail` rewrite adds that mutual exclusion as a marked bug fix.
+
+Non-facility gates in the same switch (not facility→facility): Naval Yard needs coast
+(`is_coast` `0x4E49D0`); Aquafarm / Subsea / Thermocline need expansion + coast; Covert Ops /
+Brood Pit / Flechette need expansion; Subspace Generator needs alien faction; Skunkworks
+blocked when the faction has free-proto (`rule_flags` bit).
+
+**Call sites** (only six `E8` to `0x5BA0E0` in `.text`):
+
+| Address | Caller |
+|---------|--------|
+| `0x49357A` | `ProdPicker::calculate` — lists buildable facilities (passes a non-zero `queue_count`) |
+| `0x4F077E` | `base_queue` (`0x4F06E0`) — when advancing the queue after an item completes; **`queue_count = 0`** |
+| `0x4FD920` | `base_build` (`0x4F81A0`) — AI scan of facility candidates |
+| `0x4FF2D4` | `base_build` — AI scan of secret-project candidates (`item_id = 70+`) |
+| `0x41B8BF`, `0x41CC07` | `BaseWin` editor paths |
+
+Nothing re-calls `facility_avail` on the **currently building** `queue_items[0]` each turn.
+`set_fac` (`0x4E48B0`) only flips the `facilities_built` bit; it does not scan or cancel
+dependent queue items. Destroying a prerequisite mid-build therefore does **not** cancel the
+active queue item. Pending later queue slots are still filtered when `base_queue` advances
+(`facility_avail` with `queue_count = 0`).
+
+Thinker's `mod_base_build` (AI / managed bases via `mod_base_reset`) re-selects when
+`!can_build` on the current facility item; that path is Thinker's rewrite, not a binary
+mid-build cancel for human unmanaged production.
+
+### `has_fac` (`0x421670`)
+
+`(item_id, base_id, queue_count)`. Returns false for satellites (`item_id ≥ 65`). Otherwise
+true if the base's `facilities_built` bit is set, or (when `queue_count > 0`) if any of the
+first `queue_count` queue slots equals `−item_id`. Per-base only; no faction-wide facility
+bit.
+
 ## Climate
 
 ### `world_climate` (`0x5C5A30`)

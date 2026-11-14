@@ -36,8 +36,14 @@
   {
     "id": "MagTube",
     "name": "Mag Tube",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "monopole_magnets"
+        }
+      ]
+    },
     "turns_required": 3,
-    "required_tech": "monopole_magnets",
     "effects": [
       {
         "type": "StatModifier",
@@ -264,7 +270,9 @@
         "scope": "ThisTile",
         "parameters": {
           "stat": "energy",
-          "amount_source": { "kind": "ElevationEnergy" },
+          "amount_source": {
+            "kind": "ElevationEnergy"
+          },
           "amount": 1,
           "op": "Add"
         }
@@ -292,8 +300,14 @@
   {
     "id": "Bunker",
     "name": "Bunker",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "advanced_military_algorithms"
+        }
+      ]
+    },
     "turns_required": 5,
-    "required_tech": "advanced_military_algorithms",
     "effects": [
       {
         "type": "StatModifier",
@@ -427,8 +441,14 @@
   {
     "id": "Airbase",
     "name": "Airbase",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "doctrine_air_power"
+        }
+      ]
+    },
     "turns_required": 10,
-    "required_tech": "doctrine_air_power",
     "effects": [
       {
         "type": "RuleFlag",
@@ -499,8 +519,14 @@
   {
     "id": "Mirror",
     "name": "Mirror",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "ecological_engineering"
+        }
+      ]
+    },
     "turns_required": 12,
-    "required_tech": "ecological_engineering",
     "tags": [
       "land_terraform"
     ],
@@ -515,7 +541,9 @@
         "scope": "ThisTile",
         "parameters": {
           "stat": "energy",
-          "amount_source": { "kind": "ElevationEnergy" },
+          "amount_source": {
+            "kind": "ElevationEnergy"
+          },
           "amount": 1,
           "op": "Add"
         }
@@ -573,8 +601,14 @@
   {
     "id": "Condenser",
     "name": "Condenser",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "ecological_engineering"
+        }
+      ]
+    },
     "turns_required": 12,
-    "required_tech": "ecological_engineering",
     "tags": [
       "land_terraform"
     ],
@@ -613,8 +647,14 @@
   {
     "id": "ThermalBorehole",
     "name": "Thermal Borehole",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "ecological_engineering"
+        }
+      ]
+    },
     "turns_required": 24,
-    "required_tech": "ecological_engineering",
     "tags": [
       "land_terraform"
     ],
@@ -676,8 +716,13 @@
         "condition": {
           "kind": "AllOf",
           "conditions": [
-            { "kind": "TargetTileHas", "value": "River" },
-            { "kind": "SubjectIsOwner" }
+            {
+              "kind": "TargetTileHas",
+              "value": "River"
+            },
+            {
+              "kind": "SubjectIsOwner"
+            }
           ]
         },
         "parameters": {
@@ -784,7 +829,9 @@
                 "orbital"
               ]
             },
-            { "kind": "SubjectIsOwner" }
+            {
+              "kind": "SubjectIsOwner"
+            }
           ]
         }
       }
@@ -811,7 +858,9 @@
                 "orbital"
               ]
             },
-            { "kind": "SubjectIsOwner" }
+            {
+              "kind": "SubjectIsOwner"
+            }
           ]
         }
       }
@@ -838,7 +887,9 @@
                 "orbital"
               ]
             },
-            { "kind": "SubjectIsOwner" }
+            {
+              "kind": "SubjectIsOwner"
+            }
           ]
         }
       }
@@ -866,7 +917,9 @@
                 "orbital"
               ]
             },
-            { "kind": "SubjectIsOwner" }
+            {
+              "kind": "SubjectIsOwner"
+            }
           ]
         }
       }
@@ -894,7 +947,9 @@
                 "orbital"
               ]
             },
-            { "kind": "SubjectIsOwner" }
+            {
+              "kind": "SubjectIsOwner"
+            }
           ]
         }
       }

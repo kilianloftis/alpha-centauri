@@ -28,8 +28,8 @@ struct StockpileConfig_t : public IConstructable
 {
     StockpileId_t id;
     std::string name;
-    // Empty = always available (same convention as BuildingConfig_t).
-    std::string requiredTech;
+    // Empty lists = always available (same convention as BuildingConfig_t).
+    RequiredTechs_t requiredTechs;
     // Empty-queue fallback rank, ties by load order, so a new config file cannot change it.
     int fallbackPriority = 0;
     StockpileRounding_t rounding = StockpileRounding_t::Down;
@@ -45,7 +45,7 @@ struct StockpileConfig_t : public IConstructable
 
     bool IsAvailable(const std::vector<std::string>& discoveredTechs) const
     {
-        return MeetsTechRequirement(requiredTech, discoveredTechs);
+        return MeetsTechRequirement(requiredTechs, discoveredTechs);
     }
 };
 

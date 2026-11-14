@@ -1,4 +1,5 @@
 #include "game/production/StockpileConfigParser.h"
+#include "game/research/RequiredTechsParser.h"
 #include "lib/config/JsonConfigLoader.h"
 #include "game/effects/EffectConfigParser.h"
 #include <algorithm>
@@ -71,12 +72,12 @@ void RequireConvertsMinerals_(const std::vector<EffectConfig_t>& rEffects,
 StockpileConfig_t ParseStockpile_(const ConfigReader& rReader)
 {
     rReader.RejectUnknownKeys({
-        "id", "name", "required_tech", "fallback_priority", "rounding", "effects",
+        "id", "name", "required_techs", "fallback_priority", "rounding", "effects",
     });
     StockpileConfig_t config;
     config.id = rReader.NonEmptyString("id");
     config.name = rReader.String("name");
-    config.requiredTech = rReader.StringOr("required_tech", "");
+    config.requiredTechs = ParseRequiredTechs(rReader);
     config.fallbackPriority = rReader.IntOr("fallback_priority", config.fallbackPriority);
     config.rounding = ParseRounding_(rReader);
     config.effects = EffectConfigParser::ParseEffects(rReader.Json(),

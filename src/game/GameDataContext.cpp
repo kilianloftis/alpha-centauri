@@ -3,6 +3,7 @@
 #include "game/EffectReferenceValidator.h"
 #include "game/RequiredTechValidator.h"
 #include "game/buildings/BuildingConfig.h"
+#include "game/buildings/BuildingPrerequisiteValidator.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/display/BaseSpriteSizesConfig.h"
 #include "game/display/BaseSpriteSizesConfigParser.h"
@@ -190,7 +191,7 @@ void LoadReferenceRegistries_(GameDataContext& rData)
     rData.improvementRegistry = std::make_unique<ImprovementRegistry>();
     LoadMapOccupants(rPaths.improvements, rPaths.terrain, *rData.improvementRegistry,
                      *rData.terrainOperationRegistry);
-    // HasComponent conditions and component required_tech need this before the reference
+    // HasComponent conditions and component required_techs need this before the reference
     // validators.
     rData.unitComponentRegistry = LoadRegistry_<UnitComponentRegistry>(rPaths.unitComponents);
     ValidateComponentChassisRequirements(*rData.unitComponentRegistry);
@@ -198,7 +199,7 @@ void LoadReferenceRegistries_(GameDataContext& rData)
     rData.nativeUnitRegistry = LoadRegistry_<NativeUnitRegistry>(rPaths.nativeUnits);
 }
 
-// Registries that declare effects or carry required_tech.
+// Registries that declare effects or carry required_techs.
 void LoadEffectRegistries_(GameDataContext& rData)
 {
     const GameDataPaths& rPaths = rData.paths;
@@ -396,6 +397,7 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
     ValidateTerrainFeatures(*rData.improvementRegistry);
     ValidateEffectReferences(rData);
     ValidateRequiredTechReferences(rData);
+    ValidateBuildingPrerequisiteReferences(rData);
 
     LoadFormulasAndCalculators_(rData);
     ThrowIfIncomplete(rData);

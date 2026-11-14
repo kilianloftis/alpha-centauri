@@ -13,6 +13,7 @@
 #include "game/research/TechCostConfig.h"
 #include "game/research/TechRegistry.h"
 #include "game/effects/EffectConfig.h"
+#include "game/research/TechRequirement.h"
 #include "game/social-engineering/SocialEngineeringRules.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
 #include "lib/LuaRuntime.h"
@@ -245,7 +246,7 @@ TEST_CASE("A policy is available once its tech is known", "[research][social-eng
     policy.id = "gated";
     CHECK(PolicyAvailable(faction, policy));
 
-    policy.requiredTech = "build_tech";
+    policy.requiredTechs = RequireAnyTech("build_tech");
     CHECK_FALSE(PolicyAvailable(faction, policy));
     faction.GetResearch().AddDiscoveredTech("build_tech");
     CHECK(PolicyAvailable(faction, policy));

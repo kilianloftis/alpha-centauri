@@ -18,7 +18,8 @@ Each file must be a JSON array of building objects. Any number of files may coex
 | `name` | string | No | `id` | Display name shown in the UI |
 | `mineral_cost` | int | No | `0` | Minerals required to construct; must be a non-negative integer |
 | `upkeep` | int | No | `0` | Base energy credits charged per turn per owned **constructed** copy. Effective cost is RawScaled `FacilityEnergyUpkeep` (seed = `upkeep`; techs use `buildingFilter` to target All / BuildingId / Category). Continuous `GrantBuilding` expansions are not constructed and pay nothing. UI: `BuildingConfig_t::GetUpkeep()` (base), `BaseManager::GetBuildingUpkeepByType()` / `Faction::GetBuildingUpkeepByType()` (resolved). |
-| `required_tech` | string | No | `""` | Tech that must be discovered before the building is available; omit or empty = always available |
+| `required_techs` | object | No | absent | Tech gate: `any` / `all` lists of `{ "tech": "…" }` (see below). Omit = always available. |
+| `required_buildings` | object | No | absent | Facility-on-facility production gate (see below). Omit = no gate. |
 | `allow_multiple` | bool | No | `false` | If true, a base may build more than one copy |
 | `secret_project` | bool | No | `false` | If true, only one faction in the world may own this building |
 | `orbital` | bool | No | `false` | If true, ownership counts are public to all factions (satellite census) |
@@ -35,6 +36,35 @@ Channel defaults live in [`config/map_overlay_channels.json`](../map_overlay_cha
 Population → `{size}` stage comes from [`config/base_sprite_sizes.json`](../base_sprite_sizes.json): an ordered `size_stages` array of `{ "min_population": N }` (first entry is size1). Optional `stage_bump_buildings` (e.g. `Childrens_Creche`) each raise the stage by one, capped at the last entry. Add a fifth stage by appending a threshold and shipping `*_size5.png` (and matching overlay paths); missing art falls back to the previous stage with a warning.
 
 A flat per-turn bonus (the old `nutrients_bonus`) is a `StatModifier` effect with `scope: "ThisBase"`. A per-improvement bonus (the old `improvement_bonuses`) is a `TileYieldModifier` effect with a `HasImprovement` selector — see Effect Types below.
+
+### `required_techs`
+
+Tech discovery gate. Shares the any/all list shape with `required_buildings` (no `none` list for techs).
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `any` | `{ "tech": id }[]` | absent / `[]` | Omit or empty = no OR clause; otherwise at least one tech must be discovered |
+| `all` | `{ "tech": id }[]` | absent / `[]` | Omit or empty = no AND clause; otherwise every tech must be discovered |
+
+### `required_buildings`
+
+Production-only gate (picker / queue), not a hold/grant rule. Parallel any/all/none lists; each entry also has scope and count.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `any` | entry[] | absent / `[]` | Omit or empty = no OR clause; otherwise at least one entry must be met |
+| `all` | entry[] | absent / `[]` | Omit or empty = no AND clause; otherwise every entry must be met |
+| `none` | entry[] | absent / `[]` | Omit or empty = no anti; otherwise no entry may be met |
+
+Each **entry**:
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `building` | string | Yes | — | Building id |
+| `scope` | string | Yes | — | `ThisBase` / `ThisFaction` / `World` (no inference) |
+| `count` | int | No | `1` | At least this many copies (`>= 1`) |
+
+`ThisBase` counts constructed copies at this base; when listing constructables / stripping upcoming, current and queued items at this base count too. `ThisFaction` / `World` count constructed copies only. Both `all` and `any` may be non-empty. Every `building` must name a loaded building and must not be the declaring building.
 
 ### Load-time validation
 
@@ -165,7 +195,7 @@ most once per subject — and only an entry that actually changed something spen
   "name": "Recycling Tanks",
   "mineral_cost": 5,
   "upkeep": 2,
-  "required_tech": "ecology",
+  "required_techs": { "any": [{ "tech": "ecology" }] },
   "effects": [
     {
       "type": "StatModifier",
@@ -185,7 +215,7 @@ most once per subject — and only an entry that actually changed something spen
   "mineral_cost": 500,
   "upkeep": 0,
   "secret_project": true,
-  "required_tech": "biomachinery",
+  "required_techs": { "any": [{ "tech": "biomachinery" }] },
   "effects": [
     {
       "type": "RuleFlag",
@@ -210,7 +240,7 @@ buildings and share none of a building's fields. See `config/README-stockpiles.m
   "mineral_cost": 80,
   "upkeep": 2,
   "secret_project": true,
-  "required_tech": "industrial_economics",
+  "required_techs": { "any": [{ "tech": "industrial_economics" }] },
   "on_complete_effects": [
     { "type": "AddBuilding", "parameters": { "building_id": "Energy_Bank" } }
   ]

@@ -1,6 +1,7 @@
 #include "game/probes/ProbeActionConfigParser.h"
 #include "game/effects/EffectConfigParser.h"
 #include "game/effects/TriggeredEffectParser.h"
+#include "game/research/RequiredTechsParser.h"
 #include "lib/config/JsonConfigLoader.h"
 #include <magic_enum.hpp>
 #include <optional>
@@ -178,7 +179,7 @@ ProbeActionConfig_t ParseAction_(const ConfigReader& rReader)
     {
         action.riskRepeat = rReader.Int("risk_repeat");
     }
-    action.requiredTech = rReader.StringOr("required_tech", "");
+    action.requiredTechs = ParseRequiredTechs(rReader);
     action.bHqOnly = rReader.BoolOr("hq_only", false);
     action.bNotHq = rReader.BoolOr("not_hq", false);
     if (action.id == ProbeActionId_t::InciteDroneRiots)

@@ -362,11 +362,17 @@
   },
   {
     "id": "Centauri_Preserve",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "centauri_meditation"
+        }
+      ]
+    },
     "name": "Centauri Preserve (+1 starting XP to native life)",
     "mineral_cost": 100,
     "upkeep": 1,
     "category": "grow",
-    "required_tech": "centauri_meditation",
     "on_unit_produced_effects": [
       {
         "type": "GrantXp",
@@ -1157,8 +1163,14 @@
   },
   {
     "id": "test_gated_facility",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "advanced_build"
+        }
+      ]
+    },
     "name": "Test Gated Facility",
-    "required_tech": "advanced_build",
     "effects": [],
     "category": "build"
   },
@@ -1329,7 +1341,6 @@
     "name": "Recreation Commons",
     "mineral_cost": 4,
     "category": "build",
-    "required_tech": "",
     "upkeep": 1,
     "effects": [
       {
@@ -1754,7 +1765,6 @@
     "upkeep": 0,
     "secret_project": true,
     "category": "conquer",
-    "required_tech": "",
     "effects": [
       {
         "type": "StatModifier",
@@ -1788,6 +1798,14 @@
   {
     "id": "Habitation_Dome",
     "name": "Habitation Dome",
+    "required_buildings": {
+      "any": [
+        {
+          "building": "Hab_Complex",
+          "scope": "ThisBase"
+        }
+      ]
+    },
     "mineral_cost": 160,
     "upkeep": 4,
     "category": "build",
@@ -1802,5 +1820,80 @@
         }
       }
     ]
+  },
+  {
+    "id": "test_prereq_base",
+    "name": "Test Prereq Base",
+    "mineral_cost": 10,
+    "category": "build",
+    "effects": []
+  },
+  {
+    "id": "test_prereq_needs_any",
+    "name": "Test Prereq Needs Any",
+    "required_buildings": {
+      "any": [
+        {
+          "building": "test_prereq_base",
+          "scope": "ThisBase"
+        }
+      ]
+    },
+    "mineral_cost": 10,
+    "category": "build",
+    "effects": []
+  },
+  {
+    "id": "test_prereq_needs_all",
+    "name": "Test Prereq Needs All",
+    "required_buildings": {
+      "all": [
+        {
+          "building": "test_facility_a",
+          "scope": "ThisBase"
+        },
+        {
+          "building": "test_facility_b",
+          "scope": "ThisBase"
+        }
+      ]
+    },
+    "mineral_cost": 10,
+    "category": "build",
+    "effects": []
+  },
+  {
+    "id": "test_prereq_forbid",
+    "name": "Test Prereq Forbid",
+    "required_buildings": {
+      "none": [
+        {
+          "building": "test_facility_a",
+          "scope": "ThisBase"
+        }
+      ]
+    },
+    "mineral_cost": 10,
+    "category": "build",
+    "effects": []
+  },
+  {
+    "id": "test_prereq_or_sp",
+    "name": "Test Prereq Or SP",
+    "required_buildings": {
+      "any": [
+        {
+          "building": "test_facility_a",
+          "scope": "ThisBase"
+        },
+        {
+          "building": "test_secret_project",
+          "scope": "ThisFaction"
+        }
+      ]
+    },
+    "mineral_cost": 10,
+    "category": "build",
+    "effects": []
   }
 ]

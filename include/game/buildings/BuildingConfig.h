@@ -2,6 +2,7 @@
 
 #include "game/research/TechRequirement.h"
 #include "game/GameCategory.h"
+#include "game/buildings/RequiredBuildings.h"
 #include "game/production/IConstructable.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/TriggeredEffect.h"
@@ -34,7 +35,8 @@ struct BuildingConfig_t : public IConstructable
     int mineralCost = 0;
     // Per-turn energy-credit maintenance; summed across owned copies and charged in Upkeep.
     int upkeep = 0;
-    std::string requiredTech;  // empty if none — same convention as SocialPolicyConfig_t, etc.
+    RequiredTechs_t requiredTechs;
+    RequiredBuildings_t requiredBuildings;
     bool allowMultiple = false;
     bool bIsSecretProject = false;
     // Public orbital census: counts of buildings with this flag are visible to all factions.
@@ -71,7 +73,7 @@ struct BuildingConfig_t : public IConstructable
 
     bool IsAvailable(const std::vector<std::string>& discoveredTechs) const
     {
-        return MeetsTechRequirement(requiredTech, discoveredTechs);
+        return MeetsTechRequirement(requiredTechs, discoveredTechs);
     }
 };
 

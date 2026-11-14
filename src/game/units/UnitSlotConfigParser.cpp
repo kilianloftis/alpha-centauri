@@ -1,4 +1,5 @@
 #include "game/units/UnitSlotConfigParser.h"
+#include "game/research/RequiredTechsParser.h"
 #include "lib/config/JsonConfigLoader.h"
 
 namespace ac
@@ -17,7 +18,7 @@ UnitSlotConfig_t ParseSlot_(const ConfigReader& rReader)
     slot.column = rReader.Has("column") ? rReader.Enum<SlotColumn_t>("column", "slot column")
                                         : SlotColumn_t::Left;
     slot.costModifier = rReader.FloatOr("cost_modifier", 1.0f);
-    slot.requiredTech = rReader.StringOr("required_tech", "");
+    slot.requiredTechs = ParseRequiredTechs(rReader);
     return slot;
 }
 

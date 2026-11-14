@@ -663,6 +663,9 @@ it behind a switch turns the line into a TODO entry.
 - **A contacted faction with no agreement is asked "Pronounce Vendetta!"** ("`break_treaty`"):
   Thinker's `battle_fight_2` passes Truce instead of Commlink (`Fix:`), so it attacks with no
   prompt.
+- **Paradise Garden is blocked when Punishment Sphere is present** ("Facility-on-facility"):
+  the binary only blocks Punishment ← Paradise; Thinker's `facility_avail` adds the reverse
+  as a marked bug fix.
 
 ## Variant files
 

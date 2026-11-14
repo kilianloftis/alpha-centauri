@@ -14,7 +14,7 @@ not exist here and are rejected as unknown.
 |---|---|---|---|---|
 | `id` | string | Yes | — | Unique identifier used in code and save files |
 | `name` | string | No | `id` | Display name shown in the build menu |
-| `required_tech` | string | No | `""` | Tech that must be discovered before this stockpile is selectable; omit or empty = always available |
+| `required_techs` | object | No | absent | Tech gate: `any` / `all` lists of `{ "tech": "…" }`; omit = always available |
 | `fallback_priority` | int | No | `0` | Ranking for the empty-queue default: among available stockpiles the highest wins, ties broken by load order |
 | `rounding` | string | **Yes** | — | How a fractional yield becomes an integer: `"down"`, `"up"`, or `"nearest"` |
 | `effects` | Effect[] | Yes | — | Must contain at least one `StatModifier` with `amount_source: { "kind": "MineralsConverted" }` |

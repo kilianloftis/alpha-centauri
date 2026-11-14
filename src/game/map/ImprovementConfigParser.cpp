@@ -1,6 +1,7 @@
 #include "game/map/ImprovementConfigParser.h"
 #include "game/display/OccupantArtParser.h"
 #include "game/map/TerrainConfig.h"
+#include "game/research/RequiredTechsParser.h"
 #include "game/map/Tile.h"
 #include "game/movement/MovementConstants.h"
 #include "lib/config/JsonConfigLoader.h"
@@ -189,7 +190,7 @@ void RequireKnownReferences_(const std::vector<ImprovementConfig_t>& rConfigs)
 
 void RejectProjectFields_(const ConfigReader& rReader)
 {
-    for (const char* pField : {"turns_required", "energy_cost", "required_tech"})
+    for (const char* pField : {"turns_required", "energy_cost", "required_techs"})
     {
         if (rReader.Has(pField))
         {
@@ -205,10 +206,11 @@ std::optional<FormerProject_t> ParseFormerProject_(const ConfigReader& rReader)
     project.turnsRequired =
         rReader.Has("turns_required") ? rReader.IntAtLeast("turns_required", 0) : 0;
     project.energyCost = rReader.Has("energy_cost") ? rReader.IntAtLeast("energy_cost", 0) : 0;
-    project.requiredTech = rReader.StringOr("required_tech", "");
-    if (project.turnsRequired == 0 && (project.energyCost != 0 || !project.requiredTech.empty()))
+    project.requiredTechs = ParseRequiredTechs(rReader);
+    if (project.turnsRequired == 0
+        && (project.energyCost != 0 || HasTechRequirements(project.requiredTechs)))
     {
-        rReader.Fail("'energy_cost' / 'required_tech' need a 'turns_required' > 0, or no former "
+        rReader.Fail("'energy_cost' / 'required_techs' need a 'turns_required' > 0, or no former "
                      "can ever build it");
     }
     if (project.turnsRequired == 0)

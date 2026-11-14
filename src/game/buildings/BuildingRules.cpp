@@ -1,14 +1,19 @@
 #include "game/buildings/BuildingRules.h"
 
 #include "game/CurrentGameState.h"
+#include "game/GameDataContext.h"
 #include "game/GameState.h"
 #include "game/base/BaseManager.h"
 #include "game/base/BaseRules.h"
+#include "game/RequirementLists.h"
 #include "game/buildings/BuildingManager.h"
+#include "game/buildings/RequiredBuildings.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
 #include "game/faction/Faction.h"
+#include "game/production/IConstructable.h"
+#include "game/production/ProductionManager.h"
 
 #include <stdexcept>
 #include <string>
@@ -16,6 +21,75 @@
 
 namespace ac
 {
+
+namespace
+{
+
+int CountBuiltAtBase_(const BaseManager& rBase, const std::string& rBuildingId)
+{
+    int count = 0;
+    for (const BuildingConfig_t* pBuilding : rBase.GetBuildingManager().GetBuildings())
+    {
+        if (pBuilding && pBuilding->id == rBuildingId)
+        {
+            ++count;
+        }
+    }
+    return count;
+}
+
+int CountQueuedAtBase_(const BaseManager& rBase, const std::string& rBuildingId)
+{
+    int count = 0;
+    const ProductionManager& rProduction = rBase.GetProduction();
+    const IConstructable* pCurrent = rProduction.GetCurrentProduction();
+    if (pCurrent && pCurrent->GetId() == rBuildingId)
+    {
+        ++count;
+    }
+    for (const IConstructable* pItem : rProduction.GetQueue())
+    {
+        if (pItem && pItem->GetId() == rBuildingId)
+        {
+            ++count;
+        }
+    }
+    return count;
+}
+
+int CountWorldBuildings_(const std::string& rBuildingId)
+{
+    int count = 0;
+    for (const Faction& rFaction : CurrentGameState().Factions())
+    {
+        count += rFaction.CountBuildings(rBuildingId);
+    }
+    return count;
+}
+
+int CountForRequirement_(const BaseManager& rBase, const BuildingRequirement_t& rReq,
+                         BuildingPresenceMode_t mode)
+{
+    switch (rReq.scope)
+    {
+        case BuildingRequirementScope_t::ThisBase:
+        {
+            int count = CountBuiltAtBase_(rBase, rReq.building);
+            if (mode == BuildingPresenceMode_t::BuiltOrQueued)
+            {
+                count += CountQueuedAtBase_(rBase, rReq.building);
+            }
+            return count;
+        }
+        case BuildingRequirementScope_t::ThisFaction:
+            return rBase.GetFaction().CountBuildings(rReq.building);
+        case BuildingRequirementScope_t::World:
+            return CountWorldBuildings_(rReq.building);
+    }
+    throw std::logic_error("CountForRequirement_: unhandled scope");
+}
+
+} // namespace
 
 bool MayHoldBuilding(const BuildingManager& rBuildings, const BuildingConfig_t& rBuilding)
 {
@@ -28,6 +102,16 @@ bool MayHoldBuilding(const BuildingManager& rBuildings, const BuildingConfig_t& 
         return true;
     }
     return !IsSecretProjectUnavailable(rBuilding.id);
+}
+
+bool MeetsBuildingProductionPrereqs(const BaseManager& rBase, const BuildingConfig_t& rBuilding,
+                                    BuildingPresenceMode_t mode)
+{
+    return MeetsRequirementLists(rBuilding.requiredBuildings,
+                                 [&](const BuildingRequirement_t& rReq)
+                                 {
+                                     return CountForRequirement_(rBase, rReq, mode) >= rReq.count;
+                                 });
 }
 
 bool IsSecretProjectUnavailable(const BuildingId_t& buildingId)

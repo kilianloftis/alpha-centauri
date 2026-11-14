@@ -15,7 +15,10 @@
       },
       "condition": {
         "kind": "DesignPlan",
-        "plans": ["offense", "combat"]
+        "plans": [
+          "offense",
+          "combat"
+        ]
       }
     },
     {
@@ -28,7 +31,10 @@
       },
       "condition": {
         "kind": "DesignPlan",
-        "plans": ["colony", "terraform"],
+        "plans": [
+          "colony",
+          "terraform"
+        ],
         "value": false
       }
     },
@@ -55,8 +61,12 @@
       "condition": {
         "kind": "AllOf",
         "conditions": [
-          { "kind": "TargetIsBase" },
-          { "kind": "VictimizedPartner" }
+          {
+            "kind": "TargetIsBase"
+          },
+          {
+            "kind": "VictimizedPartner"
+          }
         ]
       }
     }
@@ -200,12 +210,18 @@
       "garrison_damage_bound_formula": "max(1, floor(hp / 2))",
       "garrison_damage_formula": "floor((floor(hp / 2) + draw) / (repeated + 1))",
       "name": "Introduce Genetic Plague",
+      "required_techs": {
+        "any": [
+          {
+            "tech": "gene_splicing"
+          }
+        ]
+      },
       "target": "base",
       "may_keep_agreement": true,
       "may_frame": false,
       "hostile_act_on_break": true,
       "risk": 0,
-      "required_tech": "gene_splicing",
       "on_success_effects": [
         {
           "type": "CommitAtrocity",

@@ -20,6 +20,7 @@
 #include "game/population/RiotLatch.h"
 #include "game/population/PopTypeConfigParser.h"
 #include "game/population/PopTypeRegistry.h"
+#include "game/research/TechRequirement.h"
 #include "lib/Signal.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -284,10 +285,7 @@ TEST_CASE("Obsolescence is transitive and does not depend on the middle tech",
             {
                 const bool bResolvesToSelf =
                     availability.ResolveCurrentType(rConfig.id, rTechs).id == rConfig.id;
-                const bool bHasTech =
-                    rConfig.requiredTech.empty()
-                    || std::find(rTechs.begin(), rTechs.end(), rConfig.requiredTech)
-                           != rTechs.end();
+                const bool bHasTech = MeetsTechRequirement(rConfig.requiredTechs, rTechs);
                 const bool bExpected = rConfig.bPlayerAssignable && bHasTech && bResolvesToSelf;
 
                 CHECK(contains(ids, rConfig.id) == bExpected);

@@ -11,6 +11,8 @@ add_library(ac-core STATIC
     game/DifficultyConfigParser.cpp
     game/EffectReferenceValidator.cpp
     game/RequiredTechValidator.cpp
+    game/buildings/BuildingPrerequisiteValidator.cpp
+    game/buildings/RequiredBuildingsParser.cpp
     game/faction/Faction.cpp
     game/faction/FactionEffectsPool.cpp
     game/faction/FactionIdentity.cpp

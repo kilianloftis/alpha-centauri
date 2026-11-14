@@ -13,7 +13,7 @@ A unit is assembled from exactly one chassis, one weapon, one armour, one reacto
 | `id` | string | Unique identifier used to reference this component in code and other configs |
 | `name` | string | Display name shown in the UI |
 | `type` | string | Component slot: `chassis`, `weapon`, `armour`, `reactor`, or `ability` |
-| `required_tech` | string | Tech ID that must be researched to unlock this component. Empty string means always available |
+| `required_techs` | object | Optional. `any` / `all` lists of `{ "tech": "…" }`. Omit = always available |
 | `mineral_cost` | int | Flat mineral cost this component adds to the unit's construction cost |
 
 ---
@@ -113,7 +113,6 @@ New tables can be added freely in JSON without any code changes.
   "id": "My_Weapon",
   "name": "My Weapon",
   "type": "weapon",
-  "required_tech": "",
   "mineral_cost": 5,
   "stats": {
     "attack": { "base": 4 }
@@ -130,7 +129,7 @@ New tables can be added freely in JSON without any code changes.
   "id": "Marine",
   "name": "Marine",
   "type": "chassis",
-  "required_tech": "Doctrine_Mobility",
+  "required_techs": { "any": [{ "tech": "Doctrine_Mobility" }] },
   "mineral_cost": 15,
   "stats": {
     "movement":              { "base": 2 },

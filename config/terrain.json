@@ -831,9 +831,15 @@
     {
       "id": "PlantFungus",
       "name": "Plant Fungus",
+      "required_techs": {
+        "any": [
+          {
+            "tech": "ecological_engineering"
+          }
+        ]
+      },
       "turns_required": 6,
       "energy_cost": 0,
-      "required_tech": "ecological_engineering",
       "on_complete_effects": [
         {
           "type": "SetTerrainFeature",
@@ -892,9 +898,15 @@
     {
       "id": "RaiseLand",
       "name": "Raise Land",
+      "required_techs": {
+        "any": [
+          {
+            "tech": "environmental_economics"
+          }
+        ]
+      },
       "turns_required": 12,
       "energy_cost": 0,
-      "required_tech": "environmental_economics",
       "energy_cost_source": "RaiseLowerQuote",
       "former_domain": "Any",
       "on_complete_effects": [
@@ -909,9 +921,15 @@
     {
       "id": "LowerLand",
       "name": "Lower Land",
+      "required_techs": {
+        "any": [
+          {
+            "tech": "environmental_economics"
+          }
+        ]
+      },
       "turns_required": 12,
       "energy_cost": 0,
-      "required_tech": "environmental_economics",
       "energy_cost_source": "RaiseLowerQuote",
       "former_domain": "Any",
       "on_complete_effects": [
@@ -926,9 +944,15 @@
     {
       "id": "Aquifer",
       "name": "Aquifer",
+      "required_techs": {
+        "any": [
+          {
+            "tech": "ecological_engineering"
+          }
+        ]
+      },
       "turns_required": 18,
       "energy_cost": 0,
-      "required_tech": "ecological_engineering",
       "on_complete_effects": [
         {
           "type": "SetTerrainFeature",

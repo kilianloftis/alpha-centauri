@@ -292,7 +292,9 @@
                 "orbital"
               ]
             },
-            { "kind": "SubjectIsOwner" }
+            {
+              "kind": "SubjectIsOwner"
+            }
           ]
         }
       }
@@ -1792,9 +1794,15 @@
   {
     "id": "test_gated_ability",
     "name": "Test Gated Ability",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "advanced_build"
+        }
+      ]
+    },
     "type": "ability",
     "mineral_cost": 0,
-    "required_tech": "advanced_build",
     "effects": []
   },
   {
@@ -1870,9 +1878,15 @@
   {
     "id": "Non_Lethal_Methods",
     "name": "Non-Lethal Methods",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "intellectual_integrity"
+        }
+      ]
+    },
     "type": "ability",
     "plan": "defense",
-    "required_tech": "intellectual_integrity",
     "mineral_cost": 1,
     "effects": [
       {
@@ -2230,4 +2244,3 @@
     ]
   }
 ]
-

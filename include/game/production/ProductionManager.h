@@ -38,8 +38,9 @@ public:
     void Insert(int slot, const IConstructable& rItem);
     void Delete(int slot);
 
-    // Drops invalid queue items; an invalid current item is cleared and its name returned. The
-    // current then takes the next queued item or the default. No retool.
+    // Drops a current item that fails tech/uniqueness hold (not required_buildings); strips
+    // upcoming slots that fail CanProduceItem; promotes the first queue head that can start
+    // (BuiltOnly facility prereqs) or the default. No retool.
     std::optional<std::string> ValidateQueue();
 
     // Replace current (nullptr → default) without retooling. Used on ownership transfer

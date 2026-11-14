@@ -3,185 +3,323 @@
     "id": "Fission_Plant",
     "name": "Fission Plant",
     "type": "reactor",
-    "required_tech": "",
     "mineral_cost": 0,
     "effects": [
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "hit_points", "amount": 10, "op": "Add" }
+        "parameters": {
+          "stat": "hit_points",
+          "amount": 10,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "psi_damage", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "psi_damage",
+          "amount": 1,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "collateral_damage", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "collateral_damage",
+          "amount": 1,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "earthquake_levels", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "earthquake_levels",
+          "amount": 1,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "fungal_bloom_tiles", "amount": 3, "op": "Add" }
+        "parameters": {
+          "stat": "fungal_bloom_tiles",
+          "amount": 3,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "explosion_radius", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "explosion_radius",
+          "amount": 1,
+          "op": "Add"
+        }
       }
     ]
   },
   {
     "id": "Fusion_Lab",
     "name": "Fusion Lab",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "fusion_power"
+        }
+      ]
+    },
     "type": "reactor",
-    "required_tech": "fusion_power",
     "mineral_cost": 5,
     "effects": [
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "hit_points", "amount": 20, "op": "Add" }
+        "parameters": {
+          "stat": "hit_points",
+          "amount": 20,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "psi_damage", "amount": 2, "op": "Add" }
+        "parameters": {
+          "stat": "psi_damage",
+          "amount": 2,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "collateral_damage", "amount": 2, "op": "Add" }
+        "parameters": {
+          "stat": "collateral_damage",
+          "amount": 2,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "earthquake_levels", "amount": 2, "op": "Add" }
+        "parameters": {
+          "stat": "earthquake_levels",
+          "amount": 2,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "fungal_bloom_tiles", "amount": 5, "op": "Add" }
+        "parameters": {
+          "stat": "fungal_bloom_tiles",
+          "amount": 5,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "explosion_radius", "amount": 2, "op": "Add" }
+        "parameters": {
+          "stat": "explosion_radius",
+          "amount": 2,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "cost_multiplier", "amount": 0.5, "op": "MultiplyGeometric" }
+        "parameters": {
+          "stat": "cost_multiplier",
+          "amount": 0.5,
+          "op": "MultiplyGeometric"
+        }
       }
     ],
     "combat_rating_modifiers": [
-      { "target": "rating", "suffix": "*2" }
+      {
+        "target": "rating",
+        "suffix": "*2"
+      }
     ]
   },
   {
     "id": "Quantum_Chambers",
     "name": "Quantum Chambers",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "quantum_power"
+        }
+      ]
+    },
     "type": "reactor",
-    "required_tech": "quantum_power",
     "mineral_cost": 10,
     "effects": [
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "hit_points", "amount": 30, "op": "Add" }
+        "parameters": {
+          "stat": "hit_points",
+          "amount": 30,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "psi_damage", "amount": 3, "op": "Add" }
+        "parameters": {
+          "stat": "psi_damage",
+          "amount": 3,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "collateral_damage", "amount": 3, "op": "Add" }
+        "parameters": {
+          "stat": "collateral_damage",
+          "amount": 3,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "earthquake_levels", "amount": 3, "op": "Add" }
+        "parameters": {
+          "stat": "earthquake_levels",
+          "amount": 3,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "fungal_bloom_tiles", "amount": 7, "op": "Add" }
+        "parameters": {
+          "stat": "fungal_bloom_tiles",
+          "amount": 7,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "explosion_radius", "amount": 3, "op": "Add" }
+        "parameters": {
+          "stat": "explosion_radius",
+          "amount": 3,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "cost_multiplier", "amount": 0.25, "op": "MultiplyGeometric" }
+        "parameters": {
+          "stat": "cost_multiplier",
+          "amount": 0.25,
+          "op": "MultiplyGeometric"
+        }
       }
     ],
     "combat_rating_modifiers": [
-      { "target": "rating", "suffix": "*3" }
+      {
+        "target": "rating",
+        "suffix": "*3"
+      }
     ]
   },
   {
     "id": "Singularity_Inductor",
     "name": "Singularity Inductor",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "graviton_theory"
+        }
+      ]
+    },
     "type": "reactor",
-    "required_tech": "graviton_theory",
     "mineral_cost": 15,
     "effects": [
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "hit_points", "amount": 40, "op": "Add" }
+        "parameters": {
+          "stat": "hit_points",
+          "amount": 40,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "psi_damage", "amount": 4, "op": "Add" }
+        "parameters": {
+          "stat": "psi_damage",
+          "amount": 4,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "collateral_damage", "amount": 4, "op": "Add" }
+        "parameters": {
+          "stat": "collateral_damage",
+          "amount": 4,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "earthquake_levels", "amount": 4, "op": "Add" }
+        "parameters": {
+          "stat": "earthquake_levels",
+          "amount": 4,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "fungal_bloom_tiles", "amount": 9, "op": "Add" }
+        "parameters": {
+          "stat": "fungal_bloom_tiles",
+          "amount": 9,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "explosion_radius", "amount": 4, "op": "Add" }
+        "parameters": {
+          "stat": "explosion_radius",
+          "amount": 4,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "cost_multiplier", "amount": 0.125, "op": "MultiplyGeometric" }
+        "parameters": {
+          "stat": "cost_multiplier",
+          "amount": 0.125,
+          "op": "MultiplyGeometric"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "airdrop_landing_damage", "amount": 6, "op": "Add" }
+        "parameters": {
+          "stat": "airdrop_landing_damage",
+          "amount": 6,
+          "op": "Add"
+        }
       }
     ],
     "combat_rating_modifiers": [
-      { "target": "rating", "suffix": "*4" }
+      {
+        "target": "rating",
+        "suffix": "*4"
+      }
     ]
   }
 ]

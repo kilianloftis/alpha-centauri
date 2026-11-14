@@ -34,7 +34,7 @@ TEST_CASE("The same views build when a player faction exists", "[ui][factory]")
 
 TEST_CASE("The unit designer hides slots gated behind undiscovered tech", "[ui][unit-designer]")
 {
-    // The designer laid out every slot in the registry regardless of requiredTech, so a player
+    // The designer laid out every slot in the registry regardless of requiredTechs, so a player
     // could fill a slot the faction has not unlocked and save the design.
     ViewFixture fixture;
     REQUIRE_FALSE(fixture.pPlayer->GetResearch().HasDiscoveredTech("advanced_build"));

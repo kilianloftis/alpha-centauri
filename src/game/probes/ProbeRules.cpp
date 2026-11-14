@@ -213,7 +213,7 @@ bool ActorMeetsActionPrereqs_(const Unit& rProbe, const ProbeActionConfig_t& rAc
     {
         return false;
     }
-    return MeetsTechRequirement(rAction.requiredTech,
+    return MeetsTechRequirement(rAction.requiredTechs,
                                 rProbe.GetFaction().GetResearch().GetDiscoveredTechs());
 }
 

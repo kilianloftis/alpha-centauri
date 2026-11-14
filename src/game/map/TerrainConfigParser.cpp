@@ -2,6 +2,7 @@
 
 #include "game/effects/TriggeredEffectParser.h"
 #include "game/map/ImprovementConfigParser.h"
+#include "game/research/RequiredTechsParser.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/MapOccupantLoad.h"
 #include "game/map/TerrainOperationRegistry.h"
@@ -48,7 +49,7 @@ TerrainOperationConfig_t ParseOperation_(const ConfigReader& rReader)
     config.project.turnsRequired = rReader.IntAtLeast("turns_required", 1);
     config.project.energyCost =
         rReader.Has("energy_cost") ? rReader.IntAtLeast("energy_cost", 0) : 0;
-    config.project.requiredTech = rReader.StringOr("required_tech", "");
+    config.project.requiredTechs = ParseRequiredTechs(rReader);
     return config;
 }
 

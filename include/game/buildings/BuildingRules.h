@@ -26,9 +26,20 @@ struct OrbitalAttackerOption_t
     int cooldownTurns = 0;
 };
 
+enum class BuildingPresenceMode_t
+{
+    BuiltOnly,
+    BuiltOrQueued,
+};
+
 // Uniqueness: a building that is not allowMultiple once per base, and a secret project only
 // while no base anywhere holds it and it was never destroyed.
 bool MayHoldBuilding(const BuildingManager& rBuildings, const BuildingConfig_t& rBuilding);
+
+// Facility-on-facility production gate (required_buildings). docs/thinker/terranx-map.md
+// § Facility-on-facility.
+bool MeetsBuildingProductionPrereqs(const BaseManager& rBase, const BuildingConfig_t& rBuilding,
+                                    BuildingPresenceMode_t mode);
 
 // A secret project can no longer be built once some base holds it or it was destroyed.
 bool IsSecretProjectUnavailable(const BuildingId_t& buildingId);

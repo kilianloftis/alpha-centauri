@@ -76,7 +76,7 @@ graph TB
 
 1. Player clicks a slot in a `SlotColumnPanel` → triggers that slot's `onClicked` lambda
 2. `UnitDesignerView::ShowComponentSelector_()` filters `UnitComponentRegistry` by type **and by
-   `required_tech`** (`IsUnlocked_`). The same gate is applied to the slots themselves when the
+   `required_techs`** (`IsUnlocked_`). The same gate is applied to the slots themselves when the
    columns are built, so a slot behind an undiscovered tech is not laid out at all — config
    already locks both, and offering either let a player assemble and save a design that should
    not exist. A component with `requires_chassis` is listed only when the selected chassis id is

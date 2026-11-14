@@ -22,11 +22,11 @@ struct UnitSlotConfig_t
     bool required = true;
     SlotColumn_t column = SlotColumn_t::Left;
     float costModifier = 1.0f; // scales this slot's component mineral cost
-    std::string requiredTech;  // slot is only available once this tech is discovered
+    RequiredTechs_t requiredTechs;
 
     bool IsAvailable(const std::vector<std::string>& rDiscoveredTechs) const
     {
-        return MeetsTechRequirement(requiredTech, rDiscoveredTechs);
+        return MeetsTechRequirement(requiredTechs, rDiscoveredTechs);
     }
 };
 

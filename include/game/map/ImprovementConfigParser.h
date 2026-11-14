@@ -3,6 +3,7 @@
 #include "game/effects/EffectConfig.h"
 #include "game/effects/TriggeredEffect.h"
 #include "game/display/OccupantArt.h"
+#include "game/research/TechRequirement.h"
 #include "lib/config/ConfigReader.h"
 #include <optional>
 #include <string>
@@ -37,7 +38,7 @@ struct FormerProject_t
 {
     int turnsRequired = 0;
     int energyCost = 0;
-    std::string requiredTech;
+    RequiredTechs_t requiredTechs;
 };
 
 struct ImprovementConfig_t

@@ -2,8 +2,14 @@
   {
     "id": "Comm_Jammer",
     "name": "Comm Jammer",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "superconductor"
+        }
+      ]
+    },
     "type": "ability",
-    "required_tech": "superconductor",
     "mineral_cost": 5,
     "effects": [
       {
@@ -22,7 +28,6 @@
     "id": "Deep_Pressure_Hull",
     "name": "Deep Pressure Hull",
     "type": "ability",
-    "required_tech": "",
     "mineral_cost": 10,
     "effects": [
       {
@@ -41,8 +46,14 @@
   {
     "id": "Cloaking_Device",
     "name": "Cloaking Device",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "applied_relativity"
+        }
+      ]
+    },
     "type": "ability",
-    "required_tech": "applied_relativity",
     "mineral_cost": 10,
     "effects": [
       {
@@ -66,7 +77,6 @@
     "id": "Deep_Radar",
     "name": "Deep Radar",
     "type": "ability",
-    "required_tech": "",
     "mineral_cost": 5,
     "effects": [
       {
@@ -84,7 +94,6 @@
     "id": "Marine_Detachment",
     "name": "Marine Detachment",
     "type": "ability",
-    "required_tech": "",
     "mineral_cost": 0,
     "effects": [
       {
@@ -139,7 +148,6 @@
     "id": "AAA_Tracking",
     "name": "AAA Tracking",
     "type": "ability",
-    "required_tech": "",
     "mineral_cost": 0,
     "effects": [
       {
@@ -180,7 +188,6 @@
     "name": "Air Superiority",
     "type": "ability",
     "plan": "air_superiority",
-    "required_tech": "",
     "mineral_cost": 0,
     "effects": [
       {
@@ -270,7 +277,6 @@
     "name": "Drop Pods",
     "type": "ability",
     "plan": "offense",
-    "required_tech": "",
     "mineral_cost": 5,
     "effects": [
       {
@@ -317,7 +323,6 @@
     "name": "Amphibious Pods",
     "type": "ability",
     "plan": "offense",
-    "required_tech": "",
     "mineral_cost": 5,
     "combat_rating_modifiers": [
       {
@@ -357,7 +362,6 @@
     "id": "Carrier_Deck",
     "name": "Carrier Deck",
     "type": "ability",
-    "required_tech": "",
     "mineral_cost": 5,
     "effects": [
       {
@@ -378,8 +382,14 @@
   {
     "id": "High_Morale",
     "name": "High Morale",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "intellectual_integrity"
+        }
+      ]
+    },
     "type": "ability",
-    "required_tech": "intellectual_integrity",
     "mineral_cost": 1,
     "on_complete_effects": [
       {
@@ -394,9 +404,15 @@
   {
     "id": "Non_Lethal_Methods",
     "name": "Non-Lethal Methods",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "intellectual_integrity"
+        }
+      ]
+    },
     "type": "ability",
     "plan": "defense",
-    "required_tech": "intellectual_integrity",
     "mineral_cost": 1,
     "effects": [
       {
@@ -452,7 +468,6 @@
     "id": "Poly_Encryption",
     "name": "Polymorphic Encryption",
     "type": "ability",
-    "required_tech": "",
     "mineral_cost": 5,
     "effects": [
       {

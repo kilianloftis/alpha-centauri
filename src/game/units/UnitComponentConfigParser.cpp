@@ -1,5 +1,6 @@
 #include "game/units/UnitComponentConfigParser.h"
 #include "game/units/UnitComponentRegistry.h"
+#include "game/research/RequiredTechsParser.h"
 #include "lib/config/JsonConfigLoader.h"
 #include "game/effects/EffectConfigParser.h"
 #include "game/effects/TriggeredEffectParser.h"
@@ -109,7 +110,7 @@ UnitComponentConfig_t ParseComponent_(const ConfigReader& rReader)
     config.name = rReader.String("name");
     config.unitName = rReader.StringOr("unit_name", "");
     config.type = rReader.String("type");
-    config.requiredTech = rReader.StringOr("required_tech", "");
+    config.requiredTechs = ParseRequiredTechs(rReader);
     config.mineralCost = rReader.Int("mineral_cost");
     config.requiresChassis = ParseRequiresChassis_(rReader);
     config.effects = EffectConfigParser::ParseEffects(

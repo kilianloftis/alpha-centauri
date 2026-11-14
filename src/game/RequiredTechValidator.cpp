@@ -9,6 +9,7 @@
 #include "game/population/PopTypeConfigParser.h"
 #include "game/population/PopTypeRegistry.h"
 #include "game/research/TechRegistry.h"
+#include "game/research/TechRequirement.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/units/UnitComponentConfig.h"
@@ -22,6 +23,8 @@
 
 #include <memory>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace ac
 {
@@ -40,44 +43,48 @@ const T& RequireRegistry(const std::unique_ptr<T>& pRegistry, const char* fieldN
     return *pRegistry;
 }
 
+void ValidateRequiredTechsField_(const RequiredTechs_t& rRequired, const TechRegistry& rTechs,
+                                 const std::string& rWhat, const std::string& rId)
+{
+    auto checkList = [&](const std::vector<TechRequirement_t>& rList, const char* pListName)
+    {
+        for (const TechRequirement_t& rEntry : rList)
+        {
+            if (!rTechs.Find(rEntry.tech))
+            {
+                throw std::runtime_error(
+                    rWhat + " '" + rId + "' required_techs." + pListName + " has unknown tech '"
+                    + rEntry.tech + "'");
+            }
+        }
+    };
+    checkList(rRequired.any, "any");
+    checkList(rRequired.all, "all");
+}
+
 template <typename TConfig>
-void ValidateRequiredTech(const std::vector<TConfig>& rConfigs, const TechRegistry& rTechs,
-                          const char* what)
+void ValidateRequiredTechs(const std::vector<TConfig>& rConfigs, const TechRegistry& rTechs,
+                           const char* what)
 {
     for (const TConfig& rConfig : rConfigs)
     {
-        if (!rConfig.requiredTech.empty() && !rTechs.Find(rConfig.requiredTech))
-        {
-            throw std::runtime_error(
-                std::string(what) + " '" + rConfig.id + "' has required_tech '"
-                + rConfig.requiredTech + "' which is not a known tech");
-        }
+        ValidateRequiredTechsField_(rConfig.requiredTechs, rTechs, what, rConfig.id);
     }
 }
 
-// An improvement's former project has a tech only when a former can build it; every terrain
-// operation has one.
-void ValidateProjectTech_(const std::string& rId, const FormerProject_t& rProject,
-                          const TechRegistry& rTechs, const char* what)
+void ValidateProjectTechs_(const std::string& rId, const FormerProject_t& rProject,
+                           const TechRegistry& rTechs, const char* what)
 {
-    if (!rProject.requiredTech.empty() && !rTechs.Find(rProject.requiredTech))
-    {
-        throw std::runtime_error(std::string(what) + " '" + rId + "' has required_tech '"
-                                 + rProject.requiredTech + "' which is not a known tech");
-    }
+    ValidateRequiredTechsField_(rProject.requiredTechs, rTechs, what, rId);
 }
 
-void ValidateProbeActionTech_(const ProbeActionsConfig_t& rProbeActions, const TechRegistry& rTechs)
+void ValidateProbeActionTechs_(const ProbeActionsConfig_t& rProbeActions,
+                               const TechRegistry& rTechs)
 {
     for (const ProbeActionConfig_t& rAction : rProbeActions.actions)
     {
-        if (!rAction.requiredTech.empty() && !rTechs.Find(rAction.requiredTech))
-        {
-            throw std::runtime_error(
-                "Probe action '" + std::string(magic_enum::enum_name(rAction.id))
-                + "' has required_tech '" + rAction.requiredTech
-                + "' which is not a known tech");
-        }
+        const std::string id(magic_enum::enum_name(rAction.id));
+        ValidateRequiredTechsField_(rAction.requiredTechs, rTechs, "Probe action", id);
     }
 }
 
@@ -106,24 +113,24 @@ void ValidateRequiredTechReferences(const GameDataContext& rData)
     const ProbeActionsConfig_t& rProbeActions =
         RequireRegistry(rData.probeActionsConfig, "probeActionsConfig");
 
-    ValidateRequiredTech(rBuildings.GetAll(), rTechs, "Building");
+    ValidateRequiredTechs(rBuildings.GetAll(), rTechs, "Building");
     for (const ImprovementConfig_t& rConfig : rImprovements.GetAll())
     {
         if (rConfig.project)
         {
-            ValidateProjectTech_(rConfig.id, *rConfig.project, rTechs, "Improvement");
+            ValidateProjectTechs_(rConfig.id, *rConfig.project, rTechs, "Improvement");
         }
     }
     for (const TerrainOperationConfig_t& rConfig : rOperations.GetAll())
     {
-        ValidateProjectTech_(rConfig.id, rConfig.project, rTechs, "Terrain operation");
+        ValidateProjectTechs_(rConfig.id, rConfig.project, rTechs, "Terrain operation");
     }
-    ValidateRequiredTech(rUnitComponents.GetAll(), rTechs, "Unit component");
-    ValidateRequiredTech(rUnitSlots.GetAll(), rTechs, "Unit slot");
-    ValidateRequiredTech(rSocialPolicies.GetAll(), rTechs, "Social policy");
-    ValidateRequiredTech(rPopTypes.GetAll(), rTechs, "Pop type");
-    ValidateRequiredTech(rCouncilProposals.GetAll(), rTechs, "Council proposal");
-    ValidateProbeActionTech_(rProbeActions, rTechs);
+    ValidateRequiredTechs(rUnitComponents.GetAll(), rTechs, "Unit component");
+    ValidateRequiredTechs(rUnitSlots.GetAll(), rTechs, "Unit slot");
+    ValidateRequiredTechs(rSocialPolicies.GetAll(), rTechs, "Social policy");
+    ValidateRequiredTechs(rPopTypes.GetAll(), rTechs, "Pop type");
+    ValidateRequiredTechs(rCouncilProposals.GetAll(), rTechs, "Council proposal");
+    ValidateProbeActionTechs_(rProbeActions, rTechs);
 }
 
 } // namespace ac

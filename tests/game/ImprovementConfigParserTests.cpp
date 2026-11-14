@@ -103,7 +103,7 @@ TEST_CASE("@buildable stands for every former-built improvement", "[improvements
     std::vector<ImprovementConfig_t> occupants;
     ImprovementConfig_t farm;
     farm.id = "Farm";
-    farm.project = FormerProject_t{4, 0, ""};
+    farm.project = FormerProject_t{4, 0, {}};
     ImprovementConfig_t base;
     base.id = "Base";
     ImprovementConfig_t fungus;

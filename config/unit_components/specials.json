@@ -5,7 +5,6 @@
     "unit_name": "Colony Pod",
     "type": "weapon",
     "plan": "colony",
-    "required_tech": "",
     "mineral_cost": 10,
     "effects": [
       {
@@ -59,7 +58,6 @@
     "unit_name": "Transport",
     "type": "weapon",
     "plan": "naval_transport",
-    "required_tech": "",
     "mineral_cost": 5,
     "effects": [
       {
@@ -159,7 +157,6 @@
     "unit_name": "Supply",
     "type": "weapon",
     "plan": "supply",
-    "required_tech": "",
     "mineral_cost": 5,
     "effects": [
       {
@@ -188,7 +185,6 @@
     "unit_name": "Former",
     "type": "weapon",
     "plan": "terraform",
-    "required_tech": "",
     "mineral_cost": 5,
     "effects": [
       {
@@ -214,7 +210,6 @@
     "unit_name": "Probe",
     "type": "weapon",
     "plan": "probe",
-    "required_tech": "",
     "mineral_cost": 5,
     "effects": [
       {
@@ -268,8 +263,14 @@
   {
     "id": "Algorithmic_Enhancement",
     "name": "Algorithmic Enhancement",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "planetary_networks"
+        }
+      ]
+    },
     "type": "ability",
-    "required_tech": "planetary_networks",
     "mineral_cost": 1,
     "effects": [
       {
@@ -307,7 +308,6 @@
     "unit_name": "Tectonic",
     "type": "weapon",
     "plan": "tectonic_missile",
-    "required_tech": "",
     "mineral_cost": 0,
     "requires_chassis": [
       "Missile"
@@ -338,7 +338,6 @@
     "unit_name": "Fungal",
     "type": "weapon",
     "plan": "fungal_missile",
-    "required_tech": "",
     "mineral_cost": 0,
     "requires_chassis": [
       "Missile"
@@ -363,7 +362,6 @@
     "unit_name": "Planet Buster",
     "type": "weapon",
     "plan": "planet_buster",
-    "required_tech": "",
     "mineral_cost": 0,
     "requires_chassis": [
       "Missile"
