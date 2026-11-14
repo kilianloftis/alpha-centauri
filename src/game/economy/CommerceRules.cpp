@@ -116,7 +116,7 @@ double CommerceRateToward_(const Faction& rFaction, const Faction& rPartner, dou
 {
     EffectContext_t ctx;
     ctx.pFaction = &rFaction;
-    ctx.pPartner = &rPartner;
+    ctx.pPartnerFaction = &rPartner;
     return ResolveFactionStat(rFaction.GetActiveEffects(), StatId_t::CommerceRate, seed, &ctx);
 }
 
@@ -205,7 +205,7 @@ std::unordered_map<BaseId_t, std::vector<CommercePartnerLine_t>> ComputeCommerce
             const RankedBase_t& rTheirs = partnerBases[i];
 
             CommercePartnerLine_t line;
-            line.pPartner = &rPartner;
+            line.pPartnerFaction = &rPartner;
             line.status = rDiplomacy.GetStatus(ownerId, rPartner.GetFactionId());
             line.ourEnergy = CommercePairValue_(rOwner, *rOurs.pBase, rPartner, rOurs.energy,
                                                 rTheirs.energy, rCalculator, techDenominator);

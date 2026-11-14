@@ -30,7 +30,7 @@ double ResolveGiftStat_(const Faction& rFaction, const Faction& rPartner, TradeK
                         StatId_t stat, double seed)
 {
     EffectContext_t ctx;
-    ctx.pPartner = &rPartner;
+    ctx.pPartnerFaction = &rPartner;
     ctx.giftKind = kind;
     return ResolveFactionStat(rFaction.GetActiveEffects(), stat, seed, &ctx);
 }

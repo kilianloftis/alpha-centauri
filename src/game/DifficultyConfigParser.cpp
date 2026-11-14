@@ -32,9 +32,6 @@ void ParseOptionalRules_(const ConfigReader& rReader, DifficultyRules_t& rRules)
     rRules.noIncitedPactTreatyScripts =
         rReader.BoolOr("no_incited_pact_treaty_scripts", rRules.noIncitedPactTreatyScripts);
     rRules.aiAutoPersonality = rReader.BoolOr("ai_auto_personality", rRules.aiAutoPersonality);
-    rRules.combatHandicap = rReader.BoolOr("combat_handicap", rRules.combatHandicap);
-    rRules.combatHandicapNativesOnly =
-        rReader.BoolOr("combat_handicap_natives_only", rRules.combatHandicapNativesOnly);
 }
 
 DifficultyRules_t ParseRules_(const ConfigReader& rReader)
@@ -47,8 +44,6 @@ DifficultyRules_t ParseRules_(const ConfigReader& rReader)
         "no_power_overloads",
         "no_incited_pact_treaty_scripts",
         "ai_auto_personality",
-        "combat_handicap",
-        "combat_handicap_natives_only",
         "player_atrocity_threshold",
         "ai_atrocity_threshold",
         "planet_fauna_diff",
@@ -61,11 +56,6 @@ DifficultyRules_t ParseRules_(const ConfigReader& rReader)
     rules.aiAtrocityThreshold = rReader.IntAtLeast("ai_atrocity_threshold", 0);
     rules.planetFaunaDiff = rReader.IntInRange("planet_fauna_diff", 0, 5);
     rules.planetFaunaSwarmEvent = rReader.Bool("planet_fauna_swarm_event");
-
-    if (rules.combatHandicapNativesOnly && !rules.combatHandicap)
-    {
-        rReader.Fail("combat_handicap_natives_only requires combat_handicap true");
-    }
     return rules;
 }
 

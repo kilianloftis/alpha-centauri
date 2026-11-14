@@ -1,5 +1,7 @@
 #include "GameFixtures.h"
 
+#include "game/DifficultyConfigParser.h"
+#include "game/GameRulesConfig.h"
 #include "game/combat/AttackRules.h"
 #include "game/combat/CollateralRules.h"
 #include "game/combat/CombatResolver.h"
@@ -31,6 +33,21 @@ void FillLand_(WorldFixture& fixture)
     {
         pTile->SetElevation(100);
     }
+}
+
+void UseFixtureDifficulty_(FactionFixture& rFixtures, const char* difficultyId)
+{
+    *rFixtures.dataContext.difficultyConfig =
+        DifficultyConfigParser::ParseConfig(FixturePath("difficulty/levels.json"));
+    GameRulesConfig_t rules = rFixtures.settings.GetGameRules();
+    rules.difficultyId = difficultyId;
+    rFixtures.settings.SetGameRules(rules);
+}
+
+CombatStrength_t Strength_(Unit& rAttacker, Unit& rDefender, FactionFixture& rFixture)
+{
+    return ResolveCombatStrength(rAttacker, rDefender, rFixture.ctx, rFixture.morale(),
+                                 CombatEngagement_t::Standard);
 }
 
 } // namespace
@@ -281,4 +298,72 @@ TEST_CASE("A native is wild only while a native-life faction owns it", "[natives
     CHECK(IsWildNative(wildWorm));
     CHECK_FALSE(IsWildNative(bredWorm));
     CHECK_FALSE(IsWildNative(wildMachine));
+}
+
+TEST_CASE("Citizen difficulty scales Attack in human vs AI fights", "[combat][difficulty]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& ai = fixture.MakeFaction();
+    Unit& playerUnit = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& aiUnit = fixture.MakeUnit(ai, 9, 9, {"test_chassis", "test_weapon"});
+    // Baseline morale so AddPercent is 0 and integer handicap scales divide cleanly.
+    playerUnit.SetXp(fixture.morale().GetConfig().baselineIndex);
+    aiUnit.SetXp(fixture.morale().GetConfig().baselineIndex);
+
+    UseFixtureDifficulty_(fixture, "librarian");
+    const int basePlayerAttack = Strength_(playerUnit, aiUnit, fixture).attackStrength;
+    const int baseAiAttack = Strength_(aiUnit, playerUnit, fixture).attackStrength;
+
+    UseFixtureDifficulty_(fixture, "citizen");
+    CHECK(Strength_(playerUnit, aiUnit, fixture).attackStrength == basePlayerAttack * 2);
+    CHECK(Strength_(aiUnit, playerUnit, fixture).attackStrength == baseAiAttack / 4);
+}
+
+TEST_CASE("Talent difficulty cuts only Planet Attack against the player", "[combat][difficulty]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& ai = fixture.MakeFaction();
+    Faction& planet = AddNativeLifeFaction(fixture);
+    Unit& playerUnit = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& aiUnit = fixture.MakeUnit(ai, 9, 9, {"test_chassis", "test_weapon"});
+    Unit& planetUnit = fixture.MakeUnit(planet, 10, 10, {"test_chassis", "test_weapon"});
+    playerUnit.SetXp(fixture.morale().GetConfig().baselineIndex);
+    aiUnit.SetXp(fixture.morale().GetConfig().baselineIndex);
+    planetUnit.SetXp(fixture.morale().GetConfig().baselineIndex);
+
+    UseFixtureDifficulty_(fixture, "librarian");
+    const int baseAiAttack = Strength_(aiUnit, playerUnit, fixture).attackStrength;
+    const int basePlanetAttack = Strength_(planetUnit, playerUnit, fixture).attackStrength;
+    const int basePlayerAttack = Strength_(playerUnit, aiUnit, fixture).attackStrength;
+
+    UseFixtureDifficulty_(fixture, "talent");
+    CHECK(Strength_(aiUnit, playerUnit, fixture).attackStrength == baseAiAttack);
+    CHECK(Strength_(planetUnit, playerUnit, fixture).attackStrength == basePlanetAttack * 3 / 4);
+    CHECK(Strength_(playerUnit, aiUnit, fixture).attackStrength == basePlayerAttack);
+}
+
+TEST_CASE("Citizen difficulty leaves human vs human Attack unchanged", "[combat][difficulty]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    fixture.extraDefinitions.push_back(
+        std::make_unique<FactionConfig_t>(fixture.factionDefinition));
+    FactionConfig_t& rOtherDef = *fixture.extraDefinitions.back();
+    rOtherDef.id = "other_player";
+    Faction& otherPlayer = AddSessionFaction(fixture, rOtherDef, true);
+    Unit& a = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& b = fixture.MakeUnit(otherPlayer, 9, 9, {"test_chassis", "test_weapon"});
+    a.SetXp(fixture.morale().GetConfig().baselineIndex);
+    b.SetXp(fixture.morale().GetConfig().baselineIndex);
+
+    UseFixtureDifficulty_(fixture, "librarian");
+    const int baseAttack = Strength_(a, b, fixture).attackStrength;
+
+    UseFixtureDifficulty_(fixture, "citizen");
+    CHECK(Strength_(a, b, fixture).attackStrength == baseAttack);
 }

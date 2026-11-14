@@ -20,9 +20,6 @@ struct DifficultyRules_t
     bool noIncitedPactTreatyScripts = false;
     // Default on when omitted (harder levels). Citizen/Specialist set false.
     bool aiAutoPersonality = true;
-    // Magnitude unknown — mode stub only.
-    bool combatHandicap = false;
-    bool combatHandicapNativesOnly = false;
     // Counted Simple acts a perpetrator may reach and still be answered as Simple; the next one
     // is Major. Zero disables escalation. Read at commit time.
     int playerAtrocityThreshold = 0;

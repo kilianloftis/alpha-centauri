@@ -92,7 +92,7 @@ TEST_CASE("ComputeForBase reports our and their energy for a paired partner", "[
 
     const auto lines = ComputeCommerceForBase(a1);
     REQUIRE(lines.size() == 1);
-    CHECK(lines[0].pPartner == game.pB);
+    CHECK(lines[0].pPartnerFaction == game.pB);
     CHECK(lines[0].status == DiplomaticStatus_t::Pact);
 
     const int expectedOurs =

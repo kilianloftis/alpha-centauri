@@ -24,7 +24,7 @@ TEST_CASE("A faction's commerce rate follows its status with each partner",
     {
         EffectContext_t ctx;
         ctx.pFaction = game.pA;
-        ctx.pPartner = pPartner;
+        ctx.pPartnerFaction = pPartner;
         return ResolveFactionStat(game.pA->GetActiveEffects(), StatId_t::CommerceRate, 1.0, &ctx);
     };
 

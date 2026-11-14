@@ -57,15 +57,21 @@ faction's `FactionEffectsPool`. From that point difficulty is indistinguishable 
 modifier source at the resolve site — which is the whole point.
 
 **`rules`** — knobs with no stat to attach to (`random_events_after_turn`,
-`colony_pod_preserves_size_1_base`, `combat_handicap`, …). `DifficultyRules_t` is a flat POD.
+`colony_pod_preserves_size_1_base`, …). `DifficultyRules_t` is a flat POD.
 `player_atrocity_threshold` and `ai_atrocity_threshold` are read by `CommitAtrocity` from the
-session level at commit time.
-The other knobs are not read yet; their call sites carry `TODO(difficulty)`. A getter with no
-caller is what the coding guidelines forbid, so those fields have none.
+session level at commit time. Colony-pod size floor and Planet fauna rules are also live
+consumers. Remaining stubs still carry `TODO(difficulty)` at their call sites; a getter with
+no caller is what the coding guidelines forbid, so those fields have none.
 
 Prefer the effects channel. A knob belongs in `rules` when there is no stat to modify.
 The atrocity thresholds are ones: each is a single session integer, not a modifier that stacks
 with tech or facilities.
+
+Combat handicap is an effects-channel case: Citizen / Specialist / Talent put
+`Attack` `MultiplyGeometric` on `FactionUnits` with `IsDefending` false and
+`PartnerPlayerType` (human attack boost vs AI; AI offense cut vs the player). Talent’s
+Planet-only cut also requires `IsNativeLifeFaction`. `MakeFighter_` sets `pPartnerFaction` to the
+opposing faction so those conditions resolve in combat.
 
 ## Resolving the session level
 

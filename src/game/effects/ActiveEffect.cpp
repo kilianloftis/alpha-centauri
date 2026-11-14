@@ -737,6 +737,21 @@ struct ConditionEvaluator_
         return ctx.pUnit != nullptr && ctx.pUnit->GetDesign().IsNativeLife() == rNative.bMatches;
     }
 
+    bool operator()(const IsNativeLifeFaction_t& rNative) const
+    {
+        const Faction* pFaction = ctx.pFaction;
+        if (pFaction == nullptr && ctx.pUnit != nullptr)
+        {
+            pFaction = &ctx.pUnit->GetFaction();
+        }
+        if (pFaction == nullptr)
+        {
+            return false;
+        }
+        const FactionSpecies_t species = pFaction->GetDefinition().identity.species;
+        return IsNativeLifeFaction(species) == rNative.bMatches;
+    }
+
     bool operator()(const BaseHasBuilding_t& rHas) const
     {
         return ctx.pBase != nullptr
@@ -745,32 +760,32 @@ struct ConditionEvaluator_
 
     bool operator()(const PartnerPlayerType_t& rType) const
     {
-        if (ctx.pPartner == nullptr)
+        if (ctx.pPartnerFaction == nullptr)
         {
             return false;
         }
-        return ctx.pPartner->IsPlayerControlled() == (rType.type == PlayerType_t::Player);
+        return ctx.pPartnerFaction->IsPlayerControlled() == (rType.type == PlayerType_t::Player);
     }
 
     bool operator()(const PartnerIsFormerOwner_t&) const
     {
-        if (ctx.pBase == nullptr || ctx.pPartner == nullptr)
+        if (ctx.pBase == nullptr || ctx.pPartnerFaction == nullptr)
         {
             return false;
         }
         const AssimilationState& rWindow =
             ctx.pBase->GetPopulation().GetAssimilation().OccupierWindow();
-        return rWindow.IsActive() && rWindow.formerOwner == ctx.pPartner->GetFactionId();
+        return rWindow.IsActive() && rWindow.formerOwner == ctx.pPartnerFaction->GetFactionId();
     }
 
     bool operator()(const VictimizedPartner_t&) const
     {
-        if (ctx.pFaction == nullptr || ctx.pPartner == nullptr)
+        if (ctx.pFaction == nullptr || ctx.pPartnerFaction == nullptr)
         {
             return false;
         }
         return CurrentGameState().GetAtrocityLedger().HasVictimized(
-            ctx.pFaction->GetFactionId(), ctx.pPartner->GetFactionId());
+            ctx.pFaction->GetFactionId(), ctx.pPartnerFaction->GetFactionId());
     }
 
     bool operator()(const TargetIsBase_t&) const
@@ -835,7 +850,9 @@ bool ConditionNeedsSituationalContext(const Condition_t& rCondition)
             if constexpr (std::is_same_v<T, SubjectDomain_t> || std::is_same_v<T, HasComponent_t>
                           || std::is_same_v<T, SubjectDesign_t> || std::is_same_v<T, HasFlag_t>
                           || std::is_same_v<T, IsPrototype_t> || std::is_same_v<T, IsCombatUnit_t>
-                          || std::is_same_v<T, IsNativeLife_t> || std::is_same_v<T, DesignPlan_t>)
+                          || std::is_same_v<T, IsNativeLife_t>
+                          || std::is_same_v<T, IsNativeLifeFaction_t>
+                          || std::is_same_v<T, DesignPlan_t>)
             {
                 return false;
             }
@@ -1092,8 +1109,8 @@ double ResolveBaseStat(const BaseEffects_t& rBaseEffects, StatId_t statId, doubl
 
 bool MatchesPartner(const ActiveEffect_t& effect, const EffectContext_t& ctx)
 {
-    return ctx.pPartner && effect.partnerFaction
-        && *effect.partnerFaction == ctx.pPartner->GetFactionId();
+    return ctx.pPartnerFaction && effect.partnerFaction
+        && *effect.partnerFaction == ctx.pPartnerFaction->GetFactionId();
 }
 
 double ResolveFactionStat(const FactionEffects_t& rFactionEffects, StatId_t statId, double seed,

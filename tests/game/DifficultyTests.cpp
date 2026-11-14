@@ -330,7 +330,7 @@ TEST_CASE("Difficulty discounts only an AI's probes against a player, on Thinker
     const auto actorCost = [](const Faction& rActor, const Faction& rTarget)
     {
         EffectContext_t ctx;
-        ctx.pPartner = &rTarget;
+        ctx.pPartnerFaction = &rTarget;
         return ResolveFactionStat(rActor.GetActiveEffects(), StatId_t::ProbeActorCost, 1.0, &ctx);
     };
 

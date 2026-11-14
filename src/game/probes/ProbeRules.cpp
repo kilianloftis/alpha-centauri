@@ -68,7 +68,7 @@ double ResolveOnTargetBase_(const BaseManager& rBase, StatId_t stat, const Facti
 {
     EffectContext_t ctx;
     ctx.pBase = &rBase;
-    ctx.pPartner = &rActor;
+    ctx.pPartnerFaction = &rActor;
     return ResolveBaseStat(rBase.GetBaseEffects(), stat, SeedFor(stat), &ctx);
 }
 
@@ -78,7 +78,7 @@ double ResolveOnTargetUnit_(const Unit& rUnit, StatId_t stat, const Faction& rAc
 {
     const UnitEffects_t unitEffects = CollectLiveUnitEffects(rUnit);
     EffectContext_t ctx = UnitSubjectContext(&rUnit, EffectContext_t{});
-    ctx.pPartner = &rActor;
+    ctx.pPartnerFaction = &rActor;
     return ResolveStatModifiersTotal(FilterByStatIdInContext(unitEffects.effects, stat, ctx),
                                      SeedFor(stat), &ctx);
 }
@@ -179,7 +179,7 @@ std::optional<int> QuoteBaseActionCost_(const ProbeCostConfig_t& rCost, const Fa
     inputs.distance = ScaleTruncating_(rawDistance, distScale);
     const int formula = Calculator_().MindControlCost(rCost, inputs);
     EffectContext_t actorCtx;
-    actorCtx.pPartner = &rTargetFaction;
+    actorCtx.pPartnerFaction = &rTargetFaction;
     actorCtx.pBase = &rBase;
     const double targetScale = ResolveOnTargetBase_(rBase, StatId_t::ProbeActionCost, rActor);
     const double actorScale = ResolveActorCost_(rActor, actorCtx);
@@ -200,7 +200,7 @@ int QuoteUnitActionCost_(const ProbeCostConfig_t& rCost, const Faction& rActor,
     inputs.distance = ScaleTruncating_(rawDistance, distScale);
     const int formula = Calculator_().SubvertCost(rCost, inputs);
     EffectContext_t actorCtx;
-    actorCtx.pPartner = &rTargetFaction;
+    actorCtx.pPartnerFaction = &rTargetFaction;
     const double targetScale =
         ResolveOnTargetUnit_(rTargetUnit, StatId_t::ProbeActionCost, rActor);
     const double actorScale = ResolveActorCost_(rActor, actorCtx);

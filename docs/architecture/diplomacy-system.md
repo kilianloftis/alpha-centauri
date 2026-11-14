@@ -331,7 +331,7 @@ writes no standing.
     size both read the result;
   - `gift_size_threshold` (PureMultiplier) on the giver scales every size threshold, after each
     truncates, and never friction;
-  - each resolve has the other side as `pPartner` and the item's kind in `giftKind`, which the
+  - each resolve has the other side as `pPartnerFaction` and the item's kind in `giftKind`, which the
     `GiftKind` condition matches.
   - University ships `gift_received_value` ×2 on `Technology`. SMAC's others, for factions that
     do not ship: Morgan `gift_given_value` ×2 on `Credits`; the Spartans `gift_received_value`

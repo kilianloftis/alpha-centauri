@@ -54,13 +54,13 @@ void CommerceDisplay::Render(Graphics& rGraphics)
     float lineIndex = 1.0f;
     for (const CommercePartnerLine_t& rLine : m_rBase.GetResources().GetCommercePartners())
     {
-        if (rLine.pPartner == nullptr)
+        if (rLine.pPartnerFaction == nullptr)
         {
             throw std::runtime_error("CommerceDisplay: partner line has null faction");
         }
 
         const std::string shorthand =
-            Uppercase_(rLine.pPartner->GetDefinition().identity.name);
+            Uppercase_(rLine.pPartnerFaction->GetDefinition().identity.name);
 
         std::ostringstream factionLine;
         factionLine << shorthand << ": " << rLine.ourEnergy;

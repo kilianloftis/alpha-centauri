@@ -1159,6 +1159,11 @@ const std::unordered_map<std::string, ParseConditionFn_>& ConditionParsers_()
          [](const nlohmann::json& rJson) -> Condition_t {
              return IsNativeLife_t{OptionalConditionBool_(rJson, "value", true, "IsNativeLife")};
          }},
+        {"IsNativeLifeFaction",
+         [](const nlohmann::json& rJson) -> Condition_t {
+             return IsNativeLifeFaction_t{
+                 OptionalConditionBool_(rJson, "value", true, "IsNativeLifeFaction")};
+         }},
         {"BaseHasBuilding",
          [](const nlohmann::json& rJson) -> Condition_t {
              return BaseHasBuilding_t{

@@ -1182,6 +1182,22 @@ TEST_CASE("ParseEffectConfig: identity condition arms", "[effects][parser][condi
             json::parse(R"({ "kind": "IsNativeLife", "value": "yes" })")));
     }
 
+    SECTION("IsNativeLifeFaction")
+    {
+        const Condition_t required = EffectConfigParser::ParseCondition(
+            json::parse(R"({ "kind": "IsNativeLifeFaction" })"));
+        const auto* pRequired = std::get_if<IsNativeLifeFaction_t>(&required);
+        REQUIRE(pRequired);
+        CHECK(pRequired->bMatches);
+
+        const Condition_t negated = EffectConfigParser::ParseCondition(
+            json::parse(R"({ "kind": "IsNativeLifeFaction", "value": false })"));
+        const auto* pNegated = std::get_if<IsNativeLifeFaction_t>(&negated);
+        REQUIRE(pNegated);
+        CHECK_FALSE(pNegated->bMatches);
+        CHECK_FALSE(ConditionNeedsSituationalContext(required));
+    }
+
     SECTION("DefenderIsNativeLife")
     {
         const Condition_t required =

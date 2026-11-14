@@ -412,6 +412,13 @@ struct IsNativeLife_t
     bool bMatches = true;
 };
 
+// Subject faction species is NativeLife matching bMatches (pFaction, else pUnit's faction).
+// Omit the JSON value to require NativeLife. Distinct from IsNativeLife (unit design flag).
+struct IsNativeLifeFaction_t
+{
+    bool bMatches = true;
+};
+
 // True when EffectContext_t::pBase has a constructed copy of buildingId.
 // Fail closed if pBase is absent. This is how a unit's on_hold_effects names a facility.
 struct BaseHasBuilding_t
@@ -427,22 +434,22 @@ struct DesignPlan_t
     bool bMatches = true;
 };
 
-// Probe-cost relations: EffectContext_t::pPartner is the other side of the quote (the actor on a
-// target-side resolve, the target faction on the actor-side one). Each fails closed without its
-// subject.
+// Probe-cost relations: EffectContext_t::pPartnerFaction is the other side of the quote (the
+// actor on a target-side resolve, the target faction on the actor-side one). Each fails closed
+// without its subject.
 
-// pPartner's control matches type.
+// pPartnerFaction's control matches type.
 struct PartnerPlayerType_t
 {
     PlayerType_t type = PlayerType_t::Player;
 };
 
-// pBase's occupier window is active and its former owner is pPartner.
+// pBase's occupier window is active and its former owner is pPartnerFaction.
 struct PartnerIsFormerOwner_t
 {
 };
 
-// pFaction has committed an atrocity against pPartner.
+// pFaction has committed an atrocity against pPartnerFaction.
 struct VictimizedPartner_t
 {
 };
@@ -467,7 +474,8 @@ using ConditionVariant_t = std::variant<TargetTileHas_t, AllOf_t, AnyOf_t, IsDef
                                         SubjectIsOwner_t, SubjectIsForeign_t,
                                         SubjectDomain_t, HasComponent_t, SubjectDesign_t,
                                         HasFlag_t, IsPrototype_t, IsCombatUnit_t,
-                                        IsNativeLife_t, BaseHasBuilding_t, DesignPlan_t,
+                                        IsNativeLife_t, IsNativeLifeFaction_t,
+                                        BaseHasBuilding_t, DesignPlan_t,
                                         PartnerPlayerType_t, PartnerIsFormerOwner_t,
                                         VictimizedPartner_t, TargetIsBase_t, GiftKind_t>;
 

@@ -15,7 +15,7 @@ class Faction;
 // One trading partner that contributes commerce to a specific base this turn.
 struct CommercePartnerLine_t
 {
-    const Faction* pPartner = nullptr;
+    const Faction* pPartnerFaction = nullptr;
     DiplomaticStatus_t status = DiplomaticStatus_t::Neutral;
     int ourEnergy = 0;
     int theirEnergy = 0;

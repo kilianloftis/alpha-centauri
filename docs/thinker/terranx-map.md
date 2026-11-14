@@ -295,6 +295,24 @@ at `0x94a37d`), attacker state not `VSTATE_EXPLORE | VSTATE_ON_ALERT`
 then `jge` skip at `0x507D3E`). `#GOODIDEA` only if
 `GameMorePreferences & 0x8000`.
 
+**Difficulty combat handicap** (`0x507A17`–`0x507AD0`). After `battle_compute` and
+nerve gas, before Planet-attacker extras. Scales **offense only** (`[ebp-0x14]`);
+defense is untouched. Human ↔ non-human only (`FactionStatus` `0x9A64E8`). No psi
+gate. `diff_val = 3 - (attacker_faction != 0)`: Planet attacker opens Talent;
+any other attacker stops at Specialist.
+
+- Non-human attacks human, `def.diff_level < diff_val`:
+  `offense *= (diff_level + 1) / 4` → Citizen ×1/4, Specialist ×1/2, Talent ×3/4
+  (Planet attacker only).
+- Human attacks non-human, `atk.diff_level < diff_val`:
+  `offense *= (4 - diff_level) / 2` → Citizen ×2, Specialist ×3/2; Talent never.
+
+Integer division toward zero. Thinker's `mod_battle_fight_2` matches the math;
+its `add_bat` difficulty labels are display-only. The confirm dialog's ratio uses
+bare `battle_compute` and omits this term; this repo folds it into
+`ResolveCombatStrength` (and therefore odds) via difficulty `Attack`
+`MultiplyGeometric` effects.
+
 ### Disengage (`battle_fight_2` `0x506AF0`)
 
 Only the defender withdraws. `retreat_value` (`[ebp-0x24]`) is zeroed at `0x508C9F` and set

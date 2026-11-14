@@ -52,6 +52,8 @@ Fighter_t MakeFighter_(const Unit& rUnit, const Unit& rAttacker, const Unit& rDe
     EffectContext_t ctx{&rDefender.GetTile(), role};
     ctx.pAttacker = &rAttacker;
     ctx.pDefender = &rDefender;
+    ctx.pPartnerFaction = role == CombatRole_t::Attacker ? &rDefender.GetFaction()
+                                                  : &rAttacker.GetFaction();
     const int level = CombatMoraleLevel(rUnit, ctx, rMorale);
     return Fighter_t{rUnit, ctx, rMorale.CombatAddPercent(level)};
 }
@@ -107,8 +109,6 @@ CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefen
                                        const MoraleCalculator& rMorale,
                                        CombatEngagement_t engagement)
 {
-    // TODO(difficulty): apply combat handicap from rules.combat_handicap /
-    // combat_handicap_natives_only once magnitude is known (do not invent percents).
     CombatStrength_t strength;
     const Fighter_t attacker =
         MakeFighter_(rAttacker, rAttacker, rDefender, CombatRole_t::Attacker, rMorale);

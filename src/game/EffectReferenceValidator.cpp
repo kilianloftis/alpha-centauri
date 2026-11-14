@@ -358,6 +358,7 @@ struct ConditionReferenceValidator
     void operator()(const IsPrototype_t&) const {}
     void operator()(const IsCombatUnit_t&) const {}
     void operator()(const IsNativeLife_t&) const {}
+    void operator()(const IsNativeLifeFaction_t&) const {}
     void operator()(const DesignPlan_t&) const {}
     void operator()(const PartnerPlayerType_t&) const {}
     void operator()(const PartnerIsFormerOwner_t&) const {}

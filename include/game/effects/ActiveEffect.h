@@ -53,7 +53,7 @@ struct ActiveEffect_t
     // k_NoFactionOwner is a stamped unowned tile — polarity conditions fail closed on it.
     std::optional<FactionId_t> ownerFaction;
     // Set for FactionPair effects: the other faction of the pair. They match only a context
-    // whose pPartner is that faction.
+    // whose pPartnerFaction is that faction.
     std::optional<FactionId_t> partnerFaction;
     // Host tile of a ThisTile effect from CollectAreaEffects (occupant or unit aura).
     std::optional<TileCoord_t> hostTile;
@@ -133,9 +133,9 @@ struct EffectContext_t
     const StockpileConversionSubject_t* pStockpile = nullptr;
     const Faction* pFaction = nullptr;
     const Unit* pUnit = nullptr;
-    // The other faction when resolving pFaction's dealings with it (commerce). Admits that
-    // pair's FactionPair effects.
-    const Faction* pPartner = nullptr;
+    // The other faction in a two-faction resolve (commerce, probes, gifts, combat). Admits
+    // that pair's FactionPair effects and Partner* conditions.
+    const Faction* pPartnerFaction = nullptr;
     // The kind of gift whose value pFaction weighs; GiftKind reads it.
     std::optional<TradeKind_t> giftKind;
     // World yield rules for terrain-scaled amount sources. Stamped by TileEffectsContext,
@@ -352,7 +352,7 @@ inline const Unit* OpposingCombatant_(const EffectContext_t& ctx)
     return nullptr;
 }
 
-// Whether a FactionPair effect's partner is ctx.pPartner. False when ctx names no partner.
+// Whether a FactionPair effect's partner is ctx.pPartnerFaction. False when ctx names no partner.
 bool MatchesPartner(const ActiveEffect_t& effect, const EffectContext_t& ctx);
 
 // Drops an amount source this context cannot evaluate, rather than throwing at resolve.

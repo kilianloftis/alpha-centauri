@@ -14,12 +14,50 @@
         "no_power_overloads": true,
         "no_incited_pact_treaty_scripts": true,
         "ai_auto_personality": false,
-        "combat_handicap": true,
-        "combat_handicap_natives_only": false,
         "planet_fauna_diff": 0,
         "planet_fauna_swarm_event": false
       },
       "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "FactionUnits",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "Player"
+          },
+          "condition": {
+            "kind": "AllOf",
+            "conditions": [
+              { "kind": "IsDefending", "value": false },
+              { "kind": "PartnerPlayerType", "type": "AI" }
+            ]
+          },
+          "parameters": {
+            "stat": "attack",
+            "amount": 2,
+            "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionUnits",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "AI"
+          },
+          "condition": {
+            "kind": "AllOf",
+            "conditions": [
+              { "kind": "IsDefending", "value": false },
+              { "kind": "PartnerPlayerType", "type": "Player" }
+            ]
+          },
+          "parameters": {
+            "stat": "attack",
+            "amount": 0.25,
+            "op": "MultiplyGeometric"
+          }
+        },
         {
           "type": "StatModifier",
           "scope": "AllOwnerBases",
@@ -141,12 +179,50 @@
         "colony_pod_preserves_size_1_base": true,
         "no_power_overloads": true,
         "ai_auto_personality": false,
-        "combat_handicap": true,
-        "combat_handicap_natives_only": false,
         "planet_fauna_diff": 1,
         "planet_fauna_swarm_event": false
       },
       "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "FactionUnits",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "Player"
+          },
+          "condition": {
+            "kind": "AllOf",
+            "conditions": [
+              { "kind": "IsDefending", "value": false },
+              { "kind": "PartnerPlayerType", "type": "AI" }
+            ]
+          },
+          "parameters": {
+            "stat": "attack",
+            "amount": 1.5,
+            "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionUnits",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "AI"
+          },
+          "condition": {
+            "kind": "AllOf",
+            "conditions": [
+              { "kind": "IsDefending", "value": false },
+              { "kind": "PartnerPlayerType", "type": "Player" }
+            ]
+          },
+          "parameters": {
+            "stat": "attack",
+            "amount": 0.5,
+            "op": "MultiplyGeometric"
+          }
+        },
         {
           "type": "StatModifier",
           "scope": "AllOwnerBases",
@@ -255,12 +331,31 @@
         "ai_atrocity_threshold": 20,
         "random_events_after_turn": 55,
         "ai_secret_projects_require_human_prereq": true,
-        "combat_handicap": true,
-        "combat_handicap_natives_only": true,
         "planet_fauna_diff": 2,
         "planet_fauna_swarm_event": false
       },
       "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "FactionUnits",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "AI"
+          },
+          "condition": {
+            "kind": "AllOf",
+            "conditions": [
+              { "kind": "IsDefending", "value": false },
+              { "kind": "PartnerPlayerType", "type": "Player" },
+              { "kind": "IsNativeLifeFaction" }
+            ]
+          },
+          "parameters": {
+            "stat": "attack",
+            "amount": 0.75,
+            "op": "MultiplyGeometric"
+          }
+        },
         {
           "type": "StatModifier",
           "scope": "AllOwnerBases",
