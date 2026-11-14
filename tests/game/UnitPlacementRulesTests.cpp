@@ -38,23 +38,50 @@ TEST_CASE("Granted units take the origin, then whole rings out to radius 2", "[u
     {
         pTile->SetElevation(100);
     }
-    const FactionId_t factionId = fixture.MakeFaction().GetFactionId();
+    Faction& rFaction = fixture.MakeFaction();
     const UnitDesign& rLandDesign = fixture.MakeDesign({"test_chassis"});
     fixture.At(9, 9).SetElevation(-100);
     const Tile& origin = fixture.At(8, 8);
 
     const std::vector<const Tile*> one =
-        PlacementTiles(origin, rLandDesign, factionId, 1);
+        PlacementTiles(origin, rLandDesign, rFaction, 1);
     REQUIRE(one.size() == 1);
     CHECK(one.front() == &origin);
 
     // Ring 1 is taken whole, less the flooded tile a land unit cannot stand on.
     const std::vector<const Tile*> two =
-        PlacementTiles(origin, rLandDesign, factionId, 2);
+        PlacementTiles(origin, rLandDesign, rFaction, 2);
     CHECK(two.size() == 8);
     CHECK(std::find(two.begin(), two.end(), &fixture.At(9, 9)) == two.end());
 
     const std::vector<const Tile*> many =
-        PlacementTiles(origin, rLandDesign, factionId, 100);
+        PlacementTiles(origin, rLandDesign, rFaction, 100);
     CHECK(many.size() == 24);
+}
+
+TEST_CASE("PlacementTiles skips tiles occupied by a faction that may not share",
+          "[units][grant]")
+{
+    FactionFixture fixture;
+    for (auto& pTile : fixture.map.GetTiles())
+    {
+        pTile->SetElevation(100);
+    }
+    Faction& rFaction = fixture.MakeFaction();
+    Faction& rRival = fixture.MakeFaction();
+    const UnitDesign& rLandDesign = fixture.MakeDesign({"test_chassis"});
+    const Tile& origin = fixture.At(8, 8);
+
+    fixture.MakeUnit(rRival, 8, 8, {"test_chassis"});
+    const std::vector<const Tile*> blocked =
+        PlacementTiles(origin, rLandDesign, rFaction, 1);
+    REQUIRE_FALSE(blocked.empty());
+    CHECK(std::find(blocked.begin(), blocked.end(), &origin) == blocked.end());
+
+    const Tile& friendlyOrigin = fixture.At(12, 12);
+    fixture.MakeUnit(rFaction, 12, 12, {"test_chassis"});
+    const std::vector<const Tile*> withFriendly =
+        PlacementTiles(friendlyOrigin, rLandDesign, rFaction, 1);
+    REQUIRE(withFriendly.size() == 1);
+    CHECK(withFriendly.front() == &friendlyOrigin);
 }

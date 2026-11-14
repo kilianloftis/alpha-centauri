@@ -227,7 +227,7 @@ int SpawnGrantedUnits_(GameState& rGameState, Faction& rFaction, const UnitDesig
 {
     WorldMap& rMap = rGameState.GetWorldMap();
     const std::vector<const Tile*> tiles =
-        PlacementTiles(rAnchor.GetTile(), rDesign, rFaction.GetFactionId(), count);
+        PlacementTiles(rAnchor.GetTile(), rDesign, rFaction, count);
     int spawned = 0;
     for (const Tile* pTile : tiles)
     {

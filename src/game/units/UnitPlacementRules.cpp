@@ -3,12 +3,14 @@
 #include "game/CurrentGameState.h"
 #include "game/GameState.h"
 #include "game/base/BaseManager.h"
+#include "game/diplomacy/DiplomaticPermissionRules.h"
 #include "game/faction/Faction.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/movement/MovementRules.h"
 #include "game/movement/TransportRules.h"
+#include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitDomain.h"
 
@@ -41,6 +43,18 @@ bool DesignCanHoldTile_(const UnitDesign& rDesign, const Tile& rTile, FactionId_
     return false;
 }
 
+bool FactionMayShareTile_(const Faction& rFaction, const Tile& rTile, const WorldMap& rWorldMap)
+{
+    for (const Unit* pUnit : rWorldMap.GetUnitsOnTile(rTile))
+    {
+        if (pUnit && !MayShareTiles(rFaction, pUnit->GetFaction().GetFactionId()))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 } // namespace
 
 std::optional<BaseId_t> GrantAnchorBase(const Faction& rFaction, const BaseManager* pContextBase,
@@ -69,14 +83,15 @@ std::optional<BaseId_t> GrantAnchorBase(const Faction& rFaction, const BaseManag
 }
 
 std::vector<const Tile*> PlacementTiles(const Tile& rOrigin, const UnitDesign& rDesign,
-                                        FactionId_t factionId, int needed)
+                                        const Faction& rFaction, int needed)
 {
     const GameState& rGame = CurrentGameState();
     const WorldMap& rWorldMap = rGame.GetWorldMap();
     std::vector<const Tile*> found;
     const auto consider = [&](const Tile* pTile)
     {
-        if (!DesignCanHoldTile_(rDesign, *pTile, factionId, rWorldMap))
+        if (!DesignCanHoldTile_(rDesign, *pTile, rFaction.GetFactionId(), rWorldMap)
+            || !FactionMayShareTile_(rFaction, *pTile, rWorldMap))
         {
             return;
         }
@@ -84,7 +99,6 @@ std::vector<const Tile*> PlacementTiles(const Tile& rOrigin, const UnitDesign& r
     };
 
     consider(&rOrigin);
-    // TODO: the two-ring search limit is hardcoded.
     for (int radius = 1; found.size() < static_cast<size_t>(needed) && radius <= 2; ++radius)
     {
         ForEachNeighborInChebyshevRadius(rOrigin, rWorldMap, radius,
