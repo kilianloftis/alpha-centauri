@@ -94,7 +94,7 @@ UnitMoveExecutor::AirdropActionResult_t UnitMoveExecutor::TryAirdrop(Unit& rUnit
         return result;
     }
 
-    rUnit.Latches().MarkAirdropped();
+    rUnit.MarkAirdropped();
     rUnit.ClearOrder();
 
     const AirdropLanding_t landing = AirdropLanding(rUnit, rDest);

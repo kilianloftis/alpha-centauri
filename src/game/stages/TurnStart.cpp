@@ -6,6 +6,7 @@
 #include "game/units/UnitManager.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitOrderExecutor.h"
+#include "game/units/HealingMutations.h"
 #include "lib/EventBus.h"
 #include "lib/GameEvent.h"
 #include "game/atrocities/AtrocityLedger.h"
@@ -37,6 +38,7 @@ StageResult_t TurnStart::ExecuteImpl(GameState& rGameState)
     {
         for (Unit& rUnit : rFaction.GetUnitManager().Units())
         {
+            ApplyIdleHeal(rUnit);
             rUnit.BeginTurn();
             rOrders.OnTurnStart(rUnit);
         }

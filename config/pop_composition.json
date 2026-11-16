@@ -112,6 +112,18 @@
             "amount": 0.5,
             "op": "MultiplyGeometric"
           }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionUnits",
+          "condition": {
+            "kind": "SubjectIsOnOriginBase"
+          },
+          "parameters": {
+            "stat": "heal_rate",
+            "amount": -10,
+            "op": "Add"
+          }
         }
       ]
     },
@@ -167,6 +179,18 @@
             "stat": "probe_action_cost",
             "amount": 0.5,
             "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionUnits",
+          "condition": {
+            "kind": "SubjectIsOnOriginBase"
+          },
+          "parameters": {
+            "stat": "heal_rate",
+            "amount": -10,
+            "op": "Add"
           }
         }
       ],
@@ -233,6 +257,18 @@
             "stat": "probe_action_cost",
             "amount": 0.5,
             "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionUnits",
+          "condition": {
+            "kind": "SubjectIsOnOriginBase"
+          },
+          "parameters": {
+            "stat": "heal_rate",
+            "amount": -10,
+            "op": "Add"
           }
         }
       ],

@@ -21,6 +21,7 @@ class TerrainOperationRegistry;
 enum class HotkeyAction_t
 {
     Hold,
+    HoldUntilHealed,
     SkipTurn,
     AttachTransport,
     UnloadTransport,

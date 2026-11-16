@@ -682,6 +682,71 @@ artifact is killed like any unit.
 - Popups: `#OURBOOTY1` / `#OURBOOTY2` (count) to the captor. The victim gets
   `#THEIRBOOTY1` / `2` under Vendetta, otherwise `#THEIRBOOTY3` ("has appropriated").
 
+## Unit healing (`repair_phase`)
+
+### `repair_phase` (`0x526030` → `0x5267A8`)
+
+Called from `faction_upkeep` (`0x527290`) before production. Thinker symbol: `repair_phase`.
+Next function is `allocate_energy` (`0x5267B0`).
+
+For each of the faction's vehicles with `damage_taken != 0` on a valid tile:
+
+- Skip unless idle: `!(state & VSTATE_HAS_MOVED)` (`0x4`), except **Fungal Tower**
+  (`unit_id == 19`), which heals anyway (`0x5261DB`–`0x5261E8`).
+- Skip Battle Ogre Mk1–3 (`unit_id` 16–18) entirely (`0x5261BD`–`0x5261D5`).
+  Express as `MaxHealPercent` `MaxClamp` 0 on those designs (zeros the tile heal cap and
+  facility full-repair target); `HealRate` `MaxClamp` 0 alone still allows a high MinClamp from a facility.
+- `VSTATE_HAS_MOVED` is set by movement attempts and combat (both sides in
+  `battle_fight_2` at `0x507500` / `0x50750F`; stack collateral at `0x50AAC0`). Cleared later
+  in `enemy_strategy` (`0x561080`), after this phase — so heal sees last turn's moves and
+  inter-turn attacks. `veh_skip` (`0x5C1D20`) spends moves but does **not** set the bit.
+
+Rate (`value` at `[ebp-0x4]`):
+
+| Step | Address | Effect |
+|---|---|---|
+| Start | `0x526200` | `value = 1` |
+| Native on fungus | `0x526261` | `value = 2` (replace) |
+| Own territory | `0x526284` | `value += 1` when `whose_territory` (`0x4E3EF0`) **equals the vehicle faction** (`cmp eax, edi` at `0x526280`). Treaty/Pact do **not** count: `whose_territory` may return a foreign owner id when diplo bits `0x8000008` hold (or `−1` when they do not), and neither equals the vehicle faction. |
+| Air + airbase | `0x5262D4` | `value += 1` |
+| Land + bunker | `0x5262F5` | `value += 1` |
+| Non-rioting base | `0x52632E`–`0x52633B` | `value += 1` (riots: `BASE.state_flags` bit `0x2`) |
+| Native + `breed_mod` | `0x526376` | `value = damage_taken` (full heal) |
+| Land CC / sea NY / air AC or SP | `0x5263A6`–`0x526422` | `value = damage_taken` |
+| Land Repair abl (stack) | `0x526454`–`0x526512` | `value *= 2`; clears field cap |
+| Own Nano Factory | `0x526515`–`0x526548` | `value = damage_taken`; clears field cap |
+
+`repair_value = value * reactor` (`0x526565`). Max HP is `10 * reactor`, so each `value`
+point removes **10% of max HP**. Facility / Nano / native-breed assign `value = damage_taken`
+(byte at `VEH+0x10` / `0x952838`) for a one-turn full repair.
+
+Field cap (`0x5265AD`): when not in a base, no Repair abl, no Nano →
+`repair_limit = 2 * reactor` (cannot heal above 80% HP). Cleared for fungus+native or
+fungus+Xenoempathy Dome (`0x526607`–`0x526637`); Xeno also adds one reactor to
+`repair_value`. Standing on any base tile (`base_at >= 0`) clears the limit even when
+rioting (riots only skip the base bonus block). Sensors are unused. Monolith heal is
+separate (`monolith` `0x57A050`).
+
+SP stand-ins for CC/NY/AC: binary compares the **project base owner to the vehicle's
+faction** (`0x52640D`–`0x526420`), not the occupied base's owner.
+
+Sentry wake (`ORDER_SENTRY_BOARD` == 1): after a heal that reaches `repair_limit`, human
+factions clear the order (`0x52667A`–`0x5266E6`), except land units on ocean.
+`ORDER_HOLD` (2) only has a waypoint timer, not heal-based wake. `sleep` (`0x5C01A0`) sets
+sentry with no timer.
+
+`breed_mod` (`0x4E65C0`): count of Xenoempathy Dome, Pholus Mutagen, Voice of Planet,
+Centauri Preserve, Temple of Planet, Biology Lab, Bioenhancement Center (and Cyborg Factory
+pair). Non-zero → native full heal at a non-rioting base.
+
+### Thinker
+
+Thinker replaces `faction_upkeep`'s call with its `repair_phase` (`gameturn.cpp`): facility /
+native / Nano use `value += conf.repair_*` (defaults 10 ≈ full for fission; `thinker.ini`
+often ships 2) instead of `value = damage_taken`. Friendly territory defaults to **0**.
+`has_facility` uses the **base** owner (`Fix:`). Brood Pit is added to `breed_mod` (`Fix:`,
+not in the binary). `repair_battle_ogre` can allow Ogre healing.
+
 ## Unit disband
 
 ### `Console::disband` (`0x4D2AC0`)

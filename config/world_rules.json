@@ -41,6 +41,18 @@
         "amount": 1,
         "op": "Add"
       }
+    },
+    {
+      "type": "StatModifier",
+      "scope": "WorldGlobal",
+      "condition": {
+        "kind": "InOwnTerritory"
+      },
+      "parameters": {
+        "stat": "heal_rate",
+        "amount": 10,
+        "op": "Add"
+      }
     }
   ]
 }

@@ -541,8 +541,7 @@ void ParseRuleFlag_(const ConfigReader& rParams, EffectConfig_t& rEffect)
     }
     else if (rParams.Has("domain"))
     {
-        throw std::runtime_error(
-            "RuleFlag 'domain' is only valid with flag 'harbors'");
+        throw std::runtime_error("RuleFlag 'domain' is only valid with flag 'harbors'");
     }
     rEffect.effect = ruleFlag;
 }
@@ -1106,6 +1105,15 @@ const std::unordered_map<std::string, ParseConditionFn_>& ConditionParsers_()
          [](const nlohmann::json&) -> Condition_t { return OriginBaseIsHomeBase_t{}; }},
         {"SubjectIsOnOriginBase",
          [](const nlohmann::json&) -> Condition_t { return SubjectIsOnOriginBase_t{}; }},
+        {"BaseIsRioting",
+         [](const nlohmann::json& rJson) -> Condition_t {
+             return BaseIsRioting_t{OptionalConditionBool_(rJson, "value", true, "BaseIsRioting")};
+         }},
+        {"InOwnTerritory",
+         [](const nlohmann::json& rJson) -> Condition_t {
+             return InOwnTerritory_t{
+                 OptionalConditionBool_(rJson, "value", true, "InOwnTerritory")};
+         }},
         {"SocialRating", ParseSocialRatingCondition_},
         {"EffectiveMorale", ParseEffectiveMoraleCondition_},
         {"OriginBaseHasBuilding",

@@ -728,10 +728,20 @@ TEST_CASE("Disengage criteria each block withdrawal", "[combat][disengage]")
         CHECK(result.bDefenderDestroyed);
     }
 
+    SECTION("defender combat-engaged without attacking may still disengage")
+    {
+        DisengageSetup_ setup;
+        setup.pDefender->MarkCombatEngaged();
+        CombatHarness_ harness(setup.fixture, /*seed*/ 11);
+        const CombatResult_t result =
+            harness.combat.Resolve(*setup.pAttacker, *setup.pDefender);
+        CHECK(result.bDefenderDisengaged);
+    }
+
     SECTION("defender attacked this turn")
     {
         DisengageSetup_ setup;
-        setup.pDefender->Latches().MarkAttacked();
+        setup.pDefender->MarkAttacked();
         CombatHarness_ harness(setup.fixture, /*seed*/ 11);
         const CombatResult_t result =
             harness.combat.Resolve(*setup.pAttacker, *setup.pDefender);
@@ -741,8 +751,8 @@ TEST_CASE("Disengage criteria each block withdrawal", "[combat][disengage]")
     SECTION("defender attacked last turn")
     {
         DisengageSetup_ setup;
-        setup.pDefender->Latches().MarkAttacked();
-        setup.pDefender->Latches().Roll();
+        setup.pDefender->MarkAttacked();
+        setup.pDefender->Latches().Advance();
         CombatHarness_ harness(setup.fixture, /*seed*/ 11);
         const CombatResult_t result =
             harness.combat.Resolve(*setup.pAttacker, *setup.pDefender);
@@ -752,9 +762,9 @@ TEST_CASE("Disengage criteria each block withdrawal", "[combat][disengage]")
     SECTION("attack two turns ago no longer blocks")
     {
         DisengageSetup_ setup;
-        setup.pDefender->Latches().MarkAttacked();
-        setup.pDefender->Latches().Roll();
-        setup.pDefender->Latches().Roll();
+        setup.pDefender->MarkAttacked();
+        setup.pDefender->Latches().Advance();
+        setup.pDefender->Latches().Advance();
         CombatHarness_ harness(setup.fixture, /*seed*/ 11);
         const CombatResult_t result =
             harness.combat.Resolve(*setup.pAttacker, *setup.pDefender);

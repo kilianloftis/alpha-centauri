@@ -10,6 +10,7 @@
 #include "game/combat/AttackRules.h"
 #include "game/combat/CollateralMutations.h"
 #include "game/combat/CombatConfigParser.h"
+#include "game/units/HealingConfigParser.h"
 #include "game/combat/CombatResolver.h"
 #include "game/combat/MoraleCalculator.h"
 #include "game/combat/MoraleConfig.h"
@@ -185,6 +186,8 @@ SessionInputs::SessionInputs(const OccupantFiles_t& rOccupants,
         ac::DiplomacyConfigParser::ParseConfig(FixturePath("diplomacy.json")));
     dataContext.combatConfig = std::make_unique<ac::CombatConfig_t>(
         ac::CombatConfigParser::ParseConfig(FixturePath("combat.json")));
+    dataContext.healingConfig = std::make_unique<ac::HealingConfig_t>(
+        ac::HealingConfigParser::ParseConfig(FixturePath("healing.json")));
     dataContext.diplomacyCalculator =
         std::make_unique<ac::DiplomacyCalculator>(*dataContext.diplomacyConfig);
     dataContext.hurryProductionCalculator =

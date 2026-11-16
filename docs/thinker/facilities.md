@@ -73,14 +73,13 @@ Each bullet is one SMAC effect. Tags:
 - **[blocked]** — no seam yet (missing type, consumer, or building→combat/production path)
 
 
-**Counts:** 30 done, 56 not authored, 8 partial, 17 blocked (111 effect bullets).
+**Counts:** 33 done, 56 not authored, 8 partial, 14 blocked (111 effect bullets).
 
 ### Blocked rollup (needs engine work)
 
 | Gap | Facilities |
 |---|---|
 | Building → combat `tile_defense` (and domain) | Perimeter, Tachyon, Naval Yard, Aerospace, Geosync sensor bonus, Flechette aura |
-| Per-turn facility repair rate | Command Center, Naval Yard, Aerospace |
 | Orbital yield halving / size cap | Sky Hydro, Nessus, Orbital Power (partial: flat +1 works) |
 | Psi Gate teleport order | Psi Gate |
 | Progenitor generator victory | Subspace Generator |
@@ -317,7 +316,7 @@ Each bullet is one SMAC effect. Tags:
 - **Config id:** `Command_Center`
 - **Alphax:** cost 4, upkeep 1, Doctrine: Mobility
 - **Effects:**
-  - **[blocked]** Repairs damaged land units at this base more quickly. — _per-turn healing TODO in UnitOrderExecutor; MayRepairAt is diplomacy only_
+  - Fully repairs damaged land units at this base in one idle upkeep. — _HealRate MinClamp 100 FactionUnits (SubjectIsOnOriginBase + land + !BaseIsRioting)_; Base tile heal_rate +10 is canceled by riot_tiers Add −10; terranx-map.md § Unit healing
   - Land units built here receive +2 morale. — _on_unit_produced GrantXp +2 land non-native_
 
 ### 28. Naval Yard
@@ -325,7 +324,7 @@ Each bullet is one SMAC effect. Tags:
 - **Config id:** `Naval_Yard`
 - **Alphax:** cost 8, upkeep 2, Doctrine: Initiative
 - **Effects:**
-  - **[blocked]** Repairs damaged sea units at this base more quickly. — _same repair TODO_
+  - Fully repairs damaged sea units at this base in one idle upkeep. — _HealRate MinClamp 100 FactionUnits (SubjectIsOnOriginBase + sea + !BaseIsRioting)_
   - Sea units built here receive +2 morale. — _on_unit_produced GrantXp + SubjectDomain sea_
   - **[blocked]** Adds +100% defense against sea attack at this base. — _domain defense unused in ResolveTileDefenseMultiplier_
 
@@ -334,7 +333,7 @@ Each bullet is one SMAC effect. Tags:
 - **Config id:** `Aerospace_Complex`
 - **Alphax:** cost 8, upkeep 2, Doctrine: Air Power
 - **Effects:**
-  - **[blocked]** Repairs damaged air units at this base more quickly. — _same repair TODO_
+  - Fully repairs damaged air units at this base in one idle upkeep. — _HealRate MinClamp 100 FactionUnits (SubjectIsOnOriginBase + air + !BaseIsRioting)_
   - Air units built here receive +2 morale. — _on_unit_produced GrantXp +2 air_
   - **[blocked]** Adds +100% defense against air attack at this base. — _domain defense unused in ResolveTileDefenseMultiplier_
   - Required before this base can produce orbital facilities (and Geosync); Cloudbase Academy or Space Elevator SP also satisfy the gate. — _those buildings' required_buildings.any_; `terranx-map.md` § Facility-on-facility

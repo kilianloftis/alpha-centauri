@@ -293,6 +293,21 @@ struct SubjectIsOnOriginBase_t
 {
 };
 
+// True when the base on pUnit's tile is drone-rioting, matching bMatches. Fail closed with no
+// unit or no base on the tile. Used by Base ThisTile heal_rate (skipped while rioting).
+struct BaseIsRioting_t
+{
+    bool bMatches = true;
+};
+
+// True when pUnit stands on a tile whose territory owner is the unit's faction, matching
+// bMatches. Own claim only — Treaty/Pact do not count (terranx-map.md Unit healing). Fail
+// closed without a unit.
+struct InOwnTerritory_t
+{
+    bool bMatches = true;
+};
+
 // True when the unit owner's faction-wide social rating satisfies CompareOp_t against value.
 // Fail closed if pUnit is absent.
 struct SocialRating_t
@@ -467,6 +482,7 @@ struct GiftKind_t
 
 using ConditionVariant_t = std::variant<TargetTileHas_t, AllOf_t, AnyOf_t, IsDefending_t,
                                         IsInCombat_t, OriginBaseIsHomeBase_t, SubjectIsOnOriginBase_t,
+                                        BaseIsRioting_t, InOwnTerritory_t,
                                         SocialRating_t, EffectiveMorale_t, OriginBaseHasBuilding_t,
                                         AttackerIsEmbarked_t, HasAirdroppedThisTurn_t,
                                         AttackerDomain_t, DefenderDomain_t,

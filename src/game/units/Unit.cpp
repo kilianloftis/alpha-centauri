@@ -164,6 +164,32 @@ void Unit::SetCurrentHp(int hp)
 {
     m_currentHp = std::clamp(hp, 0, ResolveStat(*this, StatId_t::HitPoints));
 }
+
+void Unit::ApplyDamage(int damage)
+{
+    if (damage <= 0)
+    {
+        return;
+    }
+    m_latches.Record(UnitTurnEvent_t::TookDamage);
+    SetCurrentHp(m_currentHp - damage);
+}
+
+void Unit::MarkAttacked()
+{
+    m_latches.Record(UnitTurnEvent_t::Attacked);
+}
+
+void Unit::MarkCombatEngaged()
+{
+    m_latches.Record(UnitTurnEvent_t::Combat);
+}
+
+void Unit::MarkAirdropped()
+{
+    m_latches.Record(UnitTurnEvent_t::Airdropped);
+}
+
 void Unit::SetCurrentFuel(int fuel)
 {
     m_currentFuel = std::clamp(fuel, 0, GetMaxFuel());
@@ -181,7 +207,7 @@ int Unit::MaxMoveFragments_() const
 void Unit::BeginTurn()
 {
     SetMoveFragmentsRemaining(MaxMoveFragments_());
-    m_latches.Roll();
+    m_latches.Advance();
 }
 
 void Unit::SpendMoveFragments(int fragments)
@@ -190,6 +216,7 @@ void Unit::SpendMoveFragments(int fragments)
     {
         return;
     }
+    m_latches.Record(UnitTurnEvent_t::MoveSpend);
     SetMoveFragmentsRemaining(m_moveFragmentsRemaining - fragments);
     if (!m_pDesign->UsesFuel())
     {

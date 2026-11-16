@@ -614,6 +614,32 @@ struct ConditionEvaluator_
             && &ctx.pUnit->GetTile() == &pOriginBase->GetTile();
     }
 
+    bool operator()(const BaseIsRioting_t& rRiot) const
+    {
+        if (ctx.pUnit == nullptr)
+        {
+            return false;
+        }
+        const BaseManager* pBase = CurrentGameState().FindBaseAt(ctx.pUnit->GetTile());
+        if (pBase == nullptr)
+        {
+            return false;
+        }
+        return pBase->GetPopulation().IsRioting() == rRiot.bMatches;
+    }
+
+    bool operator()(const InOwnTerritory_t& rOwn) const
+    {
+        if (ctx.pUnit == nullptr)
+        {
+            return false;
+        }
+        const FactionId_t owner =
+            CurrentGameState().GetWorldMap().GetTerritory().GetOwner(ctx.pUnit->GetTile());
+        const bool bOwn = owner == ctx.pUnit->GetFaction().GetFactionId();
+        return bOwn == rOwn.bMatches;
+    }
+
     bool operator()(const SocialRating_t& rRating) const
     {
         if (ctx.pUnit == nullptr)
@@ -872,6 +898,8 @@ bool ConditionNeedsSituationalContext(const Condition_t& rCondition)
                                || std::is_same_v<T, IsInCombat_t>
                                || std::is_same_v<T, OriginBaseIsHomeBase_t>
                                || std::is_same_v<T, SubjectIsOnOriginBase_t>
+                               || std::is_same_v<T, BaseIsRioting_t>
+                               || std::is_same_v<T, InOwnTerritory_t>
                                || std::is_same_v<T, SocialRating_t>
                                || std::is_same_v<T, EffectiveMorale_t>
                                || std::is_same_v<T, OriginBaseHasBuilding_t>

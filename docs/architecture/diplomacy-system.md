@@ -404,7 +404,7 @@ side has nothing to accept.
 |---|---|
 | `enter_territory` | `CanEnterTile` via `MayEnterTerritoryOf`, and `StepEvaluator` (`BlockedByTerritory`). A covert unit is exempt where the territory's owner does not know whose it is. A player's move order stops at the border and asks: break the agreement (Vendetta) and continue (`BreakAgreementAndContinue` in `movement/TerritoryEntryMutations.h`), or cancel the order (`TerritoryEntryInteraction_t`). Path planning avoids forbidden territory when it can. Attack legality uses `CanPhysicallyEnterTile`, since the attack itself declares Vendetta. |
 | `share_tiles` | `HasFriendlyOccupant`, `HasFriendlyBase`, and `StepEvaluator`'s hostile-occupant check, via `MayShareTiles`. `JoinsSharedStack`: a player's step onto a stack it may share is a move, not an attack. Attacking that stack stays legal, so a sneak attack out of a shared stack still works. |
-| `repair_at_bases` | `MayRepairAt`. Per-turn healing does not exist yet; it should ask this. |
+| `repair_at_bases` | `MayRepairAt`, used when capture / occupation asks whether a unit may be repaired in a base. |
 | `effects` | Each faction's effect pool (`FactionPair` scope); `CommerceRules` resolves `CommerceRate` toward the partner, and skips the pair at 0; `QuoteProbeActionCost` resolves `ProbeActorCost` toward the target |
 | `may_attack` | `ApplyHostileAct`: an attack under a status that does not allow it declares Vendetta. `StatusBrokenByAttack` names the status such an attack breaks, for a faction the attacker has met, and the player's attack asks first (`WorldView::TryBeginAttack_`): "Break the Treaty?" / "Break the Truce?", or "Pronounce Vendetta?" under Neutral. The prompt is the player's alone; the attack itself stays legal, so an AI attack or one out of a shared stack still sneak-attacks. |
 | `break_by_attack` | `MayBreakByAttack`: without it, the player's attack is refused with a notice instead of the prompt, and the status ends only in talks (SMAC's Pact). |
@@ -699,7 +699,7 @@ save-game serialisation work to exist first. Recorded in
   ordering and expiry rules that are not specified anywhere.
 - **Treaty terms with duration** (tribute per turn). `DiplomaticProposal_t` carries only immediate
   transfers and a status change; the only timer is a status's own `duration_turns`.
-- **Healing.** `MayRepairAt` answers the diplomacy half; per-turn healing does not exist.
+- **Healing.** Idle upkeep heal is entirely `HealRate` / `MaxHealPercent` (Base, facilities, Nano, territory). `HealingRules` / `HealingMutations` run it in `TurnStart`.
 - **Talk standing.** Atrocity, agreement-break, probe, relic-capture, allied-territory,
   terraform-rainfall and gift writers are in. The player's probe excuse dialog, trade friction,
   base gift patience, the great satan's gift count, revenge clearing on a generous gift, the +3

@@ -904,7 +904,7 @@ TEST_CASE("A defender lost to its own failed intercept ends the attack with no f
         [&](const Unit& rUnit) { return rUnit.GetUnitId() == garrisonId; });
     CHECK_FALSE(garrisonAlive);
 
-    CHECK(attacker.Latches().HasAttackedThisTurn());
+    CHECK(attacker.Latches().HasThisTurn(UnitTurnEvent_t::Attacked));
     CHECK(attacker.GetMoveFragmentsRemaining() < movesBefore);
     CHECK(attacker.GetXp() == xpBefore);
     CHECK(playerBase.GetPopulation().GetSize() == popBefore);

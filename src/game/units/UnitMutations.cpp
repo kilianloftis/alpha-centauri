@@ -11,7 +11,7 @@ namespace ac
 
 bool SpendAttack(Unit& rAttacker, AttackKind_t kind)
 {
-    rAttacker.Latches().MarkAttacked();
+    rAttacker.MarkAttacked();
     rAttacker.SpendMoveFragments(AttackMoveFragments(rAttacker, kind));
     rAttacker.ClearOrder();
     // Destroy Enhancement never expends SingleUse (terranx-map.md Destroy Enhancement).

@@ -455,6 +455,7 @@ One directory under `include/game/` and `src/game/` per domain. The filename suf
 - `supply/`: supply-pod config, event-group stamp index, open rules and mutations
 - `terraform/`: terraform projects, elevation change, terraform spread, surface flips
 - `units/`: the unit aggregate, designs, components and slots, upgrade rules/cost/mutations,
+  turn-event ledger (`UnitTurnLatches`), idle healing (`HealingRules` / `HealingMutations`),
   orders, the order executor
 - `visibility/`: exploration, fog, tile memory, revealed units, visibility settings
 - `world-events/`: scheduled world events

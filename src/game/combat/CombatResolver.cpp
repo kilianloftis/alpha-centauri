@@ -40,11 +40,11 @@ void ApplyRound_(Unit& rAttacker, Unit& rDefender, const CombatRoundOutcome_t& r
     // Only the loser is written; a losing strike attacker is left as it was.
     if (rOutcome.winner == CombatSide_t::Attacker)
     {
-        rDefender.SetCurrentHp(rDefender.GetCurrentHp() - rOutcome.defenderHpLoss);
+        rDefender.ApplyDamage(rOutcome.defenderHpLoss);
     }
-    else if (rOutcome.attackerHpLoss > 0)
+    else
     {
-        rAttacker.SetCurrentHp(rAttacker.GetCurrentHp() - rOutcome.attackerHpLoss);
+        rAttacker.ApplyDamage(rOutcome.attackerHpLoss);
     }
     rRound.attackerHpAfter = rAttacker.GetCurrentHp();
     rRound.defenderHpAfter = rDefender.GetCurrentHp();
@@ -76,6 +76,9 @@ CombatResolver::CombatResolver(const MoveCostRules& rMoveCosts,
 
 CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender)
 {
+    rAttacker.MarkCombatEngaged();
+    rDefender.MarkCombatEngaged();
+
     FightExits_t exits;
     exits.boardingHpToLose = BoardingThreshold(rAttacker, rDefender);
     // Defender only; budget from disengage_hp_limit (terranx-map.md "Disengage").
@@ -85,12 +88,16 @@ CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender)
 
 CombatResult_t CombatResolver::ResolveDuel(Unit& rAttacker, Unit& rDefender)
 {
+    rAttacker.MarkCombatEngaged();
+    rDefender.MarkCombatEngaged();
     // Artillery never withdraws (terranx-map.md "Disengage"), and boarding is a melee assault.
     return Fight_(rAttacker, rDefender, CombatEngagement_t::ArtilleryDuel, FightExits_t{});
 }
 
 CombatResult_t CombatResolver::Strike(Unit& rAttacker, Unit& rTarget)
 {
+    rAttacker.MarkCombatEngaged();
+    rTarget.MarkCombatEngaged();
     CombatResult_t result = BeginResult_(rAttacker, rTarget, CombatEngagement_t::ArtilleryStrike);
     const int hpFloor = BombardHpFloor(rTarget);
     result.rounds.push_back(PlayStrikeRound_(rAttacker, rTarget, result, hpFloor));

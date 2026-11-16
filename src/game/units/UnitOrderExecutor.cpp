@@ -13,6 +13,9 @@
 #include "game/terraform/TerraformRules.h"
 #include "game/units/IUnitOrderWorld.h"
 #include "game/units/UnitMoveExecutor.h"
+#include "game/units/HealingRules.h"
+#include "game/units/Unit.h"
+#include "game/map/Tile.h"
 
 #include <iostream>
 #include <optional>
@@ -30,6 +33,7 @@ OrderProgress_t ProgressOfHaltedMove_(const Unit& rUnit)
 {
     return rUnit.GetOrder().has_value() ? OrderProgress_t::Continue : OrderProgress_t::Complete;
 }
+
 
 } // namespace
 
@@ -177,10 +181,13 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit&, HoldOrder_t&)
     return OrderProgress_t::Continue;
 }
 
-OrderProgress_t UnitOrderExecutor::Execute_(Unit&, HoldUntilHealedOrder_t&)
+OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, HoldUntilHealedOrder_t&)
 {
-    // TODO: per-turn healing. Repair inside a base must check MayRepairAt (DiplomaticPermissionRules.h).
-    // Clear the order when the unit reaches full HP.
+    // Heal itself runs in TurnStart; this only wakes when already at the tile cap.
+    if (rUnit.GetCurrentHp() >= MaxHealableHp(rUnit))
+    {
+        return OrderProgress_t::Complete;
+    }
     return OrderProgress_t::Continue;
 }
 

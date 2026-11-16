@@ -61,6 +61,7 @@
 #include "game/base/BaseConquestCalculator.h"
 #include "game/base/BaseConquestConfigParser.h"
 #include "game/combat/CombatConfigParser.h"
+#include "game/units/HealingConfigParser.h"
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/atrocities/AtrocityConfigParser.h"
 #include "game/council/CouncilRulesConfigParser.h"
@@ -250,6 +251,7 @@ void LoadRuleConfigs_(GameDataContext& rData)
     rData.probeActionsConfig = ParseOwned_<ProbeActionConfigParser>(rPaths.probeActions);
     rData.baseConquestConfig = ParseOwned_<BaseConquestConfigParser>(rPaths.baseConquest);
     rData.combatConfig = ParseOwned_<CombatConfigParser>(rPaths.combat);
+    rData.healingConfig = ParseOwned_<HealingConfigParser>(rPaths.healing);
     ValidateEscapePodComponents_(rData);
     rData.councilProposalRegistry = LoadRegistry_<CouncilProposalRegistry>(rPaths.councilProposals);
     rData.councilRules = ParseOwned_<CouncilRulesConfigParser>(rPaths.councilRules);
@@ -348,6 +350,7 @@ void ThrowIfIncomplete(const GameDataContext& rData)
         {rData.probeActionsConfig.get(), "probeActionsConfig"},
         {rData.baseConquestConfig.get(), "baseConquestConfig"},
         {rData.combatConfig.get(), "combatConfig"},
+        {rData.healingConfig.get(), "healingConfig"},
         {rData.councilProposalRegistry.get(), "councilProposalRegistry"},
         {rData.councilRules.get(), "councilRules"},
         {rData.difficultyConfig.get(), "difficultyConfig"},

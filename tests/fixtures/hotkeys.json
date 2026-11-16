@@ -1,6 +1,7 @@
 {
   "bindings": [
     { "action": "Hold", "key": "H" },
+    { "action": "HoldUntilHealed", "key": "S" },
     { "action": "SkipTurn", "key": "Space" },
     { "action": "AttachTransport", "key": "L" },
     { "action": "UnloadTransport", "key": "U", "shift": true },

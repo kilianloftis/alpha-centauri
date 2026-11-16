@@ -237,6 +237,16 @@ absent.
 - **Where:** `ResolveProbeFrame` in `ProbeRules.cpp`.
 - **Missing:** the original agreement-gated version and a switch.
 
+### Skip turn keeps move fragments `[Ours]`
+
+- **Original:** `veh_skip` zeroes moves for the turn but does not set `VSTATE_HAS_MOVED`, so
+  the unit still heals in `repair_phase` (`docs/thinker/terranx-map.md` “Unit healing
+  (`repair_phase`)”).
+- **Ours:** `SkipTurnOrder_t` leaves move fragments intact; heal eligibility is derived from
+  the turn-event ledger (`IsHealIneligible`), not set by skip — same heal outcome as the binary.
+- **Where:** `UnitTurnEvent_t` / `HealingRules`; `SkipTurnOrder_t` in `UnitOrderExecutor`.
+- **Missing:** binary move-zeroing on skip as a selectable switch (heal path is complete).
+
 ### Audit unclassified Thinker fixes `[Thinker]`
 
 - **Original:** terranx-map.md records these Thinker `Fix:` changes without an entry here:
@@ -666,6 +676,13 @@ it behind a switch turns the line into a TODO entry.
 - **Paradise Garden is blocked when Punishment Sphere is present** ("Facility-on-facility"):
   the binary only blocks Punishment ← Paradise; Thinker's `facility_avail` adds the reverse
   as a marked bug fix.
+- **Facility / Nano / native-breed repair is `value = damage_taken` (one-turn full heal)**
+  ("Unit healing (`repair_phase`)"): Thinker's rewrite uses configurable `value +=
+  conf.repair_*` rates (`repair_base_facility` default 10, shipping ini often 2).
+- **Friendly-territory heal +1** ("Unit healing (`repair_phase`)"): Thinker's
+  `repair_friendly` defaults to 0.
+- **Brood Pit counts in `breed_mod` for native base full heal** ("Unit healing
+  (`repair_phase`)"): Thinker adds it (`Fix:`); the binary does not.
 
 ## Variant files
 

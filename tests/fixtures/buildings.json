@@ -305,7 +305,34 @@
         }
       }
     ],
-    "category": "conquer"
+    "category": "conquer",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "SubjectIsOnOriginBase"
+            },
+            {
+              "kind": "SubjectDomain",
+              "domain": "air"
+            },
+            {
+              "kind": "BaseIsRioting",
+              "value": false
+            }
+          ]
+        },
+        "parameters": {
+          "stat": "heal_rate",
+          "amount": 100,
+          "op": "MinClamp"
+        }
+      }
+    ]
   },
   {
     "id": "Skunkworks",
@@ -358,7 +385,34 @@
       }
     ],
     "category": "conquer",
-    "upkeep": 1
+    "upkeep": 1,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "SubjectIsOnOriginBase"
+            },
+            {
+              "kind": "SubjectDomain",
+              "domain": "land"
+            },
+            {
+              "kind": "BaseIsRioting",
+              "value": false
+            }
+          ]
+        },
+        "parameters": {
+          "stat": "heal_rate",
+          "amount": 100,
+          "op": "MinClamp"
+        }
+      }
+    ]
   },
   {
     "id": "Centauri_Preserve",
@@ -1895,5 +1949,39 @@
     "mineral_cost": 10,
     "category": "build",
     "effects": []
+  },
+  {
+    "id": "Naval_Yard",
+    "name": "Naval Yard",
+    "mineral_cost": 80,
+    "upkeep": 2,
+    "category": "build",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "SubjectIsOnOriginBase"
+            },
+            {
+              "kind": "SubjectDomain",
+              "domain": "sea"
+            },
+            {
+              "kind": "BaseIsRioting",
+              "value": false
+            }
+          ]
+        },
+        "parameters": {
+          "stat": "heal_rate",
+          "amount": 100,
+          "op": "MinClamp"
+        }
+      }
+    ]
   }
 ]

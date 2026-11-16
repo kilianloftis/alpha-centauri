@@ -41,6 +41,12 @@ enum class StatId_t
     Movement,
     Vision,
     HitPoints,
+    // Percent of max HP restored per idle upkeep (Additive). Seeded from healing.json
+    // base_heal_percent (10); bunker / airbase / own-territory / base bonuses Add on top.
+    HealRate,
+    // Highest HP as a percent of max an idle heal may reach in the field (Additive). Seeded
+    // from healing.json max_heal_percent (80); Base / Nano / fungus-native raise it to 100.
+    MaxHealPercent,
     // Damage received per lost psi-combat round. Reactors set this to their tier.
     PsiDamage,
     // HP removed from each other occupant when this unit kills a defender. Reactors set
@@ -326,6 +332,8 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::Movement:
         case StatId_t::Vision:
         case StatId_t::HitPoints:
+        case StatId_t::HealRate:
+        case StatId_t::MaxHealPercent:
         case StatId_t::PsiDamage:
         case StatId_t::CollateralDamage:
         case StatId_t::EarthquakeLevels:
@@ -514,6 +522,8 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::Movement:
         case StatId_t::Vision:
         case StatId_t::HitPoints:
+        case StatId_t::HealRate:
+        case StatId_t::MaxHealPercent:
         case StatId_t::PsiDamage:
         case StatId_t::CollateralDamage:
         case StatId_t::EarthquakeLevels:
@@ -577,6 +587,8 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "movement")                return StatId_t::Movement;
     if (rStat == "vision")                  return StatId_t::Vision;
     if (rStat == "hit_points")              return StatId_t::HitPoints;
+    if (rStat == "heal_rate")               return StatId_t::HealRate;
+    if (rStat == "max_heal_percent")        return StatId_t::MaxHealPercent;
     if (rStat == "psi_damage")              return StatId_t::PsiDamage;
     if (rStat == "collateral_damage")       return StatId_t::CollateralDamage;
     if (rStat == "earthquake_levels")       return StatId_t::EarthquakeLevels;

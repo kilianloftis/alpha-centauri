@@ -45,7 +45,6 @@ void UnitAttackExecutor::HaltBombardedTarget_(Unit& rTarget, const CombatResult_
 {
     if (!rCombat.bDefenderDestroyed)
     {
-        // TODO: a bombarded unit must not heal this turn, once per-turn healing exists.
         rTarget.ClearOrder();
     }
 }

@@ -1,0 +1,8 @@
+{
+  "base_heal_percent": 10,
+  "max_heal_percent": 80,
+  "block_heal_on_move_spend": true,
+  "block_heal_on_attacked": true,
+  "block_heal_on_combat": true,
+  "block_heal_on_took_damage": true
+}

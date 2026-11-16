@@ -28,7 +28,7 @@ bool MayEnterTerritoryOf(const Unit& rGuest, FactionId_t territoryOwner);
 bool MayShareTiles(const Faction& rA, FactionId_t b);
 
 // Whether rUnit may be repaired in rBase: its own faction's bases, or a faction whose status
-// with it allows repair_at_bases. Per-turn healing does not exist yet; it should ask this.
+// with it allows repair_at_bases.
 bool MayRepairAt(const Unit& rUnit, const BaseManager& rBase);
 
 } // namespace ac

@@ -359,7 +359,7 @@ TEST_CASE("Post-airdrop attack applies HasAirdroppedThisTurn penalty", "[unit][a
     ctx.pAttacker = &attacker;
     ctx.combatRole = CombatRole_t::Attacker;
     const int penalized = ResolveStat(attacker, StatId_t::Attack, ctx);
-    attacker.Latches().Roll();
+    attacker.Latches().Advance();
     const int normal = ResolveStat(attacker, StatId_t::Attack, ctx);
     CHECK(penalized < normal);
     (void)defender;

@@ -150,7 +150,56 @@
     "upkeep": 0,
     "secret_project": true,
     "category": "conquer",
-    "icon": "assets/sprites/projects/proj008.png"
+    "icon": "assets/sprites/projects/proj008.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "IsNativeLife"
+            },
+            {
+              "kind": "BaseIsRioting",
+              "value": false
+            }
+          ]
+        },
+        "parameters": {
+          "stat": "heal_rate",
+          "amount": 100,
+          "op": "MinClamp"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "Fungus"
+        },
+        "parameters": {
+          "stat": "max_heal_percent",
+          "amount": 100,
+          "op": "MinClamp"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "Fungus"
+        },
+        "parameters": {
+          "stat": "heal_rate",
+          "amount": 10,
+          "op": "Add"
+        }
+      }
+    ]
   },
   {
     "id": "Neural_Amplifier",
@@ -182,7 +231,16 @@
     "upkeep": 0,
     "secret_project": true,
     "category": "conquer",
-    "icon": "assets/sprites/projects/proj010.png"
+    "icon": "assets/sprites/projects/proj010.png",
+    "effects": [
+      {
+        "type": "GrantBuilding",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "building_id": "Naval_Yard"
+        }
+      }
+    ]
   },
   {
     "id": "Planetary_Datalinks",
@@ -307,7 +365,30 @@
     "upkeep": 0,
     "secret_project": true,
     "category": "conquer",
-    "icon": "assets/sprites/projects/proj016.png"
+    "icon": "assets/sprites/projects/proj016.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "IsNativeLife"
+            },
+            {
+              "kind": "BaseIsRioting",
+              "value": false
+            }
+          ]
+        },
+        "parameters": {
+          "stat": "heal_rate",
+          "amount": 100,
+          "op": "MinClamp"
+        }
+      }
+    ]
   },
   {
     "id": "Cyborg_Factory",
@@ -323,7 +404,16 @@
     "upkeep": 0,
     "secret_project": true,
     "category": "conquer",
-    "icon": "assets/sprites/projects/proj017.png"
+    "icon": "assets/sprites/projects/proj017.png",
+    "effects": [
+      {
+        "type": "GrantBuilding",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "building_id": "Bioenhancement_Center"
+        }
+      }
+    ]
   },
   {
     "id": "Theory_Of_Everything",
@@ -421,6 +511,24 @@
           "stat": "upgrade_cost_scale",
           "amount": 0.5,
           "op": "MultiplyGeometric"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "heal_rate",
+          "amount": 100,
+          "op": "MinClamp"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "max_heal_percent",
+          "amount": 100,
+          "op": "MinClamp"
         }
       }
     ]
@@ -607,6 +715,27 @@
         "parameters": {
           "flag": "suppress_planet_fauna"
         }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "IsNativeLife"
+            },
+            {
+              "kind": "BaseIsRioting",
+              "value": false
+            }
+          ]
+        },
+        "parameters": {
+          "stat": "heal_rate",
+          "amount": 100,
+          "op": "MinClamp"
+        }
       }
     ],
     "destroyed_effects": [
@@ -692,7 +821,16 @@
     "upkeep": 0,
     "secret_project": true,
     "category": "conquer",
-    "icon": "assets/sprites/projects/proj035.png"
+    "icon": "assets/sprites/projects/proj035.png",
+    "effects": [
+      {
+        "type": "GrantBuilding",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "building_id": "Aerospace_Complex"
+        }
+      }
+    ]
   },
   {
     "id": "Planetary_Energy_Grid",

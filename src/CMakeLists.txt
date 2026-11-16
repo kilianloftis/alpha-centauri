@@ -174,6 +174,10 @@ add_library(ac-core STATIC
     game/units/UnitMoveExecutor.cpp
     game/units/UnitOrderExecutor.cpp
     game/units/UnitMutations.cpp
+    game/units/HealingConfigParser.cpp
+    game/units/HealingRules.cpp
+    game/units/UnitTurnLatches.cpp
+    game/units/HealingMutations.cpp
     game/units/UpgradeCostCalculator.cpp
     game/units/UpgradeCostConfigParser.cpp
     game/units/UpgradeMutations.cpp

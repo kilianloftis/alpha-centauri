@@ -38,6 +38,7 @@ HotkeyStage_t StageFor(HotkeyAction_t action)
     switch (action)
     {
     case HotkeyAction_t::Hold:
+    case HotkeyAction_t::HoldUntilHealed:
     case HotkeyAction_t::SkipTurn:
     case HotkeyAction_t::AttachTransport:
     case HotkeyAction_t::UnloadTransport:

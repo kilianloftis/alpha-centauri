@@ -66,6 +66,7 @@ std::vector<HotkeyAction_t> UnitOrderInputController::MatchingOrderActions_(
     consider(HotkeyAction_t::Airdrop, CanAttemptAirdrop(rUnit).Ok());
     consider(HotkeyAction_t::DestroyEnhancement, CanDestroyEnhancement(rUnit));
     consider(HotkeyAction_t::Hold, true);
+    consider(HotkeyAction_t::HoldUntilHealed, true);
     consider(HotkeyAction_t::SkipTurn, true);
     return valid;
 }
@@ -115,6 +116,10 @@ void UnitOrderInputController::ApplyOrderAction_(HotkeyAction_t action, Unit& rU
         break;
     case HotkeyAction_t::Hold:
         rUnit.SetOrder(HoldOrder_t{});
+        Request_(UnitOrderRequestKind_t::OrderAssigned, nullptr);
+        break;
+    case HotkeyAction_t::HoldUntilHealed:
+        rUnit.SetOrder(HoldUntilHealedOrder_t{});
         Request_(UnitOrderRequestKind_t::OrderAssigned, nullptr);
         break;
     case HotkeyAction_t::SkipTurn:

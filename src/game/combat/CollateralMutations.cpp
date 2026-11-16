@@ -38,7 +38,7 @@ void ApplyHit_(UnitPositionIndex& rPositions, Unit& rAttacker, const CollateralH
     {
         return;
     }
-    rOccupant.SetCurrentHp(rOccupant.GetCurrentHp() - rHit.damage);
+    rOccupant.ApplyDamage(rHit.damage);
     if (rOccupant.GetCurrentHp() <= 0)
     {
         RemoveCasualty_(rPositions, rAttacker, rOccupant, rCaptured);

@@ -90,6 +90,11 @@ public:
     bool IsCombatUnit() const;
 
     void SetCurrentHp(int hp);
+    // Lowers HP and records TookDamage. No-op when damage <= 0.
+    void ApplyDamage(int damage);
+    void MarkAttacked();
+    void MarkCombatEngaged();
+    void MarkAirdropped();
     void SetCurrentFuel(int fuel);
     // Clamps to [0, MovementPoints * k_moveFragmentsPerPoint]. Does not burn fuel
     // (TurnStart refresh, captures, test setup). Gameplay spend uses SpendMoveFragments.

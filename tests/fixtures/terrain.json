@@ -221,6 +221,30 @@
         {
           "type": "StatModifier",
           "scope": "ThisTile",
+          "condition": {
+            "kind": "IsNativeLife"
+          },
+          "parameters": {
+            "stat": "heal_rate",
+            "amount": 10,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "condition": {
+            "kind": "IsNativeLife"
+          },
+          "parameters": {
+            "stat": "max_heal_percent",
+            "amount": 100,
+            "op": "MinClamp"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
           "parameters": {
             "stat": "nutrients",
             "amount": 1,

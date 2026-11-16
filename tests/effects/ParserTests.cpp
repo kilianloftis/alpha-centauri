@@ -955,6 +955,18 @@ TEST_CASE("ParseEffectConfig: conditions", "[effects][parser][condition]")
             EffectConfigParser::ParseCondition(json::parse(R"({ "kind": "IsInCombat" })"))
                 .AsVariant()));
 
+        const Condition_t notRioting = EffectConfigParser::ParseCondition(
+            json::parse(R"({ "kind": "BaseIsRioting", "value": false })"));
+        const auto* pRiot = std::get_if<BaseIsRioting_t>(&notRioting.AsVariant());
+        REQUIRE(pRiot);
+        CHECK_FALSE(pRiot->bMatches);
+        CHECK(ConditionNeedsSituationalContext(notRioting));
+
+        const Condition_t ownTerritory = EffectConfigParser::ParseCondition(
+            json::parse(R"({ "kind": "InOwnTerritory" })"));
+        CHECK(std::holds_alternative<InOwnTerritory_t>(ownTerritory.AsVariant()));
+        CHECK(ConditionNeedsSituationalContext(ownTerritory));
+
         const Condition_t effective = EffectConfigParser::ParseCondition(json::parse(R"({
             "kind": "EffectiveMorale", "op": "Le", "value": 3
         })"));

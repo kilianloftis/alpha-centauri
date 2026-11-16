@@ -343,6 +343,8 @@ struct ConditionReferenceValidator
     void operator()(const IsInCombat_t&) const {}
     void operator()(const OriginBaseIsHomeBase_t&) const {}
     void operator()(const SubjectIsOnOriginBase_t&) const {}
+    void operator()(const BaseIsRioting_t&) const {}
+    void operator()(const InOwnTerritory_t&) const {}
     void operator()(const SocialRating_t&) const {}
     void operator()(const EffectiveMorale_t&) const {}
     void operator()(const AttackerIsEmbarked_t&) const {}

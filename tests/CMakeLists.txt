@@ -118,6 +118,7 @@ add_executable(effects-tests
     game/MovementTests.cpp
     game/TransportTests.cpp
     game/FuelTests.cpp
+    game/HealingTests.cpp
     game/UnitDesignAvailabilityTests.cpp
     game/UnitUpgradeTests.cpp
     game/MoveCostTests.cpp

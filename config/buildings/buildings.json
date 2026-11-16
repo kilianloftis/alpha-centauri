@@ -368,7 +368,33 @@
     "upkeep": 1,
     "secret_project": false,
     "category": "build",
-    "icon": "assets/sprites/facilities/fac008.png"
+    "icon": "assets/sprites/facilities/fac008.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "SubjectIsOnOriginBase"
+            },
+            {
+              "kind": "IsNativeLife"
+            },
+            {
+              "kind": "BaseIsRioting",
+              "value": false
+            }
+          ]
+        },
+        "parameters": {
+          "stat": "heal_rate",
+          "amount": 100,
+          "op": "MinClamp"
+        }
+      }
+    ]
   },
   {
     "id": "Skunkworks",
@@ -862,6 +888,33 @@
     "secret_project": false,
     "category": "conquer",
     "icon": "assets/sprites/facilities/fac026.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "SubjectIsOnOriginBase"
+            },
+            {
+              "kind": "SubjectDomain",
+              "domain": "land"
+            },
+            {
+              "kind": "BaseIsRioting",
+              "value": false
+            }
+          ]
+        },
+        "parameters": {
+          "stat": "heal_rate",
+          "amount": 100,
+          "op": "MinClamp"
+        }
+      }
+    ],
     "on_unit_produced_effects": [
       {
         "type": "GrantXp",
@@ -899,7 +952,56 @@
     "upkeep": 2,
     "secret_project": false,
     "category": "build",
-    "icon": "assets/sprites/facilities/fac027.png"
+    "icon": "assets/sprites/facilities/fac027.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "SubjectIsOnOriginBase"
+            },
+            {
+              "kind": "SubjectDomain",
+              "domain": "sea"
+            },
+            {
+              "kind": "BaseIsRioting",
+              "value": false
+            }
+          ]
+        },
+        "parameters": {
+          "stat": "heal_rate",
+          "amount": 100,
+          "op": "MinClamp"
+        }
+      }
+    ],
+    "on_unit_produced_effects": [
+      {
+        "type": "GrantXp",
+        "parameters": {
+          "amount": 2,
+          "op": "Add"
+        },
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "SubjectDomain",
+              "domain": "sea"
+            },
+            {
+              "kind": "IsNativeLife",
+              "value": false
+            }
+          ]
+        }
+      }
+    ]
   },
   {
     "id": "Aerospace_Complex",
@@ -916,6 +1018,33 @@
     "secret_project": false,
     "category": "conquer",
     "icon": "assets/sprites/facilities/fac028.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "SubjectIsOnOriginBase"
+            },
+            {
+              "kind": "SubjectDomain",
+              "domain": "air"
+            },
+            {
+              "kind": "BaseIsRioting",
+              "value": false
+            }
+          ]
+        },
+        "parameters": {
+          "stat": "heal_rate",
+          "amount": 100,
+          "op": "MinClamp"
+        }
+      }
+    ],
     "on_unit_produced_effects": [
       {
         "type": "GrantXp",
@@ -953,7 +1082,33 @@
     "upkeep": 2,
     "secret_project": false,
     "category": "build",
-    "icon": "assets/sprites/facilities/fac029.png"
+    "icon": "assets/sprites/facilities/fac029.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "SubjectIsOnOriginBase"
+            },
+            {
+              "kind": "IsNativeLife"
+            },
+            {
+              "kind": "BaseIsRioting",
+              "value": false
+            }
+          ]
+        },
+        "parameters": {
+          "stat": "heal_rate",
+          "amount": 100,
+          "op": "MinClamp"
+        }
+      }
+    ]
   },
   {
     "id": "Centauri_Preserve",
@@ -970,6 +1125,32 @@
     "secret_project": false,
     "category": "grow",
     "icon": "assets/sprites/facilities/fac030.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "SubjectIsOnOriginBase"
+            },
+            {
+              "kind": "IsNativeLife"
+            },
+            {
+              "kind": "BaseIsRioting",
+              "value": false
+            }
+          ]
+        },
+        "parameters": {
+          "stat": "heal_rate",
+          "amount": 100,
+          "op": "MinClamp"
+        }
+      }
+    ],
     "on_unit_produced_effects": [
       {
         "type": "GrantXp",
@@ -1005,7 +1186,33 @@
         }
       ]
     },
-    "icon": "assets/sprites/facilities/fac031.png"
+    "icon": "assets/sprites/facilities/fac031.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "SubjectIsOnOriginBase"
+            },
+            {
+              "kind": "IsNativeLife"
+            },
+            {
+              "kind": "BaseIsRioting",
+              "value": false
+            }
+          ]
+        },
+        "parameters": {
+          "stat": "heal_rate",
+          "amount": 100,
+          "op": "MinClamp"
+        }
+      }
+    ]
   },
   {
     "id": "Psi_Gate",

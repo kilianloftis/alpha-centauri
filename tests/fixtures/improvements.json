@@ -407,6 +407,19 @@
           "amount": 50,
           "op": "MinClamp"
         }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "condition": {
+          "kind": "SubjectDomain",
+          "domain": "land"
+        },
+        "parameters": {
+          "stat": "heal_rate",
+          "amount": 10,
+          "op": "Add"
+        }
       }
     ]
   },
@@ -415,6 +428,24 @@
     "name": "Base",
     "domain": "land",
     "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "heal_rate",
+          "amount": 10,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "max_heal_percent",
+          "amount": 100,
+          "op": "MinClamp"
+        }
+      },
       {
         "type": "StatModifier",
         "scope": "ThisTile",
@@ -558,6 +589,19 @@
         "scope": "ThisTile",
         "parameters": {
           "flag": "airdrop_launch"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "condition": {
+          "kind": "SubjectDomain",
+          "domain": "air"
+        },
+        "parameters": {
+          "stat": "heal_rate",
+          "amount": 10,
+          "op": "Add"
         }
       }
     ]
