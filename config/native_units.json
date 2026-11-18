@@ -47,15 +47,6 @@
           "type": "StatModifier",
           "scope": "ThisUnit",
           "parameters": {
-            "stat": "psi_damage",
-            "amount": 1,
-            "op": "Add"
-          }
-        },
-        {
-          "type": "StatModifier",
-          "scope": "ThisUnit",
-          "parameters": {
             "stat": "collateral_damage",
             "amount": 1,
             "op": "Add"
@@ -147,15 +138,6 @@
           "parameters": {
             "stat": "hit_points",
             "amount": 10,
-            "op": "Add"
-          }
-        },
-        {
-          "type": "StatModifier",
-          "scope": "ThisUnit",
-          "parameters": {
-            "stat": "psi_damage",
-            "amount": 1,
             "op": "Add"
           }
         },
@@ -282,15 +264,6 @@
           "type": "StatModifier",
           "scope": "ThisUnit",
           "parameters": {
-            "stat": "psi_damage",
-            "amount": 1,
-            "op": "Add"
-          }
-        },
-        {
-          "type": "StatModifier",
-          "scope": "ThisUnit",
-          "parameters": {
             "stat": "collateral_damage",
             "amount": 1,
             "op": "Add"
@@ -400,15 +373,6 @@
           "type": "StatModifier",
           "scope": "ThisUnit",
           "parameters": {
-            "stat": "psi_damage",
-            "amount": 1,
-            "op": "Add"
-          }
-        },
-        {
-          "type": "StatModifier",
-          "scope": "ThisUnit",
-          "parameters": {
             "stat": "collateral_damage",
             "amount": 1,
             "op": "Add"
@@ -493,15 +457,6 @@
           "parameters": {
             "stat": "hit_points",
             "amount": 10,
-            "op": "Add"
-          }
-        },
-        {
-          "type": "StatModifier",
-          "scope": "ThisUnit",
-          "parameters": {
-            "stat": "psi_damage",
-            "amount": 1,
             "op": "Add"
           }
         },
@@ -599,15 +554,6 @@
           "parameters": {
             "stat": "hit_points",
             "amount": 10,
-            "op": "Add"
-          }
-        },
-        {
-          "type": "StatModifier",
-          "scope": "ThisUnit",
-          "parameters": {
-            "stat": "psi_damage",
-            "amount": 1,
             "op": "Add"
           }
         },

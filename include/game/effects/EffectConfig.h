@@ -365,8 +365,9 @@ struct DefenderIsNativeLife_t
     bool bMatches = true;
 };
 
-// True when the other combatant's domain is in `domains`: pDefender when combatRole is Attacker,
-// pAttacker when Defender. Fails closed outside combat. Empty is rejected by the parser.
+// True when the other combatant's domain is in `domains`: pDefender when pUnit is the attacker,
+// pAttacker when pUnit is the defender. Fails closed when pUnit is neither. Empty is rejected by
+// the parser.
 struct OpponentDomain_t
 {
     std::vector<UnitDomain_t> domains;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/GameDataPaths.h"
+#include "game/combat/CombatRules.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/map/MapRulesConfigParser.h"
 #include "game/worldgen/MapGenerationConfig.h"
@@ -242,15 +243,30 @@ inline ac::Condition_t SubjectDomainCondition(ac::UnitDomain_t domain)
     return ac::SubjectDomain_t{domain};
 }
 
+// The context for role's side of rAttacker's attack on rDefender.
+inline ac::EffectContext_t FightContext(const ac::Unit& rAttacker, const ac::Unit& rDefender,
+                                        ac::CombatRole_t role)
+{
+    ac::EffectContext_t ctx{&rDefender.GetTile(), role};
+    ctx.pAttacker = &rAttacker;
+    ctx.pDefender = &rDefender;
+    return ctx;
+}
+
+// rAttacker's conventional attack rating against rDefender, at neutral morale: its
+// conventional_attack value times its attack multiplier.
+inline double ConventionalAttackRating(const ac::Unit& rAttacker, const ac::Unit& rDefender)
+{
+    const ac::EffectContext_t ctx = FightContext(rAttacker, rDefender, ac::CombatRole_t::Attacker);
+    return ac::ResolveCombatRating(rAttacker, ac::k_ConventionalCombat.attack, ctx, 1.0);
+}
+
 // rDefender's conventional defense rating on its tile when rAttacker attacks it, at neutral
 // morale: its conventional_defense value times its defense multiplier.
 inline double ConventionalDefenseRating(const ac::Unit& rDefender, const ac::Unit& rAttacker)
 {
-    ac::EffectContext_t ctx{&rDefender.GetTile(), ac::CombatRole_t::Defender};
-    ctx.pAttacker = &rAttacker;
-    ctx.pDefender = &rDefender;
-    const ac::CombatRatingStats_t stats{ac::StatId_t::ConventionalDefense, ac::StatId_t::Defense};
-    return ac::ResolveCombatRating(rDefender, stats, ctx, 1.0);
+    const ac::EffectContext_t ctx = FightContext(rAttacker, rDefender, ac::CombatRole_t::Defender);
+    return ac::ResolveCombatRating(rDefender, ac::k_ConventionalCombat.defense, ctx, 1.0);
 }
 
 inline ac::Condition_t HasComponentCondition(std::string componentId)

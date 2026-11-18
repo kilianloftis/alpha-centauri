@@ -45,7 +45,10 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("movement") == StatId_t::Movement);
     CHECK(ParseStatId("vision") == StatId_t::Vision);
     CHECK(ParseStatId("hit_points") == StatId_t::HitPoints);
+    CHECK(ParseStatId("conventional_damage") == StatId_t::ConventionalDamage);
     CHECK(ParseStatId("psi_damage") == StatId_t::PsiDamage);
+    CHECK(ParseStatId("conventional_damage_taken") == StatId_t::ConventionalDamageTaken);
+    CHECK(ParseStatId("psi_damage_taken") == StatId_t::PsiDamageTaken);
     CHECK(ParseStatId("collateral_damage") == StatId_t::CollateralDamage);
     CHECK(ParseStatId("earthquake_levels") == StatId_t::EarthquakeLevels);
     CHECK(ParseStatId("fungal_bloom_tiles") == StatId_t::FungalBloomTiles);

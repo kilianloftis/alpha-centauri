@@ -5,6 +5,24 @@
       "type": "StatModifier",
       "scope": "WorldGlobal",
       "parameters": {
+        "stat": "conventional_damage",
+        "amount": 1,
+        "op": "Add"
+      }
+    },
+    {
+      "type": "StatModifier",
+      "scope": "WorldGlobal",
+      "parameters": {
+        "stat": "psi_damage",
+        "amount": 1,
+        "op": "Add"
+      }
+    },
+    {
+      "type": "StatModifier",
+      "scope": "WorldGlobal",
+      "parameters": {
         "stat": "psi_attack",
         "amount": 1,
         "op": "Add"

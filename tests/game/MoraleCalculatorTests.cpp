@@ -7,6 +7,7 @@
 #include "game/population/PopulationManager.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/combat/CombatResolver.h"
+#include "game/combat/CombatRules.h"
 #include "game/combat/MoraleCalculator.h"
 #include "game/combat/MoraleRules.h"
 #include "game/combat/MoraleMutations.h"
@@ -98,12 +99,12 @@ TEST_CASE("CombatMultiplier scales the attack rating with combat morale level", 
     Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_weapon"});
     const MoraleCalculator& morale = fixture.morale();
     const EffectContext_t ctx{};
-    const CombatRatingStats_t attack{StatId_t::ConventionalAttack, StatId_t::Attack};
     const auto ratingAtXp = [&](int xp)
     {
         unit.SetXp(xp);
         const int level = CombatMoraleLevel(unit, ctx, morale);
-        return ResolveCombatRating(unit, attack, ctx, morale.CombatMultiplier(level));
+        return ResolveCombatRating(unit, k_ConventionalCombat.attack, ctx,
+                                   morale.CombatMultiplier(level));
     };
 
     CHECK(ratingAtXp(0) == Catch::Approx(3.0)); // Very Green x0.75
@@ -352,11 +353,10 @@ TEST_CASE("Morale multiplies an attack bonus rather than adding to its percent",
     unit.SetXp(4); // Veteran
     const MoraleCalculator& morale = fixture.morale();
     const EffectContext_t ctx{&unit.GetTile(), CombatRole_t::Attacker};
-    const CombatRatingStats_t attack{StatId_t::ConventionalAttack, StatId_t::Attack};
 
     const int combatLevel = CombatMoraleLevel(unit, ctx, morale);
-    const double rating =
-        ResolveCombatRating(unit, attack, ctx, morale.CombatMultiplier(combatLevel));
+    const double rating = ResolveCombatRating(unit, k_ConventionalCombat.attack, ctx,
+                                              morale.CombatMultiplier(combatLevel));
     CHECK(rating == Catch::Approx(4.0 * 1.1 * 1.25));
 }
 

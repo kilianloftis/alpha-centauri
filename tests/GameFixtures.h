@@ -218,6 +218,10 @@ ac::Faction& AddNativeLifeFaction(FactionFixture& rFixtures);
 
 ac::BaseManager& MakeSessionBase(FactionFixture& rFixtures, ac::Faction& rFaction, int x, int y);
 
+// rDefender's ConventionalDefenseRating after it moves to (x, y).
+double ConventionalDefenseRatingAt(FactionFixture& rFixture, ac::Unit& rDefender,
+                                   const ac::Unit& rAttacker, int x, int y);
+
 // CombatResolver::Resolve, then the collateral UnitAttackExecutor lands on the tile a killed
 // defender left. For tests that fight a defender the tile would not field.
 ac::CombatResult_t ResolveWithCollateral(ac::CombatResolver& rCombat, ac::WorldMap& rMap,

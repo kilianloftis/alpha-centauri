@@ -617,9 +617,60 @@
         "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": {
-          "stat": "psi_damage",
+          "stat": "psi_damage_taken",
+          "amount": 2,
+          "op": "MultiplyGeometric"
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_extra_conventional_damage",
+    "name": "Test Extra Conventional Damage",
+    "type": "ability",
+    "mineral_cost": 0,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "conventional_damage",
           "amount": 2,
           "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_no_conventional_damage",
+    "name": "Test No Conventional Damage",
+    "type": "ability",
+    "mineral_cost": 0,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "conventional_damage",
+          "amount": -1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_half_conventional_damage_taken",
+    "name": "Test Half Conventional Damage Taken",
+    "type": "ability",
+    "mineral_cost": 0,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "conventional_damage_taken",
+          "amount": 0.5,
+          "op": "MultiplyGeometric"
         }
       }
     ]
@@ -844,9 +895,9 @@
         "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": {
-          "stat": "psi_damage",
+          "stat": "psi_damage_taken",
           "amount": 4,
-          "op": "Add"
+          "op": "MultiplyGeometric"
         }
       },
       {

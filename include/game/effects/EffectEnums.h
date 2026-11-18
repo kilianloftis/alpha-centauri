@@ -51,8 +51,14 @@ enum class StatId_t
     // Highest HP as a percent of max an idle heal may reach in the field (Additive). Seeded
     // from healing.json max_heal_percent (80); Base / Nano / fungus-native raise it to 100.
     MaxHealPercent,
-    // Damage received per lost psi-combat round. Reactors set this to their tier.
+    // HP the winner of a conventional / psi round deals the loser, before the loser's damage
+    // taken (Additive). combat.json Adds 1 to every unit.
+    ConventionalDamage,
     PsiDamage,
+    // Scales the HP this unit loses per conventional / psi round it loses (PureMultiplier).
+    // Reactors multiply psi damage taken by their tier, so psi ignores their extra HP.
+    ConventionalDamageTaken,
+    PsiDamageTaken,
     // HP removed from each other occupant when this unit kills a defender. Reactors set
     // this to their tier; native life Adds 1. Combat reads the attacker's effects only.
     CollateralDamage,
@@ -340,6 +346,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::HitPoints:
         case StatId_t::HealRate:
         case StatId_t::MaxHealPercent:
+        case StatId_t::ConventionalDamage:
         case StatId_t::PsiDamage:
         case StatId_t::CollateralDamage:
         case StatId_t::EarthquakeLevels:
@@ -416,6 +423,8 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::PlanetFaunaCargoScale:
         case StatId_t::EcoTerraformScale:
         case StatId_t::GiftSizeThreshold:
+        case StatId_t::ConventionalDamageTaken:
+        case StatId_t::PsiDamageTaken:
         case StatId_t::CollateralSusceptibility: return StatKind_t::PureMultiplier;
         case StatId_t::PromotionEligibilityChance:
         case StatId_t::PromotionSuccessChance:
@@ -537,7 +546,10 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::HitPoints:
         case StatId_t::HealRate:
         case StatId_t::MaxHealPercent:
+        case StatId_t::ConventionalDamage:
         case StatId_t::PsiDamage:
+        case StatId_t::ConventionalDamageTaken:
+        case StatId_t::PsiDamageTaken:
         case StatId_t::CollateralDamage:
         case StatId_t::EarthquakeLevels:
         case StatId_t::FungalBloomTiles:
@@ -605,7 +617,10 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "hit_points")              return StatId_t::HitPoints;
     if (rStat == "heal_rate")               return StatId_t::HealRate;
     if (rStat == "max_heal_percent")        return StatId_t::MaxHealPercent;
+    if (rStat == "conventional_damage")     return StatId_t::ConventionalDamage;
     if (rStat == "psi_damage")              return StatId_t::PsiDamage;
+    if (rStat == "conventional_damage_taken") return StatId_t::ConventionalDamageTaken;
+    if (rStat == "psi_damage_taken")        return StatId_t::PsiDamageTaken;
     if (rStat == "collateral_damage")       return StatId_t::CollateralDamage;
     if (rStat == "earthquake_levels")       return StatId_t::EarthquakeLevels;
     if (rStat == "fungal_bloom_tiles")      return StatId_t::FungalBloomTiles;

@@ -16,6 +16,7 @@
 #include "game/population/PopulationManager.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
+#include "game/combat/CombatRules.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
@@ -68,14 +69,6 @@ BuildingConfig_t Building_(const std::string& rId, std::vector<EffectConfig_t> e
     return building;
 }
 
-// rDefender's conventional defense rating after it moves to (x, y).
-double RatingAt_(actest::FactionFixture& rFixture, Unit& rDefender, const Unit& rAttacker, int x,
-                 int y)
-{
-    rFixture.MoveUnit(rDefender, x, y);
-    return actest::ConventionalDefenseRating(rDefender, rAttacker);
-}
-
 } // namespace
 
 TEST_CASE("Faction pool: a pop type's FactionGlobal effect is collected faction-wide",
@@ -125,18 +118,17 @@ TEST_CASE("FactionUnits lane: a building's FactionUnits stat modifier boosts liv
     BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
 
     Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_weapon"}, &base); // 4 attack intrinsic
-    const CombatRatingStats_t attack{StatId_t::ConventionalAttack, StatId_t::Attack};
     const EffectContext_t ctx{};
-    CHECK(ResolveCombatRating(unit, attack, ctx, 1.0) == Approx(4.0));
+    CHECK(ResolveCombatRating(unit, k_ConventionalCombat.attack, ctx, 1.0) == Approx(4.0));
 
     base.GetBuildingManager().AddBuilding("unit_attack_array"); // +25% attack, FactionUnits
-    CHECK(ResolveCombatRating(unit, attack, ctx, 1.0) == Approx(5.0)); // 4 * 1.25
+    CHECK(ResolveCombatRating(unit, k_ConventionalCombat.attack, ctx, 1.0) == Approx(5.0)); // 4 * 1.25
 
     // The design (unit-designer view) keeps showing intrinsic values.
     CHECK(ResolveStat(unit.GetDesign(), StatId_t::ConventionalAttack) == 4);
 
     base.GetBuildingManager().DestroyBuilding("unit_attack_array");
-    CHECK(ResolveCombatRating(unit, attack, ctx, 1.0) == Approx(4.0));
+    CHECK(ResolveCombatRating(unit, k_ConventionalCombat.attack, ctx, 1.0) == Approx(4.0));
 }
 
 TEST_CASE("FactionUnits lane: a building's FactionUnits InteractionOverride applies to live units",
@@ -470,22 +462,22 @@ TEST_CASE("Unit aura: a sensor-pod unit projects its ThisTile defense bonus with
     Unit& defender = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_weak_armor"});
     const Unit& attacker = fixture.MakeUnit(enemy, 0, 0, {"test_chassis", "test_weapon"});
 
-    CHECK(RatingAt_(fixture, defender, attacker, 8, 8) == Approx(1.25)); // own tile
-    CHECK(RatingAt_(fixture, defender, attacker, 10, 10) == Approx(1.25)); // Chebyshev 2
-    CHECK(RatingAt_(fixture, defender, attacker, 8, 12) == Approx(1.25)); // Chebyshev 2 diagonal
-    CHECK(RatingAt_(fixture, defender, attacker, 11, 11) == Approx(1.0));  // Chebyshev 3
+    CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, 8, 8) == Approx(1.25)); // own tile
+    CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, 10, 10) == Approx(1.25)); // Chebyshev 2
+    CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, 8, 12) == Approx(1.25)); // Chebyshev 2 diagonal
+    CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, 11, 11) == Approx(1.0));  // Chebyshev 3
 
     SECTION("the aura moves with the unit")
     {
         fixture.MoveUnit(unit, 0, 8);
-        CHECK(RatingAt_(fixture, defender, attacker, 10, 10) == Approx(1.0));
-        CHECK(RatingAt_(fixture, defender, attacker, 1, 9) == Approx(1.25));
+        CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, 10, 10) == Approx(1.0));
+        CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, 1, 9) == Approx(1.25));
     }
 
     SECTION("the aura disappears with the unit")
     {
         faction.GetUnitManager().DestroyUnit(unit);
-        CHECK(RatingAt_(fixture, defender, attacker, 8, 8) == Approx(1.0));
+        CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, 8, 8) == Approx(1.0));
     }
 }
 
@@ -517,7 +509,7 @@ TEST_CASE("Unit aura wraps horizontally across the map seam",
     Unit& defender = fixture.MakeUnit(faction, width - 2, 4, {"test_chassis", "test_weak_armor"});
     const Unit& attacker = fixture.MakeUnit(enemy, 8, 12, {"test_chassis", "test_weapon"});
 
-    CHECK(RatingAt_(fixture, defender, attacker, width - 2, 4) == Approx(1.25));
-    CHECK(RatingAt_(fixture, defender, attacker, width - 4, 4) == Approx(1.25));
-    CHECK(RatingAt_(fixture, defender, attacker, width - 6, 4) == Approx(1.0));
+    CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, width - 2, 4) == Approx(1.25));
+    CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, width - 4, 4) == Approx(1.25));
+    CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, width - 6, 4) == Approx(1.0));
 }

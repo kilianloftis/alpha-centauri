@@ -23,37 +23,15 @@ namespace ac
 namespace
 {
 
-bool IsPsiCombat_(const Unit& rAttacker, const Unit& rDefender)
+const CombatKind_t& CombatKindFor_(const Unit& rAttacker, const Unit& rDefender)
 {
-    return ResolveFlag(rAttacker, RuleFlagId_t::ForcesPsiCombat)
-           || ResolveFlag(rDefender, RuleFlagId_t::ForcesPsiCombat);
-}
-
-int RoundDamage_(const Unit& rReceiver, bool bPsiCombat)
-{
-    if (!bPsiCombat)
+    if (ResolveFlag(rAttacker, RuleFlagId_t::ForcesPsiCombat)
+        || ResolveFlag(rDefender, RuleFlagId_t::ForcesPsiCombat))
     {
-        return k_CombatRoundDamage;
+        return k_PsiCombat;
     }
-    return std::max(1, ResolveStat(rReceiver, StatId_t::PsiDamage));
+    return k_ConventionalCombat;
 }
-
-// The value stats a fight rates each side on. Both kinds share the Attack / Defense multipliers.
-struct CombatValueStats_t
-{
-    CombatRatingStats_t attack;
-    CombatRatingStats_t defense;
-};
-
-constexpr CombatValueStats_t k_ConventionalValues{
-    {StatId_t::ConventionalAttack, StatId_t::Attack},
-    {StatId_t::ConventionalDefense, StatId_t::Defense},
-};
-
-constexpr CombatValueStats_t k_PsiValues{
-    {StatId_t::PsiAttack, StatId_t::Attack},
-    {StatId_t::PsiDefense, StatId_t::Defense},
-};
 
 // One side of the fight, with the context and morale multiplier its stats resolve under.
 struct Fighter_t
@@ -73,6 +51,16 @@ Fighter_t MakeFighter_(const Unit& rUnit, const Unit& rAttacker, const Unit& rDe
                                                   : &rAttacker.GetFaction();
     const int level = CombatMoraleLevel(rUnit, ctx, rMorale);
     return Fighter_t{rUnit, ctx, rMorale.CombatMultiplier(level)};
+}
+
+// HP rLoser loses per round rWinner wins. At least 1, so every fight ends.
+int RoundDamage_(const Fighter_t& rWinner, const Fighter_t& rLoser, const CombatKind_t& rKind)
+{
+    const double dealt = ResolveUnitStat(CollectLiveUnitEffects(rWinner.rUnit), rKind.damage,
+                                         SeedFor(rKind.damage), &rWinner.ctx);
+    const double taken = ResolveMultiplicativeStat(rLoser.rUnit, rKind.damageTaken,
+                                                   SeedFor(rKind.damageTaken), rLoser.ctx);
+    return std::max(1, FinalizeResolvedStat(dealt * taken));
 }
 
 // An attacker with less than one move point left strikes at that fraction of its strength.
@@ -128,11 +116,10 @@ CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefen
         MakeFighter_(rAttacker, rAttacker, rDefender, CombatRole_t::Attacker, rMorale);
     const Fighter_t defender =
         MakeFighter_(rDefender, rAttacker, rDefender, CombatRole_t::Defender, rMorale);
-    strength.bPsiCombat = IsPsiCombat_(rAttacker, rDefender);
-    const CombatValueStats_t& values = strength.bPsiCombat ? k_PsiValues : k_ConventionalValues;
+    const CombatKind_t& kind = CombatKindFor_(rAttacker, rDefender);
     const CombatRatingStats_t& defenderStats =
-        engagement == CombatEngagement_t::ArtilleryDuel ? values.attack : values.defense;
-    const double attackRating = ResolveCombatRating(rAttacker, values.attack, attacker.ctx,
+        engagement == CombatEngagement_t::ArtilleryDuel ? kind.attack : kind.defense;
+    const double attackRating = ResolveCombatRating(rAttacker, kind.attack, attacker.ctx,
                                                     attacker.moraleMultiplier);
     const double defenseRating = ResolveCombatRating(rDefender, defenderStats, defender.ctx,
                                                      defender.moraleMultiplier);
@@ -142,31 +129,32 @@ CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefen
     strength.attackStrength = PartialMoveAttack_(rAttacker, strength.attackStrength);
     const double handicapped = strength.attackStrength * AttackHandicap_(attacker);
     strength.attackStrength = FloorResolvedStat(handicapped);
+    strength.attackerRoundDamage = RoundDamage_(defender, attacker, kind);
+    strength.defenderRoundDamage = RoundDamage_(attacker, defender, kind);
     return strength;
 }
 
-CombatRoundOutcome_t ResolveCombatRound(const Unit& rAttacker, const Unit& rDefender,
-                                        int attackRoll, int defenseRoll)
+CombatRoundOutcome_t ResolveCombatRound(const CombatStrength_t& rStrength, int attackRoll,
+                                        int defenseRoll)
 {
-    const bool bPsiCombat = IsPsiCombat_(rAttacker, rDefender);
     CombatRoundOutcome_t outcome;
     if (attackRoll > defenseRoll)
     {
         outcome.winner = CombatSide_t::Attacker;
-        outcome.damage = RoundDamage_(rDefender, bPsiCombat);
+        outcome.damage = rStrength.defenderRoundDamage;
         outcome.defenderHpLoss = outcome.damage;
         return outcome;
     }
     outcome.winner = CombatSide_t::Defender;
-    outcome.damage = RoundDamage_(rAttacker, bPsiCombat);
+    outcome.damage = rStrength.attackerRoundDamage;
     outcome.attackerHpLoss = outcome.damage;
     return outcome;
 }
 
-CombatRoundOutcome_t ResolveStrikeRound(const Unit& rAttacker, const Unit& rDefender,
+CombatRoundOutcome_t ResolveStrikeRound(const CombatStrength_t& rStrength, const Unit& rDefender,
                                         int attackRoll, int defenseRoll, int hpFloor)
 {
-    CombatRoundOutcome_t outcome = ResolveCombatRound(rAttacker, rDefender, attackRoll, defenseRoll);
+    CombatRoundOutcome_t outcome = ResolveCombatRound(rStrength, attackRoll, defenseRoll);
     outcome.attackerHpLoss = 0;
     const int current = rDefender.GetCurrentHp();
     const int floorHp = std::min(current, hpFloor);
@@ -193,10 +181,8 @@ CombatOdds_t ComputeCombatOdds(const Unit& rAttacker, const Unit& rDefender,
     const MoraleCalculator& rMorale = *rGame.GetGameData().moraleCalculator;
     const CombatStrength_t strength =
         ResolveCombatStrength(rAttacker, rDefender, rMorale, engagement);
-    const int attackerHits =
-        HitsToKill_(rAttacker.GetCurrentHp(), RoundDamage_(rAttacker, strength.bPsiCombat));
-    const int defenderHits =
-        HitsToKill_(rDefender.GetCurrentHp(), RoundDamage_(rDefender, strength.bPsiCombat));
+    const int attackerHits = HitsToKill_(rAttacker.GetCurrentHp(), strength.attackerRoundDamage);
+    const int defenderHits = HitsToKill_(rDefender.GetCurrentHp(), strength.defenderRoundDamage);
     const int attackerProduct = strength.attackStrength * attackerHits;
     const int defenderProduct = strength.defenseStrength * defenderHits;
     return ReduceOdds_(attackerProduct, defenderProduct);

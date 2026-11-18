@@ -558,17 +558,6 @@ bool DomainListed_(const std::vector<UnitDomain_t>& rDomains, const Unit* pUnit)
     return pUnit != nullptr && std::ranges::contains(rDomains, pUnit->GetDomain());
 }
 
-const Unit* Opponent_(const EffectContext_t& ctx)
-{
-    switch (ctx.combatRole)
-    {
-        case CombatRole_t::Attacker: return ctx.pDefender;
-        case CombatRole_t::Defender: return ctx.pAttacker;
-        case CombatRole_t::None:     return nullptr;
-    }
-    return nullptr;
-}
-
 // pFaction when set, else the unit subject's faction — polarity conditions share this.
 std::optional<FactionId_t> SubjectFactionId_(const EffectContext_t& ctx)
 {
@@ -714,7 +703,7 @@ struct ConditionEvaluator_
 
     bool operator()(const OpponentDomain_t& rDomain) const
     {
-        return DomainListed_(rDomain.domains, Opponent_(ctx));
+        return DomainListed_(rDomain.domains, OpposingCombatant_(ctx));
     }
 
     bool operator()(const AttackerIsNativeLife_t& rNative) const
@@ -1216,7 +1205,8 @@ double ResolveUnitStat(const UnitEffects_t& rUnitEffects, StatId_t statId, doubl
 namespace
 {
 
-// Shared by psi combat and MoraleRules' scale steps so they cannot drift.
+// Shared by ResolveMultiplicativeStat and ResolveCombatUnitMultiplicativeStat so they cannot
+// drift.
 double ResolveUnitMultiplicative_(const UnitEffects_t& rUnitEffects, StatId_t statId,
                                   double baseValue, const EffectContext_t& rCtx)
 {

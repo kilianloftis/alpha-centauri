@@ -29,14 +29,6 @@ namespace
 const std::vector<std::string> k_ArmoredLand{"test_chassis", "test_weak_armor"};
 const std::vector<std::string> k_LandGun{"test_chassis", "test_weapon"};
 
-// rDefender's conventional defense rating after it moves to (x, y).
-double RatingAt_(actest::FactionFixture& rFixture, Unit& rDefender, const Unit& rAttacker, int x,
-                 int y)
-{
-    rFixture.MoveUnit(rDefender, x, y);
-    return actest::ConventionalDefenseRating(rDefender, rAttacker);
-}
-
 } // namespace
 
 TEST_CASE("Sensor reaches defenders within Chebyshev radius 2 for its territory owner",
@@ -53,21 +45,21 @@ TEST_CASE("Sensor reaches defenders within Chebyshev radius 2 for its territory 
 
     SECTION("distance 1 and 2 are covered, including diagonals")
     {
-        CHECK(RatingAt_(fixture, defender, attacker, 9, 9) == Approx(1.25));
-        CHECK(RatingAt_(fixture, defender, attacker, 10, 10) == Approx(1.25));
-        CHECK(RatingAt_(fixture, defender, attacker, 8, 10) == Approx(1.25));
-        CHECK(RatingAt_(fixture, defender, attacker, 8, 12) == Approx(1.25));
+        CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, 9, 9) == Approx(1.25));
+        CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, 10, 10) == Approx(1.25));
+        CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, 8, 10) == Approx(1.25));
+        CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, 8, 12) == Approx(1.25));
     }
 
     SECTION("distance 3 is not covered")
     {
-        CHECK(RatingAt_(fixture, defender, attacker, 11, 11) == Approx(1.0));
-        CHECK(RatingAt_(fixture, defender, attacker, 8, 14) == Approx(1.0));
+        CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, 11, 11) == Approx(1.0));
+        CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, 8, 14) == Approx(1.0));
     }
 
     SECTION("the sensor's own tile is covered")
     {
-        CHECK(RatingAt_(fixture, defender, attacker, 8, 8) == Approx(1.25));
+        CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, 8, 8) == Approx(1.25));
     }
 }
 
@@ -96,8 +88,8 @@ TEST_CASE("Sensor in unowned territory benefits any real faction's defender",
     Unit& defender = fixture.MakeUnit(first, 8, 8, k_ArmoredLand);
     const Unit& attacker = fixture.MakeUnit(second, 0, 0, k_LandGun);
 
-    CHECK(RatingAt_(fixture, defender, attacker, 8, 8) == Approx(1.25));
-    CHECK(RatingAt_(fixture, defender, attacker, 10, 10) == Approx(1.25));
+    CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, 8, 8) == Approx(1.25));
+    CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, 10, 10) == Approx(1.25));
 }
 
 TEST_CASE("Sensor never benefits a native-life faction's defender",
@@ -137,8 +129,8 @@ TEST_CASE("CollectAreaEffects: radius-0 improvements never reach neighbors", "[e
     Unit& defender = fixture.MakeUnit(defending, 8, 8, k_ArmoredLand);
     const Unit& attacker = fixture.MakeUnit(attacking, 0, 0, k_LandGun);
 
-    CHECK(RatingAt_(fixture, defender, attacker, 8, 8) == Approx(1.5));
-    CHECK(RatingAt_(fixture, defender, attacker, 9, 9) == Approx(1.0));
+    CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, 8, 8) == Approx(1.5));
+    CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, 9, 9) == Approx(1.0));
 }
 
 TEST_CASE("Tile defense bonuses each multiply the defender's rating",
@@ -583,8 +575,8 @@ TEST_CASE("Aura effects at the map edge are collected without crashing", "[effec
     fixture.ctx.AddOccupantWithEffects(fixture.At(10, 2), "Sensor");
     Unit& defender = fixture.MakeUnit(owner, 10, 2, k_ArmoredLand);
     const Unit& attacker = fixture.MakeUnit(enemy, 0, 8, k_LandGun);
-    CHECK(RatingAt_(fixture, defender, attacker, 10, 2) == Approx(1.25));
-    CHECK(RatingAt_(fixture, defender, attacker, 9, 1) == Approx(1.25));
+    CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, 10, 2) == Approx(1.25));
+    CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, 9, 1) == Approx(1.25));
     CHECK(fixture.ctx.ResolveTileYield(fixture.At(7, 1)).effective.nutrients == 0);
 }
 
@@ -757,9 +749,9 @@ TEST_CASE("Sensor aura wraps horizontally across the map seam",
     const Unit& attacker = fixture.MakeUnit(enemy, 8, 12, k_LandGun);
 
     REQUIRE(fixture.map.GetTerritory().GetOwner(0, 4) == owner.GetFactionId());
-    CHECK(RatingAt_(fixture, defender, attacker, width - 2, 4) == Approx(1.25));
-    CHECK(RatingAt_(fixture, defender, attacker, width - 4, 4) == Approx(1.25));
-    CHECK(RatingAt_(fixture, defender, attacker, width - 6, 4) == Approx(1.0));
+    CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, width - 2, 4) == Approx(1.25));
+    CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, width - 4, 4) == Approx(1.25));
+    CHECK(actest::ConventionalDefenseRatingAt(fixture, defender, attacker, width - 6, 4) == Approx(1.0));
 }
 
 TEST_CASE("Condenser moisture aura wraps horizontally across the map seam",

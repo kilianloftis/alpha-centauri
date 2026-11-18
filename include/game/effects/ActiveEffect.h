@@ -531,7 +531,7 @@ void AppendGlobalScopeEffects(const std::vector<ActiveEffect_t>& rPool, ResolveD
 // Resolve a live unit's stats / flags over CollectLiveUnitEffects.
 int ResolveStat(const Unit& rUnit, StatId_t statId);
 int ResolveStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx);
-// Only AddPercent and MultiplyGeometric, from baseValue: psi combat strengths start at 1.
+// The stat's ops other than Add applied to baseValue, unrounded.
 double ResolveMultiplicativeStat(const Unit& rUnit, StatId_t statId, double baseValue,
                                  const EffectContext_t& rCtx);
 // Context-free: effects carrying a condition are skipped (same rule as FilterByStatId).

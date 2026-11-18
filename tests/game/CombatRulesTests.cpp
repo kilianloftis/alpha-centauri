@@ -56,26 +56,19 @@ CombatStrength_t Strength_(Unit& rAttacker, Unit& rDefender, FactionFixture& rFi
 
 TEST_CASE("A tied round goes to the defender and only the attacker loses HP", "[combat]")
 {
-    FactionFixture fixture;
-    FillLand_(fixture);
-    Faction& player = fixture.MakeFaction();
-    Faction& enemy = fixture.MakeFaction();
-    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
-    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    CombatStrength_t strength;
+    strength.attackerRoundDamage = 2;
+    strength.defenderRoundDamage = 3;
 
-    const CombatRoundOutcome_t tie =
-        ResolveCombatRound(attacker, defender, 5, 5);
+    const CombatRoundOutcome_t tie = ResolveCombatRound(strength, 5, 5);
     CHECK(tie.winner == CombatSide_t::Defender);
-    CHECK(tie.attackerHpLoss == k_CombatRoundDamage);
+    CHECK(tie.attackerHpLoss == 2);
     CHECK(tie.defenderHpLoss == 0);
 
-    const CombatRoundOutcome_t win =
-        ResolveCombatRound(attacker, defender, 6, 5);
+    const CombatRoundOutcome_t win = ResolveCombatRound(strength, 6, 5);
     CHECK(win.winner == CombatSide_t::Attacker);
     CHECK(win.attackerHpLoss == 0);
-    CHECK(win.defenderHpLoss == k_CombatRoundDamage);
-    CHECK(attacker.GetCurrentHp() == 10);
-    CHECK(defender.GetCurrentHp() == 10);
+    CHECK(win.defenderHpLoss == 3);
 }
 
 TEST_CASE("A strike spares a losing attacker and stops the defender at the floor",
@@ -83,24 +76,25 @@ TEST_CASE("A strike spares a losing attacker and stops the defender at the floor
 {
     FactionFixture fixture;
     FillLand_(fixture);
-    Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
-    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
     Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis"});
+    CombatStrength_t strength;
+    strength.attackerRoundDamage = 2;
+    strength.defenderRoundDamage = 3;
     const int floor = 4;
 
-    const CombatRoundOutcome_t miss =
-        ResolveStrikeRound(attacker, defender, 0, 5, floor);
+    const CombatRoundOutcome_t miss = ResolveStrikeRound(strength, defender, 0, 5, floor);
     CHECK(miss.winner == CombatSide_t::Defender);
-    CHECK(miss.damage == k_CombatRoundDamage);
+    CHECK(miss.damage == 2);
     CHECK(miss.attackerHpLoss == 0);
 
     auto hitAt = [&](int defenderHp)
     {
         defender.SetCurrentHp(defenderHp);
-        return ResolveStrikeRound(attacker, defender, 5, 0, floor).defenderHpLoss;
+        return ResolveStrikeRound(strength, defender, 5, 0, floor).defenderHpLoss;
     };
-    CHECK(hitAt(10) == k_CombatRoundDamage);
+    CHECK(hitAt(10) == 3);
+    CHECK(hitAt(floor + 1) == 1);
     CHECK(hitAt(floor) == 0);
     CHECK(hitAt(floor - 2) == 0);
 }
@@ -499,7 +493,6 @@ TEST_CASE("Psi values follow the defender's domain", "[combat][psi]")
     seaDefender.SetXp(2);
 
     const CombatStrength_t vsLand = Strength_(worm, landDefender, fixture);
-    CHECK(vsLand.bPsiCombat);
     CHECK(vsLand.attackStrength == 768);
     CHECK(vsLand.defenseStrength == 512);
 
@@ -524,9 +517,37 @@ TEST_CASE("In a psi duel each side's attack reads the other's domain", "[combat]
 
     const CombatStrength_t duel = ResolveCombatStrength(seaLauncher, landGun, fixture.morale(),
                                                         CombatEngagement_t::ArtilleryDuel);
-    CHECK(duel.bPsiCombat);
     CHECK(duel.attackStrength == 768);
     CHECK(duel.defenseStrength == 256);
+}
+
+TEST_CASE("A lost round costs the winner's damage times the loser's damage taken",
+          "[combat][psi]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    Unit& gun = fixture.MakeUnit(
+        player, 8, 8,
+        {"test_chassis", "test_weapon", "test_psi_tier_2", "test_extra_conventional_damage"});
+    Unit& rifle = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_weapon"});
+    Unit& worm = fixture.MakeUnit(enemy, 7, 7, {"test_chassis", "test_weapon", "test_psi"});
+    Unit& padded = fixture.MakeUnit(
+        enemy, 9, 7, {"test_chassis", "test_weapon", "test_half_conventional_damage_taken"});
+    Unit& harmless = fixture.MakeUnit(
+        enemy, 7, 9, {"test_chassis", "test_weapon", "test_no_conventional_damage"});
+
+    const CombatStrength_t conventional = Strength_(gun, rifle, fixture);
+    CHECK(conventional.attackerRoundDamage == 1);
+    CHECK(conventional.defenderRoundDamage == 3); // combat.json's 1, plus 2
+
+    const CombatStrength_t psi = Strength_(gun, worm, fixture);
+    CHECK(psi.attackerRoundDamage == 2); // the worm's 1, taken twice
+    CHECK(psi.defenderRoundDamage == 1); // conventional damage is not psi damage
+
+    CHECK(Strength_(gun, padded, fixture).defenderRoundDamage == 2); // 1.5, rounded
+    CHECK(Strength_(gun, harmless, fixture).attackerRoundDamage == 1); // 0, raised to 1
 }
 
 TEST_CASE("Outside combat a psi attack is only the base value", "[combat][psi]")

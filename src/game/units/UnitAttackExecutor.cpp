@@ -109,8 +109,8 @@ void UnitAttackExecutor::ApplyFightAftermath_(Unit& rAttacker, Unit& rDefender,
         promoteCtx.targetTile = &rBattleTile;
         promoteCtx.combatRole = *survivor == CombatSide_t::Attacker ? CombatRole_t::Attacker
                                                                    : CombatRole_t::Defender;
-        TryPromote(rSurvivor, *survivor, rResult.attackStrength, rResult.defenseStrength, m_rMorale,
-                   promoteCtx, m_rRng);
+        TryPromote(rSurvivor, *survivor, rResult.strength.attackStrength,
+                   rResult.strength.defenseStrength, m_rMorale, promoteCtx, m_rRng);
     }
     m_rWorld.ApplyFightConsequences(rAttacker, rBattleTile, rResult);
 }

@@ -285,7 +285,9 @@ as tough as fission (10 HP, takes 1). Thinker's `combat_odds_fix`
 `ignore_reactor_power` as strength × hits-to-kill
 (`ceil(HP / own reactor)`). It skips psi (natives are fission; mixed
 fusion-vs-worm still shows the HP lie). This repo applies the same
-hits-to-kill correction whenever a lost round costs `psi_damage`.
+hits-to-kill correction to every fight, with each side's damage per lost round
+(the other side's `conventional_damage` or `psi_damage` times its own
+`conventional_damage_taken` or `psi_damage_taken`).
 
 **Battle panel** (`0x421B50`, reached from `StatusWin_draw` `0x4B8830` through `0x4B6570`).
 Each side shows, top to bottom:

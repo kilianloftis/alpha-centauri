@@ -90,9 +90,6 @@ void FillWater_(WorldFixture& fixture)
     }
 }
 
-const CombatRatingStats_t k_ConventionalAttack{StatId_t::ConventionalAttack, StatId_t::Attack};
-const CombatRatingStats_t k_ConventionalDefense{StatId_t::ConventionalDefense, StatId_t::Defense};
-
 } // namespace
 
 TEST_CASE("Disciplined combat strength is the rating times 0x100", "[combat]")
@@ -110,8 +107,8 @@ TEST_CASE("Disciplined combat strength is the rating times 0x100", "[combat]")
     CombatHarness_ harness(fixture, /*seed*/ 1);
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
 
-    CHECK(result.attackStrength == 4 * CombatResolver::k_combatStrengthScale);
-    CHECK(result.defenseStrength == 3 * CombatResolver::k_combatStrengthScale);
+    CHECK(result.strength.attackStrength == 4 * CombatResolver::k_combatStrengthScale);
+    CHECK(result.strength.defenseStrength == 3 * CombatResolver::k_combatStrengthScale);
     CHECK_FALSE(result.rounds.empty());
 }
 
@@ -136,22 +133,22 @@ TEST_CASE("Partial movement scales attack strength by the leftover fraction of a
     {
         attacker.SetMoveFragmentsRemaining(point * 2 / 3);
         const CombatResult_t result = harness.combat.Resolve(attacker, defender);
-        CHECK(result.attackStrength == 682);
-        CHECK(result.defenseStrength == 3 * CombatResolver::k_combatStrengthScale);
+        CHECK(result.strength.attackStrength == 682);
+        CHECK(result.strength.defenseStrength == 3 * CombatResolver::k_combatStrengthScale);
     }
 
     SECTION("exactly one point")
     {
         attacker.SetMoveFragmentsRemaining(point);
         const CombatResult_t result = harness.combat.Resolve(attacker, defender);
-        CHECK(result.attackStrength == fullAttack);
+        CHECK(result.strength.attackStrength == fullAttack);
     }
 
     SECTION("more than one point")
     {
         attacker.SetMoveFragmentsRemaining(point + point * 2 / 3);
         const CombatResult_t result = harness.combat.Resolve(attacker, defender);
-        CHECK(result.attackStrength == fullAttack);
+        CHECK(result.strength.attackStrength == fullAttack);
     }
 }
 
@@ -174,21 +171,14 @@ TEST_CASE("AAA Tracking doubles defense vs air and orbital attackers", "[combat]
     orbitalAttacker.SetXp(2);
     defender.SetXp(2);
 
-    auto defenseVs = [&](Unit& rAttacker) {
-        EffectContext_t defenseCtx{&defender.GetTile(), CombatRole_t::Defender};
-        defenseCtx.pAttacker = &rAttacker;
-        defenseCtx.pDefender = &defender;
-        return ResolveCombatRating(defender, k_ConventionalDefense, defenseCtx, 1.0);
-    };
-
     // Armor 3; +100% vs air/orbital → 6.
-    CHECK(defenseVs(landAttacker) == Catch::Approx(3.0));
-    CHECK(defenseVs(airAttacker) == Catch::Approx(6.0));
-    CHECK(defenseVs(orbitalAttacker) == Catch::Approx(6.0));
+    CHECK(ConventionalDefenseRating(defender, landAttacker) == Catch::Approx(3.0));
+    CHECK(ConventionalDefenseRating(defender, airAttacker) == Catch::Approx(6.0));
+    CHECK(ConventionalDefenseRating(defender, orbitalAttacker) == Catch::Approx(6.0));
 
     CombatHarness_ harness(fixture, /*seed*/ 7);
     const CombatResult_t vsAir = harness.combat.Resolve(airAttacker, defender);
-    CHECK(vsAir.defenseStrength == 6 * CombatResolver::k_combatStrengthScale);
+    CHECK(vsAir.strength.defenseStrength == 6 * CombatResolver::k_combatStrengthScale);
 }
 
 TEST_CASE("Air Superiority doubles attack vs air/orbital and halves vs land/sea",
@@ -214,23 +204,16 @@ TEST_CASE("Air Superiority doubles attack vs air/orbital and halves vs land/sea"
     airDefender.SetXp(2);
     seaDefender.SetXp(2);
 
-    auto attackVs = [&](Unit& rAttacker, Unit& rDefender) {
-        EffectContext_t attackCtx{&rDefender.GetTile(), CombatRole_t::Attacker};
-        attackCtx.pAttacker = &rAttacker;
-        attackCtx.pDefender = &rDefender;
-        return ResolveCombatRating(rAttacker, k_ConventionalAttack, attackCtx, 1.0);
-    };
-
     // Weapon 4; +100% vs air → 8; −50% vs land/sea → 2.
-    CHECK(attackVs(attacker, airDefender) == Catch::Approx(8.0));
-    CHECK(attackVs(attacker, landDefender) == Catch::Approx(2.0));
-    CHECK(attackVs(attacker, seaDefender) == Catch::Approx(2.0));
-    CHECK(attackVs(baseline, landDefender) == Catch::Approx(4.0));
-    CHECK(attackVs(baseline, airDefender) == Catch::Approx(4.0));
+    CHECK(ConventionalAttackRating(attacker, airDefender) == Catch::Approx(8.0));
+    CHECK(ConventionalAttackRating(attacker, landDefender) == Catch::Approx(2.0));
+    CHECK(ConventionalAttackRating(attacker, seaDefender) == Catch::Approx(2.0));
+    CHECK(ConventionalAttackRating(baseline, landDefender) == Catch::Approx(4.0));
+    CHECK(ConventionalAttackRating(baseline, airDefender) == Catch::Approx(4.0));
 
     CombatHarness_ harness(fixture, /*seed*/ 11);
     const CombatResult_t vsAir = harness.combat.Resolve(attacker, airDefender);
-    CHECK(vsAir.attackStrength == 8 * CombatResolver::k_combatStrengthScale);
+    CHECK(vsAir.strength.attackStrength == 8 * CombatResolver::k_combatStrengthScale);
 }
 
 TEST_CASE("Higher roll wins the round; ties go to the defender", "[combat]")
@@ -260,7 +243,7 @@ TEST_CASE("Higher roll wins the round; ties go to the defender", "[combat]")
         {
             CHECK(round.roundWinner == CombatSide_t::Defender);
         }
-        CHECK(round.damage == k_CombatRoundDamage);
+        CHECK(round.damage == 1);
     }
 
     CHECK(result.bDefenderDestroyed);
@@ -307,8 +290,8 @@ TEST_CASE("Zero vs zero combat: ties favour the defender until attacker dies", "
     CombatHarness_ harness(fixture, /*seed*/ 7);
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
 
-    CHECK(result.attackStrength == 0);
-    CHECK(result.defenseStrength == 0);
+    CHECK(result.strength.attackStrength == 0);
+    CHECK(result.strength.defenseStrength == 0);
     CHECK(result.rounds.size() == static_cast<size_t>(attackerHp));
     for (const CombatRound_t& round : result.rounds)
     {
@@ -375,7 +358,7 @@ TEST_CASE("Rocky ground multiplies a conventional defender's strength", "[combat
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
 
     // Armor 3 x rocky 1.5.
-    CHECK(result.defenseStrength == 1152);
+    CHECK(result.strength.defenseStrength == 1152);
 }
 
 TEST_CASE("Psi combat rates the psi values, not weapon and armor", "[combat][psi]")
@@ -401,9 +384,8 @@ TEST_CASE("Psi combat rates the psi values, not weapon and armor", "[combat][psi
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
 
     // Psi against a land defender: attack 3 x the +50% multiplier, defense 2 x the x2 one.
-    CHECK(result.bPsiCombat);
-    CHECK(result.attackStrength == 1152);
-    CHECK(result.defenseStrength == 1024);
+    CHECK(result.strength.attackStrength == 1152);
+    CHECK(result.strength.defenseStrength == 1024);
 }
 
 TEST_CASE("Partial movement scales psi attack strength by the leftover fraction",
@@ -427,9 +409,8 @@ TEST_CASE("Partial movement scales psi attack strength by the leftover fraction"
     CombatHarness_ harness(fixture, /*seed*/ 23);
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
 
-    CHECK(result.bPsiCombat);
-    CHECK(result.attackStrength == 768);
-    CHECK(result.defenseStrength == 1024);
+    CHECK(result.strength.attackStrength == 768);
+    CHECK(result.strength.defenseStrength == 1024);
 }
 
 TEST_CASE("Either combatant can force psi combat", "[combat][psi]")
@@ -449,9 +430,8 @@ TEST_CASE("Either combatant can force psi combat", "[combat][psi]")
 
         CombatHarness_ harness(fixture, /*seed*/ 5);
         const CombatResult_t result = harness.combat.Resolve(attacker, defender);
-        CHECK(result.bPsiCombat);
-        CHECK(result.attackStrength == 3 * CombatResolver::k_combatStrengthScale);
-        CHECK(result.defenseStrength == 2 * CombatResolver::k_combatStrengthScale);
+        CHECK(result.strength.attackStrength == 3 * CombatResolver::k_combatStrengthScale);
+        CHECK(result.strength.defenseStrength == 2 * CombatResolver::k_combatStrengthScale);
     }
 
     SECTION("defender forces psi")
@@ -469,9 +449,8 @@ TEST_CASE("Either combatant can force psi combat", "[combat][psi]")
 
         CombatHarness_ harness(fixture, /*seed*/ 5);
         const CombatResult_t result = harness.combat.Resolve(attacker, defender);
-        CHECK(result.bPsiCombat);
-        CHECK(result.attackStrength == 3 * CombatResolver::k_combatStrengthScale);
-        CHECK(result.defenseStrength == 2 * CombatResolver::k_combatStrengthScale);
+        CHECK(result.strength.attackStrength == 3 * CombatResolver::k_combatStrengthScale);
+        CHECK(result.strength.defenseStrength == 2 * CombatResolver::k_combatStrengthScale);
     }
 }
 
@@ -489,7 +468,8 @@ TEST_CASE("Psi round damage equals the receiving unit's reactor tier", "[combat]
     CombatHarness_ harness(fixture, /*seed*/ 17);
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
 
-    REQUIRE(result.bPsiCombat);
+    REQUIRE(result.strength.attackerRoundDamage == 2);
+    REQUIRE(result.strength.defenderRoundDamage == 1);
     REQUIRE_FALSE(result.rounds.empty());
     for (const CombatRound_t& round : result.rounds)
     {
@@ -514,10 +494,10 @@ TEST_CASE("Conventional combat keeps fixed one damage despite psi tier", "[comba
     CombatHarness_ harness(fixture, /*seed*/ 9);
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
 
-    CHECK_FALSE(result.bPsiCombat);
+    CHECK(result.strength.attackerRoundDamage == 1);
     for (const CombatRound_t& round : result.rounds)
     {
-        CHECK(round.damage == k_CombatRoundDamage);
+        CHECK(round.damage == 1);
     }
 }
 

@@ -36,12 +36,8 @@ struct CombatResult_t
 {
     UnitId_t attackerId = 0;
     UnitId_t defenderId = 0;
-    // Resolved attack / defense ratings after * k_combatStrengthScale (pre-roll pools).
-    int attackStrength = 0;
-    int defenseStrength = 0;
-    // True when either combatant carries ForcesPsiCombat. In psi combat, strengths start
-    // at 1 and ignore additive weapon/armour values; round damage uses receiver PsiDamage.
-    bool bPsiCombat = false;
+    // The pre-roll pools and what a lost round costs each side.
+    CombatStrength_t strength;
     std::vector<CombatRound_t> rounds;
     // The side that remains on the field: the survivor, or the opponent of a unit that
     // disengaged. Attacker when the defender was destroyed or disengaged; Defender otherwise.
@@ -121,7 +117,7 @@ private:
         const Tile* pRetreatTile = nullptr;
     };
 
-    // Ids, the defender's owner, promotion eligibility and both strengths.
+    // Ids, the defender's owner, promotion eligibility and the fight's CombatStrength_t.
     CombatResult_t BeginResult_(const Unit& rAttacker, const Unit& rDefender,
                                 CombatEngagement_t engagement) const;
     CombatResult_t Fight_(Unit& rAttacker, Unit& rDefender, CombatEngagement_t engagement,

@@ -119,12 +119,12 @@ Any effect may carry an optional top-level `condition` object making it situatio
 {
   "type": "StatModifier",
   "scope": "ThisUnit",
-  "parameters": { "stat": "attack", "amount": 25, "op": "AddPercent" },
+  "parameters": { "stat": "attack", "amount": 1.25, "op": "MultiplyGeometric" },
   "condition": { "kind": "TargetTileHas", "value": "Base" }
 }
 ```
 
-`TargetTileHas` matches `value` against the target tile's features via `Tile::HasFeature` — terrain (`Rocky`), `River`/`Fungus`, landmark, bonus, or any improvement id including `Base`. Conditional effects are excluded from context-free resolution and only apply through a matching runtime context (e.g. `Unit::GetAttackAgainst`).
+`TargetTileHas` matches `value` against the target tile's features via `Tile::HasFeature` — terrain (`Rocky`), `River`/`Fungus`, landmark, bonus, or any improvement id including `Base`. Conditional effects are excluded from context-free resolution and only apply through a matching runtime context (e.g. combat's `ResolveCombatRating`).
 
 #### `TileYieldModifier` selector
 

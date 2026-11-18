@@ -355,9 +355,9 @@ TEST_CASE("An artillery duel rates the defender with attack and can destroy eith
 
     CombatHarness_ harness(fixture, 1);
     const CombatResult_t duel = harness.combat.ResolveDuel(attacker, defender);
-    CHECK(duel.defenseStrength == expected.defenseStrength);
+    CHECK(duel.strength.defenseStrength == expected.defenseStrength);
     // The defender's weapon (4), unscaled by its leftover fragment of a move.
-    CHECK(duel.defenseStrength == 4 * k_CombatStrengthScale);
+    CHECK(duel.strength.defenseStrength == 4 * k_CombatStrengthScale);
     CHECK_FALSE(duel.bAttackerDisengaged);
     CHECK_FALSE(duel.bDefenderDisengaged);
 
@@ -436,7 +436,7 @@ TEST_CASE("Partial movement scales bombard attack and the shot spends the rest",
     const auto strike = orders.attacks.TryBombard(attacker, defender.GetTile());
     REQUIRE(strike);
     REQUIRE(strike->combats.size() == 1);
-    CHECK(strike->combats.front().attackStrength == expectedStrike.attackStrength);
+    CHECK(strike->combats.front().strength.attackStrength == expectedStrike.attackStrength);
     CHECK(attacker.GetMoveFragmentsRemaining() == 0);
 
     Unit& duelAttacker = fixture.MakeUnit(player, 6, 10, {"test_chassis", "test_weapon", "bombard"});
@@ -450,8 +450,8 @@ TEST_CASE("Partial movement scales bombard attack and the shot spends the rest",
     const auto duel = orders.attacks.TryBombard(duelAttacker, duelDefender.GetTile());
     REQUIRE(duel);
     REQUIRE(duel->combats.size() == 1);
-    CHECK(duel->combats.front().attackStrength == expectedDuel.attackStrength);
-    CHECK(duel->combats.front().defenseStrength == expectedDuel.defenseStrength);
+    CHECK(duel->combats.front().strength.attackStrength == expectedDuel.attackStrength);
+    CHECK(duel->combats.front().strength.defenseStrength == expectedDuel.defenseStrength);
     CHECK(duelAttacker.GetMoveFragmentsRemaining() == 0);
 }
 

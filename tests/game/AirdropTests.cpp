@@ -18,6 +18,7 @@
 #include "game/map/WorldMap.h"
 #include "game/movement/AirdropRules.h"
 #include "game/combat/CombatResolver.h"
+#include "game/combat/CombatRules.h"
 #include "game/movement/MovementConstants.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitComponentConfig.h"
@@ -358,10 +359,9 @@ TEST_CASE("Post-airdrop attack applies HasAirdroppedThisTurn penalty", "[unit][a
     ctx.pUnit = &attacker;
     ctx.pAttacker = &attacker;
     ctx.combatRole = CombatRole_t::Attacker;
-    const CombatRatingStats_t attack{StatId_t::ConventionalAttack, StatId_t::Attack};
-    const double penalized = ResolveCombatRating(attacker, attack, ctx, 1.0);
+    const double penalized = ResolveCombatRating(attacker, k_ConventionalCombat.attack, ctx, 1.0);
     attacker.Latches().Advance();
-    const double normal = ResolveCombatRating(attacker, attack, ctx, 1.0);
+    const double normal = ResolveCombatRating(attacker, k_ConventionalCombat.attack, ctx, 1.0);
     CHECK(penalized < normal);
     (void)defender;
     (void)rMap;

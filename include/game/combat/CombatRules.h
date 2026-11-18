@@ -1,5 +1,7 @@
 #pragma once
 
+#include "game/effects/ActiveEffect.h"
+
 namespace ac
 {
 
@@ -28,24 +30,50 @@ enum class CombatEngagement_t
 // Roll-pool scale applied to a resolved attack or defense rating.
 inline constexpr int k_CombatStrengthScale = 0x100;
 
-// Roll pools for one fight. attackStrength and defenseStrength are the resolved ratings
-// after k_CombatStrengthScale. bPsiCombat is true when either side forces psi combat.
+// What one fight is decided by, fixed before the first round. attackStrength and
+// defenseStrength are the resolved ratings after k_CombatStrengthScale; each round damage is the
+// HP that side loses per round it loses.
 struct CombatStrength_t
 {
     int attackStrength = 0;
     int defenseStrength = 0;
-    bool bPsiCombat = false;
+    int attackerRoundDamage = 0;
+    int defenderRoundDamage = 0;
 };
 
-// Attack and defence pools. Each side's rating is its value stat for the kind of fight times its
-// Attack / Defense multiplier; the defender rates on attack in a duel. The partial-move penalty
-// and the difficulty handicap scale the attacker's whole-number strength.
+// What one kind of fight reads: the value stats each side rates on, the damage a round's winner
+// deals, and the multiplier the loser takes it at. Both kinds share the Attack / Defense
+// multipliers.
+struct CombatKind_t
+{
+    CombatRatingStats_t attack;
+    CombatRatingStats_t defense;
+    StatId_t damage;
+    StatId_t damageTaken;
+};
+
+inline constexpr CombatKind_t k_ConventionalCombat{
+    {StatId_t::ConventionalAttack, StatId_t::Attack},
+    {StatId_t::ConventionalDefense, StatId_t::Defense},
+    StatId_t::ConventionalDamage,
+    StatId_t::ConventionalDamageTaken,
+};
+
+inline constexpr CombatKind_t k_PsiCombat{
+    {StatId_t::PsiAttack, StatId_t::Attack},
+    {StatId_t::PsiDefense, StatId_t::Defense},
+    StatId_t::PsiDamage,
+    StatId_t::PsiDamageTaken,
+};
+
+// The fight is psi when either side forces it. Each side's rating is its value stat for the kind
+// of fight times its Attack / Defense multiplier; the defender rates on attack in a duel. The
+// partial-move penalty and the difficulty handicap scale the attacker's whole-number strength.
+// A side's round damage is the other side's damage times its own damage taken, rounded and at
+// least 1.
 CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefender,
                                        const MoraleCalculator& rMorale,
                                        CombatEngagement_t engagement);
-
-// Placeholder until weapon / reactor damage tables exist.
-inline constexpr int k_CombatRoundDamage = 1;
 
 struct CombatRoundOutcome_t
 {
@@ -56,14 +84,13 @@ struct CombatRoundOutcome_t
     int defenderHpLoss = 0;
 };
 
-// One round of a fight. Equal rolls favour the defender. Psi combat deals the receiver's
-// PsiDamage.
-CombatRoundOutcome_t ResolveCombatRound(const Unit& rAttacker, const Unit& rDefender,
-                                        int attackRoll, int defenseRoll);
+// One round of a fight. Equal rolls favour the defender; the loser takes its round damage.
+CombatRoundOutcome_t ResolveCombatRound(const CombatStrength_t& rStrength, int attackRoll,
+                                        int defenseRoll);
 
 // An artillery strike's one round: as ResolveCombatRound, but the attacker is never hurt and the
 // defender never drops below hpFloor (one already under it is not healed).
-CombatRoundOutcome_t ResolveStrikeRound(const Unit& rAttacker, const Unit& rDefender,
+CombatRoundOutcome_t ResolveStrikeRound(const CombatStrength_t& rStrength, const Unit& rDefender,
                                         int attackRoll, int defenseRoll, int hpFloor);
 
 // HP a strike must leave on rTarget: bombard_min_hp_percent of its HitPoints, from the area

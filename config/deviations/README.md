@@ -171,8 +171,9 @@ absent.
   the receiver's reactor: fusion looks twice as tough as fission ("Combat odds").
 - **Thinker:** `combat_odds_fix` uses strength × hits-to-kill for conventional fights, and
   skips psi.
-- **Ours:** the hits-to-kill correction applies whenever a lost round costs `psi_damage`,
-  psi included.
+- **Ours:** every fight's odds use strength × hits-to-kill, psi included, with each side's
+  damage per lost round: the other side's `conventional_damage` or `psi_damage` times its own
+  `conventional_damage_taken` or `psi_damage_taken`.
 - **Where:** `CombatRules.h` odds ratio.
 - **Missing:** the original and Thinker versions and a switch.
 

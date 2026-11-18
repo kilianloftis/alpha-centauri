@@ -116,11 +116,7 @@ CombatResult_t CombatResolver::BeginResult_(const Unit& rAttacker, const Unit& r
     result.defenderId = rDefender.GetUnitId();
     result.defenderFactionId = rDefender.GetFaction().GetFactionId();
     result.bKillEarnsPromotion = KillEarnsPromotion(rDefender);
-    const CombatStrength_t strength =
-        ResolveCombatStrength(rAttacker, rDefender, m_rMorale, engagement);
-    result.attackStrength = strength.attackStrength;
-    result.defenseStrength = strength.defenseStrength;
-    result.bPsiCombat = strength.bPsiCombat;
+    result.strength = ResolveCombatStrength(rAttacker, rDefender, m_rMorale, engagement);
     return result;
 }
 
@@ -279,8 +275,8 @@ int CombatResolver::Roll_(int strength) const
 CombatRound_t CombatResolver::RollRound_(const CombatResult_t& rResult) const
 {
     CombatRound_t round;
-    round.attackRoll = Roll_(rResult.attackStrength);
-    round.defenseRoll = Roll_(rResult.defenseStrength);
+    round.attackRoll = Roll_(rResult.strength.attackStrength);
+    round.defenseRoll = Roll_(rResult.strength.defenseStrength);
     return round;
 }
 
@@ -289,7 +285,7 @@ CombatRound_t CombatResolver::PlayRound_(Unit& rAttacker, Unit& rDefender,
 {
     CombatRound_t round = RollRound_(rResult);
     const CombatRoundOutcome_t outcome =
-        ResolveCombatRound(rAttacker, rDefender, round.attackRoll, round.defenseRoll);
+        ResolveCombatRound(rResult.strength, round.attackRoll, round.defenseRoll);
     ApplyRound_(rAttacker, rDefender, outcome, round);
     return round;
 }
@@ -299,7 +295,8 @@ CombatRound_t CombatResolver::PlayStrikeRound_(Unit& rAttacker, Unit& rTarget,
 {
     CombatRound_t round = RollRound_(rResult);
     const CombatRoundOutcome_t outcome =
-        ResolveStrikeRound(rAttacker, rTarget, round.attackRoll, round.defenseRoll, hpFloor);
+        ResolveStrikeRound(rResult.strength, rTarget, round.attackRoll, round.defenseRoll,
+                           hpFloor);
     ApplyRound_(rAttacker, rTarget, outcome, round);
     return round;
 }

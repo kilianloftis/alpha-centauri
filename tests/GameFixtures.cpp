@@ -551,6 +551,13 @@ ac::BaseManager& MakeSessionBase(FactionFixture& rFixtures, ac::Faction& rFactio
     return *pBase;
 }
 
+double ConventionalDefenseRatingAt(FactionFixture& rFixture, ac::Unit& rDefender,
+                                   const ac::Unit& rAttacker, int x, int y)
+{
+    rFixture.MoveUnit(rDefender, x, y);
+    return ConventionalDefenseRating(rDefender, rAttacker);
+}
+
 ac::CombatResult_t ResolveWithCollateral(ac::CombatResolver& rCombat, ac::WorldMap& rMap,
                                          ac::Unit& rAttacker, ac::Unit& rDefender)
 {
