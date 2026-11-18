@@ -532,7 +532,8 @@ TEST_CASE("A lost round costs the winner's damage times the loser's damage taken
         player, 8, 8,
         {"test_chassis", "test_weapon", "test_psi_tier_2", "test_extra_conventional_damage"});
     Unit& rifle = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_weapon"});
-    Unit& worm = fixture.MakeUnit(enemy, 7, 7, {"test_chassis", "test_weapon", "test_psi"});
+    Unit& worm =
+        fixture.MakeUnit(enemy, 7, 7, {"test_chassis", "test_weapon", "test_psi_defense"});
     Unit& padded = fixture.MakeUnit(
         enemy, 9, 7, {"test_chassis", "test_weapon", "test_half_conventional_damage_taken"});
     Unit& harmless = fixture.MakeUnit(

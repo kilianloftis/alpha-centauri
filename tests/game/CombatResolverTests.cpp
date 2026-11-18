@@ -413,7 +413,8 @@ TEST_CASE("Partial movement scales psi attack strength by the leftover fraction"
     CHECK(result.strength.defenseStrength == 1024);
 }
 
-TEST_CASE("Either combatant can force psi combat", "[combat][psi]")
+TEST_CASE("Psi combat needs the attacker's weapon flag or the defender's armor flag",
+          "[combat][psi]")
 {
     SECTION("attacker forces psi")
     {
@@ -443,7 +444,7 @@ TEST_CASE("Either combatant can force psi combat", "[combat][psi]")
         Unit& attacker =
             fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
         Unit& defender =
-            fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_armor", "test_psi"});
+            fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_armor", "test_psi_defense"});
         attacker.SetXp(2);
         defender.SetXp(2);
 
@@ -451,6 +452,44 @@ TEST_CASE("Either combatant can force psi combat", "[combat][psi]")
         const CombatResult_t result = harness.combat.Resolve(attacker, defender);
         CHECK(result.strength.attackStrength == 3 * CombatResolver::k_combatStrengthScale);
         CHECK(result.strength.defenseStrength == 2 * CombatResolver::k_combatStrengthScale);
+    }
+
+    SECTION("defender weapon flag alone stays conventional")
+    {
+        FactionFixture fixture;
+        FillLand_(fixture);
+        Faction& player = fixture.MakeFaction();
+        Faction& enemy = fixture.MakeFaction();
+        Unit& attacker =
+            fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
+        Unit& defender =
+            fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_armor", "test_psi"});
+        attacker.SetXp(2);
+        defender.SetXp(2);
+
+        CombatHarness_ harness(fixture, /*seed*/ 5);
+        const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+        CHECK(result.strength.attackStrength == 4 * CombatResolver::k_combatStrengthScale);
+        CHECK(result.strength.defenseStrength == 3 * CombatResolver::k_combatStrengthScale);
+    }
+
+    SECTION("attacker armor flag alone stays conventional")
+    {
+        FactionFixture fixture;
+        FillLand_(fixture);
+        Faction& player = fixture.MakeFaction();
+        Faction& enemy = fixture.MakeFaction();
+        Unit& attacker =
+            fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_psi_defense"});
+        Unit& defender =
+            fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_armor"});
+        attacker.SetXp(2);
+        defender.SetXp(2);
+
+        CombatHarness_ harness(fixture, /*seed*/ 5);
+        const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+        CHECK(result.strength.attackStrength == 4 * CombatResolver::k_combatStrengthScale);
+        CHECK(result.strength.defenseStrength == 3 * CombatResolver::k_combatStrengthScale);
     }
 }
 

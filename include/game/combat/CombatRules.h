@@ -66,11 +66,13 @@ inline constexpr CombatKind_t k_PsiCombat{
     StatId_t::PsiDamageTaken,
 };
 
-// The fight is psi when either side forces it. Each side's rating is its value stat for the kind
-// of fight times its Attack / Defense multiplier; the defender rates on attack in a duel. The
-// partial-move penalty and the difficulty handicap scale the attacker's whole-number strength.
-// A side's round damage is the other side's damage times its own damage taken, rounded and at
-// least 1.
+// The fight is psi by engagement: Standard when the attacker forces psi combat or the defender
+// forces psi defense; ArtilleryStrike when the attacker forces psi combat; ArtilleryDuel when
+// either side forces psi combat (weapon vs weapon). Each side's rating is its value stat for the
+// kind of fight times its Attack / Defense multiplier; the defender rates on attack in a duel.
+// The partial-move penalty and the difficulty handicap scale the attacker's whole-number
+// strength. A side's round damage is the other side's damage times its own damage taken, rounded
+// and at least 1.
 CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefender,
                                        const MoraleCalculator& rMorale,
                                        CombatEngagement_t engagement);

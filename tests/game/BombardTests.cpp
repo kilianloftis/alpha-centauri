@@ -614,6 +614,58 @@ TEST_CASE("An attack costs one move point unless it ends the turn; a bombard cos
     CHECK(AttackMoveFragments(jet, AttackKind_t::Attack) == jet.GetMoveFragmentsRemaining());
 }
 
+TEST_CASE("Artillery strike uses only the attacker's psi weapon; duel uses either weapon",
+          "[bombard][psi]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    Unit& gun = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "bombard"});
+    Unit& psiArmor =
+        fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_weapon", "bombard", "test_psi_defense"});
+    gun.SetXp(2);
+    psiArmor.SetXp(2);
+
+    // Psi armor alone does not force psi under artillery.
+    const CombatStrength_t strikeVsArmor = ResolveCombatStrength(
+        gun, psiArmor, fixture.morale(), CombatEngagement_t::ArtilleryStrike);
+    CHECK(strikeVsArmor.attackStrength == 4 * k_CombatStrengthScale);
+
+    const CombatStrength_t duelVsArmor = ResolveCombatStrength(
+        gun, psiArmor, fixture.morale(), CombatEngagement_t::ArtilleryDuel);
+    CHECK(duelVsArmor.attackStrength == 4 * k_CombatStrengthScale);
+    CHECK(duelVsArmor.defenseStrength == 4 * k_CombatStrengthScale);
+
+    Unit& spore = fixture.MakeUnit(
+        player, 8, 6, {"test_chassis", "test_weapon", "bombard", "test_psi"});
+    Unit& target = fixture.MakeUnit(enemy, 7, 7, {"test_chassis", "test_weapon", "bombard"});
+    spore.SetXp(2);
+    target.SetXp(2);
+
+    const CombatStrength_t sporeAttack = ResolveCombatStrength(
+        spore, target, fixture.morale(), CombatEngagement_t::ArtilleryDuel);
+    CHECK(sporeAttack.attackStrength == 3 * k_CombatStrengthScale);
+    CHECK(sporeAttack.defenseStrength == 3 * k_CombatStrengthScale);
+
+    Unit& gunner = fixture.MakeUnit(player, 8, 4, {"test_chassis", "test_weapon", "bombard"});
+    Unit& sporeDef =
+        fixture.MakeUnit(enemy, 7, 5, {"test_chassis", "test_weapon", "bombard", "test_psi"});
+    gunner.SetXp(2);
+    sporeDef.SetXp(2);
+
+    // Duel: defender's psi weapon forces psi. Strike: only the attacker's weapon counts.
+    const CombatStrength_t sporeDefend = ResolveCombatStrength(
+        gunner, sporeDef, fixture.morale(), CombatEngagement_t::ArtilleryDuel);
+    CHECK(sporeDefend.attackStrength == 3 * k_CombatStrengthScale);
+    CHECK(sporeDefend.defenseStrength == 3 * k_CombatStrengthScale);
+
+    const CombatStrength_t strikeIgnoresDefenderWeapon = ResolveCombatStrength(
+        gunner, sporeDef, fixture.morale(), CombatEngagement_t::ArtilleryStrike);
+    CHECK(strikeIgnoresDefenderWeapon.attackStrength == 4 * k_CombatStrengthScale);
+}
+
 TEST_CASE("Equally matched defenders keep the order they stand in", "[combat][defender]")
 {
     FactionFixture fixture;

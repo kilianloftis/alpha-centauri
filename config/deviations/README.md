@@ -165,6 +165,17 @@ absent.
   `probe_success_bust` after both successful draws.
 - **Missing:** the original sea/no-port version and a switch.
 
+### Psi engagement by engagement kind `[Ours]`
+
+- **Original:** artillery / missile skips psi unless either side is Spore Launcher; otherwise
+  attacker psi weapon or defender psi armor ("Psi engagement").
+- **Ours:** Standard uses attacker `forces_psi_combat` or defender `forces_psi_defense`; an
+  artillery strike uses only the attacker's `forces_psi_combat`; an artillery duel uses
+  either side's `forces_psi_combat` (weapon vs weapon). Shipping Spore Launchers carry both
+  psi flags, so their strike and duel outcomes match the binary without a Spore unit-id gate.
+- **Where:** `CombatKindFor_` in `CombatRules.cpp`.
+- **Missing:** the original Spore / bombard gate and a switch.
+
 ### Combat odds dialog uses hits-to-kill `[Bug]` `[Thinker]`
 
 - **Original:** the confirm dialog compares `HP × strength`, which is wrong when firepower is

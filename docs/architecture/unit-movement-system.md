@@ -255,6 +255,10 @@ Targeting rules (embarked-in-base, prefer carrier) live in `FindVisibleHostileOn
 hands the visible hostiles to `SelectDefender`: the best `DefenderWinChance` defends, ties in
 tile order. `ComputeCombatOdds` is the reduced attacker:defender ratio of
 `ResolveCombatStrength` × hits-to-kill (`ceil(current HP / damage per lost round)`).
+A fight is psi by engagement: Standard when the attacker has `forces_psi_combat` or the
+defender has `forces_psi_defense`; an artillery strike when the attacker has
+`forces_psi_combat`; an artillery duel when either side has `forces_psi_combat` (weapon vs
+weapon). Shipping Spore outcomes match the binary; the rule itself is a documented deviation.
 Damage per lost round is the winner's `conventional_damage` or `psi_damage` for the kind of
 fight times the receiver's `conventional_damage_taken` or `psi_damage_taken`, rounded and at
 least 1, resolved once with the strengths.

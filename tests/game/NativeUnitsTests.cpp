@@ -55,6 +55,7 @@ TEST_CASE("Mind Worm is land psi combat", "[native]")
     CHECK(rDesign.GetDomain() == UnitDomain_t::Land);
     CHECK(rDesign.IsCombatUnit());
     CHECK(ResolveFlag(rDesign, RuleFlagId_t::ForcesPsiCombat));
+    CHECK(ResolveFlag(rDesign, RuleFlagId_t::ForcesPsiDefense));
     CHECK_FALSE(rDesign.UsesFuel());
     CHECK_FALSE(rDesign.HasComponent("Mind_Worm"));
 
@@ -174,6 +175,7 @@ TEST_CASE("Fungal Tower is land psi combat visible in fog", "[native]")
     CHECK(rDesign.GetDomain() == UnitDomain_t::Land);
     CHECK(rDesign.IsCombatUnit());
     CHECK(ResolveFlag(rDesign, RuleFlagId_t::ForcesPsiCombat));
+    CHECK(ResolveFlag(rDesign, RuleFlagId_t::ForcesPsiDefense));
     CHECK(ResolveFlag(rDesign, RuleFlagId_t::VisibleInFog));
 }
 

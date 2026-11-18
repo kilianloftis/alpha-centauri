@@ -251,6 +251,35 @@ Annotations after the word, in order:
 Thinker's `mod_say_morale2` also adds HQ +1 to the plus count (`Fix:`). The
 binary does not.
 
+### Psi engagement (`battle_compute` `0x501DA0`)
+
+Whether a fight uses psi strengths is decided once at the start of
+`battle_compute`, in `[ebp-0x10]`:
+
+1. **Bombard gate** (`0x501DCA`–`0x501E49`). `is_bombard` is true when
+   `combat_type & CT_CAN_ARTY` or the attacker's chassis is a missile
+   (`Chassis.missile` at `0x94a37d`). If bombard and neither side's
+   `unit_id` is Spore Launcher (`0xF`), the psi setup is skipped
+   (`jmp 0x502102`) and the fight stays conventional.
+2. **Role bits** (`0x501E52`–`0x501EBA`). Otherwise: attacker
+   `Weapon.offense_value` (`0x94AE68`) `< 0` sets bit 1; defender
+   `Armor.defense_value` (`0x94F280`) `< 0` sets bit 2. Any nonzero value
+   means psi combat. A defender's psi weapon alone does not force psi; an
+   attacker's psi armor alone does not. Alphax Psi Attack / Psi Defense are
+   `-1`; stock natives (including Spore Launcher) carry both.
+
+Trance (`ABL_TRANCE`, defense step at `0x503C82`) and Empath Song
+(`ABL_EMPATH`, offense step at `0x502282`) only modify an already-psi fight.
+Trance needs bit 1 (attacker psi weapon). Empath Song in the binary needs
+bit 2 (defender psi armor, `psi_combat & 2` at `0x502335`); Thinker's
+`mod_battle_compute` gates Empath on any nonzero `psi_combat` instead.
+
+**Battle panel** (`0x421DCF`) sets its psi display flag the same way for
+weapon and armor, plus a third leg when the attacker's `faction_id`
+(`VEH+0xE` at `0x952836`) is 0. That Planet-only leg is display-only;
+`battle_compute` does not use it. Shipping natives already have psi weapon
+and armor, so it is usually redundant.
+
 ### Combat odds (`battle_fight_2` `0x506AF0`)
 
 Player confirm lives inside `battle_fight_2`, not `compute_odds` (`0x565F20`).
@@ -263,7 +292,10 @@ writes 8.8 `offense_out` / `defense_out`:
 - Conventional (attacker weapon at `UNIT+0x9ab88d` ≥ 0 **and** defender armor
   at `+0x9ab88e` ≥ 0): 1 damage per lost round (`0x506FBA` / `0x506FF8`).
 - Psi (either signed byte `< 0`, `jl` at `0x506F90` / `0x506FB8` /
-  `0x506FF6`): the **receiver's** `reactor_id` (`UNIT+0x9ab88f`).
+  `0x506FF6`): the **receiver's** `reactor_id` (`UNIT+0x9ab88f`). Same
+  asymmetric weapon/armor test as "Psi engagement"; firepower does not
+  re-apply the bombard/Spore gate (Spore ships with a psi weapon, so it
+  still hits).
 
 Thinker's `ignore_reactor_power` (default on) `short_jump`s `0x506F90` and
 `0x506FF6` (`refs/thinker/src/patch.cpp`), so conventional fights use reactor

@@ -23,14 +23,36 @@ namespace ac
 namespace
 {
 
-const CombatKind_t& CombatKindFor_(const Unit& rAttacker, const Unit& rDefender)
+// Standard: attacker psi weapon or defender psi armor. Strike: attacker weapon only. Duel:
+// either side's weapon (weapon-vs-weapon). Shipping Spore outcomes match terranx-map.md
+// "Psi engagement"; see config/deviations/README.md.
+const CombatKind_t& CombatKindFor_(const Unit& rAttacker, const Unit& rDefender,
+                                   CombatEngagement_t engagement)
 {
-    if (ResolveFlag(rAttacker, RuleFlagId_t::ForcesPsiCombat)
-        || ResolveFlag(rDefender, RuleFlagId_t::ForcesPsiCombat))
+    const bool bAttackerPsi = ResolveFlag(rAttacker, RuleFlagId_t::ForcesPsiCombat);
+    switch (engagement)
     {
-        return k_PsiCombat;
+    case CombatEngagement_t::ArtilleryStrike:
+        if (bAttackerPsi)
+        {
+            return k_PsiCombat;
+        }
+        return k_ConventionalCombat;
+    case CombatEngagement_t::ArtilleryDuel:
+        if (bAttackerPsi || ResolveFlag(rDefender, RuleFlagId_t::ForcesPsiCombat))
+        {
+            return k_PsiCombat;
+        }
+        return k_ConventionalCombat;
+    case CombatEngagement_t::Standard:
+        if (bAttackerPsi || ResolveFlag(rDefender, RuleFlagId_t::ForcesPsiDefense))
+        {
+            return k_PsiCombat;
+        }
+        return k_ConventionalCombat;
+    default:
+        throw std::invalid_argument("Invalid engagement");
     }
-    return k_ConventionalCombat;
 }
 
 // One side of the fight, with the context and morale multiplier its stats resolve under.
@@ -116,7 +138,7 @@ CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefen
         MakeFighter_(rAttacker, rAttacker, rDefender, CombatRole_t::Attacker, rMorale);
     const Fighter_t defender =
         MakeFighter_(rDefender, rAttacker, rDefender, CombatRole_t::Defender, rMorale);
-    const CombatKind_t& kind = CombatKindFor_(rAttacker, rDefender);
+    const CombatKind_t& kind = CombatKindFor_(rAttacker, rDefender, engagement);
     const CombatRatingStats_t& defenderStats =
         engagement == CombatEngagement_t::ArtilleryDuel ? kind.attack : kind.defense;
     const double attackRating = ResolveCombatRating(rAttacker, kind.attack, attacker.ctx,
