@@ -66,8 +66,8 @@ TEST_CASE("AppendActiveEffects: originBase follows TagsOriginBase", "[effects][c
         pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase),
         pool.StatMod(StatId_t::Energy, 1.0, ModifierOp_t::Add, EffectScope_t::FactionGlobal),
         pool.StatMod(StatId_t::Minerals, 1.0, ModifierOp_t::Add, EffectScope_t::AllOwnerBases),
-        pool.StatMod(StatId_t::Attack, 1.0, ModifierOp_t::Add, EffectScope_t::ProducedAtThisBase),
-        pool.StatMod(StatId_t::Attack, 1.0, ModifierOp_t::Add, EffectScope_t::FactionUnits),
+        pool.StatMod(StatId_t::ConventionalAttack, 1.0, ModifierOp_t::Add, EffectScope_t::ProducedAtThisBase),
+        pool.StatMod(StatId_t::ConventionalAttack, 1.0, ModifierOp_t::Add, EffectScope_t::FactionUnits),
         pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisPop),
     };
 
@@ -91,7 +91,7 @@ TEST_CASE("CollectUnitEffects: gathers design component effects, tagged with the
     UnitComponentConfig_t weapon;
     weapon.id = "laser";
     weapon.type = "weapon";
-    weapon.effects = {pool.StatMod(StatId_t::Attack, 4.0, ModifierOp_t::Add, EffectScope_t::ThisUnit)};
+    weapon.effects = {pool.StatMod(StatId_t::ConventionalAttack, 4.0, ModifierOp_t::Add, EffectScope_t::ThisUnit)};
 
     UnitComponentConfig_t chassis;
     chassis.id = "speeder";

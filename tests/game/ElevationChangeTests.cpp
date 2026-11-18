@@ -433,7 +433,7 @@ TEST_CASE("Attacking with a detonation weapon does not raise the target tile",
     weapon.type = "weapon";
     EffectPool pool;
     weapon.effects.push_back(
-        pool.StatMod(StatId_t::Attack, 4.0, ModifierOp_t::Add, EffectScope_t::ThisUnit));
+        pool.StatMod(StatId_t::ConventionalAttack, 4.0, ModifierOp_t::Add, EffectScope_t::ThisUnit));
     TriggeredEffectConfig_t quake;
     quake.effect = EarthquakeEffect_t{.levels = 2};
     weapon.onDetonateEffects.push_back(std::move(quake));

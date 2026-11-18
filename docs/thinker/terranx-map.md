@@ -287,6 +287,20 @@ as tough as fission (10 HP, takes 1). Thinker's `combat_odds_fix`
 fusion-vs-worm still shows the HP lie). This repo applies the same
 hits-to-kill correction whenever a lost round costs `psi_damage`.
 
+**Battle panel** (`0x421B50`, reached from `StatusWin_draw` `0x4B8830` through `0x4B6570`).
+Each side shows, top to bottom:
+
+1. The weapon (attacker) or armor (defender) name, then its base value. Conventional: the
+   bare rating, from `offense_proto` / `armor_proto` with no opponent. Psi (`[ebp-0x4C]`, set
+   when either side is psi at `0x421DCF`): the Rules psi ratio for the *defender's* triad,
+   offense row for the attacker (`0x42272B`) and defense row for the defender (`0x4226A3`).
+   Against a land defender that is 3 and 2. The ratio is the base value, not a modifier line.
+2. Morale: `+` when non-negative, then `(morale − 2) × 100 / 8` truncated, then `%`
+   (`0x4227DC`–`0x422838`). Green shows `-12%`.
+3. The `add_bat` modifier lines, as percents.
+4. The strength in braces, `s >> 8` then two digits of `(s & 0xFF) × 100 >> 8`, zero-padded
+   (`0x4229AD`–`0x422A4B`). 768 shows `{3.00}`; Green armor 1 (224) shows `{0.87}`.
+
 **When the dialog appears** (`0x507CA4`–`0x507D42`): `VehAttackFlags & 1`, not
 an intercept, local human, `combat_type == 0`, not a missile (`Chassis.missile`
 at `0x94a37d`), attacker state not `VSTATE_EXPLORE | VSTATE_ON_ALERT`
@@ -312,6 +326,81 @@ its `add_bat` difficulty labels are display-only. The confirm dialog's ratio use
 bare `battle_compute` and omits this term; this repo folds it into
 `ResolveCombatStrength` (and therefore odds) via difficulty `Attack`
 `MultiplyGeometric` effects.
+
+### Combat strength and the round roll (`battle_compute` `0x501DA0`, `battle_fight_2` `0x506AF0`)
+
+**Scale.** `offense_proto` (`0x5C1150`) and `armor_proto` (`0x5C1290`) return the rating
+`× 8` (`shl …, 3` before each `ret` on the paths with an opponent). `get_basic_offense`
+multiplies that by `morale + 6` (`imul` at `0x501929`) and by 4 (`shl eax, 2` at
+`0x501938`). `get_basic_defense` multiplies by `morale + 6` only. Defense gets its 4 inside
+`battle_compute` as two exact integer half-steps, terrain `T` (`0x5031B8`) and fortification
+`M` (`0x503785`), each 2 for no bonus. A Disciplined rating-1 unit is therefore
+`1 × 8 × 8 × 4 = 256`: 8.8 fixed point, the same scale as `k_CombatStrengthScale`.
+
+**Truncation.** Each percent modifier in `battle_compute` is its own step:
+`value = value × (100 + x) / 100`, truncated toward zero. There are 32 `/100` sites, each a
+multiply by `0x51EB851F`, `sar edx, 5` and a sign fix (e.g. a ×125/100 step at
+`0x5022AA`–`0x5022CD`). The result depends on the order of the steps. Thinker keeps the
+original order.
+
+**Round roll** (`0x5091A5`–`0x5091D5`). `off_rand = game_rand() % offense` and
+`def_rand = game_rand() % defense`, each 0 when the strength is ≤ 1. Then `cmp` / `jle`:
+the attacker wins the round only when `off_rand > def_rand`, so ties go to the defender.
+Offense is `[ebp-0x14]` and defense `[ebp-0x1c]` (the `battle_compute` call at `0x506EA6`).
+Round odds therefore depend on the integer strengths, not only their ratio: at 32 vs 32 the
+attacker wins a round 31/64.
+
+**Defense steps**, in order. Each was traced by its display label (`TextLabels` `0x9B90F8`
+index) and its `/100` site. "Truncated" means `× (100 + x) / 100` toward zero; "exact"
+means an integer multiply.
+
+1. Basic: `armor_proto × (morale + 6)`. Conventional `armor_proto` is
+   `clamp(armor, 1, 9999) × 8`. In psi combat it is the Rules psi defense ratio for the
+   defender's chassis triad (table at `0x9497A8`, `0x5C1387`–`0x5C13A6`) `× 8`. Shipping
+   ratios are land 3:2, sea 1:1, air 1:1 (offense:defense). An artifact (and a defense-1
+   probe facing a non-probe) is 1, skipping morale.
+2. Probe attacker (`UNIT.plan == 0xB`, `0x502B87`): `× 4` and stop (`jmp 0x5044A3`).
+3. Alien Defense (label 1109), truncated.
+4. Psi (`[ebp-0x10]`, `jne 0x5037E9`): Base intrinsic (label 332) when on a base and the
+   rule is nonzero, truncated, then `× 4` (`0x50386B`); go to step 9. The original has no
+   Planet defense step; Thinker's `planet_defense_bonus` adds one.
+5. Rough vs. Mobile / Mobile vs. Base (548 / 612), then Uphill (441), truncated.
+6. `× T`, exact (`defense_value` `0x5010C0`). T is 2 on ocean, on a base tile, for an air
+   defender, and on fungus against a wild or native attacker. Otherwise rocky (label 91)
+   gives 3; else fungus (338) gives 3, or 4 for a native defender; else forest (291) gives
+   3 against a land attacker.
+7. Base intrinsic (332), truncated, only on a base with no facility bonus and not against
+   Blink Displacer.
+8. `× M`, exact: one of base facility (Perimeter / Naval Yard / Aerospace by attacker
+   triad, Tachyon), else Bunker 3 (not against air), else Open Ground 3 (artillery, no
+   base, not rocky / forest / fungus; `0x503713`–`0x50377A`).
+9. When the defender's faction is not 0 (`0x503A1E`): Flechette, then Sensor (613) and GSP
+   (1123), truncated. Sensor scans the 25 tiles within 2. A land sensor counts when its
+   territory (`whose_territory` `0x4E3EF0`) is unowned or the defender's. An ocean sensor
+   counts when the nearest base (`base_find`) is the defender's.
+10. Trance (329), Resonance Def. (1111), Air-to-Air (449), Non Combat (439), Pulse (1112),
+    Jammer (336), Tracking (337), truncated.
+
+An artillery duel (`CT_WEAPON_ONLY`) rates the defender with `get_basic_offense` and applies
+only Land Based Guns (435) or Altitude (576).
+
+**Psi offense** (`offense_proto` `0x5C1245`–`0x5C128A`): the Rules psi offense ratio (table at
+`0x94979C`) for the *opponent's* chassis triad, `× 8`; with no opponent, the land entry
+unscaled. Defense reads its own triad's entry at `0x9497A8`, so in a standard fight both sides
+use the defender's triad row.
+
+**After `battle_compute`** (`battle_fight_2`). Three steps scale the whole-number offense
+`[ebp-0x14]`, each truncated, in this order:
+
+1. Partial move (`0x507405`–`0x5074A3`, label 339 "Hasty"): `offense × moves /
+   move_rate_roads`, where moves is `veh_speed − moves_spent` clamped to `[0,
+   move_rate_roads]`. Skipped when the attacker's faction (`[ebp-0x10]`) is 0, or its unit is
+   Mind Worms (8) or Spore Launcher (15) (`0x507405`–`0x507425`).
+2. Nerve gas (`0x5078E2`–`0x5078FB`, label 341): `offense + offense / 2`.
+3. Difficulty handicap (`0x507A17`; "Difficulty combat handicap" under Combat odds).
+
+Shipping values (`alphax.txt` `#RULES`): intrinsic base 25, Sensor 25, AAA 100, Comm Jammer
+50, Non Combat −50, Trance 50, mobile in open 25, rough vs. mobile 0, uphill 0.
 
 ### Disengage (`battle_fight_2` `0x506AF0`)
 

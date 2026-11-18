@@ -56,12 +56,12 @@ TEST_CASE("FilterByStatId: excludes condition-carrying effects from context-free
     // A "+25% attack vs Base" style effect must never leak into context-free totals.
     actest::EffectPool pool;
     const std::vector<ActiveEffect_t> effects = {
-        Active(pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
+        Active(pool.StatMod(StatId_t::ConventionalAttack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
                             std::nullopt, actest::TargetTileHas("Base")), "vs_base"),
-        Active(pool.StatMod(StatId_t::Attack, 4.0, ModifierOp_t::Add, EffectScope_t::ThisUnit), "weapon"),
+        Active(pool.StatMod(StatId_t::ConventionalAttack, 4.0, ModifierOp_t::Add, EffectScope_t::ThisUnit), "weapon"),
     };
 
-    const std::vector<ActiveEffect_t> matching = actest::Materialize(FilterByStatId(effects, StatId_t::Attack));
+    const std::vector<ActiveEffect_t> matching = actest::Materialize(FilterByStatId(effects, StatId_t::ConventionalAttack));
     REQUIRE(matching.size() == 1);
     CHECK(matching[0].sourceId == "weapon");
 }
@@ -300,7 +300,7 @@ TEST_CASE("AmountSourceValue: missing BasesOwned subject throws",
           "[effects][amount_source]")
 {
     StatModifierEffect_t mod;
-    mod.stat = StatId_t::Attack;
+    mod.stat = StatId_t::ConventionalAttack;
     mod.amount = 1.0;
     mod.op = ModifierOp_t::Add;
     mod.amountSource = StatModifierEffect_t::AmountSource_t::BasesOwned;
@@ -381,23 +381,23 @@ TEST_CASE("BasesOwned: Empire Pulse Attack scales with owned base count",
     Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_empire_pulse"});
 
     // Flat +1 Attack; BasesOwned contribution is 0 with no bases.
-    CHECK(ResolveStat(unit, StatId_t::Attack) == 1);
+    CHECK(ResolveStat(unit, StatId_t::ConventionalAttack) == 1);
     // IDesign-only resolve has no faction subject, so BasesOwned is dropped.
-    CHECK(ResolveStat(unit.GetDesign(), StatId_t::Attack) == 1);
+    CHECK(ResolveStat(unit.GetDesign(), StatId_t::ConventionalAttack) == 1);
 
     fixture.MakeFactionBase(faction, 8, 4);
     CHECK(faction.GetBaseCount() == 1);
-    CHECK(ResolveStat(unit, StatId_t::Attack) == 2);
+    CHECK(ResolveStat(unit, StatId_t::ConventionalAttack) == 2);
 
     fixture.MakeFactionBase(faction, 8, 12);
     CHECK(faction.GetBaseCount() == 2);
-    CHECK(ResolveStat(unit, StatId_t::Attack) == 3);
+    CHECK(ResolveStat(unit, StatId_t::ConventionalAttack) == 3);
 }
 
 TEST_CASE("ConditionSatisfied: no condition always applies", "[effects][condition]")
 {
     actest::EffectPool pool;
-    const EffectConfig_t& config = pool.StatMod(StatId_t::Attack, 1.0);
+    const EffectConfig_t& config = pool.StatMod(StatId_t::ConventionalAttack, 1.0);
 
     CHECK(ConditionSatisfied(config, EffectContext_t{}, nullptr));
     Tile tile(3, 3);
@@ -473,16 +473,16 @@ TEST_CASE("FilterByStatIdInContext: unconditional effects plus satisfied conditi
     rockyTile.SetRockiness(Rockiness_t::Rocky);
 
     const std::vector<ActiveEffect_t> effects = {
-        Active(pool.StatMod(StatId_t::Attack, 4.0, ModifierOp_t::Add, EffectScope_t::ThisUnit), "weapon"),
-        Active(pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
+        Active(pool.StatMod(StatId_t::ConventionalAttack, 4.0, ModifierOp_t::Add, EffectScope_t::ThisUnit), "weapon"),
+        Active(pool.StatMod(StatId_t::ConventionalAttack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
                             std::nullopt, actest::TargetTileHas("Rocky")), "vs_rocky"),
-        Active(pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
+        Active(pool.StatMod(StatId_t::ConventionalAttack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
                             std::nullopt, actest::TargetTileHas("Base")), "vs_base"),
-        Active(pool.StatMod(StatId_t::Defense, 2.0, ModifierOp_t::Add, EffectScope_t::ThisUnit), "armor"),
+        Active(pool.StatMod(StatId_t::ConventionalDefense, 2.0, ModifierOp_t::Add, EffectScope_t::ThisUnit), "armor"),
     };
 
     const EffectContext_t ctx{&rockyTile};
-    const std::vector<ActiveEffect_t> matching = actest::Materialize(FilterByStatIdInContext(effects, StatId_t::Attack, ctx));
+    const std::vector<ActiveEffect_t> matching = actest::Materialize(FilterByStatIdInContext(effects, StatId_t::ConventionalAttack, ctx));
 
     REQUIRE(matching.size() == 2);
     CHECK(matching[0].sourceId == "weapon");
@@ -497,13 +497,13 @@ TEST_CASE("FilterByStatIdInContext: with an empty context only unconditional eff
 {
     actest::EffectPool pool;
     const std::vector<ActiveEffect_t> effects = {
-        Active(pool.StatMod(StatId_t::Attack, 4.0, ModifierOp_t::Add, EffectScope_t::ThisUnit), "weapon"),
-        Active(pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
+        Active(pool.StatMod(StatId_t::ConventionalAttack, 4.0, ModifierOp_t::Add, EffectScope_t::ThisUnit), "weapon"),
+        Active(pool.StatMod(StatId_t::ConventionalAttack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
                             std::nullopt, actest::TargetTileHas("Rocky")), "vs_rocky"),
     };
 
     const std::vector<ActiveEffect_t> matching =
-        actest::Materialize(FilterByStatIdInContext(effects, StatId_t::Attack, EffectContext_t{}));
+        actest::Materialize(FilterByStatIdInContext(effects, StatId_t::ConventionalAttack, EffectContext_t{}));
     REQUIRE(matching.size() == 1);
     CHECK(matching[0].sourceId == "weapon");
 }

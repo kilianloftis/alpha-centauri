@@ -10,7 +10,7 @@
         "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": {
-          "stat": "defense",
+          "stat": "conventional_defense",
           "amount": 1,
           "op": "Add"
         }
@@ -35,7 +35,7 @@
         "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": {
-          "stat": "defense",
+          "stat": "conventional_defense",
           "amount": 2,
           "op": "Add"
         }
@@ -60,7 +60,7 @@
         "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": {
-          "stat": "defense",
+          "stat": "conventional_defense",
           "amount": 3,
           "op": "Add"
         }
@@ -78,7 +78,7 @@
         "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": {
-          "stat": "defense",
+          "stat": "conventional_defense",
           "amount": 3,
           "op": "Add"
         }

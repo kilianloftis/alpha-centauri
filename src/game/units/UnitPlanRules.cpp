@@ -69,8 +69,8 @@ std::optional<UnitPlan_t> WeaponPlan_(const UnitDesign& rDesign)
 
 UnitPlan_t LandPlan_(const UnitDesign& rDesign)
 {
-    const int offense = PartAddAmount_(rDesign, "weapon", StatId_t::Attack);
-    const int defense = PartAddAmount_(rDesign, "armour", StatId_t::Defense);
+    const int offense = PartAddAmount_(rDesign, "weapon", StatId_t::ConventionalAttack);
+    const int defense = PartAddAmount_(rDesign, "armour", StatId_t::ConventionalDefense);
     const int speed = PartAddAmount_(rDesign, "chassis", StatId_t::Movement);
     UnitPlan_t plan = defense > 1 ? UnitPlan_t::Defense : UnitPlan_t::Offense;
     if (plan == UnitPlan_t::Defense && offense >= defense)

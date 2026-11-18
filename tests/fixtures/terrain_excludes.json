@@ -47,7 +47,7 @@
           "type": "StatModifier",
           "scope": "ThisTile",
           "parameters": {
-            "stat": "tile_defense",
+            "stat": "defense",
             "amount": 25,
             "op": "AddPercent"
           }
@@ -190,7 +190,7 @@
           "type": "StatModifier",
           "scope": "ThisTile",
           "parameters": {
-            "stat": "tile_defense",
+            "stat": "defense",
             "amount": 25,
             "op": "AddPercent"
           }

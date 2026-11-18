@@ -116,8 +116,9 @@ Every design has SMAC's `UNIT.plan`, the AI role (`IDesign::GetPlan`, `UnitPlan_
   missile payloads) wins outright.
 - Otherwise sea designs are `naval_superiority`, air designs `offense` (or `air_superiority`
   with an ability whose `plan` says so), and orbital (missile) designs `offense`.
-- Land designs compare the weapon's `attack` Add, the armour's `defense` Add and the chassis
-  `movement` Add, unscaled: armour above 1 is `defense`, a weapon at least as strong as that
+- Land designs compare the weapon's `conventional_attack` Add, the armour's
+  `conventional_defense` Add and the chassis `movement` Add, unscaled: armour above 1 is
+  `defense`, a weapon at least as strong as that
   armour is `combat`, a fast design that out-guns its armour is `offense`. An ability `plan` of
   `offense` overrides any land design; a gun with no armour is `recon` when fast, or `defense`
   with an ability `plan` of `defense`.

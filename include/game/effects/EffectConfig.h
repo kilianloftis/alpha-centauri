@@ -365,6 +365,20 @@ struct DefenderIsNativeLife_t
     bool bMatches = true;
 };
 
+// True when the other combatant's domain is in `domains`: pDefender when combatRole is Attacker,
+// pAttacker when Defender. Fails closed outside combat. Empty is rejected by the parser.
+struct OpponentDomain_t
+{
+    std::vector<UnitDomain_t> domains;
+};
+
+// EffectContext_t::pAttacker's design has native_life matching bMatches; fails closed without an
+// attacker. Omit the JSON value to require native life.
+struct AttackerIsNativeLife_t
+{
+    bool bMatches = true;
+};
+
 // True when EffectContext_t::pBase has the Headquarters rule flag (Economy SE −1
 // energy-at-HQ). Requires pBase in the resolve context.
 struct IsHeadquarters_t
@@ -382,6 +396,12 @@ struct SubjectIsOwner_t
 // SubjectIsOwner. Fails closed without a subject, without a stamped owner, or when the owner
 // is k_NoFactionOwner.
 struct SubjectIsForeign_t
+{
+};
+
+// True when effectOwnerFaction is the k_NoFactionOwner stamp of unowned territory. Fails closed
+// without a stamp.
+struct EffectIsUnowned_t
 {
 };
 
@@ -415,7 +435,7 @@ struct IsPrototype_t
 {
 };
 
-// True when UnitDesign::IsCombatUnit (additive Attack > 0 or ForcesPsiCombat). IDesign-only
+// True when UnitDesign::IsCombatUnit (conventional_attack > 0 or ForcesPsiCombat). IDesign-only
 // flag resolve so FactionUnits collection stays recursion-safe.
 struct IsCombatUnit_t
 {
@@ -486,8 +506,9 @@ using ConditionVariant_t = std::variant<TargetTileHas_t, AllOf_t, AnyOf_t, IsDef
                                         SocialRating_t, EffectiveMorale_t, OriginBaseHasBuilding_t,
                                         AttackerIsEmbarked_t, HasAirdroppedThisTurn_t,
                                         AttackerDomain_t, DefenderDomain_t,
-                                        DefenderIsNativeLife_t, IsHeadquarters_t,
-                                        SubjectIsOwner_t, SubjectIsForeign_t,
+                                        DefenderIsNativeLife_t, OpponentDomain_t,
+                                        AttackerIsNativeLife_t, IsHeadquarters_t,
+                                        SubjectIsOwner_t, SubjectIsForeign_t, EffectIsUnowned_t,
                                         SubjectDomain_t, HasComponent_t, SubjectDesign_t,
                                         HasFlag_t, IsPrototype_t, IsCombatUnit_t,
                                         IsNativeLife_t, IsNativeLifeFaction_t,

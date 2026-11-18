@@ -15,8 +15,8 @@ enum class MoraleLifecycle_t
     Native,
 };
 
-// Morale / XP rank formulas over the game-wide MoraleConfig_t. Combat Attack/Defense
-// scale is CombatAddPercent; named rows keep promotion eligibility/success and planet_pearls.
+// Morale / XP rank formulas over the game-wide MoraleConfig_t. Combat ratings scale by
+// CombatMultiplier; named rows keep promotion eligibility/success and planet_pearls.
 class MoraleCalculator
 {
 public:
@@ -30,9 +30,9 @@ public:
     // defense level in CombatStrength, not here.
     int MoraleLevel(int xp, int liveBonus) const;
 
-    // (combatLevel - baselineIndex) * percentPerLevel. Unbounded: attack may sit
+    // 1 + (combatLevel - baselineIndex) * percentPerLevel / 100. Unbounded: attack may sit
     // outside the named rows.
-    double CombatAddPercent(int combatLevel) const;
+    double CombatMultiplier(int combatLevel) const;
 
     const std::string& DisplayName(int level, MoraleLifecycle_t lifecycle) const;
 

@@ -15,7 +15,6 @@
 #include "game/combat/CombatResolver.h"
 #include "game/combat/CombatRules.h"
 #include "game/combat/MoraleCalculator.h"
-#include "game/combat/MoraleRules.h"
 #include "game/movement/MoveCostRules.h"
 #include "game/movement/MovementConstants.h"
 #include "game/movement/Pathfinder.h"
@@ -28,6 +27,7 @@
 #include "game/units/UnitOrderExecutor.h"
 #include "game/map/ImprovementRegistry.h"
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include <cmath>
@@ -51,7 +51,7 @@ struct CombatHarness_
         : moveCosts(fixture.improvements, MovementConstants_t{})
         , steps(fixture.map, fixture.ctx)
         , rng(seed)
-        , combat(moveCosts, steps, fixture.map, fixture.ctx, fixture.morale(), rng)
+        , combat(moveCosts, steps, fixture.map, fixture.morale(), rng)
     {
     }
 };
@@ -351,24 +351,13 @@ TEST_CASE("An artillery duel rates the defender with attack and can destroy eith
     defender.SetMoveFragmentsRemaining(1);
 
     const CombatStrength_t expected = ResolveCombatStrength(
-        attacker, defender, fixture.ctx, fixture.morale(), CombatEngagement_t::ArtilleryDuel);
-    const EffectContext_t defenseCtx{&defender.GetTile(), CombatRole_t::Defender};
-    EffectContext_t defenderAttack = defenseCtx;
-    defenderAttack.pAttacker = &attacker;
-    defenderAttack.pDefender = &defender;
-    const int defenderAttackLevel = CombatMoraleLevel(defender, defenderAttack, fixture.morale());
-    const int defenderAttackRating = ResolveCombatUnitStat(
-        defender, StatId_t::Attack, defenderAttack,
-        fixture.morale().CombatAddPercent(defenderAttackLevel));
-    const int point = MovementConstants_t::k_moveFragmentsPerPoint;
-    const int scaledByLeftover = static_cast<int>(std::lround(
-        defenderAttackRating * 1.0 / static_cast<double>(point) * k_CombatStrengthScale));
+        attacker, defender, fixture.morale(), CombatEngagement_t::ArtilleryDuel);
 
     CombatHarness_ harness(fixture, 1);
     const CombatResult_t duel = harness.combat.ResolveDuel(attacker, defender);
     CHECK(duel.defenseStrength == expected.defenseStrength);
-    CHECK(duel.defenseStrength == defenderAttackRating * k_CombatStrengthScale);
-    CHECK(duel.defenseStrength != scaledByLeftover);
+    // The defender's weapon (4), unscaled by its leftover fragment of a move.
+    CHECK(duel.defenseStrength == 4 * k_CombatStrengthScale);
     CHECK_FALSE(duel.bAttackerDisengaged);
     CHECK_FALSE(duel.bDefenderDisengaged);
 
@@ -441,7 +430,7 @@ TEST_CASE("Partial movement scales bombard attack and the shot spends the rest",
     attacker.SetMoveFragmentsRemaining(point * 2 / 3);
 
     const CombatStrength_t expectedStrike =
-        ResolveCombatStrength(attacker, defender, fixture.ctx, fixture.morale(),
+        ResolveCombatStrength(attacker, defender, fixture.morale(),
                               CombatEngagement_t::ArtilleryStrike);
     OrderHarness_ orders(fixture, 1);
     const auto strike = orders.attacks.TryBombard(attacker, defender.GetTile());
@@ -457,8 +446,7 @@ TEST_CASE("Partial movement scales bombard attack and the shot spends the rest",
     duelAttacker.SetMoveFragmentsRemaining(point * 2 / 3);
     duelDefender.SetMoveFragmentsRemaining(1);
     const CombatStrength_t expectedDuel = ResolveCombatStrength(
-        duelAttacker, duelDefender, fixture.ctx, fixture.morale(),
-        CombatEngagement_t::ArtilleryDuel);
+        duelAttacker, duelDefender, fixture.morale(), CombatEngagement_t::ArtilleryDuel);
     const auto duel = orders.attacks.TryBombard(duelAttacker, duelDefender.GetTile());
     REQUIRE(duel);
     REQUIRE(duel->combats.size() == 1);
@@ -479,22 +467,24 @@ TEST_CASE("LevelsAboveOpponent adds 25 percent attack per whole level above the 
     attacker.SetXp(2);
     defender.SetXp(2);
 
+    const auto strikeStrength = [&]()
+    {
+        return ResolveCombatStrength(attacker, defender, fixture.morale(),
+                                     CombatEngagement_t::ArtilleryStrike).attackStrength;
+    };
+
     fixture.At(8, 8).SetElevation(2000);
     fixture.At(9, 9).SetElevation(0);
-    EffectContext_t ctx{&defender.GetTile(), CombatRole_t::Attacker};
-    ctx.pAttacker = &attacker;
-    ctx.pDefender = &defender;
-    const int attackLevel = CombatMoraleLevel(attacker, ctx, fixture.morale());
-    const double attackPercent = fixture.morale().CombatAddPercent(attackLevel);
-    CHECK(ResolveCombatUnitStat(attacker, StatId_t::Attack, ctx, attackPercent) == 6);
-    CHECK(ResolveStat(attacker, StatId_t::Attack) == 4);
+    CHECK(strikeStrength() == 6 * k_CombatStrengthScale);
+    CHECK(ResolveMultiplicativeStat(attacker, StatId_t::Attack, 1.0, EffectContext_t{})
+          == Catch::Approx(1.0));
 
     fixture.At(8, 8).SetElevation(999);
-    CHECK(ResolveCombatUnitStat(attacker, StatId_t::Attack, ctx, attackPercent) == 4);
+    CHECK(strikeStrength() == 4 * k_CombatStrengthScale);
 
     fixture.At(8, 8).SetElevation(0);
     fixture.At(9, 9).SetElevation(2000);
-    CHECK(ResolveCombatUnitStat(attacker, StatId_t::Attack, ctx, attackPercent) == 4);
+    CHECK(strikeStrength() == 4 * k_CombatStrengthScale);
 }
 
 TEST_CASE("An empty tile loses one non-base improvement, including outside vision", "[bombard]")

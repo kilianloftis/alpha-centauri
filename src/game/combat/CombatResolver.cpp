@@ -10,7 +10,6 @@
 #include "game/combat/MoraleRules.h"
 #include "game/movement/MoveCostRules.h"
 #include "game/movement/StepEvaluator.h"
-#include "game/effects/TileEffectsContext.h"
 #include "lib/RandomRoll.h"
 
 #include <cmath>
@@ -63,12 +62,10 @@ void AppendCapturedIds_(const std::vector<CapturedUnit_t>& rCaptured, std::vecto
 CombatResolver::CombatResolver(const MoveCostRules& rMoveCosts,
                                const StepEvaluator& rSteps,
                                WorldMap& rWorldMap,
-                               const TileEffectsContext& rTileEffects,
                                const MoraleCalculator& rMorale,
                                std::mt19937& rRng)
     : m_disengage(rMoveCosts, rSteps, rWorldMap)
     , m_rWorldMap(rWorldMap)
-    , m_rTileEffects(rTileEffects)
     , m_rMorale(rMorale)
     , m_rRng(rRng)
 {
@@ -120,7 +117,7 @@ CombatResult_t CombatResolver::BeginResult_(const Unit& rAttacker, const Unit& r
     result.defenderFactionId = rDefender.GetFaction().GetFactionId();
     result.bKillEarnsPromotion = KillEarnsPromotion(rDefender);
     const CombatStrength_t strength =
-        ResolveCombatStrength(rAttacker, rDefender, m_rTileEffects, m_rMorale, engagement);
+        ResolveCombatStrength(rAttacker, rDefender, m_rMorale, engagement);
     result.attackStrength = strength.attackStrength;
     result.defenseStrength = strength.defenseStrength;
     result.bPsiCombat = strength.bPsiCombat;

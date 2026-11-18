@@ -39,7 +39,7 @@ std::vector<TriggeredEffectConfig_t> NativeDesign::CollectOnHoldEffects() const
 
 bool NativeDesign::IsCombatUnit() const
 {
-    return ResolveAdditiveStat(*this, StatId_t::Attack) > 0
+    return ResolveAdditiveStat(*this, StatId_t::ConventionalAttack) > 0
            || ResolveFlag(*this, RuleFlagId_t::ForcesPsiCombat);
 }
 
@@ -66,8 +66,8 @@ int NativeDesign::MaxFuel() const
 std::string NativeDesign::FormatCombatRating() const
 {
     std::ostringstream oss;
-    oss << ResolveAdditiveStat(*this, StatId_t::Attack) << "-"
-        << ResolveAdditiveStat(*this, StatId_t::Defense) << "-"
+    oss << ResolveAdditiveStat(*this, StatId_t::ConventionalAttack) << "-"
+        << ResolveAdditiveStat(*this, StatId_t::ConventionalDefense) << "-"
         << ResolveAdditiveStat(*this, StatId_t::Movement);
     return oss.str();
 }

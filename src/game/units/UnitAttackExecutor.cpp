@@ -35,7 +35,7 @@ UnitAttackExecutor::UnitAttackExecutor(const MoveCostRules& rMoveCosts,
     , m_rTileEffects(rTileEffects)
     , m_rMorale(rMorale)
     , m_rRng(rRng)
-    , m_combat(rMoveCosts, rSteps, rWorldMap, rTileEffects, rMorale, rRng)
+    , m_combat(rMoveCosts, rSteps, rWorldMap, rMorale, rRng)
     , m_rWorld(rWorld)
     , m_rOrders(rOrders)
 {

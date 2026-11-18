@@ -8,7 +8,6 @@
 #include "game/faction/Faction.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/InteractionResolve.h"
-#include "game/effects/TileEffectsContext.h"
 #include "game/visibility/VisibilityRules.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementIds.h"
@@ -337,12 +336,7 @@ bool CanDestroyEnhancement(const Unit& rUnit)
 int DestroyEnhancementSuccessChance(const Unit& rUnit)
 {
     const EffectContext_t ctx = UnitSubjectContext(&rUnit, EffectContext_t{});
-    std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects(rUnit).effects;
-    for (const ActiveEffect_t& rEffect :
-         CurrentGameState().GetTileEffects().CollectAreaEffects(rUnit.GetTile()))
-    {
-        effects.push_back(rEffect);
-    }
+    const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects(rUnit).effects;
     const double total = ResolveStatModifiers(
                              FilterByStatIdInContext(effects, StatId_t::DestroyEnhancementSuccess,
                                                      ctx),

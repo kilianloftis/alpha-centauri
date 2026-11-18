@@ -17,7 +17,6 @@ namespace ac
 class MoveCostRules;
 class StepEvaluator;
 class Tile;
-class TileEffectsContext;
 class WorldMap;
 
 // One exchange of rolls. Damage is applied to the loser; ties award the round to the
@@ -82,7 +81,6 @@ public:
     CombatResolver(const MoveCostRules& rMoveCosts,
                    const StepEvaluator& rSteps,
                    WorldMap& rWorldMap,
-                   const TileEffectsContext& rTileEffects,
                    const MoraleCalculator& rMorale,
                    std::mt19937& rRng);
 
@@ -162,7 +160,6 @@ private:
 
     DisengageRules m_disengage;
     WorldMap& m_rWorldMap;
-    const TileEffectsContext& m_rTileEffects;
     const MoraleCalculator& m_rMorale;
     // Non-const reference: Roll_ is const so Resolve stays const-correct for callers.
     std::mt19937& m_rRng;

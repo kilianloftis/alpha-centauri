@@ -373,7 +373,8 @@ TEST_CASE("ODP intercept miss still deploys and allows combat", "[orbital][inter
     BaseManager& playerBase = game.MakeBase(*game.pPlayer, 8, 8);
     playerBase.GetBuildingManager().AddBuilding("test_odp_always_miss");
 
-    Unit& missile = game.MakeUnit(*game.pAi, 9, 9, {"test_orbital_chassis", "test_weapon"});
+    // A weak attacker so the garrison holds the base and its satellite.
+    Unit& missile = game.MakeUnit(*game.pAi, 9, 9, {"test_orbital_chassis", "test_weak_weapon"});
     Unit& garrison = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_armor"}, &playerBase);
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 

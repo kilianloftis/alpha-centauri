@@ -85,7 +85,7 @@ graph TB
 - **Pattern**: Thin Lua bridge, same shape as `PopCompositionCalculator`
 - **Per-tech modifiers**: optional `ThisTech` `tech_cost` StatModifiers on the tech config join the post-Lua `TechCost` product. There is no per-tech base cost field.
 - **Thinker sidecar**: [`config/deviations/tech_cost_thinker.lua`](../../config/deviations/tech_cost_thinker.lua) records Thinker's per-tech `tech_alt_cost` for a future profile; it is not on `GameDataPaths`.
-- **World rules**: [`config/world_rules.json`](../../config/world_rules.json) is the session `WorldRules` source. Shipping emits `TechCost` 1.5× and `TechCostTurnLag` beside the combat WorldGlobal rules. `GameState` appends it once onto every faction's composed effects.
+- **World rules**: [`config/world_rules.json`](../../config/world_rules.json) is the session `WorldRules` source, along with [`config/combat.json`](../../config/combat.json)'s `effects` (the psi values). Shipping emits `TechCost` 1.5× and `TechCostTurnLag` beside the combat WorldGlobal rules. `GameState` appends both once onto every faction's composed effects.
 
 ## Usage Flow
 

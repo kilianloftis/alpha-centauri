@@ -7,6 +7,7 @@
 #include "game/worldgen/WorldGenPresetConfigParser.h"
 #include "game/effects/EffectConfig.h"
 #include "game/population/GrowthConfigParser.h"
+#include "game/units/Unit.h"
 #include "game/units/UnitComponentConfigParser.h"
 #include "TempConfigFile.h"
 
@@ -239,6 +240,17 @@ inline ac::Condition_t TargetTileHas(std::string featureId)
 inline ac::Condition_t SubjectDomainCondition(ac::UnitDomain_t domain)
 {
     return ac::SubjectDomain_t{domain};
+}
+
+// rDefender's conventional defense rating on its tile when rAttacker attacks it, at neutral
+// morale: its conventional_defense value times its defense multiplier.
+inline double ConventionalDefenseRating(const ac::Unit& rDefender, const ac::Unit& rAttacker)
+{
+    ac::EffectContext_t ctx{&rDefender.GetTile(), ac::CombatRole_t::Defender};
+    ctx.pAttacker = &rAttacker;
+    ctx.pDefender = &rDefender;
+    const ac::CombatRatingStats_t stats{ac::StatId_t::ConventionalDefense, ac::StatId_t::Defense};
+    return ac::ResolveCombatRating(rDefender, stats, ctx, 1.0);
 }
 
 inline ac::Condition_t HasComponentCondition(std::string componentId)

@@ -81,7 +81,11 @@ void ValidateMoraleStatOp_(const StatModifierEffect_t& rMod, int levelIndex)
 {
     switch (rMod.stat)
     {
+        case StatId_t::ConventionalAttack:
+        case StatId_t::PsiAttack:
         case StatId_t::Attack:
+        case StatId_t::ConventionalDefense:
+        case StatId_t::PsiDefense:
         case StatId_t::Defense:
             FailLevel_(levelIndex,
                        "attack/defense combat scale is percent_per_level, not a level effect");

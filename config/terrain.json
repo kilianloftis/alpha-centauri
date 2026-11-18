@@ -55,10 +55,41 @@
         {
           "type": "StatModifier",
           "scope": "ThisTile",
+          "condition": {
+            "kind": "AllOf",
+            "conditions": [
+              {
+                "kind": "DefenderDomain",
+                "domains": [
+                  "land",
+                  "sea"
+                ]
+              },
+              {
+                "kind": "TargetTileHas",
+                "value": "Base",
+                "present": false
+              },
+              {
+                "kind": "AnyOf",
+                "conditions": [
+                  {
+                    "kind": "TargetTileHas",
+                    "value": "Fungus",
+                    "present": false
+                  },
+                  {
+                    "kind": "AttackerIsNativeLife",
+                    "value": false
+                  }
+                ]
+              }
+            ]
+          },
           "parameters": {
-            "stat": "tile_defense",
-            "amount": 25,
-            "op": "AddPercent"
+            "stat": "conventional_defense",
+            "amount": 1.5,
+            "op": "MultiplyGeometric"
           }
         }
       ],
@@ -286,10 +317,89 @@
         {
           "type": "StatModifier",
           "scope": "ThisTile",
+          "condition": {
+            "kind": "AllOf",
+            "conditions": [
+              {
+                "kind": "DefenderDomain",
+                "domains": [
+                  "land",
+                  "sea"
+                ]
+              },
+              {
+                "kind": "TargetTileHas",
+                "value": "Base",
+                "present": false
+              },
+              {
+                "kind": "TargetTileHas",
+                "value": "Rocky",
+                "present": false
+              },
+              {
+                "kind": "TargetTileHas",
+                "value": "Water",
+                "present": false
+              },
+              {
+                "kind": "AttackerIsNativeLife",
+                "value": false
+              },
+              {
+                "kind": "DefenderIsNativeLife",
+                "value": false
+              }
+            ]
+          },
           "parameters": {
-            "stat": "tile_defense",
-            "amount": 25,
-            "op": "AddPercent"
+            "stat": "conventional_defense",
+            "amount": 1.5,
+            "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "condition": {
+            "kind": "AllOf",
+            "conditions": [
+              {
+                "kind": "DefenderDomain",
+                "domains": [
+                  "land",
+                  "sea"
+                ]
+              },
+              {
+                "kind": "TargetTileHas",
+                "value": "Base",
+                "present": false
+              },
+              {
+                "kind": "TargetTileHas",
+                "value": "Rocky",
+                "present": false
+              },
+              {
+                "kind": "TargetTileHas",
+                "value": "Water",
+                "present": false
+              },
+              {
+                "kind": "AttackerIsNativeLife",
+                "value": false
+              },
+              {
+                "kind": "DefenderIsNativeLife",
+                "value": true
+              }
+            ]
+          },
+          "parameters": {
+            "stat": "conventional_defense",
+            "amount": 2,
+            "op": "MultiplyGeometric"
           }
         },
         {

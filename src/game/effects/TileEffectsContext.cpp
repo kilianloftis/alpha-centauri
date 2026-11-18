@@ -1,6 +1,5 @@
 #include "game/effects/TileEffectsContext.h"
 
-#include "game/CurrentGameState.h"
 #include "game/GameState.h"
 #include "game/combat/TileInterceptDeployLedger.h"
 #include "game/faction/Faction.h"
@@ -427,17 +426,6 @@ TileYieldView_t TileEffectsContext::ResolveYieldFromEffects_(
 {
     const YieldLanes_t lanes = ResolveYieldLanes_(rTile, effects);
     return TileYieldView_t{lanes.effective, lanes.potential};
-}
-
-double TileEffectsContext::ResolveTileDefenseMultiplier(const Tile& rTile, FactionId_t forFaction) const
-{
-    EffectContext_t ctx;
-    ctx.pFaction = CurrentGameState().FindFaction(forFaction);
-    const std::vector<ActiveEffect_t> effects = CollectAreaEffects(rTile);
-    return ResolveStatModifiers(
-               FilterByStatIdInContext(effects, StatId_t::TileDefense, ctx),
-               SeedFor(StatId_t::TileDefense), &ctx)
-        .total;
 }
 
 void TileEffectsContext::RecomputeMoisture(Tile& rTile)

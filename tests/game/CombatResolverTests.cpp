@@ -45,7 +45,7 @@ struct CombatHarness_
         : moveCosts(fixture.improvements, MovementConstants_t{})
         , steps(fixture.map, fixture.ctx)
         , rng(seed)
-        , combat(moveCosts, steps, fixture.map, fixture.ctx, fixture.morale(), rng)
+        , combat(moveCosts, steps, fixture.map, fixture.morale(), rng)
     {
     }
 };
@@ -90,16 +90,12 @@ void FillWater_(WorldFixture& fixture)
     }
 }
 
-double CombatMoralePercent_(const Unit& rUnit, const EffectContext_t& rCtx,
-                            const MoraleCalculator& rMorale)
-{
-    const int level = CombatMoraleLevel(rUnit, rCtx, rMorale);
-    return rMorale.CombatAddPercent(level);
-}
+const CombatRatingStats_t k_ConventionalAttack{StatId_t::ConventionalAttack, StatId_t::Attack};
+const CombatRatingStats_t k_ConventionalDefense{StatId_t::ConventionalDefense, StatId_t::Defense};
 
 } // namespace
 
-TEST_CASE("Combat strength is resolved rating times 0x100", "[combat]")
+TEST_CASE("Disciplined combat strength is the rating times 0x100", "[combat]")
 {
     FactionFixture fixture;
     FillLand_(fixture);
@@ -108,24 +104,14 @@ TEST_CASE("Combat strength is resolved rating times 0x100", "[combat]")
 
     Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
     Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_armor"});
-    // Disciplined = 0% morale so ResolveCombatUnitStat matches weapon/armour only.
     attacker.SetXp(2);
     defender.SetXp(2);
-
-    const MoraleCalculator& morale = fixture.morale();
-    const EffectContext_t attackCtx{&defender.GetTile(), CombatRole_t::Attacker};
-    const EffectContext_t defenseCtx{&defender.GetTile(), CombatRole_t::Defender};
-    const int attackRating = ResolveCombatUnitStat(
-        attacker, StatId_t::Attack, attackCtx, CombatMoralePercent_(attacker, attackCtx, morale));
-    const int defenseRating = ResolveCombatUnitStat(
-        defender, StatId_t::Defense, defenseCtx,
-        CombatMoralePercent_(defender, defenseCtx, morale));
 
     CombatHarness_ harness(fixture, /*seed*/ 1);
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
 
-    CHECK(result.attackStrength == attackRating * CombatResolver::k_combatStrengthScale);
-    CHECK(result.defenseStrength == defenseRating * CombatResolver::k_combatStrengthScale);
+    CHECK(result.attackStrength == 4 * CombatResolver::k_combatStrengthScale);
+    CHECK(result.defenseStrength == 3 * CombatResolver::k_combatStrengthScale);
     CHECK_FALSE(result.rounds.empty());
 }
 
@@ -141,43 +127,31 @@ TEST_CASE("Partial movement scales attack strength by the leftover fraction of a
     Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_armor"});
     attacker.SetXp(2);
     defender.SetXp(2);
-
-    const MoraleCalculator& morale = fixture.morale();
-    const EffectContext_t attackCtx{&defender.GetTile(), CombatRole_t::Attacker};
-    const EffectContext_t defenseCtx{&defender.GetTile(), CombatRole_t::Defender};
-    const int attackRating = ResolveCombatUnitStat(
-        attacker, StatId_t::Attack, attackCtx, CombatMoralePercent_(attacker, attackCtx, morale));
-    const int defenseRating = ResolveCombatUnitStat(
-        defender, StatId_t::Defense, defenseCtx,
-        CombatMoralePercent_(defender, defenseCtx, morale));
     const int point = MovementConstants_t::k_moveFragmentsPerPoint;
+    const int fullAttack = 4 * CombatResolver::k_combatStrengthScale;
 
     CombatHarness_ harness(fixture, /*seed*/ 1);
 
-    SECTION("two thirds of a point")
+    SECTION("two thirds of a point rounds the scaled strength down")
     {
         attacker.SetMoveFragmentsRemaining(point * 2 / 3);
         const CombatResult_t result = harness.combat.Resolve(attacker, defender);
-        CHECK(result.attackStrength
-              == static_cast<int>(std::lround(attackRating * (2.0 / 3.0)
-                                              * CombatResolver::k_combatStrengthScale)));
-        CHECK(result.defenseStrength == defenseRating * CombatResolver::k_combatStrengthScale);
+        CHECK(result.attackStrength == 682);
+        CHECK(result.defenseStrength == 3 * CombatResolver::k_combatStrengthScale);
     }
 
     SECTION("exactly one point")
     {
         attacker.SetMoveFragmentsRemaining(point);
         const CombatResult_t result = harness.combat.Resolve(attacker, defender);
-        CHECK(result.attackStrength == attackRating * CombatResolver::k_combatStrengthScale);
-        CHECK(result.defenseStrength == defenseRating * CombatResolver::k_combatStrengthScale);
+        CHECK(result.attackStrength == fullAttack);
     }
 
     SECTION("more than one point")
     {
         attacker.SetMoveFragmentsRemaining(point + point * 2 / 3);
         const CombatResult_t result = harness.combat.Resolve(attacker, defender);
-        CHECK(result.attackStrength == attackRating * CombatResolver::k_combatStrengthScale);
-        CHECK(result.defenseStrength == defenseRating * CombatResolver::k_combatStrengthScale);
+        CHECK(result.attackStrength == fullAttack);
     }
 }
 
@@ -200,20 +174,17 @@ TEST_CASE("AAA Tracking doubles defense vs air and orbital attackers", "[combat]
     orbitalAttacker.SetXp(2);
     defender.SetXp(2);
 
-    const MoraleCalculator& morale = fixture.morale();
-
     auto defenseVs = [&](Unit& rAttacker) {
         EffectContext_t defenseCtx{&defender.GetTile(), CombatRole_t::Defender};
         defenseCtx.pAttacker = &rAttacker;
-        return ResolveCombatUnitStat(
-            defender, StatId_t::Defense, defenseCtx,
-            CombatMoralePercent_(defender, defenseCtx, morale));
+        defenseCtx.pDefender = &defender;
+        return ResolveCombatRating(defender, k_ConventionalDefense, defenseCtx, 1.0);
     };
 
-    // Armor base defense 3; +100% AddPercent vs air/orbital → 6.
-    CHECK(defenseVs(landAttacker) == 3);
-    CHECK(defenseVs(airAttacker) == 6);
-    CHECK(defenseVs(orbitalAttacker) == 6);
+    // Armor 3; +100% vs air/orbital → 6.
+    CHECK(defenseVs(landAttacker) == Catch::Approx(3.0));
+    CHECK(defenseVs(airAttacker) == Catch::Approx(6.0));
+    CHECK(defenseVs(orbitalAttacker) == Catch::Approx(6.0));
 
     CombatHarness_ harness(fixture, /*seed*/ 7);
     const CombatResult_t vsAir = harness.combat.Resolve(airAttacker, defender);
@@ -243,23 +214,19 @@ TEST_CASE("Air Superiority doubles attack vs air/orbital and halves vs land/sea"
     airDefender.SetXp(2);
     seaDefender.SetXp(2);
 
-    const MoraleCalculator& morale = fixture.morale();
-
     auto attackVs = [&](Unit& rAttacker, Unit& rDefender) {
         EffectContext_t attackCtx{&rDefender.GetTile(), CombatRole_t::Attacker};
         attackCtx.pAttacker = &rAttacker;
         attackCtx.pDefender = &rDefender;
-        return ResolveCombatUnitStat(
-            rAttacker, StatId_t::Attack, attackCtx,
-            CombatMoralePercent_(rAttacker, attackCtx, morale));
+        return ResolveCombatRating(rAttacker, k_ConventionalAttack, attackCtx, 1.0);
     };
 
-    // Weapon base attack 4; +100% vs air → 8; −50% vs land/sea → 2.
-    CHECK(attackVs(attacker, airDefender) == 8);
-    CHECK(attackVs(attacker, landDefender) == 2);
-    CHECK(attackVs(attacker, seaDefender) == 2);
-    CHECK(attackVs(baseline, landDefender) == 4);
-    CHECK(attackVs(baseline, airDefender) == 4);
+    // Weapon 4; +100% vs air → 8; −50% vs land/sea → 2.
+    CHECK(attackVs(attacker, airDefender) == Catch::Approx(8.0));
+    CHECK(attackVs(attacker, landDefender) == Catch::Approx(2.0));
+    CHECK(attackVs(attacker, seaDefender) == Catch::Approx(2.0));
+    CHECK(attackVs(baseline, landDefender) == Catch::Approx(4.0));
+    CHECK(attackVs(baseline, airDefender) == Catch::Approx(4.0));
 
     CombatHarness_ harness(fixture, /*seed*/ 11);
     const CombatResult_t vsAir = harness.combat.Resolve(attacker, airDefender);
@@ -391,7 +358,7 @@ TEST_CASE("Each round deals 1 damage and records HP snapshots", "[combat]")
     CHECK(walkAtk == attacker.GetCurrentHp());
 }
 
-TEST_CASE("Tile defense multiplier scales defender strength", "[combat]")
+TEST_CASE("Rocky ground multiplies a conventional defender's strength", "[combat]")
 {
     FactionFixture fixture;
     FillLand_(fixture);
@@ -400,23 +367,18 @@ TEST_CASE("Tile defense multiplier scales defender strength", "[combat]")
 
     Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
     Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_armor"});
-
+    attacker.SetXp(2);
+    defender.SetXp(2);
     fixture.At(9, 9).SetRockiness(Rockiness_t::Rocky);
-    const double mult =
-        fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(9, 9), enemy.GetFactionId());
-    REQUIRE(mult == Catch::Approx(1.25));
-
-    const int defenseRating = ResolveStat(defender, StatId_t::Defense);
 
     CombatHarness_ harness(fixture, /*seed*/ 3);
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
 
-    CHECK(result.defenseStrength
-          == static_cast<int>(
-              std::lround(defenseRating * mult * CombatResolver::k_combatStrengthScale)));
+    // Armor 3 x rocky 1.5.
+    CHECK(result.defenseStrength == 1152);
 }
 
-TEST_CASE("Psi combat ignores additive ratings and applies multipliers to one", "[combat][psi]")
+TEST_CASE("Psi combat rates the psi values, not weapon and armor", "[combat][psi]")
 {
     FactionFixture fixture;
     FillLand_(fixture);
@@ -429,21 +391,19 @@ TEST_CASE("Psi combat ignores additive ratings and applies multipliers to one", 
     Unit& defender = fixture.MakeUnit(
         enemy, 9, 9,
         {"test_chassis", "test_armor", "test_psi_defense_modifiers"});
-    // Disciplined = 0% morale so psi percents are unmodified by rank.
     attacker.SetXp(2);
     defender.SetXp(2);
 
-    // Conventional values are huge (156 attack, 206 defense), but psi starts both at 1:
-    // attacker +50% => 1.5; defender geometric x2 => 2.
-    REQUIRE(ResolveStat(attacker, StatId_t::Attack) == 156);
-    REQUIRE(ResolveStat(defender, StatId_t::Defense) == 206);
+    REQUIRE(ResolveStat(attacker, StatId_t::ConventionalAttack) == 104);
+    REQUIRE(ResolveStat(defender, StatId_t::ConventionalDefense) == 103);
 
     CombatHarness_ harness(fixture, /*seed*/ 23);
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
 
+    // Psi against a land defender: attack 3 x the +50% multiplier, defense 2 x the x2 one.
     CHECK(result.bPsiCombat);
-    CHECK(result.attackStrength == 384); // 1.5 * 0x100
-    CHECK(result.defenseStrength == 512); // 2.0 * 0x100
+    CHECK(result.attackStrength == 1152);
+    CHECK(result.defenseStrength == 1024);
 }
 
 TEST_CASE("Partial movement scales psi attack strength by the leftover fraction",
@@ -464,25 +424,12 @@ TEST_CASE("Partial movement scales psi attack strength by the leftover fraction"
     defender.SetXp(2);
     attacker.SetMoveFragmentsRemaining(MovementConstants_t::k_moveFragmentsPerPoint * 2 / 3);
 
-    const MoraleCalculator& morale = fixture.morale();
-    const EffectContext_t attackCtx{&defender.GetTile(), CombatRole_t::Attacker};
-    const EffectContext_t defenseCtx{&defender.GetTile(), CombatRole_t::Defender};
-    const double attackRating = ResolveCombatUnitMultiplicativeStat(
-        attacker, StatId_t::Attack, 1.0, attackCtx,
-        CombatMoralePercent_(attacker, attackCtx, morale));
-    const double defenseRating = ResolveCombatUnitMultiplicativeStat(
-        defender, StatId_t::Defense, 1.0, defenseCtx,
-        CombatMoralePercent_(defender, defenseCtx, morale));
-
     CombatHarness_ harness(fixture, /*seed*/ 23);
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
 
     CHECK(result.bPsiCombat);
-    CHECK(result.attackStrength
-          == static_cast<int>(std::lround(attackRating * (2.0 / 3.0)
-                                          * CombatResolver::k_combatStrengthScale)));
-    CHECK(result.defenseStrength
-          == static_cast<int>(std::lround(defenseRating * CombatResolver::k_combatStrengthScale)));
+    CHECK(result.attackStrength == 768);
+    CHECK(result.defenseStrength == 1024);
 }
 
 TEST_CASE("Either combatant can force psi combat", "[combat][psi]")
@@ -503,8 +450,8 @@ TEST_CASE("Either combatant can force psi combat", "[combat][psi]")
         CombatHarness_ harness(fixture, /*seed*/ 5);
         const CombatResult_t result = harness.combat.Resolve(attacker, defender);
         CHECK(result.bPsiCombat);
-        CHECK(result.attackStrength == CombatResolver::k_combatStrengthScale);
-        CHECK(result.defenseStrength == CombatResolver::k_combatStrengthScale);
+        CHECK(result.attackStrength == 3 * CombatResolver::k_combatStrengthScale);
+        CHECK(result.defenseStrength == 2 * CombatResolver::k_combatStrengthScale);
     }
 
     SECTION("defender forces psi")
@@ -523,8 +470,8 @@ TEST_CASE("Either combatant can force psi combat", "[combat][psi]")
         CombatHarness_ harness(fixture, /*seed*/ 5);
         const CombatResult_t result = harness.combat.Resolve(attacker, defender);
         CHECK(result.bPsiCombat);
-        CHECK(result.attackStrength == CombatResolver::k_combatStrengthScale);
-        CHECK(result.defenseStrength == CombatResolver::k_combatStrengthScale);
+        CHECK(result.attackStrength == 3 * CombatResolver::k_combatStrengthScale);
+        CHECK(result.defenseStrength == 2 * CombatResolver::k_combatStrengthScale);
     }
 }
 

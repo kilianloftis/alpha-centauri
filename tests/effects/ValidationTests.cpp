@@ -163,9 +163,13 @@ static_assert(KindFor(StatId_t::Labs) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Psych) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Drones) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Talents) == StatKind_t::Additive);
-static_assert(KindFor(StatId_t::Attack) == StatKind_t::Additive);
-static_assert(KindFor(StatId_t::Defense) == StatKind_t::Additive);
-static_assert(KindFor(StatId_t::TileDefense) == StatKind_t::PureMultiplier);
+static_assert(KindFor(StatId_t::ConventionalAttack) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::PsiAttack) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::Attack) == StatKind_t::PureMultiplier);
+static_assert(KindFor(StatId_t::ConventionalDefense) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::PsiDefense) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::Defense) == StatKind_t::PureMultiplier);
+static_assert(KindFor(StatId_t::AttackHandicap) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::Movement) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Vision) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::HitPoints) == StatKind_t::Additive);
@@ -277,12 +281,13 @@ static_assert(KindFor(StatId_t::GiftSizeThreshold) == StatKind_t::PureMultiplier
 // SeedFor derives the context-free seed from the kind; RawScaled stats have none (SeedFor
 // throws for them, which is not constexpr-evaluable, so no pin here).
 static_assert(SeedFor(StatId_t::Nutrients) == 0.0);
-static_assert(SeedFor(StatId_t::Attack) == 0.0);
+static_assert(SeedFor(StatId_t::ConventionalAttack) == 0.0);
+static_assert(SeedFor(StatId_t::Attack) == 1.0);
+static_assert(SeedFor(StatId_t::AttackHandicap) == 1.0);
 static_assert(SeedFor(StatId_t::CostMultiplier) == 1.0);
 static_assert(SeedFor(StatId_t::PrototypeSurchargeScale) == 1.0);
 static_assert(SeedFor(StatId_t::RetoolPenaltyScale) == 1.0);
 static_assert(SeedFor(StatId_t::UpgradeCostScale) == 1.0);
-static_assert(SeedFor(StatId_t::TileDefense) == 1.0);
 static_assert(SeedFor(StatId_t::RebelJoinWeight) == 0.0);
 static_assert(SeedFor(StatId_t::GiftSizeThreshold) == 1.0);
 
@@ -307,18 +312,22 @@ static_assert(DomainFor(StatId_t::RebelJoinWeight) == ResolveDomain_t::Faction);
 static_assert(DomainFor(StatId_t::GiftGivenValue) == ResolveDomain_t::Faction);
 static_assert(DomainFor(StatId_t::GiftReceivedValue) == ResolveDomain_t::Faction);
 static_assert(DomainFor(StatId_t::GiftSizeThreshold) == ResolveDomain_t::Faction);
+static_assert(DomainFor(StatId_t::ConventionalAttack) == ResolveDomain_t::Unit);
+static_assert(DomainFor(StatId_t::PsiAttack) == ResolveDomain_t::Unit);
 static_assert(DomainFor(StatId_t::Attack) == ResolveDomain_t::Unit);
+static_assert(DomainFor(StatId_t::AttackHandicap) == ResolveDomain_t::Unit);
 static_assert(DomainFor(StatId_t::HealRate) == ResolveDomain_t::Unit);
 static_assert(DomainFor(StatId_t::MaxHealPercent) == ResolveDomain_t::Unit);
 static_assert(DomainFor(StatId_t::EarthquakeLevels) == ResolveDomain_t::Unit);
 static_assert(DomainFor(StatId_t::FungalBloomTiles) == ResolveDomain_t::Unit);
 static_assert(DomainFor(StatId_t::ExplosionRadius) == ResolveDomain_t::Unit);
 static_assert(DomainFor(StatId_t::CollateralSusceptibility) == ResolveDomain_t::Unit);
+static_assert(DomainFor(StatId_t::ConventionalDefense) == ResolveDomain_t::Unit);
+static_assert(DomainFor(StatId_t::PsiDefense) == ResolveDomain_t::Unit);
 static_assert(DomainFor(StatId_t::Defense) == ResolveDomain_t::Unit);
 static_assert(DomainFor(StatId_t::MoraleRank) == ResolveDomain_t::Unit);
 static_assert(DomainFor(StatId_t::MoraleExtra) == ResolveDomain_t::Unit);
 static_assert(DomainFor(StatId_t::MoistureTier) == ResolveDomain_t::Tile);
-static_assert(DomainFor(StatId_t::TileDefense) == ResolveDomain_t::Tile);
 static_assert(DomainFor(StatId_t::MoveCost) == ResolveDomain_t::Tile);
 static_assert(DomainFor(StatId_t::BombardRange) == ResolveDomain_t::Unit);
 static_assert(DomainFor(StatId_t::BombardMinHpPercent) == ResolveDomain_t::Tile);
@@ -459,12 +468,12 @@ TEST_CASE("ValidateEffectReferences: HasComponent condition ids must exist",
 
     actest::EffectPool pool;
     data.productionConfig->effects = {
-        pool.StatMod(StatId_t::Attack, 1.0, ModifierOp_t::Add, EffectScope_t::FactionUnits,
+        pool.StatMod(StatId_t::ConventionalAttack, 1.0, ModifierOp_t::Add, EffectScope_t::FactionUnits,
                      std::nullopt, actest::HasComponentCondition("test_weapon"))};
     CHECK_NOTHROW(ValidateEffectReferences(data));
 
     data.productionConfig->effects = {
-        pool.StatMod(StatId_t::Attack, 1.0, ModifierOp_t::Add, EffectScope_t::FactionUnits,
+        pool.StatMod(StatId_t::ConventionalAttack, 1.0, ModifierOp_t::Add, EffectScope_t::FactionUnits,
                      std::nullopt, actest::HasComponentCondition("no_such_component"))};
     CHECK_THROWS_WITH(ValidateEffectReferences(data),
                       Catch::Matchers::ContainsSubstring("no_such_component"));

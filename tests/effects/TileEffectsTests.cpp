@@ -1,5 +1,5 @@
-// Tests for TileEffectsContext: area (aura) collection, tile yield resolution, defense
-// multipliers, moisture recomputation, and improvement add/remove with effects.
+// Tests for TileEffectsContext: area (aura) collection, tile yield resolution, tile defense
+// bonuses on a defender, moisture recomputation, and improvement add/remove with effects.
 
 #include "GameFixtures.h"
 #include "TestHelpers.h"
@@ -23,37 +23,55 @@
 using namespace ac;
 using Catch::Approx;
 
-TEST_CASE("CollectAreaEffects: Sensor reaches Chebyshev radius for its territory owner",
+namespace
+{
+
+const std::vector<std::string> k_ArmoredLand{"test_chassis", "test_weak_armor"};
+const std::vector<std::string> k_LandGun{"test_chassis", "test_weapon"};
+
+// rDefender's conventional defense rating after it moves to (x, y).
+double RatingAt_(actest::FactionFixture& rFixture, Unit& rDefender, const Unit& rAttacker, int x,
+                 int y)
+{
+    rFixture.MoveUnit(rDefender, x, y);
+    return actest::ConventionalDefenseRating(rDefender, rAttacker);
+}
+
+} // namespace
+
+TEST_CASE("Sensor reaches defenders within Chebyshev radius 2 for its territory owner",
           "[effects][tile][aura][territory]")
 {
     actest::FactionFixture fixture;
     Faction& owner = fixture.MakeFaction();
-    // Base off the Sensor tile so Base's +100% defense does not stack into these checks.
+    Faction& enemy = fixture.MakeFaction();
+    // Base off the Sensor tile so Base's defense bonus does not stack into these checks.
     fixture.MakeFactionBase(owner, 8, 2);
     fixture.ctx.AddOccupantWithEffects(fixture.At(8, 8), "Sensor");
-    const FactionId_t id = owner.GetFactionId();
+    Unit& defender = fixture.MakeUnit(owner, 8, 8, k_ArmoredLand);
+    const Unit& attacker = fixture.MakeUnit(enemy, 0, 0, k_LandGun);
 
     SECTION("distance 1 and 2 are covered, including diagonals")
     {
-        CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(9, 9), id) == Approx(1.25));
-        CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(10, 10), id) == Approx(1.25));
-        CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(8, 10), id) == Approx(1.25));
-        CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(8, 12), id) == Approx(1.25));
+        CHECK(RatingAt_(fixture, defender, attacker, 9, 9) == Approx(1.25));
+        CHECK(RatingAt_(fixture, defender, attacker, 10, 10) == Approx(1.25));
+        CHECK(RatingAt_(fixture, defender, attacker, 8, 10) == Approx(1.25));
+        CHECK(RatingAt_(fixture, defender, attacker, 8, 12) == Approx(1.25));
     }
 
     SECTION("distance 3 is not covered")
     {
-        CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(11, 11), id) == Approx(1.0));
-        CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(8, 14), id) == Approx(1.0));
+        CHECK(RatingAt_(fixture, defender, attacker, 11, 11) == Approx(1.0));
+        CHECK(RatingAt_(fixture, defender, attacker, 8, 14) == Approx(1.0));
     }
 
     SECTION("the sensor's own tile is covered")
     {
-        CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(8, 8), id) == Approx(1.25));
+        CHECK(RatingAt_(fixture, defender, attacker, 8, 8) == Approx(1.25));
     }
 }
 
-TEST_CASE("Sensor aura only benefits the faction that owns its territory",
+TEST_CASE("Sensor in owned territory only benefits the territory owner",
           "[effects][tile][aura][territory]")
 {
     actest::FactionFixture fixture;
@@ -61,9 +79,38 @@ TEST_CASE("Sensor aura only benefits the faction that owns its territory",
     Faction& other = fixture.MakeFaction();
     fixture.MakeFactionBase(owner, 8, 2);
     fixture.ctx.AddOccupantWithEffects(fixture.At(8, 8), "Sensor");
+    const Unit& ownerDefender = fixture.MakeUnit(owner, 10, 10, k_ArmoredLand);
+    const Unit& otherDefender = fixture.MakeUnit(other, 10, 10, k_ArmoredLand);
 
-    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(10, 10), owner.GetFactionId()) == Approx(1.25));
-    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(10, 10), other.GetFactionId()) == Approx(1.0));
+    CHECK(actest::ConventionalDefenseRating(ownerDefender, otherDefender) == Approx(1.25));
+    CHECK(actest::ConventionalDefenseRating(otherDefender, ownerDefender) == Approx(1.0));
+}
+
+TEST_CASE("Sensor in unowned territory benefits any real faction's defender",
+          "[effects][tile][aura][territory]")
+{
+    actest::FactionFixture fixture;
+    Faction& first = fixture.MakeFaction();
+    Faction& second = fixture.MakeFaction();
+    fixture.ctx.AddOccupantWithEffects(fixture.At(8, 8), "Sensor");
+    Unit& defender = fixture.MakeUnit(first, 8, 8, k_ArmoredLand);
+    const Unit& attacker = fixture.MakeUnit(second, 0, 0, k_LandGun);
+
+    CHECK(RatingAt_(fixture, defender, attacker, 8, 8) == Approx(1.25));
+    CHECK(RatingAt_(fixture, defender, attacker, 10, 10) == Approx(1.25));
+}
+
+TEST_CASE("Sensor never benefits a native-life faction's defender",
+          "[effects][tile][aura][territory]")
+{
+    actest::FactionFixture fixture;
+    Faction& planet = actest::AddNativeLifeFaction(fixture);
+    Faction& enemy = fixture.MakeFaction();
+    fixture.ctx.AddOccupantWithEffects(fixture.At(8, 8), "Sensor");
+    const Unit& defender = fixture.MakeUnit(planet, 8, 8, k_ArmoredLand);
+    const Unit& attacker = fixture.MakeUnit(enemy, 0, 0, k_LandGun);
+
+    CHECK(actest::ConventionalDefenseRating(defender, attacker) == Approx(1.0));
 }
 
 TEST_CASE("A unit-projected defense aura only benefits the projecting faction",
@@ -75,51 +122,144 @@ TEST_CASE("A unit-projected defense aura only benefits the projecting faction",
 
     // Unit auras are attributed to the unit's faction, not to territory — no base needed.
     fixture.MakeUnit(owner, 8, 8, {"test_chassis", "sensor_pod"});
-    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(9, 9), owner.GetFactionId())
-          == Approx(1.25));
-    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(9, 9), foreign.GetFactionId())
-          == Approx(1.0));
-}
-
-TEST_CASE("Sensor on unowned territory benefits nobody", "[effects][tile][aura][territory]")
-{
-    actest::WorldFixture world;
-    world.ctx.AddOccupantWithEffects(world.At(8, 8), "Sensor");
-    // No bases -> territory unowned -> ownerFaction is k_NoFactionOwner.
-    CHECK(world.ctx.ResolveTileDefenseMultiplier(world.At(8, 8), /*forFaction*/ 1) == Approx(1.0));
-    CHECK(world.ctx.ResolveTileDefenseMultiplier(world.At(10, 10), /*forFaction*/ 1) == Approx(1.0));
+    const Unit& ownerDefender = fixture.MakeUnit(owner, 9, 9, k_ArmoredLand);
+    const Unit& foreignDefender = fixture.MakeUnit(foreign, 9, 9, k_ArmoredLand);
+    CHECK(actest::ConventionalDefenseRating(ownerDefender, foreignDefender) == Approx(1.25));
+    CHECK(actest::ConventionalDefenseRating(foreignDefender, ownerDefender) == Approx(1.0));
 }
 
 TEST_CASE("CollectAreaEffects: radius-0 improvements never reach neighbors", "[effects][tile][aura]")
 {
-    actest::WorldFixture world;
-    world.ctx.AddOccupantWithEffects(world.At(8, 8), "Bunker");
+    actest::FactionFixture fixture;
+    Faction& defending = fixture.MakeFaction();
+    Faction& attacking = fixture.MakeFaction();
+    fixture.ctx.AddOccupantWithEffects(fixture.At(8, 8), "Bunker");
+    Unit& defender = fixture.MakeUnit(defending, 8, 8, k_ArmoredLand);
+    const Unit& attacker = fixture.MakeUnit(attacking, 0, 0, k_LandGun);
 
-    CHECK(world.ctx.ResolveTileDefenseMultiplier(world.At(8, 8), /*forFaction*/ 1) == Approx(1.5));
-    CHECK(world.ctx.ResolveTileDefenseMultiplier(world.At(9, 9), /*forFaction*/ 1) == Approx(1.0));
+    CHECK(RatingAt_(fixture, defender, attacker, 8, 8) == Approx(1.5));
+    CHECK(RatingAt_(fixture, defender, attacker, 9, 9) == Approx(1.0));
 }
 
-TEST_CASE("ResolveTileDefenseMultiplier: terrain and improvement bonuses combine arithmetically",
+TEST_CASE("Tile defense bonuses each multiply the defender's rating",
           "[effects][tile][defense][territory]")
 {
     actest::FactionFixture fixture;
     Faction& owner = fixture.MakeFaction();
-    fixture.MakeFactionBase(owner, 8, 2); // owns Sensor territory without stacking Base on (4,4)
+    Faction& enemy = fixture.MakeFaction();
+    fixture.MakeFactionBase(owner, 8, 2); // owns Sensor territory without stacking Base on (8,8)
     Tile& tile = fixture.At(8, 8);
-    const FactionId_t id = owner.GetFactionId();
+    const Unit& defender = fixture.MakeUnit(owner, 8, 8, k_ArmoredLand);
+    const Unit& attacker = fixture.MakeUnit(enemy, 0, 0, k_LandGun);
 
-    // Base multiplier for a featureless tile is 1.0.
-    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(tile, id) == Approx(1.0));
+    CHECK(actest::ConventionalDefenseRating(defender, attacker) == Approx(1.0));
 
-    tile.SetRockiness(Rockiness_t::Rocky); // +25%
-    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(tile, id) == Approx(1.25));
+    tile.SetRockiness(Rockiness_t::Rocky);
+    CHECK(actest::ConventionalDefenseRating(defender, attacker) == Approx(1.5));
 
-    fixture.ctx.AddOccupantWithEffects(tile, "Bunker"); // +50%
-    // Arithmetic combination: 1 + 0.25 + 0.50, not 1.25 * 1.5.
-    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(tile, id) == Approx(1.75));
+    fixture.ctx.AddOccupantWithEffects(tile, "Bunker");
+    CHECK(actest::ConventionalDefenseRating(defender, attacker) == Approx(2.25));
 
-    fixture.ctx.AddOccupantWithEffects(fixture.At(9, 9), "Sensor"); // +25% aura
-    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(tile, id) == Approx(2.0));
+    fixture.ctx.AddOccupantWithEffects(fixture.At(9, 9), "Sensor");
+    CHECK(actest::ConventionalDefenseRating(defender, attacker) == Approx(2.8125));
+}
+
+TEST_CASE("Rocky defends land and sea units off a base, unless fungus meets a native attacker",
+          "[effects][tile][defense]")
+{
+    actest::FactionFixture fixture;
+    Faction& defending = fixture.MakeFaction();
+    Faction& attacking = fixture.MakeFaction();
+    Tile& tile = fixture.At(8, 8);
+    tile.SetRockiness(Rockiness_t::Rocky);
+    const Unit& gun = fixture.MakeUnit(attacking, 0, 0, k_LandGun);
+    const Unit& worm = fixture.MakeUnit(attacking, 0, 2, {"native_life_chassis", "test_weapon"});
+
+    SECTION("a land defender gets x1.5")
+    {
+        const Unit& defender = fixture.MakeUnit(defending, 8, 8, k_ArmoredLand);
+        CHECK(actest::ConventionalDefenseRating(defender, gun) == Approx(1.5));
+    }
+
+    SECTION("an air defender gets nothing")
+    {
+        const Unit& flyer =
+            fixture.MakeUnit(defending, 8, 8, {"test_flight_chassis", "test_weak_armor"});
+        CHECK(actest::ConventionalDefenseRating(flyer, gun) == Approx(1.0));
+    }
+
+    SECTION("rocky fungus still gives x1.5 against a conventional attacker, not x2.25")
+    {
+        fixture.ctx.AddOccupantWithEffects(tile, "Fungus");
+        const Unit& defender = fixture.MakeUnit(defending, 8, 8, k_ArmoredLand);
+        CHECK(actest::ConventionalDefenseRating(defender, gun) == Approx(1.5));
+    }
+
+    SECTION("rocky fungus gives nothing against a native attacker")
+    {
+        fixture.ctx.AddOccupantWithEffects(tile, "Fungus");
+        const Unit& defender = fixture.MakeUnit(defending, 8, 8, k_ArmoredLand);
+        CHECK(actest::ConventionalDefenseRating(defender, worm) == Approx(1.0));
+    }
+}
+
+TEST_CASE("Fungus defends x1.5, or x2 for a native defender, but not against natives",
+          "[effects][tile][defense]")
+{
+    actest::FactionFixture fixture;
+    Faction& defending = fixture.MakeFaction();
+    Faction& attacking = fixture.MakeFaction();
+    fixture.ctx.AddOccupantWithEffects(fixture.At(8, 8), "Fungus");
+    const Unit& gun = fixture.MakeUnit(attacking, 0, 0, k_LandGun);
+    const Unit& worm = fixture.MakeUnit(attacking, 0, 2, {"native_life_chassis", "test_weapon"});
+
+    SECTION("a conventional defender gets x1.5")
+    {
+        const Unit& defender = fixture.MakeUnit(defending, 8, 8, k_ArmoredLand);
+        CHECK(actest::ConventionalDefenseRating(defender, gun) == Approx(1.5));
+    }
+
+    SECTION("a native defender gets x2")
+    {
+        const Unit& native =
+            fixture.MakeUnit(defending, 8, 8, {"native_life_chassis", "test_weak_armor"});
+        CHECK(actest::ConventionalDefenseRating(native, gun) == Approx(2.0));
+    }
+
+    SECTION("a native attacker cancels it")
+    {
+        const Unit& defender = fixture.MakeUnit(defending, 8, 8, k_ArmoredLand);
+        CHECK(actest::ConventionalDefenseRating(defender, worm) == Approx(1.0));
+    }
+}
+
+TEST_CASE("Sea fungus gives no defense bonus", "[effects][tile][defense]")
+{
+    actest::FactionFixture fixture;
+    Faction& defending = fixture.MakeFaction();
+    Faction& attacking = fixture.MakeFaction();
+    Tile& sea = fixture.At(8, 8);
+    sea.SetElevation(-100);
+    fixture.ctx.AddOccupantWithEffects(sea, "Fungus");
+    const Unit& defender =
+        fixture.MakeUnit(defending, 8, 8, {"test_sea_chassis", "test_weak_armor"});
+    const Unit& gun = fixture.MakeUnit(attacking, 0, 0, k_LandGun);
+
+    CHECK(actest::ConventionalDefenseRating(defender, gun) == Approx(1.0));
+}
+
+TEST_CASE("Bunker defends against land and sea attackers, not air", "[effects][tile][defense]")
+{
+    actest::FactionFixture fixture;
+    Faction& defending = fixture.MakeFaction();
+    Faction& attacking = fixture.MakeFaction();
+    fixture.ctx.AddOccupantWithEffects(fixture.At(8, 8), "Bunker");
+    const Unit& defender = fixture.MakeUnit(defending, 8, 8, k_ArmoredLand);
+    const Unit& gun = fixture.MakeUnit(attacking, 0, 0, k_LandGun);
+    const Unit& flyer = fixture.MakeUnit(attacking, 0, 2, {"test_flight_chassis", "test_weapon"});
+
+    CHECK(actest::ConventionalDefenseRating(defender, gun) == Approx(1.5));
+    CHECK(actest::ConventionalDefenseRating(defender, flyer) == Approx(1.0));
 }
 
 TEST_CASE("ResolveTileYield: bare tiles start at zero; SolarCollector applies elevation via amount_source",
@@ -437,12 +577,14 @@ TEST_CASE("Aura effects at the map edge are collected without crashing", "[effec
 {
     actest::FactionFixture fixture;
     Faction& owner = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
     fixture.MakeFactionBase(owner, 8, 0);
-    // Sensor beside the base so Base's +100% does not stack into the Sensor checks.
+    // Sensor beside the base so Base's defense bonus does not stack into the Sensor checks.
     fixture.ctx.AddOccupantWithEffects(fixture.At(10, 2), "Sensor");
-    const FactionId_t id = owner.GetFactionId();
-    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(10, 2), id) == Approx(1.25));
-    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(9, 1), id) == Approx(1.25));
+    Unit& defender = fixture.MakeUnit(owner, 10, 2, k_ArmoredLand);
+    const Unit& attacker = fixture.MakeUnit(enemy, 0, 8, k_LandGun);
+    CHECK(RatingAt_(fixture, defender, attacker, 10, 2) == Approx(1.25));
+    CHECK(RatingAt_(fixture, defender, attacker, 9, 1) == Approx(1.25));
     CHECK(fixture.ctx.ResolveTileYield(fixture.At(7, 1)).effective.nutrients == 0);
 }
 
@@ -607,15 +749,17 @@ TEST_CASE("Sensor aura wraps horizontally across the map seam",
 {
     actest::FactionFixture fixture;
     Faction& owner = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
     const int width = fixture.map.GetWidth();
     fixture.MakeFactionBase(owner, 4, 8);
     fixture.ctx.AddOccupantWithEffects(fixture.At(0, 4), "Sensor");
-    const FactionId_t id = owner.GetFactionId();
+    Unit& defender = fixture.MakeUnit(owner, width - 2, 4, k_ArmoredLand);
+    const Unit& attacker = fixture.MakeUnit(enemy, 8, 12, k_LandGun);
 
-    REQUIRE(fixture.map.GetTerritory().GetOwner(0, 4) == id);
-    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(width - 2, 4), id) == Approx(1.25));
-    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(width - 4, 4), id) == Approx(1.25));
-    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(width - 6, 4), id) == Approx(1.0));
+    REQUIRE(fixture.map.GetTerritory().GetOwner(0, 4) == owner.GetFactionId());
+    CHECK(RatingAt_(fixture, defender, attacker, width - 2, 4) == Approx(1.25));
+    CHECK(RatingAt_(fixture, defender, attacker, width - 4, 4) == Approx(1.25));
+    CHECK(RatingAt_(fixture, defender, attacker, width - 6, 4) == Approx(1.0));
 }
 
 TEST_CASE("Condenser moisture aura wraps horizontally across the map seam",

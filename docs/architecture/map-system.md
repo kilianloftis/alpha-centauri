@@ -37,7 +37,7 @@ graph TB
         TerrainOperationRegistry[TerrainOperationRegistry<br/>projects that place nothing<br/>on_complete_effects]
         CollectTileEffects[CollectTileEffects]
         ResolveTileYield[ResolveTileYield]
-        ResolveTileDefenseMultiplier[ResolveTileDefenseMultiplier]
+        StandingUnitEffects[Standing unit effects<br/>CollectAreaEffects of the unit's tile]
     end
 
     subgraph "Former Projects"
@@ -71,7 +71,7 @@ graph TB
     TerraformProject --> TerrainOperationRegistry
     CollectTileEffects --> ImprovementRegistry
     CollectTileEffects --> ResolveTileYield
-    CollectTileEffects --> ResolveTileDefenseMultiplier
+    CollectTileEffects --> StandingUnitEffects
     TerritoryMap --> Base
     Base --> Tile
     Faction --> Base
@@ -280,16 +280,16 @@ and yield lookups for object rows still read the live tile.
 - **Purpose**: Unifies terrain classification, natural features, player-built improvements, tile specials (formerly "bonus"/"landmark"), and a founded base behind one config type (`ImprovementConfig_t`), since all of them answer the same two questions: what effects do they grant, and what do they exclude. Terrain is resolved by name into cached config pointers (`Tile::GetTerrainFeatures()`); improvements are held directly as `const ImprovementConfig_t*` on the tile (`Tile::GetImprovements()`). Full details (scope semantics, the `ThisTile` resolution pattern, the seeded-energy pattern) are in `docs/architecture/effects-system.md`'s "Tile Improvement Effects" section — this is the map-system-facing summary.
 - **Components**:
   - `ImprovementConfig_t` / `ImprovementConfigParser` / `ImprovementRegistry` (`include/game/map/ImprovementConfigParser.h`, `ImprovementRegistry.h`) — id, name, `placement`, `excludes` (incompatible occupant ids), per-effect `radius`, optional `owned_by_territory`, an `effects` array, optional `std::optional<OccupantArt_t> art` (the JSON `art` block — see Occupant art above), and an optional `project` (`FormerProject_t`: turns, energy, required tech) present only when a former can build it — so "terrain with a build cost" is unrepresentable rather than three fields every terrain consumer knows to ignore, and `IsBuildable` is just `project.has_value()`. Coexistence is **not** in this header: `OccupantCoexistence.h` owns the predicate, leaving the parser to parse.
-  - `TileEffectsContext::CollectAreaEffects` / `ResolveTileYield` / `ResolveTileDefenseMultiplier` — gather own-tile and neighbor aura effects (Chebyshev scan).
+  - `TileEffectsContext::CollectAreaEffects` / `ResolveTileYield` — gather own-tile and neighbor aura effects (Chebyshev scan). A live unit's effects include the Unit-domain stat modifiers of `CollectAreaEffects` on its tile, which is how tile defense reaches the defender.
   - `OccupantsBlockPlacement(tile, candidate, leavingIds, overrides)` (`include/game/map/ImprovementConfigParser.h`) — the one coexistence predicate. `CanBuildImprovement` is the same question asked the other way round for call sites that want permission rather than a blocker.
 - **Configuration**: `config/improvements.json` holds improvements, each carrying its own `turns_required` / `energy_cost` / `required_techs` when a former can build it. `config/terrain.json` holds terrain occupants (rockiness, moisture, water bands, river, aquifer, fungus, landmarks, bonuses, Monolith) under `features`, and former projects that place no improvement (`LevelTerrain`, `PlantFungus`, `RemoveFungus`, `RaiseLand`, `LowerLand`, `Aquifer`) under `operations`. An operation is `turns_required` / `energy_cost` / `required_techs` plus an `on_complete_effects` list of triggered effects — the same machinery a Tectonic Payload's `on_detonate_effects` uses — so the set is open and nothing in code enumerates it. Each entry's `condition` is also what decides whether the project may start: `CanStartTerraform` refuses when no effect would fire, so a project is never paid for when it would do nothing. Two fields cover the rules that are not expressible as effects: `energy_cost_source: RaiseLowerQuote` swaps the flat `energy_cost` for the elevation-band-plus-distance quote, and `former_domain: Any` lets either Former run it on whatever tile it is standing on. Both files load into **one** `ImprovementRegistry`; `ImprovementConfig_t::placement` says which file an entry came from, so an id cannot be both and `ValidateNoDuplicates_` catches an attempt. `LoadMapOccupants` (`include/game/map/MapOccupantLoad.h`) is the single loading path — production and every test fixture call it, so neither can drift from the other or skip the check that refuses an operation id a buildable improvement would shadow. It reads `terrain.json` once and hands each half to its owner. Callers with no use for former projects use `ImprovementRegistry::LoadOccupants`. `Base` declares no `turns_required`, which is exactly what makes it unbuildable.
-- **Combat bonus example**: `Rocky`, `Fungus`, and `Bunker` each grant a `StatModifier`
-  effect on `StatId_t::TileDefense` with `op: AddPercent, amount: 25` (+25%, stacking
-  additively per `ResolveStatModifiers`'s arithmetic-factor formula). `Base` grants a larger
-  placeholder bonus the same way. Combat folds `ResolveTileDefenseMultiplier` onto unit
-  `Defense` armor (takes a defending `FactionId` so territory-owned Sensor auras only apply
-  for the owner).
-  - **Aura example**: `Sensor` declares `radius: 2` on its defense (and vision) effect entries and projects `+25%` defense to every tile within **Chebyshev** distance 2 — `AppendAreaEffectsFromNeighbors_` uses `ForEachTileInChebyshevRadius`. Prefer per-effect `"radius"` over the improvement-level default. `owned_by_territory: true` stamps `ownerFaction` from the tile's territory owner; Sensor defense/Detect author `SubjectIsOwner` so only that faction receives them, and fog vision still keys on the same ownership stamp via `FactionVisibleMap`. `ResolveTileYield` / own-tile `CollectTileEffects` only look at a tile's own terrain features and improvements unless scanning neighbors for auras.
+- **Combat bonus example**: `Rocky` and `Bunker` grant `conventional_defense`
+  `MultiplyGeometric` 1.5, and `Fungus` 1.5 (2 for a native defender), so psi fights never
+  read them. Their conditions carry SMAC's exclusions: no air defender, not on a base tile,
+  Rocky before Fungus, nothing on fungus against a native attacker, no Bunker against an air
+  attacker. `Base` grants `defense` 1.25, which applies in both kinds of fight. Each
+  multiplies the defender's rating, as SMAC's steps do.
+  - **Aura example**: `Sensor` declares `radius: 2` on its defense (and vision) effect entries and projects a `defense` ×1.25 to every tile within **Chebyshev** distance 2 — `AppendAreaEffectsFromNeighbors_` uses `ForEachTileInChebyshevRadius`. Prefer per-effect `"radius"` over the improvement-level default. `owned_by_territory: true` stamps `ownerFaction` from the tile's territory owner; Sensor defense applies to a non-native defender whose faction owns that territory or when it is unowned (`AnyOf`[`SubjectIsOwner`, `EffectIsUnowned`]), Detect authors `SubjectIsOwner`, and fog vision still keys on the same ownership stamp via `FactionVisibleMap`. `ResolveTileYield` / own-tile `CollectTileEffects` only look at a tile's own terrain features and improvements unless scanning neighbors for auras.
 
 ### Tile Bonuses (special resources)
 - **Purpose**: Special resource bonuses on individual tiles (e.g. a nutrient-rich or mineral deposit).
@@ -354,5 +354,4 @@ and yield lookups for object rows still read the live tile.
 
 - **Climate side effects**: SMAC's `world_climate` also rebuilds temperature, shorelines and continents, and a rainfall change near a base drives the TERRAMINE / TERRAYOURS popup. `RecomputeClimate` covers rivers and rainfall only.
 - **Seed persistence**: `Engine` resolves one session seed and the whole map derives from it, but nothing writes it down — replaying a finished game waits on a save system.
-- **Combat system**: `ResolveTileDefenseMultiplier(tile, forFaction)` is ready to call but nothing resolves attacks yet
 - **Territory UI**: WorldDisplay draws faction base sprites and name labels; border/ownership tint is not implemented yet

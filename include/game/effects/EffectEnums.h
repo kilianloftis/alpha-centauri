@@ -32,12 +32,16 @@ enum class StatId_t
     RiotWeight,
     GoldenAgeWeight,
 
-    // Unit stats
+    // Unit stats. A combat rating is the value stat for the kind of fight times the Attack or
+    // Defense multiplier, which applies in both kinds.
+    ConventionalAttack,
+    PsiAttack,
     Attack,
+    ConventionalDefense,
+    PsiDefense,
     Defense,
-    // Tile defense multiplier (terrain / sensors / bunkers). Distinct quantity from unit
-    // Defense armor — combat folds ResolveTileDefenseMultiplier on top of unit Defense.
-    TileDefense,
+    // Scales the attacker's whole-number strength after the partial-move penalty.
+    AttackHandicap,
     Movement,
     Vision,
     HitPoints,
@@ -327,8 +331,10 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::Talents:
         case StatId_t::RiotWeight:
         case StatId_t::GoldenAgeWeight:
-        case StatId_t::Attack:
-        case StatId_t::Defense:
+        case StatId_t::ConventionalAttack:
+        case StatId_t::PsiAttack:
+        case StatId_t::ConventionalDefense:
+        case StatId_t::PsiDefense:
         case StatId_t::Movement:
         case StatId_t::Vision:
         case StatId_t::HitPoints:
@@ -403,7 +409,9 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::TechCost:
         case StatId_t::CommerceRate:
         case StatId_t::Bureaucracy:
-        case StatId_t::TileDefense:
+        case StatId_t::Attack:
+        case StatId_t::Defense:
+        case StatId_t::AttackHandicap:
         case StatId_t::EcologicalDamage:
         case StatId_t::PlanetFaunaCargoScale:
         case StatId_t::EcoTerraformScale:
@@ -517,8 +525,13 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::GiftSizeThreshold:
         case StatId_t::UpgradeCostScale: return ResolveDomain_t::Faction;
 
+        case StatId_t::ConventionalAttack:
+        case StatId_t::PsiAttack:
         case StatId_t::Attack:
+        case StatId_t::ConventionalDefense:
+        case StatId_t::PsiDefense:
         case StatId_t::Defense:
+        case StatId_t::AttackHandicap:
         case StatId_t::Movement:
         case StatId_t::Vision:
         case StatId_t::HitPoints:
@@ -557,7 +570,6 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::PromotionSuccessChance: return ResolveDomain_t::Unit;
 
         case StatId_t::MoistureTier:
-        case StatId_t::TileDefense:
         case StatId_t::MoveCost:
         case StatId_t::EcoDamageContribution:
         case StatId_t::EcoDamageWorkedContribution:
@@ -581,9 +593,13 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "riot_weight")             return StatId_t::RiotWeight;
     if (rStat == "golden_age_weight")       return StatId_t::GoldenAgeWeight;
     if (rStat == "size_free_drones")        return StatId_t::SizeFreeDrones;
+    if (rStat == "conventional_attack")     return StatId_t::ConventionalAttack;
+    if (rStat == "psi_attack")              return StatId_t::PsiAttack;
     if (rStat == "attack")                  return StatId_t::Attack;
+    if (rStat == "conventional_defense")    return StatId_t::ConventionalDefense;
+    if (rStat == "psi_defense")             return StatId_t::PsiDefense;
     if (rStat == "defense")                 return StatId_t::Defense;
-    if (rStat == "tile_defense")            return StatId_t::TileDefense;
+    if (rStat == "attack_handicap")         return StatId_t::AttackHandicap;
     if (rStat == "movement")                return StatId_t::Movement;
     if (rStat == "vision")                  return StatId_t::Vision;
     if (rStat == "hit_points")              return StatId_t::HitPoints;
@@ -739,6 +755,8 @@ enum class RuleFlagId_t
     CannotCaptureBases,
     // Attack spends all remaining moves (Needlejet: one strike per turn).
     AttackingEndsTurn,
+    // Attacks at full strength with less than one move point left (native life).
+    IgnoresPartialMovePenalty,
     // Capturing this unit does not fully repair it (e.g. Battle Ogre).
     NoConquestRepair,
     // A combat kill of this unit may capture it instead (Alien Artifact), and earns no promotion.
@@ -825,6 +843,7 @@ inline RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "bombard")                     return RuleFlagId_t::Bombard;
     if (rFlag == "cannot_capture_bases")        return RuleFlagId_t::CannotCaptureBases;
     if (rFlag == "attacking_ends_turn")         return RuleFlagId_t::AttackingEndsTurn;
+    if (rFlag == "ignores_partial_move_penalty") return RuleFlagId_t::IgnoresPartialMovePenalty;
     if (rFlag == "no_conquest_repair")          return RuleFlagId_t::NoConquestRepair;
     if (rFlag == "covert")                      return RuleFlagId_t::Covert;
     if (rFlag == "prevents_disengage")          return RuleFlagId_t::PreventsDisengage;
@@ -1032,8 +1051,8 @@ enum class EffectSourceKind_t
     // pop_growth.json continuous baselines (starting_size / max_base_size). No origin base —
     // AllOwnerBases only, like Difficulty.
     Growth,
-    // config/world_rules.json: standing WorldGlobal effects appended once per session
-    // (collateral, bombard floor, tech stagnation cost and turn lag).
+    // config/world_rules.json and combat.json's `effects`: standing WorldGlobal effects appended
+    // once per session (collateral, bombard floor, tech stagnation cost and turn lag, psi values).
     WorldRules,
     // config/eco_damage.json's continuous `effects` (the clean-minerals baseline). No origin
     // base — FactionGlobal / AllOwnerBases only, like Difficulty.

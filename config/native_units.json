@@ -85,6 +85,13 @@
           }
         },
         {
+          "type": "RuleFlag",
+          "scope": "ThisUnit",
+          "parameters": {
+            "flag": "ignores_partial_move_penalty"
+          }
+        },
+        {
           "type": "StatModifier",
           "scope": "ThisUnit",
           "condition": {
@@ -206,6 +213,16 @@
           }
         },
         {
+          "type": "RuleFlag",
+          "scope": "ThisUnit",
+          "condition": {
+            "kind": "IsNativeLifeFaction"
+          },
+          "parameters": {
+            "flag": "ignores_partial_move_penalty"
+          }
+        },
+        {
           "type": "StatModifier",
           "scope": "ThisUnit",
           "condition": {
@@ -314,6 +331,16 @@
           }
         },
         {
+          "type": "RuleFlag",
+          "scope": "ThisUnit",
+          "condition": {
+            "kind": "IsNativeLifeFaction"
+          },
+          "parameters": {
+            "flag": "ignores_partial_move_penalty"
+          }
+        },
+        {
           "type": "StatModifier",
           "scope": "ThisUnit",
           "condition": {
@@ -409,6 +436,16 @@
           "parameters": {
             "flag": "native_life"
           }
+        },
+        {
+          "type": "RuleFlag",
+          "scope": "ThisUnit",
+          "condition": {
+            "kind": "IsNativeLifeFaction"
+          },
+          "parameters": {
+            "flag": "ignores_partial_move_penalty"
+          }
         }
       ],
       "planet": {
@@ -501,6 +538,13 @@
           }
         },
         {
+          "type": "RuleFlag",
+          "scope": "ThisUnit",
+          "parameters": {
+            "flag": "ignores_partial_move_penalty"
+          }
+        },
+        {
           "type": "StatModifier",
           "scope": "ThisUnit",
           "condition": {
@@ -590,8 +634,8 @@
           "scope": "ThisUnit",
           "parameters": {
             "stat": "defense",
-            "amount": 50,
-            "op": "AddPercent"
+            "amount": 1.5,
+            "op": "MultiplyGeometric"
           }
         },
         {
@@ -606,6 +650,16 @@
           "scope": "ThisUnit",
           "parameters": {
             "flag": "native_life"
+          }
+        },
+        {
+          "type": "RuleFlag",
+          "scope": "ThisUnit",
+          "condition": {
+            "kind": "IsNativeLifeFaction"
+          },
+          "parameters": {
+            "flag": "ignores_partial_move_penalty"
           }
         },
         {
@@ -659,7 +713,7 @@
           "type": "StatModifier",
           "scope": "ThisUnit",
           "parameters": {
-            "stat": "defense",
+            "stat": "conventional_defense",
             "amount": 1,
             "op": "MaxClamp"
           }
@@ -668,7 +722,25 @@
           "type": "StatModifier",
           "scope": "ThisUnit",
           "parameters": {
-            "stat": "defense",
+            "stat": "conventional_defense",
+            "amount": 1,
+            "op": "MinClamp"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisUnit",
+          "parameters": {
+            "stat": "psi_defense",
+            "amount": 1,
+            "op": "MaxClamp"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisUnit",
+          "parameters": {
+            "stat": "psi_defense",
             "amount": 1,
             "op": "MinClamp"
           }

@@ -94,17 +94,18 @@ TEST_CASE("ResolveAdditiveStat sums component Adds and ignores percent modifiers
     weapon.id = "laser";
     weapon.type = "weapon";
     weapon.effects = {
-        pool.StatMod(StatId_t::Attack, 2.0, ModifierOp_t::Add, EffectScope_t::ThisUnit),
-        pool.StatMod(StatId_t::Attack, 50.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit),
+        pool.StatMod(StatId_t::ConventionalAttack, 2.0, ModifierOp_t::Add, EffectScope_t::ThisUnit),
+        pool.StatMod(StatId_t::ConventionalAttack, 50.0, ModifierOp_t::AddPercent,
+                     EffectScope_t::ThisUnit),
     };
 
     UnitComponentConfig_t armor;
     armor.id = "synthmetal";
     armor.type = "armour";
     armor.effects = {
-        pool.StatMod(StatId_t::Defense, 2.0, ModifierOp_t::Add, EffectScope_t::ThisUnit),
+        pool.StatMod(StatId_t::ConventionalDefense, 2.0, ModifierOp_t::Add, EffectScope_t::ThisUnit),
         // Extra attack points from armor/ability still count toward the base rating.
-        pool.StatMod(StatId_t::Attack, 1.0, ModifierOp_t::Add, EffectScope_t::ThisUnit),
+        pool.StatMod(StatId_t::ConventionalAttack, 1.0, ModifierOp_t::Add, EffectScope_t::ThisUnit),
     };
 
     UnitComponentConfig_t chassis;
@@ -128,11 +129,11 @@ TEST_CASE("ResolveAdditiveStat sums component Adds and ignores percent modifiers
     const UnitDesign design(slots, components);
 
     // Base combat rating: laser 2 + armor's +1 attack, ignoring the +50%.
-    CHECK(ResolveAdditiveStat(design, StatId_t::Attack) == 3);
-    CHECK(ResolveAdditiveStat(design, StatId_t::Defense) == 2);
+    CHECK(ResolveAdditiveStat(design, StatId_t::ConventionalAttack) == 3);
+    CHECK(ResolveAdditiveStat(design, StatId_t::ConventionalDefense) == 2);
     CHECK(ResolveAdditiveStat(design, StatId_t::Movement) == 2);
     // Full resolve still applies percent: (2+1)*1.5 = 4.5 → FinalizeResolvedStat → 5.
-    CHECK(ResolveStat(design, StatId_t::Attack) == 5);
+    CHECK(ResolveStat(design, StatId_t::ConventionalAttack) == 5);
 }
 
 TEST_CASE("UnitDesign GetBaseCost uses CostMultiplier seed when no contributions", "[unit][stats][cost]")

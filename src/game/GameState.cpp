@@ -37,6 +37,7 @@
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/base/BaseConquestMutations.h"
+#include "game/combat/CombatConfig.h"
 #include "game/combat/FightAftermathMutations.h"
 #include "game/combat/InterceptMutations.h"
 #include "game/GameDataContext.h"
@@ -358,6 +359,7 @@ void GameState::AppendWorldSources_(const Faction* pFor, std::vector<ActiveEffec
         m_pWorldEvents->AppendActiveEffects(rOut);
     }
     AppendActiveEffects(m_rGameData.worldRules, nullptr, "world_rules", rOut);
+    AppendActiveEffects(m_rGameData.combatConfig->effects, nullptr, "combat", rOut);
     AppendDestroyedSecretProjectEffects_(rOut);
 }
 

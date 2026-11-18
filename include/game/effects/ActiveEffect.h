@@ -259,6 +259,14 @@ inline int FinalizeResolvedStat(double value)
     return static_cast<int>(std::lround(value));
 }
 
+// Rounds down. The tolerance keeps a product that is whole in decimal (300 × 1.1) at its whole
+// value despite binary error.
+inline int FloorResolvedStat(double value)
+{
+    constexpr double k_WholeTolerance = 1e-9;
+    return static_cast<int>(std::floor(value + k_WholeTolerance));
+}
+
 // Never defaulted: a pure multiplier from a 0 base resolves to 0, so callers state the seed.
 // Pass the pCtx the range was filtered with, or nullptr for context-free resolves.
 template <std::ranges::input_range Range>
@@ -465,16 +473,25 @@ double ResolveFactionStat(const FactionEffects_t& rFactionEffects, StatId_t stat
 double ResolveUnitStat(const UnitEffects_t& rUnitEffects, StatId_t statId, double seed,
                        const EffectContext_t* pCtx);
 
-// Live-unit Attack or Defense for combat. moraleAddPercent joins the AddPercent bucket.
+// A live unit's stat in a combat context, with extra ThisUnit configs (morale level rows).
 int ResolveCombatUnitStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx,
                           std::span<const EffectConfig_t> extraEffects);
-int ResolveCombatUnitStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx,
-                          double moraleAddPercent);
 double ResolveCombatUnitMultiplicativeStat(const Unit& rUnit, StatId_t statId, double baseValue,
                                            const EffectContext_t& rCtx,
                                            std::span<const EffectConfig_t> extraEffects);
-double ResolveCombatUnitMultiplicativeStat(const Unit& rUnit, StatId_t statId, double baseValue,
-                                           const EffectContext_t& rCtx, double moraleAddPercent);
+
+// The value stat a fight rates a unit on, and the multiplier that scales it in every kind of
+// fight.
+struct CombatRatingStats_t
+{
+    StatId_t value;
+    StatId_t multiplier;
+};
+
+// The value stat times the multiplier stat, with moraleMultiplier as one more geometric factor
+// on the multiplier. Unrounded.
+double ResolveCombatRating(const Unit& rUnit, CombatRatingStats_t stats,
+                           const EffectContext_t& rCtx, double moraleMultiplier);
 
 // The base's share of the pool: its own ThisBase effects and every faction-wide one. The only
 // way to build a BaseEffects_t, and eager so it can be cached.

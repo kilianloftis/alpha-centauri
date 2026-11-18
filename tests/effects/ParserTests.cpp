@@ -35,9 +35,13 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("psych") == StatId_t::Psych);
     CHECK(ParseStatId("drones") == StatId_t::Drones);
     CHECK(ParseStatId("talents") == StatId_t::Talents);
+    CHECK(ParseStatId("conventional_attack") == StatId_t::ConventionalAttack);
+    CHECK(ParseStatId("psi_attack") == StatId_t::PsiAttack);
     CHECK(ParseStatId("attack") == StatId_t::Attack);
+    CHECK(ParseStatId("conventional_defense") == StatId_t::ConventionalDefense);
+    CHECK(ParseStatId("psi_defense") == StatId_t::PsiDefense);
     CHECK(ParseStatId("defense") == StatId_t::Defense);
-    CHECK(ParseStatId("tile_defense") == StatId_t::TileDefense);
+    CHECK(ParseStatId("attack_handicap") == StatId_t::AttackHandicap);
     CHECK(ParseStatId("movement") == StatId_t::Movement);
     CHECK(ParseStatId("vision") == StatId_t::Vision);
     CHECK(ParseStatId("hit_points") == StatId_t::HitPoints);
@@ -517,7 +521,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisBase",
-            "parameters": { "stat": "attack", "amount_source": { "kind": "BaseSize" }, "amount": 0.25 }
+            "parameters": { "stat": "conventional_attack", "amount_source": { "kind": "BaseSize" }, "amount": 0.25 }
         })")));
     }
 
@@ -527,7 +531,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
             "type": "StatModifier",
             "scope": "ThisUnit",
             "parameters": {
-                "stat": "attack",
+                "stat": "conventional_attack",
                 "amount_source": { "kind": "BasesOwned" },
                 "amount": 1,
                 "op": "Add"
@@ -578,7 +582,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisBase",
-            "parameters": { "stat": "attack", "amount_source": { "kind": "BasesOwned" }, "amount": 1 }
+            "parameters": { "stat": "conventional_attack", "amount_source": { "kind": "BasesOwned" }, "amount": 1 }
         })")));
     }
 
@@ -994,6 +998,14 @@ TEST_CASE("ParseEffectConfig: conditions", "[effects][parser][condition]")
                 .AsVariant()));
     }
 
+    SECTION("EffectIsUnowned parses and waits for an effect's owner stamp")
+    {
+        const Condition_t condition = EffectConfigParser::ParseCondition(
+            json::parse(R"({ "kind": "EffectIsUnowned" })"));
+        CHECK(std::holds_alternative<EffectIsUnowned_t>(condition.AsVariant()));
+        CHECK(ConditionNeedsSituationalContext(condition));
+    }
+
     SECTION("HasAirdroppedThisTurn condition")
     {
         const Condition_t condition = EffectConfigParser::ParseCondition(
@@ -1115,7 +1127,7 @@ TEST_CASE("ParseEffectConfig: identity condition arms", "[effects][parser][condi
             "type": "StatModifier",
             "scope": "FactionUnits",
             "condition": { "kind": "SubjectDomain", "domain": "air" },
-            "parameters": { "stat": "attack", "amount": 2 }
+            "parameters": { "stat": "conventional_attack", "amount": 2 }
         })");
 
         const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
@@ -1147,7 +1159,7 @@ TEST_CASE("ParseEffectConfig: identity condition arms", "[effects][parser][condi
             "type": "StatModifier",
             "scope": "FactionUnits",
             "condition": { "kind": "IsPrototype" },
-            "parameters": { "stat": "attack", "amount": 1 }
+            "parameters": { "stat": "conventional_attack", "amount": 1 }
         })");
 
         const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
@@ -1175,7 +1187,7 @@ TEST_CASE("ParseEffectConfig: identity condition arms", "[effects][parser][condi
             "type": "StatModifier",
             "scope": "FactionUnits",
             "condition": { "kind": "IsNativeLife" },
-            "parameters": { "stat": "attack", "amount": 1 }
+            "parameters": { "stat": "conventional_attack", "amount": 1 }
         })");
 
         const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
@@ -1221,6 +1233,22 @@ TEST_CASE("ParseEffectConfig: identity condition arms", "[effects][parser][condi
         const Condition_t negated = EffectConfigParser::ParseCondition(
             json::parse(R"({ "kind": "DefenderIsNativeLife", "value": false })"));
         const auto* pNegated = std::get_if<DefenderIsNativeLife_t>(&negated);
+        REQUIRE(pNegated);
+        CHECK_FALSE(pNegated->bMatches);
+        CHECK(ConditionNeedsSituationalContext(negated));
+    }
+
+    SECTION("AttackerIsNativeLife")
+    {
+        const Condition_t required =
+            EffectConfigParser::ParseCondition(json::parse(R"({ "kind": "AttackerIsNativeLife" })"));
+        const auto* pRequired = std::get_if<AttackerIsNativeLife_t>(&required);
+        REQUIRE(pRequired);
+        CHECK(pRequired->bMatches);
+
+        const Condition_t negated = EffectConfigParser::ParseCondition(
+            json::parse(R"({ "kind": "AttackerIsNativeLife", "value": false })"));
+        const auto* pNegated = std::get_if<AttackerIsNativeLife_t>(&negated);
         REQUIRE(pNegated);
         CHECK_FALSE(pNegated->bMatches);
         CHECK(ConditionNeedsSituationalContext(negated));
@@ -2077,12 +2105,53 @@ TEST_CASE("ParseEffectConfig: InteractionOverride and AttackerIsEmbarked",
     CHECK_THROWS(EffectConfigParser::ParseCondition(
         json::parse(R"({ "kind": "DefenderDomain", "domains": [] })")));
 
+    const Condition_t opponentDomain = EffectConfigParser::ParseCondition(
+        json::parse(R"({ "kind": "OpponentDomain", "domains": ["land"] })"));
+    const auto* pOpponentDomains = std::get_if<OpponentDomain_t>(&opponentDomain.AsVariant());
+    REQUIRE(pOpponentDomains);
+    REQUIRE(pOpponentDomains->domains.size() == 1);
+    CHECK(pOpponentDomains->domains[0] == UnitDomain_t::Land);
+    CHECK(ConditionNeedsSituationalContext(opponentDomain));
+    CHECK_THROWS(EffectConfigParser::ParseCondition(
+        json::parse(R"({ "kind": "OpponentDomain", "domains": [] })")));
+
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(
         json::parse(R"({ "type": "Permission", "scope": "ThisUnit", "parameters": {} })")));
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "Permission", "scope": "ThisUnit",
         "parameters": { "permission": "Fly" }
     })")));
+}
+
+TEST_CASE("ParseEffectConfig: a multiplier stat rejects a flat Add", "[effects][parser]")
+{
+    for (const char* stat : {"attack", "defense", "attack_handicap"})
+    {
+        const json flatJson = json::parse(std::string(R"({
+            "type": "StatModifier", "scope": "ThisUnit",
+            "parameters": { "stat": ")") + stat + R"(", "amount": 1, "op": "Add" }
+        })");
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(flatJson));
+        const json defaultOpJson = json::parse(std::string(R"({
+            "type": "StatModifier", "scope": "ThisUnit",
+            "parameters": { "stat": ")") + stat + R"(", "amount": 1 }
+        })");
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(defaultOpJson));
+        const json scaleJson = json::parse(std::string(R"({
+            "type": "StatModifier", "scope": "ThisUnit",
+            "parameters": { "stat": ")") + stat + R"(", "amount": 1.5, "op": "MultiplyGeometric" }
+        })");
+        CHECK_NOTHROW(EffectConfigParser::ParseEffectConfig(scaleJson));
+    }
+    for (const char* stat : {"conventional_attack", "psi_attack", "conventional_defense",
+                             "psi_defense"})
+    {
+        const json flatJson = json::parse(std::string(R"({
+            "type": "StatModifier", "scope": "ThisUnit",
+            "parameters": { "stat": ")") + stat + R"(", "amount": 1, "op": "Add" }
+        })");
+        CHECK_NOTHROW(EffectConfigParser::ParseEffectConfig(flatJson));
+    }
 }
 
 TEST_CASE("ParseEffectConfig: tile MaxClamp and bypass_clamp", "[effects][parser]")

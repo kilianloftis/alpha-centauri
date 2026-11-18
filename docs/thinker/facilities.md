@@ -79,7 +79,7 @@ Each bullet is one SMAC effect. Tags:
 
 | Gap | Facilities |
 |---|---|
-| Building → combat `tile_defense` (and domain) | Perimeter, Tachyon, Naval Yard, Aerospace, Geosync sensor bonus, Flechette aura |
+| Building → combat `defense` on the base's defenders (and attacker domain) | Perimeter, Tachyon, Naval Yard, Aerospace, Geosync sensor bonus, Flechette aura |
 | Orbital yield halving / size cap | Sky Hydro, Nessus, Orbital Power (partial: flat +1 works) |
 | Psi Gate teleport order | Psi Gate |
 | Progenitor generator victory | Subspace Generator |
@@ -123,7 +123,7 @@ Each bullet is one SMAC effect. Tags:
 - **Config id:** `Perimeter_Defense`
 - **Alphax:** cost 5, upkeep 0, Doctrine: Loyalty
 - **Effects:**
-  - **[blocked]** Adds one base defense multiplier against land attack (doubles land defense; with Tachyon, triples). — _combat ResolveTileDefenseMultiplier ignores building BaseTile tile_defense; no AttackerDomain in that path. JSON only has last_defender_pop_loss + high_risk_sabotage_
+  - **[blocked]** Adds one base defense multiplier against land attack (doubles land defense; with Tachyon, triples). — _a building's defense effect has no route to the units defending its base. JSON only has last_defender_pop_loss + high_risk_sabotage_
 
 ### 5. Tachyon Field
 
@@ -326,7 +326,7 @@ Each bullet is one SMAC effect. Tags:
 - **Effects:**
   - Fully repairs damaged sea units at this base in one idle upkeep. — _HealRate MinClamp 100 FactionUnits (SubjectIsOnOriginBase + sea + !BaseIsRioting)_
   - Sea units built here receive +2 morale. — _on_unit_produced GrantXp + SubjectDomain sea_
-  - **[blocked]** Adds +100% defense against sea attack at this base. — _domain defense unused in ResolveTileDefenseMultiplier_
+  - **[blocked]** Adds +100% defense against sea attack at this base. — _a building's defense effect has no route to the units defending its base_
 
 ### 29. Aerospace Complex
 
@@ -335,7 +335,7 @@ Each bullet is one SMAC effect. Tags:
 - **Effects:**
   - Fully repairs damaged air units at this base in one idle upkeep. — _HealRate MinClamp 100 FactionUnits (SubjectIsOnOriginBase + air + !BaseIsRioting)_
   - Air units built here receive +2 morale. — _on_unit_produced GrantXp +2 air_
-  - **[blocked]** Adds +100% defense against air attack at this base. — _domain defense unused in ResolveTileDefenseMultiplier_
+  - **[blocked]** Adds +100% defense against air attack at this base. — _a building's defense effect has no route to the units defending its base_
   - Required before this base can produce orbital facilities (and Geosync); Cloudbase Academy or Space Elevator SP also satisfy the gate. — _those buildings' required_buildings.any_; `terranx-map.md` § Facility-on-facility
 
 ### 30. Bioenhancement Center
@@ -432,7 +432,7 @@ Each bullet is one SMAC effect. Tags:
 - **Alphax:** cost 16, upkeep 4, N-Space Compression
 - **Effects:**
   - **[blocked]** Extends this base's sighting radius to three squares. — _FactionVisibleMap uses fixed k_BaseVisionRadius=2; building vision not folded in_
-  - **[blocked]** Acts as a Sensor Array (+25% defensive bonus). — _same tile_defense-from-building gap; Sensor improvement pattern not available on buildings_
+  - **[blocked]** Acts as a Sensor Array (+25% defensive bonus). — _same building-to-defender gap; Sensor improvement pattern not available on buildings_
   - **[partial]** Can be destroyed by Orbital Defense Pods or probe teams. — _generic ASAT/probe sabotage can destroy buildings; not Geosync-specific rules_
   - May only be produced at a base with Aerospace Complex, or with Cloudbase Academy / Space Elevator owned by the faction. — _required_buildings.any_
 

@@ -39,7 +39,7 @@ public:
     const UnitComponentConfig_t& Weapon(int attack)
     {
         UnitComponentConfig_t& rPart = NewPart_("weapon");
-        rPart.effects = {m_pool.StatMod(StatId_t::Attack, attack, ModifierOp_t::Add,
+        rPart.effects = {m_pool.StatMod(StatId_t::ConventionalAttack, attack, ModifierOp_t::Add,
                                         EffectScope_t::ThisUnit)};
         return rPart;
     }
@@ -54,7 +54,7 @@ public:
     const UnitComponentConfig_t& Armour(int defense)
     {
         UnitComponentConfig_t& rPart = NewPart_("armour");
-        rPart.effects = {m_pool.StatMod(StatId_t::Defense, defense, ModifierOp_t::Add,
+        rPart.effects = {m_pool.StatMod(StatId_t::ConventionalDefense, defense, ModifierOp_t::Add,
                                         EffectScope_t::ThisUnit)};
         return rPart;
     }

@@ -91,31 +91,24 @@ TEST_CASE("MoraleConfigParser requires percent_per_level and baseline_index", "[
                       Catch::Matchers::ContainsSubstring("percent_per_level"));
 }
 
-TEST_CASE("CombatAddPercent scales Attack with combat morale level", "[morale]")
+TEST_CASE("CombatMultiplier scales the attack rating with combat morale level", "[morale]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
     Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_weapon"});
     const MoraleCalculator& morale = fixture.morale();
     const EffectContext_t ctx{};
+    const CombatRatingStats_t attack{StatId_t::ConventionalAttack, StatId_t::Attack};
+    const auto ratingAtXp = [&](int xp)
+    {
+        unit.SetXp(xp);
+        const int level = CombatMoraleLevel(unit, ctx, morale);
+        return ResolveCombatRating(unit, attack, ctx, morale.CombatMultiplier(level));
+    };
 
-    const int baseAttack = ResolveStat(unit, StatId_t::Attack, ctx);
-
-    unit.SetXp(0); // Very Green −25%
-    const int veryGreen = CombatMoraleLevel(unit, ctx, morale);
-    CHECK(ResolveCombatUnitStat(unit, StatId_t::Attack, ctx, morale.CombatAddPercent(veryGreen))
-          == static_cast<int>(std::lround(baseAttack * 0.75)));
-
-    unit.SetXp(2); // Disciplined 0%
-    const int disciplined = CombatMoraleLevel(unit, ctx, morale);
-    CHECK(ResolveCombatUnitStat(unit, StatId_t::Attack, ctx,
-                                morale.CombatAddPercent(disciplined))
-          == baseAttack);
-
-    unit.SetXp(4); // Veteran +25%
-    const int veteran = CombatMoraleLevel(unit, ctx, morale);
-    CHECK(ResolveCombatUnitStat(unit, StatId_t::Attack, ctx, morale.CombatAddPercent(veteran))
-          == static_cast<int>(std::lround(baseAttack * 1.25)));
+    CHECK(ratingAtXp(0) == Catch::Approx(3.0)); // Very Green x0.75
+    CHECK(ratingAtXp(2) == Catch::Approx(4.0)); // Disciplined
+    CHECK(ratingAtXp(4) == Catch::Approx(5.0)); // Veteran x1.25
 }
 
 TEST_CASE("DisplayName switches on IsNativeLife", "[morale]")
@@ -286,8 +279,8 @@ TEST_CASE("Elite plus Creche extras caps defense and leaves attack uncapped", "[
     const EffectContext_t defCtx{&unit.GetTile(), CombatRole_t::Defender};
     CHECK(CombatMoraleLevel(unit, atkCtx, morale) == 7);
     CHECK(CombatMoraleLevel(unit, defCtx, morale) == 6);
-    CHECK(morale.CombatAddPercent(7) == Catch::Approx(62.5));
-    CHECK(morale.CombatAddPercent(6) == Catch::Approx(50.0));
+    CHECK(morale.CombatMultiplier(7) == Catch::Approx(1.625));
+    CHECK(morale.CombatMultiplier(6) == Catch::Approx(1.5));
 }
 
 TEST_CASE("Brood Pit adds native-psi extras and does not copy Creche home-half",
@@ -349,20 +342,22 @@ TEST_CASE("Manual Creche snippet parses as valid effects", "[morale][manual]")
     CHECK(std::holds_alternative<SubjectIsOnOriginBase_t>(effects[0].condition->AsVariant()));
 }
 
-TEST_CASE("ResolveCombatUnitStat applies CombatAddPercent on Attack", "[morale][combat]")
+TEST_CASE("Morale multiplies an attack bonus rather than adding to its percent",
+          "[morale][combat]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_weapon"});
-    unit.SetXp(4); // Veteran = +25%
+    Unit& unit =
+        fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_weapon", "test_tenth_attack"});
+    unit.SetXp(4); // Veteran
     const MoraleCalculator& morale = fixture.morale();
     const EffectContext_t ctx{&unit.GetTile(), CombatRole_t::Attacker};
+    const CombatRatingStats_t attack{StatId_t::ConventionalAttack, StatId_t::Attack};
 
-    const int baseAttack = ResolveStat(unit, StatId_t::Attack, ctx);
     const int combatLevel = CombatMoraleLevel(unit, ctx, morale);
-    const int combatAttack = ResolveCombatUnitStat(
-        unit, StatId_t::Attack, ctx, morale.CombatAddPercent(combatLevel));
-    CHECK(combatAttack == static_cast<int>(std::lround(baseAttack * 1.25)));
+    const double rating =
+        ResolveCombatRating(unit, attack, ctx, morale.CombatMultiplier(combatLevel));
+    CHECK(rating == Catch::Approx(4.0 * 1.1 * 1.25));
 }
 
 TEST_CASE("morale_rank carries a Unit-domain amount_source without a caller-stamped faction",
@@ -500,10 +495,10 @@ TEST_CASE("MoraleCalculator value methods read the configured levels", "[morale]
     CHECK(morale.StartingIntrinsicXp() == 1);
 
     CHECK(fixture.dataContext.moraleConfig->FindLevel(4)->effects.size() == 2);
-    CHECK(morale.CombatAddPercent(2) == Catch::Approx(0.0));
-    CHECK(morale.CombatAddPercent(0) == Catch::Approx(-25.0));
-    CHECK(morale.CombatAddPercent(4) == Catch::Approx(25.0));
-    CHECK(morale.CombatAddPercent(7) == Catch::Approx(62.5));
+    CHECK(morale.CombatMultiplier(2) == Catch::Approx(1.0));
+    CHECK(morale.CombatMultiplier(0) == Catch::Approx(0.75));
+    CHECK(morale.CombatMultiplier(4) == Catch::Approx(1.25));
+    CHECK(morale.CombatMultiplier(7) == Catch::Approx(1.625));
 
     CHECK(morale.PromotionEligibilitySeed(0, 100) == Catch::Approx(1.0));
     CHECK(morale.PromotionEligibilitySeed(30, 70) == Catch::Approx(0.7));

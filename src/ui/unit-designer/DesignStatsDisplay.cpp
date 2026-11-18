@@ -47,8 +47,8 @@ void DrawStats_(Graphics& rGraphics,
         y += rMetrics.lineH;
     };
 
-    drawStat("Attack",   ResolveStat(rDesign, StatId_t::Attack));
-    drawStat("Defense",  ResolveStat(rDesign, StatId_t::Defense));
+    drawStat("Attack",   ResolveStat(rDesign, StatId_t::ConventionalAttack));
+    drawStat("Defense",  ResolveStat(rDesign, StatId_t::ConventionalDefense));
     drawStat("Movement", rDesign.GetMovementPoints());
     drawStat("HP",       ResolveStat(rDesign, StatId_t::HitPoints));
     if (rDesign.UsesFuel())

@@ -38,12 +38,29 @@ int RoundDamage_(const Unit& rReceiver, bool bPsiCombat)
     return std::max(1, ResolveStat(rReceiver, StatId_t::PsiDamage));
 }
 
-// One side of the fight, with the context and morale bonus its stats resolve under.
+// The value stats a fight rates each side on. Both kinds share the Attack / Defense multipliers.
+struct CombatValueStats_t
+{
+    CombatRatingStats_t attack;
+    CombatRatingStats_t defense;
+};
+
+constexpr CombatValueStats_t k_ConventionalValues{
+    {StatId_t::ConventionalAttack, StatId_t::Attack},
+    {StatId_t::ConventionalDefense, StatId_t::Defense},
+};
+
+constexpr CombatValueStats_t k_PsiValues{
+    {StatId_t::PsiAttack, StatId_t::Attack},
+    {StatId_t::PsiDefense, StatId_t::Defense},
+};
+
+// One side of the fight, with the context and morale multiplier its stats resolve under.
 struct Fighter_t
 {
     const Unit& rUnit;
     EffectContext_t ctx;
-    double moralePercent;
+    double moraleMultiplier;
 };
 
 Fighter_t MakeFighter_(const Unit& rUnit, const Unit& rAttacker, const Unit& rDefender,
@@ -55,29 +72,27 @@ Fighter_t MakeFighter_(const Unit& rUnit, const Unit& rAttacker, const Unit& rDe
     ctx.pPartnerFaction = role == CombatRole_t::Attacker ? &rDefender.GetFaction()
                                                   : &rAttacker.GetFaction();
     const int level = CombatMoraleLevel(rUnit, ctx, rMorale);
-    return Fighter_t{rUnit, ctx, rMorale.CombatAddPercent(level)};
+    return Fighter_t{rUnit, ctx, rMorale.CombatMultiplier(level)};
 }
 
-double PsiRating_(const Fighter_t& rFighter, StatId_t stat)
+// An attacker with less than one move point left strikes at that fraction of its strength.
+int PartialMoveAttack_(const Unit& rAttacker, int strength)
 {
-    return ResolveCombatUnitMultiplicativeStat(rFighter.rUnit, stat, 1.0, rFighter.ctx,
-                                               rFighter.moralePercent);
+    const int perPoint = MovementConstants_t::k_moveFragmentsPerPoint;
+    const int remainingFragments = rAttacker.GetMoveFragmentsRemaining();
+    if (remainingFragments >= perPoint
+        || ResolveFlag(rAttacker, RuleFlagId_t::IgnoresPartialMovePenalty))
+    {
+        return strength;
+    }
+    return strength * remainingFragments / perPoint;
 }
 
-double ConventionalRating_(const Fighter_t& rFighter, StatId_t stat)
+double AttackHandicap_(const Fighter_t& rAttacker)
 {
-    const int rating =
-        ResolveCombatUnitStat(rFighter.rUnit, stat, rFighter.ctx, rFighter.moralePercent);
-    return static_cast<double>(rating);
-}
-
-// An attacker with less than one move point left strikes at that fraction of its rating.
-int PartialMoveAttack_(double attackRating, int remainingFragments)
-{
-    const double perPoint = static_cast<double>(MovementConstants_t::k_moveFragmentsPerPoint);
-    const double scaled =
-        attackRating * static_cast<double>(remainingFragments) / perPoint * k_CombatStrengthScale;
-    return static_cast<int>(std::lround(scaled));
+    const double seed = SeedFor(StatId_t::AttackHandicap);
+    return ResolveMultiplicativeStat(rAttacker.rUnit, StatId_t::AttackHandicap, seed,
+                                     rAttacker.ctx);
 }
 
 int HitsToKill_(int hp, int damagePerHit)
@@ -105,7 +120,6 @@ CombatOdds_t ReduceOdds_(int attackerProduct, int defenderProduct)
 } // namespace
 
 CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefender,
-                                       const TileEffectsContext& rTileEffects,
                                        const MoraleCalculator& rMorale,
                                        CombatEngagement_t engagement)
 {
@@ -114,27 +128,20 @@ CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefen
         MakeFighter_(rAttacker, rAttacker, rDefender, CombatRole_t::Attacker, rMorale);
     const Fighter_t defender =
         MakeFighter_(rDefender, rAttacker, rDefender, CombatRole_t::Defender, rMorale);
-    const StatId_t defenderStat = engagement == CombatEngagement_t::ArtilleryDuel
-                                      ? StatId_t::Attack
-                                      : StatId_t::Defense;
     strength.bPsiCombat = IsPsiCombat_(rAttacker, rDefender);
-    const double attackRating = strength.bPsiCombat
-                                    ? PsiRating_(attacker, StatId_t::Attack)
-                                    : ConventionalRating_(attacker, StatId_t::Attack);
-    const double defenseRating = strength.bPsiCombat
-                                     ? PsiRating_(defender, defenderStat)
-                                     : ConventionalRating_(defender, defenderStat);
-    const double tileDefenseMult = rTileEffects.ResolveTileDefenseMultiplier(
-        rDefender.GetTile(), rDefender.GetFaction().GetFactionId());
+    const CombatValueStats_t& values = strength.bPsiCombat ? k_PsiValues : k_ConventionalValues;
+    const CombatRatingStats_t& defenderStats =
+        engagement == CombatEngagement_t::ArtilleryDuel ? values.attack : values.defense;
+    const double attackRating = ResolveCombatRating(rAttacker, values.attack, attacker.ctx,
+                                                    attacker.moraleMultiplier);
+    const double defenseRating = ResolveCombatRating(rDefender, defenderStats, defender.ctx,
+                                                     defender.moraleMultiplier);
 
-    strength.attackStrength = static_cast<int>(std::lround(attackRating * k_CombatStrengthScale));
-    strength.defenseStrength =
-        static_cast<int>(std::lround(defenseRating * tileDefenseMult * k_CombatStrengthScale));
-    const int remainingFragments = rAttacker.GetMoveFragmentsRemaining();
-    if (remainingFragments < MovementConstants_t::k_moveFragmentsPerPoint)
-    {
-        strength.attackStrength = PartialMoveAttack_(attackRating, remainingFragments);
-    }
+    strength.attackStrength = FloorResolvedStat(attackRating * k_CombatStrengthScale);
+    strength.defenseStrength = FloorResolvedStat(defenseRating * k_CombatStrengthScale);
+    strength.attackStrength = PartialMoveAttack_(rAttacker, strength.attackStrength);
+    const double handicapped = strength.attackStrength * AttackHandicap_(attacker);
+    strength.attackStrength = FloorResolvedStat(handicapped);
     return strength;
 }
 
@@ -184,8 +191,8 @@ CombatOdds_t ComputeCombatOdds(const Unit& rAttacker, const Unit& rDefender,
 {
     const GameState& rGame = CurrentGameState();
     const MoraleCalculator& rMorale = *rGame.GetGameData().moraleCalculator;
-    const CombatStrength_t strength = ResolveCombatStrength(
-        rAttacker, rDefender, rGame.GetTileEffects(), rMorale, engagement);
+    const CombatStrength_t strength =
+        ResolveCombatStrength(rAttacker, rDefender, rMorale, engagement);
     const int attackerHits =
         HitsToKill_(rAttacker.GetCurrentHp(), RoundDamage_(rAttacker, strength.bPsiCombat));
     const int defenderHits =

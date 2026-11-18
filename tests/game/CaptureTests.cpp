@@ -105,7 +105,7 @@ struct Resolver_
         : moveCosts(rFixture.improvements, MovementConstants_t{})
         , steps(rFixture.map, rFixture.ctx)
         , rng(seed)
-        , combat(moveCosts, steps, rFixture.map, rFixture.ctx, rFixture.morale(), rng)
+        , combat(moveCosts, steps, rFixture.map, rFixture.morale(), rng)
     {
     }
 };

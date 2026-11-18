@@ -37,7 +37,7 @@ public:
     // One-shot effects when this unit founds a base. Empty means the design cannot found.
     virtual std::vector<TriggeredEffectConfig_t> CollectOnFoundEffects() const = 0;
 
-    // True when additive Attack > 0 or ForcesPsiCombat (design-only resolve).
+    // True when conventional_attack > 0 or ForcesPsiCombat (design-only resolve).
     virtual bool IsCombatUnit() const = 0;
 
     // True if any filled component has this id. NativeDesign always false.

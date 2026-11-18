@@ -243,7 +243,7 @@ TEST_CASE("Growth config requires its keys and positive values", "[config][popul
               {"type": "StatModifier", "scope": "AllOwnerBases",
                "parameters": {"stat": "max_base_size", "amount": 8, "op": "Add"}},
               {"type": "StatModifier", "scope": "AllOwnerBases",
-               "parameters": {"stat": "attack", "amount": 8, "op": "Add"}}])"));
+               "parameters": {"stat": "conventional_attack", "amount": 8, "op": "Add"}}])"));
         CHECK_THROWS_WITH(GrowthConfigParser::ParseConfig(config.Path()),
                           Catch::Matchers::ContainsSubstring("stat is not allowed"));
     }

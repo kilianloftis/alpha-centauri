@@ -54,8 +54,8 @@ std::optional<int> MatchingScrambleRange_(const Unit& rCandidate, const Unit& rA
 
 bool BetterScrambleCandidate_(const Unit& rCandidate, const Unit& rBest)
 {
-    const int candidateAttack = ResolveStat(rCandidate, StatId_t::Attack);
-    const int bestAttack = ResolveStat(rBest, StatId_t::Attack);
+    const int candidateAttack = ResolveStat(rCandidate, StatId_t::ConventionalAttack);
+    const int bestAttack = ResolveStat(rBest, StatId_t::ConventionalAttack);
     if (candidateAttack != bestAttack)
     {
         return candidateAttack > bestAttack;

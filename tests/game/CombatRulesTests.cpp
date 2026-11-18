@@ -7,12 +7,14 @@
 #include "game/combat/CombatResolver.h"
 #include "game/combat/CombatRules.h"
 #include "game/combat/MoraleRules.h"
+#include "game/effects/ActiveEffect.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/effects/WorldRulesConfigParser.h"
 #include "game/faction/Faction.h"
 #include "game/faction/FactionConfig.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/movement/MovementConstants.h"
 #include "game/natives/NativeRules.h"
 #include "game/units/Unit.h"
 
@@ -46,7 +48,7 @@ void UseFixtureDifficulty_(FactionFixture& rFixtures, const char* difficultyId)
 
 CombatStrength_t Strength_(Unit& rAttacker, Unit& rDefender, FactionFixture& rFixture)
 {
-    return ResolveCombatStrength(rAttacker, rDefender, rFixture.ctx, rFixture.morale(),
+    return ResolveCombatStrength(rAttacker, rDefender, rFixture.morale(),
                                  CombatEngagement_t::Standard);
 }
 
@@ -236,7 +238,7 @@ TEST_CASE("A damaged defender changes only its own hits in the odds", "[combat][
     CHECK(odds.defenderOdds == 1);
 }
 
-TEST_CASE("Psi odds use hits-to-kill so a double-HP double-firepower attacker is 1 to 1",
+TEST_CASE("Psi odds use hits-to-kill, so double HP and firepower keep the strength ratio",
           "[combat][odds][psi]")
 {
     FactionFixture fixture;
@@ -252,8 +254,9 @@ TEST_CASE("Psi odds use hits-to-kill so a double-HP double-firepower attacker is
     REQUIRE(defender.GetCurrentHp() == 10);
     const CombatOdds_t odds =
         ComputeCombatOdds(attacker, defender, CombatEngagement_t::Standard);
-    CHECK(odds.attackerOdds == 1);
-    CHECK(odds.defenderOdds == 1);
+    // Both need ten hits, so the odds are the land psi strengths, 3 to 2.
+    CHECK(odds.attackerOdds == 3);
+    CHECK(odds.defenderOdds == 2);
 }
 
 TEST_CASE("SelectDefender picks the candidate with the better chance, ties keep order",
@@ -366,4 +369,227 @@ TEST_CASE("Citizen difficulty leaves human vs human Attack unchanged", "[combat]
 
     UseFixtureDifficulty_(fixture, "citizen");
     CHECK(Strength_(a, b, fixture).attackStrength == baseAttack);
+}
+
+TEST_CASE("Disciplined armor 1 defends at 256 and Green armor 1 at 224", "[combat][strength]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    UseFixtureDifficulty_(fixture, "librarian");
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_weak_armor"});
+
+    defender.SetXp(2);
+    CHECK(Strength_(attacker, defender, fixture).defenseStrength == 256);
+    defender.SetXp(1);
+    CHECK(Strength_(attacker, defender, fixture).defenseStrength == 224);
+}
+
+TEST_CASE("A fractional strength rounds down once", "[combat][strength]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    UseFixtureDifficulty_(fixture, "librarian");
+    Unit& attacker =
+        fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_tenth_attack"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_weak_armor"});
+    attacker.SetXp(1);
+
+    // 4 x 1.1 x Green 0.875 x 256 = 985.6.
+    CHECK(Strength_(attacker, defender, fixture).attackStrength == 985);
+}
+
+TEST_CASE("FloorResolvedStat keeps a product that is whole in decimal", "[combat][strength]")
+{
+    CHECK(FloorResolvedStat(0.29 * 100.0) == 29);
+    CHECK(FloorResolvedStat(3.75) == 3);
+    CHECK(FloorResolvedStat(0.0) == 0);
+}
+
+TEST_CASE("Partial move scales the whole-number strength before the difficulty handicap",
+          "[combat][strength][difficulty]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& ai = fixture.MakeFaction();
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weak_weapon"});
+    Unit& defender = fixture.MakeUnit(ai, 9, 9, {"test_chassis", "test_weak_armor"});
+    attacker.SetXp(1);
+    attacker.SetMoveFragmentsRemaining(MovementConstants_t::k_moveFragmentsPerPoint / 3);
+
+    UseFixtureDifficulty_(fixture, "librarian");
+    CHECK(Strength_(attacker, defender, fixture).attackStrength == 74); // 224 x 1/3
+    UseFixtureDifficulty_(fixture, "specialist");
+    CHECK(Strength_(attacker, defender, fixture).attackStrength == 111); // 74 x 1.5
+}
+
+TEST_CASE("A partial-move exemption keeps full attack strength with moves left",
+          "[combat][strength][natives]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    Faction& planet = AddNativeLifeFaction(fixture);
+    UseFixtureDifficulty_(fixture, "librarian");
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_weak_armor"});
+    const auto attackWithThirdMove = [&](Faction& rOwner, const char* pExemption)
+    {
+        Unit& attacker =
+            fixture.MakeUnit(rOwner, 8, 8, {"test_chassis", "test_weak_weapon", pExemption});
+        attacker.SetXp(2);
+        attacker.SetMoveFragmentsRemaining(MovementConstants_t::k_moveFragmentsPerPoint / 3);
+        return Strength_(attacker, defender, fixture).attackStrength;
+    };
+
+    SECTION("an unconditional exemption holds for any owner")
+    {
+        CHECK(attackWithThirdMove(player, "test_partial_move_exempt") == 256);
+    }
+
+    SECTION("a wild-only exemption holds for the native-life faction")
+    {
+        CHECK(attackWithThirdMove(planet, "test_wild_partial_move_exempt") == 256);
+    }
+
+    SECTION("a wild-only exemption does not hold for a real faction")
+    {
+        CHECK(attackWithThirdMove(player, "test_wild_partial_move_exempt") == 85);
+    }
+}
+
+TEST_CASE("A duel defender rated on attack takes no difficulty handicap",
+          "[combat][difficulty][bombard]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& ai = fixture.MakeFaction();
+    Unit& playerGun = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& aiGun = fixture.MakeUnit(ai, 9, 9, {"test_chassis", "test_weapon"});
+    playerGun.SetXp(2);
+    aiGun.SetXp(2);
+
+    UseFixtureDifficulty_(fixture, "citizen");
+    const CombatStrength_t duel = ResolveCombatStrength(playerGun, aiGun, fixture.morale(),
+                                                        CombatEngagement_t::ArtilleryDuel);
+    CHECK(duel.attackStrength == 2 * 4 * k_CombatStrengthScale);
+    CHECK(duel.defenseStrength == 4 * k_CombatStrengthScale);
+}
+
+TEST_CASE("Psi values follow the defender's domain", "[combat][psi]")
+{
+    FactionFixture fixture;
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    UseFixtureDifficulty_(fixture, "librarian");
+    fixture.At(8, 8).SetElevation(100);
+    fixture.At(7, 7).SetElevation(100);
+    fixture.At(9, 9).SetElevation(-100);
+    Unit& worm = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_psi"});
+    Unit& landDefender = fixture.MakeUnit(enemy, 7, 7, {"test_chassis", "test_armor"});
+    Unit& seaDefender = fixture.MakeUnit(enemy, 9, 9, {"test_sea_chassis", "test_armor"});
+    worm.SetXp(2);
+    landDefender.SetXp(2);
+    seaDefender.SetXp(2);
+
+    const CombatStrength_t vsLand = Strength_(worm, landDefender, fixture);
+    CHECK(vsLand.bPsiCombat);
+    CHECK(vsLand.attackStrength == 768);
+    CHECK(vsLand.defenseStrength == 512);
+
+    const CombatStrength_t vsSea = Strength_(worm, seaDefender, fixture);
+    CHECK(vsSea.attackStrength == 256);
+    CHECK(vsSea.defenseStrength == 256);
+}
+
+TEST_CASE("In a psi duel each side's attack reads the other's domain", "[combat][psi][bombard]")
+{
+    FactionFixture fixture;
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    UseFixtureDifficulty_(fixture, "librarian");
+    fixture.At(8, 8).SetElevation(-100);
+    fixture.At(9, 9).SetElevation(100);
+    Unit& seaLauncher =
+        fixture.MakeUnit(player, 8, 8, {"test_sea_chassis", "test_weapon", "test_psi"});
+    Unit& landGun = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_weapon"});
+    seaLauncher.SetXp(2);
+    landGun.SetXp(2);
+
+    const CombatStrength_t duel = ResolveCombatStrength(seaLauncher, landGun, fixture.morale(),
+                                                        CombatEngagement_t::ArtilleryDuel);
+    CHECK(duel.bPsiCombat);
+    CHECK(duel.attackStrength == 768);
+    CHECK(duel.defenseStrength == 256);
+}
+
+TEST_CASE("Outside combat a psi attack is only the base value", "[combat][psi]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    const Unit& worm = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_psi"});
+
+    CHECK(ResolveStat(worm, StatId_t::PsiAttack, EffectContext_t{}) == 1);
+}
+
+TEST_CASE("In psi combat Rocky and Bunker give nothing and Base still does",
+          "[combat][psi][tile]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    UseFixtureDifficulty_(fixture, "librarian");
+    Unit& worm = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon", "test_psi"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_armor"});
+    worm.SetXp(2);
+    defender.SetXp(2);
+
+    SECTION("rocky ground with a bunker")
+    {
+        fixture.At(9, 9).SetRockiness(Rockiness_t::Rocky);
+        fixture.ctx.AddOccupantWithEffects(fixture.At(9, 9), "Bunker");
+        CHECK(Strength_(worm, defender, fixture).defenseStrength == 512);
+    }
+
+    SECTION("a base")
+    {
+        fixture.ctx.AddOccupantWithEffects(fixture.At(9, 9), "Base");
+        CHECK(Strength_(worm, defender, fixture).defenseStrength == 640);
+    }
+}
+
+TEST_CASE("The Alien Artifact defends at value 1 in both kinds of fight", "[combat][natives]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    UseFixtureDifficulty_(fixture, "librarian");
+    Unit& gun = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& worm = fixture.MakeUnit(player, 8, 10, {"test_chassis", "test_weapon", "test_psi"});
+    Unit& artifact = fixture.MakeUnit(enemy, 9, 9, {"test_artifact_chassis"});
+    gun.SetXp(2);
+    worm.SetXp(2);
+    artifact.SetXp(2);
+
+    SECTION("rocky ground does not raise it")
+    {
+        fixture.At(9, 9).SetRockiness(Rockiness_t::Rocky);
+        CHECK(Strength_(gun, artifact, fixture).defenseStrength == 256);
+        CHECK(Strength_(worm, artifact, fixture).defenseStrength == 256);
+    }
+
+    SECTION("a base does")
+    {
+        fixture.ctx.AddOccupantWithEffects(fixture.At(9, 9), "Base");
+        CHECK(Strength_(gun, artifact, fixture).defenseStrength == 320);
+    }
 }

@@ -167,7 +167,7 @@ const UnitComponentConfig_t* UnitDesign::GetComponentForSlot(const std::string& 
 
 bool UnitDesign::IsCombatUnit() const
 {
-    return ResolveAdditiveStat(*this, StatId_t::Attack) > 0
+    return ResolveAdditiveStat(*this, StatId_t::ConventionalAttack) > 0
            || ResolveFlag(*this, RuleFlagId_t::ForcesPsiCombat);
 }
 
@@ -306,8 +306,10 @@ std::string UnitDesign::FormatCombatRating() const
         const std::string value = std::to_string(ResolveAdditiveStat(*this, statId));
         return DecorateCombatRatingField_(m_components, target, value);
     };
-    const std::string attack = decorate(CombatRatingTarget_t::Attack, StatId_t::Attack);
-    const std::string defense = decorate(CombatRatingTarget_t::Defense, StatId_t::Defense);
+    const std::string attack =
+        decorate(CombatRatingTarget_t::Attack, StatId_t::ConventionalAttack);
+    const std::string defense =
+        decorate(CombatRatingTarget_t::Defense, StatId_t::ConventionalDefense);
     const std::string movement = decorate(CombatRatingTarget_t::Movement, StatId_t::Movement);
 
     const std::string rating = DecorateCombatRatingField_(

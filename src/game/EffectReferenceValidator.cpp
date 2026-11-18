@@ -2,6 +2,7 @@
 
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingConfig.h"
+#include "game/combat/CombatConfig.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/production/StockpileRegistry.h"
 #include "game/map/ImprovementConfigParser.h"
@@ -352,6 +353,9 @@ struct ConditionReferenceValidator
     void operator()(const AttackerDomain_t&) const {}
     void operator()(const DefenderDomain_t&) const {}
     void operator()(const DefenderIsNativeLife_t&) const {}
+    void operator()(const OpponentDomain_t&) const {}
+    void operator()(const AttackerIsNativeLife_t&) const {}
+    void operator()(const EffectIsUnowned_t&) const {}
     void operator()(const IsHeadquarters_t&) const {}
     void operator()(const SubjectIsOwner_t&) const {}
     void operator()(const SubjectIsForeign_t&) const {}
@@ -582,6 +586,8 @@ void CheckRuleConfigSources_(const GameDataContext& rData, const EffectSourceChe
     rCheck.Effects(rData.tileYieldRules.effects, "tile_yield_rules");
     rCheck.Effects(rData.policeRules, "police_rules");
     rCheck.Effects(rData.worldRules, "world_rules");
+    const CombatConfig_t& rCombatConfig = RequireRegistry(rData.combatConfig, "combatConfig");
+    rCheck.Effects(rCombatConfig.effects, "combat");
     CheckPopCompositionSources_(rData, rCheck);
     const ProductionConfig_t& rProductionConfig =
         RequireRegistry(rData.productionConfig, "productionConfig");

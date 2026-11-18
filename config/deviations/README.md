@@ -176,6 +176,56 @@ absent.
 - **Where:** `CombatRules.h` odds ratio.
 - **Missing:** the original and Thinker versions and a switch.
 
+### Combat rating rounds once `[Ours]`
+
+- **Original:** strengths are exact integers (`rating × 8 × (morale + 6)`, 256 for a
+  Disciplined rating 1). Each percent modifier truncates in a fixed order, interleaved with
+  exact terrain and fortification multiplies ("Combat strength and the round roll").
+- **Ours:** ratings stay exact; `ResolveCombatStrength` rounds the rating × 256 down once,
+  then rounds down again after the partial-move penalty and after the difficulty handicap,
+  as SMAC does. Inside the rating, each multiplier applies exactly instead of truncating.
+  A strength is 1 higher than SMAC's when three or more 25% steps stack on an odd morale
+  factor (about 0.4% of conventional defense combinations), or when a 10% step comes before
+  a 50% one, as a Planet rating step before Empath Song does.
+- **Where:** `CombatRules.cpp` `ResolveCombatStrength`, `FloorResolvedStat`.
+- **Missing:** the original version: ordered truncating steps inside the rating.
+
+### Combat modifiers with no effect yet `[Ours]`
+
+- **Original:** Forest, Perimeter Defense, Naval Yard, Aerospace Complex, Tachyon Field,
+  Flechette, GSP, Pholus Mutagen, Trance, Comm Jammer, Pulse, Non Combat, Alien Defense and
+  the other steps of "Combat strength and the round roll" change combat strength.
+- **Ours:** these occupants, facilities and abilities exist in config with no combat
+  effect.
+- **Where:** `improvements.json`, `buildings/*.json`, `unit_components/*.json`.
+- **Missing:** the effects.
+
+### Alien Artifact defends at full scale `[Ours]`
+
+- **Original:** an artifact's basic defense is 1, without the ×8 scale or morale, so it
+  defends at about 4 on open ground ("Combat strength and the round roll", step 1).
+- **Ours:** `Alien_Artifact` clamps its conventional and psi defense values to 1, which
+  scales to 256 like an armor-1 unit. The clamp also caps Rocky, Fungus and Bunker, while
+  morale, Base and Sensor still scale it.
+- **Where:** `native_units.json` `Alien_Artifact`.
+- **Missing:** the original version.
+
+### Overlapping Sensors stack `[Ours]`
+
+- **Original:** one Sensor bonus when any qualifying Sensor is within 2 tiles of the
+  defender ("Combat strength and the round roll", step 9).
+- **Ours:** every Sensor in range adds its own bonus.
+- **Where:** `improvements.json` `Sensor`.
+- **Missing:** the original version.
+
+### Ocean Sensors follow territory `[Ours]`
+
+- **Original:** a Sensor on an ocean tile counts when the nearest base is the defender's
+  ("Combat strength and the round roll", step 9).
+- **Ours:** ocean Sensors use the territory owner, like land Sensors.
+- **Where:** `improvements.json` `Sensor` (`owned_by_territory`).
+- **Missing:** the original version.
+
 ### Assimilation claims per previous owner `[Ours]`
 
 - **Original:** one `assimilation_turns_left` counter and one `faction_id_former` per base

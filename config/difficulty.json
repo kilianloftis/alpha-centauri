@@ -25,15 +25,9 @@
             "kind": "PlayerType",
             "type": "Player"
           },
-          "condition": {
-            "kind": "AllOf",
-            "conditions": [
-              { "kind": "IsDefending", "value": false },
-              { "kind": "PartnerPlayerType", "type": "AI" }
-            ]
-          },
+          "condition": { "kind": "PartnerPlayerType", "type": "AI" },
           "parameters": {
-            "stat": "attack",
+            "stat": "attack_handicap",
             "amount": 2,
             "op": "MultiplyGeometric"
           }
@@ -45,15 +39,9 @@
             "kind": "PlayerType",
             "type": "AI"
           },
-          "condition": {
-            "kind": "AllOf",
-            "conditions": [
-              { "kind": "IsDefending", "value": false },
-              { "kind": "PartnerPlayerType", "type": "Player" }
-            ]
-          },
+          "condition": { "kind": "PartnerPlayerType", "type": "Player" },
           "parameters": {
-            "stat": "attack",
+            "stat": "attack_handicap",
             "amount": 0.25,
             "op": "MultiplyGeometric"
           }
@@ -216,15 +204,9 @@
             "kind": "PlayerType",
             "type": "Player"
           },
-          "condition": {
-            "kind": "AllOf",
-            "conditions": [
-              { "kind": "IsDefending", "value": false },
-              { "kind": "PartnerPlayerType", "type": "AI" }
-            ]
-          },
+          "condition": { "kind": "PartnerPlayerType", "type": "AI" },
           "parameters": {
-            "stat": "attack",
+            "stat": "attack_handicap",
             "amount": 1.5,
             "op": "MultiplyGeometric"
           }
@@ -236,15 +218,9 @@
             "kind": "PlayerType",
             "type": "AI"
           },
-          "condition": {
-            "kind": "AllOf",
-            "conditions": [
-              { "kind": "IsDefending", "value": false },
-              { "kind": "PartnerPlayerType", "type": "Player" }
-            ]
-          },
+          "condition": { "kind": "PartnerPlayerType", "type": "Player" },
           "parameters": {
-            "stat": "attack",
+            "stat": "attack_handicap",
             "amount": 0.5,
             "op": "MultiplyGeometric"
           }
@@ -397,13 +373,12 @@
           "condition": {
             "kind": "AllOf",
             "conditions": [
-              { "kind": "IsDefending", "value": false },
               { "kind": "PartnerPlayerType", "type": "Player" },
               { "kind": "IsNativeLifeFaction" }
             ]
           },
           "parameters": {
-            "stat": "attack",
+            "stat": "attack_handicap",
             "amount": 0.75,
             "op": "MultiplyGeometric"
           }

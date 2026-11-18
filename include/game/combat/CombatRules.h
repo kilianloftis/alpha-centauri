@@ -4,7 +4,6 @@ namespace ac
 {
 
 class MoraleCalculator;
-class TileEffectsContext;
 class Unit;
 
 // Which side of a fight a roll / outcome refers to. Attacker initiated; Defender is the
@@ -38,10 +37,10 @@ struct CombatStrength_t
     bool bPsiCombat = false;
 };
 
-// Attack and defence pools; psi ratings start at 1. The defender uses Defense (Attack in a duel)
-// times its tile's multiplier; under one movement point, attack scales by the fraction left.
+// Attack and defence pools. Each side's rating is its value stat for the kind of fight times its
+// Attack / Defense multiplier; the defender rates on attack in a duel. The partial-move penalty
+// and the difficulty handicap scale the attacker's whole-number strength.
 CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefender,
-                                       const TileEffectsContext& rTileEffects,
                                        const MoraleCalculator& rMorale,
                                        CombatEngagement_t engagement);
 

@@ -448,7 +448,7 @@
         "type": "StatModifier",
         "scope": "ProducedAtThisBase",
         "parameters": {
-          "stat": "attack",
+          "stat": "conventional_attack",
           "amount": 1,
           "op": "Add"
         }
@@ -666,7 +666,7 @@
         "type": "StatModifier",
         "scope": "FactionUnits",
         "parameters": {
-          "stat": "attack",
+          "stat": "conventional_attack",
           "amount": 1,
           "op": "Add"
         },
@@ -1473,7 +1473,7 @@
         "type": "StatModifier",
         "scope": "WorldGlobal",
         "parameters": {
-          "stat": "attack",
+          "stat": "conventional_attack",
           "amount": 1,
           "op": "Add"
         }
@@ -1489,7 +1489,7 @@
         "type": "StatModifier",
         "scope": "WorldGlobal",
         "parameters": {
-          "stat": "tile_defense",
+          "stat": "defense",
           "amount": 50,
           "op": "AddPercent"
         }

@@ -59,12 +59,14 @@ const UnitComponentConfig_t* ComponentOfType_(const UnitDesign& rDesign, const c
 
 int WeaponOffense_(const UnitDesign& rDesign)
 {
-    return ComponentAdditiveStat_(ComponentOfType_(rDesign, "weapon"), StatId_t::Attack);
+    const UnitComponentConfig_t* pWeapon = ComponentOfType_(rDesign, "weapon");
+    return ComponentAdditiveStat_(pWeapon, StatId_t::ConventionalAttack);
 }
 
 int ArmorDefense_(const UnitDesign& rDesign)
 {
-    return ComponentAdditiveStat_(ComponentOfType_(rDesign, "armour"), StatId_t::Defense);
+    const UnitComponentConfig_t* pArmour = ComponentOfType_(rDesign, "armour");
+    return ComponentAdditiveStat_(pArmour, StatId_t::ConventionalDefense);
 }
 
 int TypeMineralCost_(const UnitDesign& rDesign, const char* pType)

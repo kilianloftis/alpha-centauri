@@ -155,8 +155,8 @@
         "scope": "ThisUnit",
         "parameters": {
           "stat": "defense",
-          "amount": 100,
-          "op": "AddPercent"
+          "amount": 2,
+          "op": "MultiplyGeometric"
         },
         "condition": {
           "kind": "AllOf",
@@ -237,8 +237,8 @@
         "scope": "ThisUnit",
         "parameters": {
           "stat": "attack",
-          "amount": 100,
-          "op": "AddPercent"
+          "amount": 2,
+          "op": "MultiplyGeometric"
         },
         "condition": {
           "kind": "DefenderDomain",
@@ -253,8 +253,8 @@
         "scope": "ThisUnit",
         "parameters": {
           "stat": "attack",
-          "amount": -50,
-          "op": "AddPercent"
+          "amount": 0.5,
+          "op": "MultiplyGeometric"
         },
         "condition": {
           "kind": "DefenderDomain",
@@ -309,8 +309,8 @@
         "scope": "ThisUnit",
         "parameters": {
           "stat": "attack",
-          "amount": -50,
-          "op": "AddPercent"
+          "amount": 0.5,
+          "op": "MultiplyGeometric"
         },
         "condition": {
           "kind": "HasAirdroppedThisTurn"

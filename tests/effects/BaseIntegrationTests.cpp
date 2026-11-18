@@ -39,14 +39,17 @@ using Catch::Approx;
 TEST_CASE("Founding a base registers the Base improvement and its defense bonus on the tile",
           "[effects][base]")
 {
-    actest::BaseFixture fixture;
-    fixture.MakeBase(8, 8);
+    actest::FactionFixture fixture;
+    Faction& owner = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    fixture.MakeFactionBase(owner, 8, 8);
 
     Tile& tile = fixture.At(8, 8);
     CHECK(tile.HasImprovement("Base"));
     CHECK(tile.HasFeature("Base"));
-    // Fixture Base entry: +100% defense through the same mechanism as Bunker/Rocky.
-    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(tile, /*forFaction*/ 1) == Approx(2.0));
+    const Unit& defender = fixture.MakeUnit(owner, 8, 8, {"test_chassis", "test_weak_armor"});
+    const Unit& attacker = fixture.MakeUnit(enemy, 0, 0, {"test_chassis", "test_weapon"});
+    CHECK(actest::ConventionalDefenseRating(defender, attacker) == Approx(1.25));
 }
 
 TEST_CASE("BaseManager::CollectBuildingEffects tags ThisBase effects with the owning base",

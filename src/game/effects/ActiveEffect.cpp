@@ -28,6 +28,7 @@
 #include "game/units/IDesign.h"
 #include "game/units/UnitDesign.h"
 #include "game/effects/EffectConfig.h"
+#include "game/effects/TileEffectsContext.h"
 #include "game/effects/TileYieldRulesConfig.h"
 #include "game/natives/NativeRules.h"
 #include "game/combat/MoraleCalculator.h"
@@ -557,6 +558,17 @@ bool DomainListed_(const std::vector<UnitDomain_t>& rDomains, const Unit* pUnit)
     return pUnit != nullptr && std::ranges::contains(rDomains, pUnit->GetDomain());
 }
 
+const Unit* Opponent_(const EffectContext_t& ctx)
+{
+    switch (ctx.combatRole)
+    {
+        case CombatRole_t::Attacker: return ctx.pDefender;
+        case CombatRole_t::Defender: return ctx.pAttacker;
+        case CombatRole_t::None:     return nullptr;
+    }
+    return nullptr;
+}
+
 // pFaction when set, else the unit subject's faction — polarity conditions share this.
 std::optional<FactionId_t> SubjectFactionId_(const EffectContext_t& ctx)
 {
@@ -700,6 +712,17 @@ struct ConditionEvaluator_
             && ctx.pDefender->GetDesign().IsNativeLife() == rNative.bMatches;
     }
 
+    bool operator()(const OpponentDomain_t& rDomain) const
+    {
+        return DomainListed_(rDomain.domains, Opponent_(ctx));
+    }
+
+    bool operator()(const AttackerIsNativeLife_t& rNative) const
+    {
+        return ctx.pAttacker != nullptr
+            && ctx.pAttacker->GetDesign().IsNativeLife() == rNative.bMatches;
+    }
+
     bool operator()(const IsHeadquarters_t&) const
     {
         return ctx.pBase != nullptr && ctx.pBase->IsHeadquarters();
@@ -725,6 +748,11 @@ struct ConditionEvaluator_
             return false;
         }
         return *subjectId != *ctx.effectOwnerFaction;
+    }
+
+    bool operator()(const EffectIsUnowned_t&) const
+    {
+        return ctx.effectOwnerFaction.has_value() && *ctx.effectOwnerFaction == k_NoFactionOwner;
     }
 
     bool operator()(const SubjectDomain_t& rDomain) const
@@ -908,9 +936,12 @@ bool ConditionNeedsSituationalContext(const Condition_t& rCondition)
                                || std::is_same_v<T, AttackerDomain_t>
                                || std::is_same_v<T, DefenderDomain_t>
                                || std::is_same_v<T, DefenderIsNativeLife_t>
+                               || std::is_same_v<T, OpponentDomain_t>
+                               || std::is_same_v<T, AttackerIsNativeLife_t>
                                || std::is_same_v<T, IsHeadquarters_t>
                                || std::is_same_v<T, SubjectIsOwner_t>
                                || std::is_same_v<T, SubjectIsForeign_t>
+                               || std::is_same_v<T, EffectIsUnowned_t>
                                || std::is_same_v<T, BaseHasBuilding_t>
                                || std::is_same_v<T, PartnerPlayerType_t>
                                || std::is_same_v<T, PartnerIsFormerOwner_t>
@@ -1067,9 +1098,9 @@ namespace
 
 void AppendStandingTileUnitEffects_(const Unit& rUnit, std::vector<ActiveEffect_t>& rOut)
 {
-    // ThisTile unit-domain modifiers on the tile the unit occupies (e.g. Base promotion
-    // eligibility). Tile-domain stats and rule flags stay on tile resolvers.
-    for (ActiveEffect_t& rEffect : CollectTileEffects(rUnit.GetTile()))
+    // Tile-domain stats and rule flags stay on tile resolvers.
+    const TileEffectsContext& rTileEffects = CurrentGameState().GetTileEffects();
+    for (ActiveEffect_t& rEffect : rTileEffects.CollectAreaEffects(rUnit.GetTile()))
     {
         const StatModifierEffect_t* pMod =
             std::get_if<StatModifierEffect_t>(&rEffect.config->effect);
@@ -1205,7 +1236,7 @@ double ResolveUnitMultiplicative_(const UnitEffects_t& rUnitEffects, StatId_t st
 }
 
 // A live unit's effects plus extra ThisUnit configs (planet_pearls rows or the combat
-// morale AddPercent), as one Unit-domain bundle.
+// morale multiplier), as one Unit-domain bundle.
 UnitEffects_t LiveUnitEffectsWithMorale_(const Unit& rUnit,
                                          std::span<const EffectConfig_t> extraEffects)
 {
@@ -1224,15 +1255,6 @@ int ResolveCombatUnitStat(const Unit& rUnit, StatId_t statId, const EffectContex
     return FinalizeResolvedStat(total);
 }
 
-int ResolveCombatUnitStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx,
-                          double moraleAddPercent)
-{
-    EffectConfig_t scale;
-    scale.scope = EffectScope_t::ThisUnit;
-    scale.effect = StatModifierEffect_t{statId, moraleAddPercent, ModifierOp_t::AddPercent};
-    return ResolveCombatUnitStat(rUnit, statId, rCtx, std::span<const EffectConfig_t>(&scale, 1));
-}
-
 double ResolveCombatUnitMultiplicativeStat(const Unit& rUnit, StatId_t statId, double baseValue,
                                            const EffectContext_t& rCtx,
                                            std::span<const EffectConfig_t> extraEffects)
@@ -1241,14 +1263,19 @@ double ResolveCombatUnitMultiplicativeStat(const Unit& rUnit, StatId_t statId, d
                                       statId, baseValue, rCtx);
 }
 
-double ResolveCombatUnitMultiplicativeStat(const Unit& rUnit, StatId_t statId, double baseValue,
-                                           const EffectContext_t& rCtx, double moraleAddPercent)
+double ResolveCombatRating(const Unit& rUnit, CombatRatingStats_t stats,
+                           const EffectContext_t& rCtx, double moraleMultiplier)
 {
-    EffectConfig_t scale;
-    scale.scope = EffectScope_t::ThisUnit;
-    scale.effect = StatModifierEffect_t{statId, moraleAddPercent, ModifierOp_t::AddPercent};
-    return ResolveCombatUnitMultiplicativeStat(
-        rUnit, statId, baseValue, rCtx, std::span<const EffectConfig_t>(&scale, 1));
+    EffectConfig_t morale;
+    morale.scope = EffectScope_t::ThisUnit;
+    morale.effect =
+        StatModifierEffect_t{stats.multiplier, moraleMultiplier, ModifierOp_t::MultiplyGeometric};
+    const std::span<const EffectConfig_t> extraEffects(&morale, 1);
+    const UnitEffects_t effects = LiveUnitEffectsWithMorale_(rUnit, extraEffects);
+    const double value = ResolveUnitStat(effects, stats.value, SeedFor(stats.value), &rCtx);
+    const double multiplier =
+        ResolveUnitStat(effects, stats.multiplier, SeedFor(stats.multiplier), &rCtx);
+    return value * multiplier;
 }
 
 namespace

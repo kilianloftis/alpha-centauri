@@ -29,10 +29,10 @@ int MoraleCalculator::MoraleLevel(int xp, int liveBonus) const
     return std::clamp(xp + liveBonus, m_rConfig.MinLevel(), m_rConfig.MaxLevel());
 }
 
-double MoraleCalculator::CombatAddPercent(int combatLevel) const
+double MoraleCalculator::CombatMultiplier(int combatLevel) const
 {
     const double delta = static_cast<double>(combatLevel - m_rConfig.baselineIndex);
-    return delta * m_rConfig.percentPerLevel;
+    return 1.0 + delta * m_rConfig.percentPerLevel / 100.0;
 }
 
 const std::string& MoraleCalculator::DisplayName(int level, MoraleLifecycle_t lifecycle) const

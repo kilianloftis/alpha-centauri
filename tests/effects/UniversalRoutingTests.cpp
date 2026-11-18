@@ -68,6 +68,14 @@ BuildingConfig_t Building_(const std::string& rId, std::vector<EffectConfig_t> e
     return building;
 }
 
+// rDefender's conventional defense rating after it moves to (x, y).
+double RatingAt_(actest::FactionFixture& rFixture, Unit& rDefender, const Unit& rAttacker, int x,
+                 int y)
+{
+    rFixture.MoveUnit(rDefender, x, y);
+    return actest::ConventionalDefenseRating(rDefender, rAttacker);
+}
+
 } // namespace
 
 TEST_CASE("Faction pool: a pop type's FactionGlobal effect is collected faction-wide",
@@ -117,16 +125,18 @@ TEST_CASE("FactionUnits lane: a building's FactionUnits stat modifier boosts liv
     BaseManager& base = fixture.MakeFactionBase(faction, 8, 4);
 
     Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_weapon"}, &base); // 4 attack intrinsic
-    CHECK(ResolveStat(unit, StatId_t::Attack) == 4);
+    const CombatRatingStats_t attack{StatId_t::ConventionalAttack, StatId_t::Attack};
+    const EffectContext_t ctx{};
+    CHECK(ResolveCombatRating(unit, attack, ctx, 1.0) == Approx(4.0));
 
     base.GetBuildingManager().AddBuilding("unit_attack_array"); // +25% attack, FactionUnits
-    CHECK(ResolveStat(unit, StatId_t::Attack) == 5); // 4 * 1.25
+    CHECK(ResolveCombatRating(unit, attack, ctx, 1.0) == Approx(5.0)); // 4 * 1.25
 
     // The design (unit-designer view) keeps showing intrinsic values.
-    CHECK(ResolveStat(unit.GetDesign(), StatId_t::Attack) == 4);
+    CHECK(ResolveStat(unit.GetDesign(), StatId_t::ConventionalAttack) == 4);
 
     base.GetBuildingManager().DestroyBuilding("unit_attack_array");
-    CHECK(ResolveStat(unit, StatId_t::Attack) == 4);
+    CHECK(ResolveCombatRating(unit, attack, ctx, 1.0) == Approx(4.0));
 }
 
 TEST_CASE("FactionUnits lane: a building's FactionUnits InteractionOverride applies to live units",
@@ -229,12 +239,12 @@ TEST_CASE("FactionUnits condition HasComponent: only matching designs receive th
 
     Unit& armed = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_weapon"}, &base);
     Unit& unarmed = fixture.MakeUnit(faction, 9, 9, {"test_chassis"}, &base);
-    CHECK(ResolveStat(armed, StatId_t::Attack) == 4);
-    CHECK(ResolveStat(unarmed, StatId_t::Attack) == 0);
+    CHECK(ResolveStat(armed, StatId_t::ConventionalAttack) == 4);
+    CHECK(ResolveStat(unarmed, StatId_t::ConventionalAttack) == 0);
 
     base.GetBuildingManager().AddBuilding("component_attack_array"); // +1 attack if HasComponent test_weapon
-    CHECK(ResolveStat(armed, StatId_t::Attack) == 5);
-    CHECK(ResolveStat(unarmed, StatId_t::Attack) == 0);
+    CHECK(ResolveStat(armed, StatId_t::ConventionalAttack) == 5);
+    CHECK(ResolveStat(unarmed, StatId_t::ConventionalAttack) == 0);
 }
 
 TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other factions' bases",
@@ -311,13 +321,13 @@ TEST_CASE("WorldGlobal lane: a peer unit-domain modifier changes the other facti
 
     BaseManager& baseA = fixture.MakeFactionBase(factionA, 8, 4);
     Unit& unitB = fixture.MakeUnit(factionB, 8, 12, {"test_chassis", "test_weapon"});
-    const int attackBefore = ResolveStat(unitB, StatId_t::Attack);
+    const int attackBefore = ResolveStat(unitB, StatId_t::ConventionalAttack);
 
     baseA.GetBuildingManager().AddBuilding("world_beacon"); // +10 energy, base domain
-    CHECK(ResolveStat(unitB, StatId_t::Attack) == attackBefore);
+    CHECK(ResolveStat(unitB, StatId_t::ConventionalAttack) == attackBefore);
 
     baseA.GetBuildingManager().AddBuilding("world_unit_attack"); // +1 attack, unit domain
-    CHECK(ResolveStat(unitB, StatId_t::Attack) == attackBefore + 1);
+    CHECK(ResolveStat(unitB, StatId_t::ConventionalAttack) == attackBefore + 1);
 }
 
 TEST_CASE("FactionGlobal lane: unit-domain stats and rule flags reach the faction's own units",
@@ -327,11 +337,11 @@ TEST_CASE("FactionGlobal lane: unit-domain stats and rule flags reach the factio
     actest::FactionFixture fixture;
     AddBuildings_(fixture,
                   {Building_("test_faction_attack",
-                             {pool.StatMod(StatId_t::Attack, 1, ModifierOp_t::Add,
+                             {pool.StatMod(StatId_t::ConventionalAttack, 1, ModifierOp_t::Add,
                                            EffectScope_t::FactionGlobal),
                               pool.RuleFlag(RuleFlagId_t::OrbitalInsertion)}),
                    Building_("test_bases_attack",
-                             {pool.StatMod(StatId_t::Attack, 1, ModifierOp_t::Add,
+                             {pool.StatMod(StatId_t::ConventionalAttack, 1, ModifierOp_t::Add,
                                            EffectScope_t::AllOwnerBases),
                               pool.RuleFlag(RuleFlagId_t::OrbitalInsertion,
                                             EffectScope_t::AllOwnerBases)})});
@@ -340,22 +350,22 @@ TEST_CASE("FactionGlobal lane: unit-domain stats and rule flags reach the factio
     BaseManager& baseA = fixture.MakeFactionBase(factionA, 8, 4);
     Unit& unitA = fixture.MakeUnit(factionA, 8, 8, {"test_chassis", "test_weapon"}, &baseA);
     Unit& unitB = fixture.MakeUnit(factionB, 8, 12, {"test_chassis", "test_weapon"});
-    const int attackA = ResolveStat(unitA, StatId_t::Attack);
-    const int attackB = ResolveStat(unitB, StatId_t::Attack);
+    const int attackA = ResolveStat(unitA, StatId_t::ConventionalAttack);
+    const int attackB = ResolveStat(unitB, StatId_t::ConventionalAttack);
 
     baseA.GetBuildingManager().AddBuilding("test_bases_attack");
-    CHECK(ResolveStat(unitA, StatId_t::Attack) == attackA);
+    CHECK(ResolveStat(unitA, StatId_t::ConventionalAttack) == attackA);
     CHECK_FALSE(ResolveFlag(unitA, RuleFlagId_t::OrbitalInsertion));
 
     baseA.GetBuildingManager().DestroyBuilding("test_bases_attack");
     baseA.GetBuildingManager().AddBuilding("test_faction_attack");
-    CHECK(ResolveStat(unitA, StatId_t::Attack) == attackA + 1);
+    CHECK(ResolveStat(unitA, StatId_t::ConventionalAttack) == attackA + 1);
     CHECK(ResolveFlag(unitA, RuleFlagId_t::OrbitalInsertion));
-    CHECK(ResolveStat(unitB, StatId_t::Attack) == attackB);
+    CHECK(ResolveStat(unitB, StatId_t::ConventionalAttack) == attackB);
     CHECK_FALSE(ResolveFlag(unitB, RuleFlagId_t::OrbitalInsertion));
 }
 
-TEST_CASE("WorldGlobal lane: tile defense applies and base yield stats stay on the base",
+TEST_CASE("WorldGlobal lane: a defense bonus reaches units and base yield stats stay on the base",
           "[effects][routing][world][tile]")
 {
     actest::FactionFixture fixture;
@@ -364,12 +374,14 @@ TEST_CASE("WorldGlobal lane: tile defense applies and base yield stats stay on t
         fixture.state.AllocateFactionId(), true, fixture.factionDefinition, fixture.dataContext, fixture.map,
         fixture.settings, fixture.state.GetUnitIdAllocator(), actest::k_TestFactionSeed));
     BaseManager& baseA = fixture.MakeFactionBase(factionA, 8, 4);
+    Faction& enemy = fixture.MakeFaction();
+    const Unit& defender = fixture.MakeUnit(factionA, 8, 8, {"test_chassis", "test_weak_armor"});
+    const Unit& attacker = fixture.MakeUnit(enemy, 0, 0, {"test_chassis", "test_weapon"});
 
     Tile& tile = *fixture.map.GetTile(8, 8);
     const TileResources_t yieldBefore =
         fixture.ctx.ResolveTileYield(tile).effective;
-    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(tile, factionA.GetFactionId())
-          == Approx(1.0));
+    CHECK(actest::ConventionalDefenseRating(defender, attacker) == Approx(1.0));
 
     baseA.GetBuildingManager().AddBuilding("world_beacon");
     baseA.GetBuildingManager().AddBuilding("world_tile_defense");
@@ -379,8 +391,7 @@ TEST_CASE("WorldGlobal lane: tile defense applies and base yield stats stay on t
     CHECK(yieldAfter.nutrients == yieldBefore.nutrients);
     CHECK(yieldAfter.energy == yieldBefore.energy);
     CHECK(yieldAfter.minerals == yieldBefore.minerals);
-    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(tile, factionA.GetFactionId())
-          == Approx(1.5));
+    CHECK(actest::ConventionalDefenseRating(defender, attacker) == Approx(1.5));
 }
 
 TEST_CASE("WorldGlobal lane: a move_cost clamp applies when entering a tile",
@@ -453,25 +464,28 @@ TEST_CASE("Unit aura: a sensor-pod unit projects its ThisTile defense bonus with
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
 
     Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "sensor_pod"}); // +25% defense, radius 2
+    Unit& defender = fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_weak_armor"});
+    const Unit& attacker = fixture.MakeUnit(enemy, 0, 0, {"test_chassis", "test_weapon"});
 
-    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(8, 8), faction.GetFactionId()) == Approx(1.25)); // own tile
-    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(10, 10), faction.GetFactionId()) == Approx(1.25)); // Chebyshev 2
-    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(8, 12), faction.GetFactionId()) == Approx(1.25)); // Chebyshev 2 diagonal
-    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(11, 11), faction.GetFactionId()) == Approx(1.0));  // Chebyshev 3
+    CHECK(RatingAt_(fixture, defender, attacker, 8, 8) == Approx(1.25)); // own tile
+    CHECK(RatingAt_(fixture, defender, attacker, 10, 10) == Approx(1.25)); // Chebyshev 2
+    CHECK(RatingAt_(fixture, defender, attacker, 8, 12) == Approx(1.25)); // Chebyshev 2 diagonal
+    CHECK(RatingAt_(fixture, defender, attacker, 11, 11) == Approx(1.0));  // Chebyshev 3
 
     SECTION("the aura moves with the unit")
     {
         fixture.MoveUnit(unit, 0, 8);
-        CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(10, 10), faction.GetFactionId()) == Approx(1.0));
-        CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(1, 9), faction.GetFactionId()) == Approx(1.25));
+        CHECK(RatingAt_(fixture, defender, attacker, 10, 10) == Approx(1.0));
+        CHECK(RatingAt_(fixture, defender, attacker, 1, 9) == Approx(1.25));
     }
 
     SECTION("the aura disappears with the unit")
     {
-            faction.GetUnitManager().DestroyUnit(unit);
-        CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(8, 8), faction.GetFactionId()) == Approx(1.0));
+        faction.GetUnitManager().DestroyUnit(unit);
+        CHECK(RatingAt_(fixture, defender, attacker, 8, 8) == Approx(1.0));
     }
 }
 
@@ -482,8 +496,9 @@ TEST_CASE("Unit aura: ThisUnit effects on a unit's components never leak into ti
     Faction& faction = fixture.MakeFaction();
 
     fixture.MakeUnit(faction, 8, 8, {"test_weapon", "test_chassis"});
+    const Unit& bystander = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
 
-    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(8, 8), faction.GetFactionId()) == Approx(1.0));
+    CHECK(ResolveStat(bystander, StatId_t::ConventionalAttack) == 0);
     const TileResources_t yield = fixture.ctx.ResolveTileYield(fixture.At(8, 8)).effective;
     CHECK(yield.nutrients == 0);
     CHECK(yield.minerals == 0);
@@ -497,12 +512,12 @@ TEST_CASE("Unit aura wraps horizontally across the map seam",
     Faction& faction = fixture.MakeFaction();
     const int width = fixture.map.GetWidth();
 
+    Faction& enemy = fixture.MakeFaction();
     fixture.MakeUnit(faction, 0, 4, {"test_chassis", "sensor_pod"}); // +25% defense, radius 2
+    Unit& defender = fixture.MakeUnit(faction, width - 2, 4, {"test_chassis", "test_weak_armor"});
+    const Unit& attacker = fixture.MakeUnit(enemy, 8, 12, {"test_chassis", "test_weapon"});
 
-    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(width - 2, 4), faction.GetFactionId())
-          == Approx(1.25));
-    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(width - 4, 4), faction.GetFactionId())
-          == Approx(1.25));
-    CHECK(fixture.ctx.ResolveTileDefenseMultiplier(fixture.At(width - 6, 4), faction.GetFactionId())
-          == Approx(1.0));
+    CHECK(RatingAt_(fixture, defender, attacker, width - 2, 4) == Approx(1.25));
+    CHECK(RatingAt_(fixture, defender, attacker, width - 4, 4) == Approx(1.25));
+    CHECK(RatingAt_(fixture, defender, attacker, width - 6, 4) == Approx(1.0));
 }

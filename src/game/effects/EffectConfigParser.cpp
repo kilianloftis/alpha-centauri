@@ -507,6 +507,16 @@ void RequireBombardFloorOp_(const StatModifierEffect_t& rModifier)
     }
 }
 
+void RequireScalingOpOnMultiplier_(const StatModifierEffect_t& rModifier)
+{
+    if (KindFor(rModifier.stat) == StatKind_t::PureMultiplier && rModifier.op == ModifierOp_t::Add)
+    {
+        throw std::runtime_error(
+            "StatModifier op Add is not valid on a multiplier stat; a flat amount belongs on "
+            "a value stat (e.g. conventional_attack, not attack)");
+    }
+}
+
 void ParseStatModifier_(const ConfigReader& rParams, EffectConfig_t& rEffect)
 {
     StatModifierEffect_t statModifier;
@@ -528,6 +538,7 @@ void ParseStatModifier_(const ConfigReader& rParams, EffectConfig_t& rEffect)
     RequireTileClampSelector_(statModifier);
     statModifier.bypassClamp = ParseBypassClamp_(rParams, statModifier);
     RequireBombardFloorOp_(statModifier);
+    RequireScalingOpOnMultiplier_(statModifier);
     rEffect.effect = statModifier;
 }
 
@@ -1139,11 +1150,22 @@ const std::unordered_map<std::string, ParseConditionFn_>& ConditionParsers_()
              return DefenderIsNativeLife_t{
                  OptionalConditionBool_(rJson, "value", true, "DefenderIsNativeLife")};
          }},
+        {"OpponentDomain",
+         [](const nlohmann::json& rJson) -> Condition_t {
+             return OpponentDomain_t{ParseConditionDomains_(rJson, "OpponentDomain")};
+         }},
+        {"AttackerIsNativeLife",
+         [](const nlohmann::json& rJson) -> Condition_t {
+             return AttackerIsNativeLife_t{
+                 OptionalConditionBool_(rJson, "value", true, "AttackerIsNativeLife")};
+         }},
         {"IsHeadquarters", [](const nlohmann::json&) -> Condition_t { return IsHeadquarters_t{}; }},
         {"SubjectIsOwner",
          [](const nlohmann::json&) -> Condition_t { return SubjectIsOwner_t{}; }},
         {"SubjectIsForeign",
          [](const nlohmann::json&) -> Condition_t { return SubjectIsForeign_t{}; }},
+        {"EffectIsUnowned",
+         [](const nlohmann::json&) -> Condition_t { return EffectIsUnowned_t{}; }},
         {"SubjectDomain",
          [](const nlohmann::json& rJson) -> Condition_t {
              return SubjectDomain_t{

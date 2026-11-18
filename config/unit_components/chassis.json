@@ -39,8 +39,8 @@
         "scope": "ThisUnit",
         "parameters": {
           "stat": "attack",
-          "amount": 25,
-          "op": "AddPercent"
+          "amount": 1.25,
+          "op": "MultiplyGeometric"
         },
         "condition": {
           "kind": "TargetTileHas",

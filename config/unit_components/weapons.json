@@ -10,7 +10,7 @@
         "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": {
-          "stat": "attack",
+          "stat": "conventional_attack",
           "amount": 1,
           "op": "Add"
         }
@@ -36,7 +36,7 @@
         "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": {
-          "stat": "attack",
+          "stat": "conventional_attack",
           "amount": 2,
           "op": "Add"
         }
@@ -62,7 +62,7 @@
         "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": {
-          "stat": "attack",
+          "stat": "conventional_attack",
           "amount": 3,
           "op": "Add"
         }

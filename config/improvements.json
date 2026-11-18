@@ -468,10 +468,17 @@
       {
         "type": "StatModifier",
         "scope": "ThisTile",
+        "condition": {
+          "kind": "AttackerDomain",
+          "domains": [
+            "land",
+            "sea"
+          ]
+        },
         "parameters": {
-          "stat": "tile_defense",
-          "amount": 50,
-          "op": "AddPercent"
+          "stat": "conventional_defense",
+          "amount": 1.5,
+          "op": "MultiplyGeometric"
         }
       },
       {
@@ -600,12 +607,29 @@
         "scope": "ThisTile",
         "radius": 2,
         "parameters": {
-          "stat": "tile_defense",
-          "amount": 25,
-          "op": "AddPercent"
+          "stat": "defense",
+          "amount": 1.25,
+          "op": "MultiplyGeometric"
         },
         "condition": {
-          "kind": "SubjectIsOwner"
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "IsNativeLifeFaction",
+              "value": false
+            },
+            {
+              "kind": "AnyOf",
+              "conditions": [
+                {
+                  "kind": "SubjectIsOwner"
+                },
+                {
+                  "kind": "EffectIsUnowned"
+                }
+              ]
+            }
+          ]
         }
       },
       {
@@ -1044,9 +1068,9 @@
         "type": "StatModifier",
         "scope": "ThisTile",
         "parameters": {
-          "stat": "tile_defense",
-          "amount": 100,
-          "op": "AddPercent"
+          "stat": "defense",
+          "amount": 1.25,
+          "op": "MultiplyGeometric"
         }
       },
       {

@@ -1,3 +1,53 @@
 {
-  "boarding_home_base_min_pop": 3
+  "boarding_home_base_min_pop": 3,
+  "effects": [
+    {
+      "type": "StatModifier",
+      "scope": "WorldGlobal",
+      "parameters": {
+        "stat": "psi_attack",
+        "amount": 1,
+        "op": "Add"
+      }
+    },
+    {
+      "type": "StatModifier",
+      "scope": "WorldGlobal",
+      "condition": {
+        "kind": "OpponentDomain",
+        "domains": [
+          "land"
+        ]
+      },
+      "parameters": {
+        "stat": "psi_attack",
+        "amount": 2,
+        "op": "Add"
+      }
+    },
+    {
+      "type": "StatModifier",
+      "scope": "WorldGlobal",
+      "parameters": {
+        "stat": "psi_defense",
+        "amount": 1,
+        "op": "Add"
+      }
+    },
+    {
+      "type": "StatModifier",
+      "scope": "WorldGlobal",
+      "condition": {
+        "kind": "DefenderDomain",
+        "domains": [
+          "land"
+        ]
+      },
+      "parameters": {
+        "stat": "psi_defense",
+        "amount": 1,
+        "op": "Add"
+      }
+    }
+  ]
 }

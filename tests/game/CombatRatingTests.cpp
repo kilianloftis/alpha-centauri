@@ -111,7 +111,7 @@ TEST_CASE("FormatCombatRating applies stacked modifiers, reactor suffix, and lab
     weapon.id = "laser";
     weapon.type = "weapon";
     weapon.effects = {
-        pool.StatMod(StatId_t::Attack, 2.0, ModifierOp_t::Add, EffectScope_t::ThisUnit),
+        pool.StatMod(StatId_t::ConventionalAttack, 2.0, ModifierOp_t::Add, EffectScope_t::ThisUnit),
         pool.StatMod(StatId_t::Attack, 50.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit),
     };
 
@@ -119,7 +119,7 @@ TEST_CASE("FormatCombatRating applies stacked modifiers, reactor suffix, and lab
     armour.id = "plasma_resonance";
     armour.type = "armour";
     armour.effects = {
-        pool.StatMod(StatId_t::Defense, 3.0, ModifierOp_t::Add, EffectScope_t::ThisUnit),
+        pool.StatMod(StatId_t::ConventionalDefense, 3.0, ModifierOp_t::Add, EffectScope_t::ThisUnit),
     };
     armour.combatRatingModifiers = {
         {CombatRatingTarget_t::Defense, "", "r"},
