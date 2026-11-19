@@ -175,14 +175,14 @@ void Unit::ApplyDamage(int damage)
     SetCurrentHp(m_currentHp - damage);
 }
 
-void Unit::MarkAttacked()
+void Unit::MarkWasAttacker()
 {
-    m_latches.Record(UnitTurnEvent_t::Attacked);
+    m_latches.Record(UnitTurnEvent_t::WasAttacker);
 }
 
-void Unit::MarkCombatEngaged()
+void Unit::MarkWasDefender()
 {
-    m_latches.Record(UnitTurnEvent_t::Combat);
+    m_latches.Record(UnitTurnEvent_t::WasDefender);
 }
 
 void Unit::MarkAirdropped()

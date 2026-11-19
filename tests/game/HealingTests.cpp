@@ -79,7 +79,7 @@ TEST_CASE("Heal-ineligible unit does not heal", "[healing]")
     Faction& faction = fixture.MakeFaction();
     Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
     unit.SetCurrentHp(1);
-    unit.MarkCombatEngaged();
+    unit.MarkWasDefender();
     ApplyIdleHeal(unit);
     CHECK(unit.GetCurrentHp() == 1);
 }
@@ -267,23 +267,66 @@ TEST_CASE("Heal-ineligible unit is skipped then BeginTurn rolls the ledger", "[h
     Faction& faction = fixture.MakeFaction();
     Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
     unit.SetCurrentHp(1);
-    unit.MarkCombatEngaged();
+    unit.MarkWasDefender();
     ApplyIdleHeal(unit);
     CHECK(unit.GetCurrentHp() == 1);
     unit.BeginTurn();
     CHECK_FALSE(IsHealIneligible(unit));
 }
 
-TEST_CASE("block_heal_on_combat false allows heal after combat engage", "[healing]")
+TEST_CASE("block_heal_on_was_defender false allows heal after WasDefender latch", "[healing]")
 {
     FactionFixture fixture;
     FillLand_(fixture);
-    fixture.state.GetGameData().healingConfig->blockHealOnCombat = false;
+    fixture.state.GetGameData().healingConfig->blockHealOnWasDefender = false;
     Faction& faction = fixture.MakeFaction();
     Unit& unit = fixture.MakeUnit(faction, 8, 8, {"test_chassis"});
     unit.SetCurrentHp(1);
-    unit.MarkCombatEngaged();
-    REQUIRE(unit.Latches().HasThisTurn(UnitTurnEvent_t::Combat));
+    unit.MarkWasDefender();
+    REQUIRE(unit.Latches().HasThisTurn(UnitTurnEvent_t::WasDefender));
+    CHECK_FALSE(IsHealIneligible(unit));
+    ApplyIdleHeal(unit);
+    CHECK(unit.GetCurrentHp() == 2);
+}
+
+TEST_CASE("ignores_heal_block_on_was_attacker still heals after WasAttacker latch", "[healing]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& faction = fixture.MakeFaction();
+    Unit& unit =
+        fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_ignores_heal_block_on_was_attacker"});
+    unit.SetCurrentHp(1);
+    unit.MarkWasAttacker();
+    CHECK_FALSE(IsHealIneligible(unit));
+    ApplyIdleHeal(unit);
+    CHECK(unit.GetCurrentHp() == 2);
+}
+
+TEST_CASE("ignores_heal_block_on_was_attacker alone does not clear TookDamage block", "[healing]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& faction = fixture.MakeFaction();
+    Unit& unit =
+        fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_ignores_heal_block_on_was_attacker"});
+    unit.SetCurrentHp(2);
+    unit.ApplyDamage(1);
+    REQUIRE(unit.Latches().HasThisTurn(UnitTurnEvent_t::TookDamage));
+    CHECK(IsHealIneligible(unit));
+    ApplyIdleHeal(unit);
+    CHECK(unit.GetCurrentHp() == 1);
+}
+
+TEST_CASE("ignores all heal blocks still heals after WasDefender latch", "[healing]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& faction = fixture.MakeFaction();
+    Unit& unit =
+        fixture.MakeUnit(faction, 8, 8, {"test_chassis", "test_ignores_all_heal_blocks"});
+    unit.SetCurrentHp(1);
+    unit.MarkWasDefender();
     CHECK_FALSE(IsHealIneligible(unit));
     ApplyIdleHeal(unit);
     CHECK(unit.GetCurrentHp() == 2);

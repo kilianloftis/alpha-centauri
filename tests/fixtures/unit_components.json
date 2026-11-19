@@ -1858,6 +1858,57 @@
     ]
   },
   {
+    "id": "test_ignores_heal_block_on_was_attacker",
+    "name": "Test Ignores Heal Block On Was Attacker",
+    "type": "ability",
+    "mineral_cost": 0,
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "ignores_heal_block_on_was_attacker"
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_ignores_all_heal_blocks",
+    "name": "Test Ignores All Heal Blocks (Fungal Tower stand-in)",
+    "type": "ability",
+    "mineral_cost": 0,
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "ignores_heal_block_on_move_spend"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "ignores_heal_block_on_was_attacker"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "ignores_heal_block_on_was_defender"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "ignores_heal_block_on_took_damage"
+        }
+      }
+    ]
+  },
+  {
     "id": "test_gated_ability",
     "name": "Test Gated Ability",
     "required_techs": {

@@ -16,8 +16,8 @@ struct HealingConfig_t
 
     // Which UnitTurnEvent_t facts block idle heal when present this turn.
     bool blockHealOnMoveSpend = true;
-    bool blockHealOnAttacked = true;
-    bool blockHealOnCombat = true;
+    bool blockHealOnWasAttacker = true;
+    bool blockHealOnWasDefender = true;
     bool blockHealOnTookDamage = true;
 };
 

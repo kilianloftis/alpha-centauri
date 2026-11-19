@@ -182,6 +182,14 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
           == RuleFlagId_t::CannotCaptureBases);
     CHECK(ParseRuleFlagId("attacking_ends_turn")
           == RuleFlagId_t::AttackingEndsTurn);
+    CHECK(ParseRuleFlagId("ignores_heal_block_on_move_spend")
+          == RuleFlagId_t::IgnoresHealBlockOnMoveSpend);
+    CHECK(ParseRuleFlagId("ignores_heal_block_on_was_attacker")
+          == RuleFlagId_t::IgnoresHealBlockOnWasAttacker);
+    CHECK(ParseRuleFlagId("ignores_heal_block_on_was_defender")
+          == RuleFlagId_t::IgnoresHealBlockOnWasDefender);
+    CHECK(ParseRuleFlagId("ignores_heal_block_on_took_damage")
+          == RuleFlagId_t::IgnoresHealBlockOnTookDamage);
     CHECK(ParseRuleFlagId("no_conquest_repair")
           == RuleFlagId_t::NoConquestRepair);
     CHECK(ParseRuleFlagId("headquarters") == RuleFlagId_t::Headquarters);

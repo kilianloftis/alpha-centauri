@@ -1292,7 +1292,9 @@ mod-scoped override conditions.
 `FactionUnits` (Command Center / Naval Yard / Aerospace Complex with `SubjectIsOnOriginBase` +
 `SubjectDomain`; native breed with `IsNativeLife`), gated by `BaseIsRioting` false — MinClamp
 cannot be opposed by a riot MaxClamp; the Base tile `heal_rate` +10 is canceled instead by
-`riot_tiers` Add −10. Nano Factory raises the same stat faction-wide. See terranx-map.md § Unit
+`riot_tiers` Add −10. Nano Factory raises the same stat faction-wide. Which this-turn latches
+block idle heal is configured in `healing.json`; a unit clears one with the matching
+`ignores_heal_block_on_*` RuleFlag (Fungal Tower carries all four). See terranx-map.md § Unit
 healing.
 
 **Harbors** is the parameterized `RuleFlag` (`flag: "harbors"`, `domain`) on `ThisTile`

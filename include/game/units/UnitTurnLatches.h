@@ -6,12 +6,12 @@ namespace ac
 {
 
 // Facts recorded about a unit this turn / last turn. Heal and disengage each interpret the
-// ledger (docs/thinker/terranx-map.md "Unit healing"; DisengageRules for Attacked).
+// ledger (docs/thinker/terranx-map.md "Unit healing"; DisengageRules for WasAttacker).
 enum class UnitTurnEvent_t : unsigned
 {
     MoveSpend = 0,
-    Attacked,   // initiated an attack
-    Combat,     // fought as either side / bombard halt
+    WasAttacker,
+    WasDefender,
     TookDamage,
     Airdropped,
     Count

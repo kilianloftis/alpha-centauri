@@ -602,6 +602,34 @@
           "parameters": {
             "flag": "visible_in_fog"
           }
+        },
+        {
+          "type": "RuleFlag",
+          "scope": "ThisUnit",
+          "parameters": {
+            "flag": "ignores_heal_block_on_move_spend"
+          }
+        },
+        {
+          "type": "RuleFlag",
+          "scope": "ThisUnit",
+          "parameters": {
+            "flag": "ignores_heal_block_on_was_attacker"
+          }
+        },
+        {
+          "type": "RuleFlag",
+          "scope": "ThisUnit",
+          "parameters": {
+            "flag": "ignores_heal_block_on_was_defender"
+          }
+        },
+        {
+          "type": "RuleFlag",
+          "scope": "ThisUnit",
+          "parameters": {
+            "flag": "ignores_heal_block_on_took_damage"
+          }
         }
       ],
       "planet": {

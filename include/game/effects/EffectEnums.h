@@ -774,6 +774,12 @@ enum class RuleFlagId_t
     AttackingEndsTurn,
     // Attacks at full strength with less than one move point left (native life).
     IgnoresPartialMovePenalty,
+    // Idle heal proceeds despite the matching this-turn latch when healing.json still
+    // blocks on that event. Fungal Tower carries all four.
+    IgnoresHealBlockOnMoveSpend,
+    IgnoresHealBlockOnWasAttacker,
+    IgnoresHealBlockOnWasDefender,
+    IgnoresHealBlockOnTookDamage,
     // Capturing this unit does not fully repair it (e.g. Battle Ogre).
     NoConquestRepair,
     // A combat kill of this unit may capture it instead (Alien Artifact), and earns no promotion.
@@ -862,6 +868,14 @@ inline RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "cannot_capture_bases")        return RuleFlagId_t::CannotCaptureBases;
     if (rFlag == "attacking_ends_turn")         return RuleFlagId_t::AttackingEndsTurn;
     if (rFlag == "ignores_partial_move_penalty") return RuleFlagId_t::IgnoresPartialMovePenalty;
+    if (rFlag == "ignores_heal_block_on_move_spend")
+        return RuleFlagId_t::IgnoresHealBlockOnMoveSpend;
+    if (rFlag == "ignores_heal_block_on_was_attacker")
+        return RuleFlagId_t::IgnoresHealBlockOnWasAttacker;
+    if (rFlag == "ignores_heal_block_on_was_defender")
+        return RuleFlagId_t::IgnoresHealBlockOnWasDefender;
+    if (rFlag == "ignores_heal_block_on_took_damage")
+        return RuleFlagId_t::IgnoresHealBlockOnTookDamage;
     if (rFlag == "no_conquest_repair")          return RuleFlagId_t::NoConquestRepair;
     if (rFlag == "covert")                      return RuleFlagId_t::Covert;
     if (rFlag == "prevents_disengage")          return RuleFlagId_t::PreventsDisengage;

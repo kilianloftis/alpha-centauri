@@ -190,7 +190,7 @@ about a pending riot without being a yielding stage.
   playable year `k_FirstPlayableMissionYear`), publishes turn-start events, expires sanctions
   and diplomatic statuses past their `duration_turns` (`ExpireDiplomaticStatuses`), then per unit
   applies idle heal (`ApplyIdleHeal`) before `BeginTurn` refreshes moves and rolls the
-  turn-event ledger (heal reads this turn’s events; disengage also reads last turn’s `Attacked`).
+  turn-event ledger (heal reads this turn’s events; disengage also reads last turn’s `WasAttacker`).
 - **`WorldEvents`**: advances the world-event registry (`config/world_events.json`) through
   `GameState::GetWorldEvents()` — each `Cycle` event is re-evaluated against
   `GetYearsSinceFirstPlayableYear()`, and an event that starts or ends this turn fires its

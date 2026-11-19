@@ -12,8 +12,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <optional>
 #include <stdexcept>
-#include <string_view>
 
 namespace ac
 {
@@ -21,23 +21,16 @@ namespace ac
 namespace
 {
 
-constexpr std::string_view k_FungalTowerId = "Fungal_Tower";
-
-bool IsFungalTower_(const Unit& rUnit)
-{
-    return rUnit.GetDesign().GetId() == k_FungalTowerId;
-}
-
 bool BlocksIdleHeal_(UnitTurnEvent_t event, const HealingConfig_t& rConfig)
 {
     switch (event)
     {
     case UnitTurnEvent_t::MoveSpend:
         return rConfig.blockHealOnMoveSpend;
-    case UnitTurnEvent_t::Attacked:
-        return rConfig.blockHealOnAttacked;
-    case UnitTurnEvent_t::Combat:
-        return rConfig.blockHealOnCombat;
+    case UnitTurnEvent_t::WasAttacker:
+        return rConfig.blockHealOnWasAttacker;
+    case UnitTurnEvent_t::WasDefender:
+        return rConfig.blockHealOnWasDefender;
     case UnitTurnEvent_t::TookDamage:
         return rConfig.blockHealOnTookDamage;
     case UnitTurnEvent_t::Airdropped:
@@ -48,26 +41,47 @@ bool BlocksIdleHeal_(UnitTurnEvent_t event, const HealingConfig_t& rConfig)
     throw std::logic_error("BlocksIdleHeal: invalid UnitTurnEvent_t");
 }
 
+std::optional<RuleFlagId_t> IgnoreHealBlockFlag_(UnitTurnEvent_t event)
+{
+    switch (event)
+    {
+    case UnitTurnEvent_t::MoveSpend:
+        return RuleFlagId_t::IgnoresHealBlockOnMoveSpend;
+    case UnitTurnEvent_t::WasAttacker:
+        return RuleFlagId_t::IgnoresHealBlockOnWasAttacker;
+    case UnitTurnEvent_t::WasDefender:
+        return RuleFlagId_t::IgnoresHealBlockOnWasDefender;
+    case UnitTurnEvent_t::TookDamage:
+        return RuleFlagId_t::IgnoresHealBlockOnTookDamage;
+    case UnitTurnEvent_t::Airdropped:
+    case UnitTurnEvent_t::Count:
+        return std::nullopt;
+    }
+    throw std::logic_error("IgnoreHealBlockFlag: invalid UnitTurnEvent_t");
+}
+
+bool IgnoresHealBlock_(const Unit& rUnit, UnitTurnEvent_t event)
+{
+    const std::optional<RuleFlagId_t> flag = IgnoreHealBlockFlag_(event);
+    return flag.has_value() && ResolveFlag(rUnit, *flag);
+}
+
 bool IsHealIneligible_(const Unit& rUnit, const HealingConfig_t& rConfig)
 {
     for (unsigned i = 0; i < static_cast<unsigned>(UnitTurnEvent_t::Count); ++i)
     {
         const UnitTurnEvent_t event = static_cast<UnitTurnEvent_t>(i);
-        if (rUnit.Latches().HasThisTurn(event) && BlocksIdleHeal_(event, rConfig))
+        if (!rUnit.Latches().HasThisTurn(event) || !BlocksIdleHeal_(event, rConfig))
         {
-            return true;
+            continue;
         }
-    }
-    return false;
-}
-
-bool EligibleForIdleHeal_(const Unit& rUnit, const HealingConfig_t& rConfig)
-{
-    if (IsFungalTower_(rUnit))
-    {
+        if (IgnoresHealBlock_(rUnit, event))
+        {
+            continue;
+        }
         return true;
     }
-    return !IsHealIneligible_(rUnit, rConfig);
+    return false;
 }
 
 int FloorPercentOf_(int maxHp, int percent)
@@ -112,7 +126,7 @@ int IdleHealNewHp_(const Unit& rUnit, const HealingConfig_t& rConfig)
 {
     const int currentHp = rUnit.GetCurrentHp();
     const HealStatInputs_t inputs = ResolveHealStats_(rUnit, rConfig);
-    if (currentHp >= inputs.maxHp || !EligibleForIdleHeal_(rUnit, rConfig))
+    if (currentHp >= inputs.maxHp || IsHealIneligible_(rUnit, rConfig))
     {
         return currentHp;
     }

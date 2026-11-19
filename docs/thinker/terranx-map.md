@@ -815,7 +815,9 @@ Next function is `allocate_energy` (`0x5267B0`).
 For each of the faction's vehicles with `damage_taken != 0` on a valid tile:
 
 - Skip unless idle: `!(state & VSTATE_HAS_MOVED)` (`0x4`), except **Fungal Tower**
-  (`unit_id == 19`), which heals anyway (`0x5261DB`–`0x5261E8`).
+  (`unit_id == 19`), which heals anyway (`0x5261DB`–`0x5261E8`). Express as the four
+  `ignores_heal_block_on_*` RuleFlags on that design (per latch; our idle gate is finer
+  than the one bit).
 - Skip Battle Ogre Mk1–3 (`unit_id` 16–18) entirely (`0x5261BD`–`0x5261D5`).
   Express as `MaxHealPercent` `MaxClamp` 0 on those designs (zeros the tile heal cap and
   facility full-repair target); `HealRate` `MaxClamp` 0 alone still allows a high MinClamp from a facility.

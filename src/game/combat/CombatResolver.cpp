@@ -73,8 +73,8 @@ CombatResolver::CombatResolver(const MoveCostRules& rMoveCosts,
 
 CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender)
 {
-    rAttacker.MarkCombatEngaged();
-    rDefender.MarkCombatEngaged();
+    rAttacker.MarkWasAttacker();
+    rDefender.MarkWasDefender();
 
     FightExits_t exits;
     exits.boardingHpToLose = BoardingThreshold(rAttacker, rDefender);
@@ -85,16 +85,16 @@ CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender)
 
 CombatResult_t CombatResolver::ResolveDuel(Unit& rAttacker, Unit& rDefender)
 {
-    rAttacker.MarkCombatEngaged();
-    rDefender.MarkCombatEngaged();
+    rAttacker.MarkWasAttacker();
+    rDefender.MarkWasDefender();
     // Artillery never withdraws (terranx-map.md "Disengage"), and boarding is a melee assault.
     return Fight_(rAttacker, rDefender, CombatEngagement_t::ArtilleryDuel, FightExits_t{});
 }
 
 CombatResult_t CombatResolver::Strike(Unit& rAttacker, Unit& rTarget)
 {
-    rAttacker.MarkCombatEngaged();
-    rTarget.MarkCombatEngaged();
+    rAttacker.MarkWasAttacker();
+    rTarget.MarkWasDefender();
     CombatResult_t result = BeginResult_(rAttacker, rTarget, CombatEngagement_t::ArtilleryStrike);
     const int hpFloor = BombardHpFloor(rTarget);
     result.rounds.push_back(PlayStrikeRound_(rAttacker, rTarget, result, hpFloor));
