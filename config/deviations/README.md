@@ -80,6 +80,28 @@ absent.
 - **Missing:** the optional table or flags, a selectable switch or variant file, and tests for
   the widened cases.
 
+### Formers terraform base squares `[Ours]`
+
+- **Original:** no terraform project can start on a base square (`#NOTBASE`, "Terraform orders
+  on a base").
+- **Ours:** `CanStartTerraform` has no base check, so a former can build any improvement the
+  Base does not exclude (Farm, Sensor, ...) or run any terrain operation on a base tile. A
+  Bunker is refused, because the Base excludes it and is never displaced.
+- **Where:** `CanStartTerraform` (`TerraformRules`).
+- **Missing:** the original version and a switch.
+
+### Founding destroys a Bunker `[Ours]`
+
+- **Original:** a colony founded on a Bunker keeps it under the base, and combat ignores it
+  while the base stands ("Founding on an improvement"; "Combat strength and the round roll",
+  step 8).
+- **Ours:** the `Base` occupant excludes `Bunker`, so founding removes it after the player
+  confirms. Bunker's defense then needs no exception naming the Base.
+- **Where:** `Base` `excludes` in `config/improvements.json`; `ImprovementsDestroyedByFounding`
+  (`FoundBaseRules`); `WorldView::FoundBaseWith_`.
+- **Missing:** the original version: a variant improvements file whose Base does not exclude
+  Bunker and whose Bunker keeps a base exception on its defense.
+
 ### Flood razes undomed bases `[Ours]`
 
 - **Original:** (`docs/thinker/terranx-map.md` “Sea bases” / `alt_set`) an undomed land base
@@ -204,9 +226,9 @@ absent.
 
 ### Combat modifiers with no effect yet `[Ours]`
 
-- **Original:** Forest, Perimeter Defense, Naval Yard, Aerospace Complex, Tachyon Field,
-  Flechette, GSP, Pholus Mutagen, Trance, Comm Jammer, Pulse, Non Combat, Alien Defense and
-  the other steps of "Combat strength and the round roll" change combat strength.
+- **Original:** Flechette, GSP, Pholus Mutagen, Trance, Comm Jammer, Pulse, Non
+  Combat, Alien Defense and the other steps of "Combat strength and the round roll" change
+  combat strength.
 - **Ours:** these occupants, facilities and abilities exist in config with no combat
   effect.
 - **Where:** `improvements.json`, `buildings/*.json`, `unit_components/*.json`.
@@ -217,17 +239,9 @@ absent.
 - **Original:** an artifact's basic defense is 1, without the ×8 scale or morale, so it
   defends at about 4 on open ground ("Combat strength and the round roll", step 1).
 - **Ours:** `Alien_Artifact` clamps its conventional and psi defense values to 1, which
-  scales to 256 like an armor-1 unit. The clamp also caps Rocky, Fungus and Bunker, while
-  morale, Base and Sensor still scale it.
+  scales to 256 like an armor-1 unit. The clamp also caps the Base's psi bonus, while morale
+  and the `defense` slots (terrain, Base, facilities, Bunker, Sensor) still scale it.
 - **Where:** `native_units.json` `Alien_Artifact`.
-- **Missing:** the original version.
-
-### Overlapping Sensors stack `[Ours]`
-
-- **Original:** one Sensor bonus when any qualifying Sensor is within 2 tiles of the
-  defender ("Combat strength and the round roll", step 9).
-- **Ours:** every Sensor in range adds its own bonus.
-- **Where:** `improvements.json` `Sensor`.
 - **Missing:** the original version.
 
 ### Ocean Sensors follow territory `[Ours]`

@@ -133,8 +133,8 @@ public:
     void AddCoexistenceWaiver(const std::string& rImprovementId, const std::string& rFeatureId);
     const std::vector<std::pair<std::string, std::string>>& GetCoexistenceWaivers() const;
 
-    // Rockiness, moisture, active TerrainFeature_t and active optional terrain, general to
-    // specific. Not improvements.
+    // Active rockiness, moisture, TerrainFeature_t and optional terrain, general to specific.
+    // Not improvements.
     const std::vector<const ImprovementConfig_t*>& GetTerrainFeatures() const;
 
     // Terrain then improvements; fn returns true to stop, and so does ForEachOccupant.

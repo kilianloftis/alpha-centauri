@@ -13,6 +13,7 @@
 #include "ui/MultiSelectListPopup.h"
 #include "ui/NoticePopup.h"
 #include "ui/AttackConfirmText.h"
+#include "ui/FoundBaseConfirmText.h"
 #include "ui/ScrapRefundText.h"
 #include "ui/world/UnitStackPanel.h"
 #include "ui/world/CommlinksButton.h"
@@ -33,7 +34,9 @@
 #include "game/economy/EconomyManager.h"
 #include "game/research/ResearchManager.h"
 #include "game/units/UnitManager.h"
+#include "game/effects/TileEffectsContext.h"
 #include "game/map/ImprovementConfigParser.h"
+#include "game/map/ImprovementRegistry.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/effects/TriggeredEffectDispatch.h"
@@ -552,6 +555,36 @@ void WorldView::OpenSupplyCrawlMenu_(Unit& rUnit)
 }
 
 void WorldView::FoundBaseWith_(Unit& rUnit)
+{
+    if (!CanFoundBase(rUnit))
+    {
+        return;
+    }
+    const std::vector<std::string> destroyedIds = ImprovementsDestroyedByFounding(rUnit.GetTile());
+    if (destroyedIds.empty())
+    {
+        FoundBaseConfirmed_(rUnit);
+        return;
+    }
+    const ImprovementRegistry& rImprovements = m_rGameState.GetTileEffects().GetImprovements();
+    std::vector<std::string> names;
+    for (const std::string& rId : destroyedIds)
+    {
+        names.push_back(rImprovements.Get(rId).name);
+    }
+    Unit* pUnit = &rUnit;
+    Confirm_(FormatFoundBaseConfirm(names),
+             [this, pUnit]
+             {
+                 if (m_pSelectedUnit != pUnit)
+                 {
+                     return;
+                 }
+                 FoundBaseConfirmed_(*pUnit);
+             });
+}
+
+void WorldView::FoundBaseConfirmed_(Unit& rUnit)
 {
     if (!CanFoundBase(rUnit))
     {

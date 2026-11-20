@@ -177,7 +177,9 @@ private:
     void ToggleBombardTargeting_();
     bool ApplyOrderInput_(Unit& rControllable);
     void OpenSupplyCrawlMenu_(Unit& rUnit);
+    // Asks first when founding would destroy an improvement on the tile.
     void FoundBaseWith_(Unit& rUnit);
+    void FoundBaseConfirmed_(Unit& rUnit);
     void Detonate_(Unit& rUnit);
     void ToggleAirdropTargeting_();
     // A hold order may link the unit to its base's on-hold effects; then the next unit.

@@ -55,10 +55,6 @@ bool CanStartTerraformProject(const Unit& rUnit, const std::string& projectId);
 
 int TerraformEnergyCost(const Unit& rUnit, const TerraformProject_t& rProject);
 
-// The improvement can be placed once the improvements it displaces are gone. Terrain is
-// never displaced, so anything left after that displacement is a hard refusal.
-bool ImprovementApplies(const Tile& rTile, const ImprovementConfig_t& rPlaced,
-                        std::span<const CoexistenceOverrideEffect_t> overrides);
 
 // Whether a Former of this domain can still move rTile this way. A sea Former raises only deep
 // ground; a land Former never lowers below the reference level.

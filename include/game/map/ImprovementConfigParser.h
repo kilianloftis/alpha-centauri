@@ -64,8 +64,9 @@ struct ImprovementConfig_t
     // Feature/improvement ids whose yield StatModifiers are dropped while this improvement
     // is present (Forest suppresses landform; Borehole suppresses most terraform).
     std::vector<std::string> suppressYieldSources;
-    // Terrain kept on the tile but dormant while this terrain is present: Ocean keeps Fungus
-    // dormant until the sea floor rises to the shelf.
+    // Terrain kept on the tile but dormant while this terrain is present: Water keeps a sunken
+    // tile's rockiness, moisture and river dormant; Ocean keeps Fungus dormant until the sea
+    // floor rises to the shelf.
     std::vector<std::string> suppressTerrain;
     // When true, downhill river flow marks this tile then stops (ThermalBorehole).
     bool terminatesRiver = false;

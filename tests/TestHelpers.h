@@ -266,7 +266,16 @@ inline double ConventionalAttackRating(const ac::Unit& rAttacker, const ac::Unit
 inline double ConventionalDefenseRating(const ac::Unit& rDefender, const ac::Unit& rAttacker)
 {
     const ac::EffectContext_t ctx = FightContext(rAttacker, rDefender, ac::CombatRole_t::Defender);
-    return ac::ResolveCombatRating(rDefender, ac::k_ConventionalCombat.defense, ctx, 1.0);
+    const ac::CombatRatingStats_t stats = ac::DefenseRatingStats(ac::k_ConventionalCombat);
+    return ac::ResolveCombatRating(rDefender, stats, ctx, 1.0);
+}
+
+// rDefender's psi defense rating on its tile when rAttacker attacks it, at neutral morale.
+inline double PsiDefenseRating(const ac::Unit& rDefender, const ac::Unit& rAttacker)
+{
+    const ac::EffectContext_t ctx = FightContext(rAttacker, rDefender, ac::CombatRole_t::Defender);
+    const ac::CombatRatingStats_t stats = ac::DefenseRatingStats(ac::k_PsiCombat);
+    return ac::ResolveCombatRating(rDefender, stats, ctx, 1.0);
 }
 
 inline ac::Condition_t HasComponentCondition(std::string componentId)

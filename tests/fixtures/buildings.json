@@ -331,6 +331,23 @@
           "amount": 100,
           "op": "MinClamp"
         }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "condition": {
+          "kind": "AttackerDomain",
+          "domains": [
+            "air",
+            "orbital"
+          ]
+        },
+        "parameters": {
+          "stat": "defense",
+          "slot": "fortification",
+          "amount": 100,
+          "op": "AddPercent"
+        }
       }
     ]
   },
@@ -466,6 +483,21 @@
         "scope": "AllOwnerBases",
         "parameters": {
           "building_id": "Command_Center"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "Citizens_Defense_Force",
+    "name": "Citizens' Defense Force",
+    "secret_project": true,
+    "effects": [
+      {
+        "type": "GrantBuilding",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "building_id": "Perimeter_Defense"
         }
       }
     ],
@@ -1130,6 +1162,22 @@
         "parameters": {
           "flag": "high_risk_sabotage"
         }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "condition": {
+          "kind": "AttackerDomain",
+          "domains": [
+            "land"
+          ]
+        },
+        "parameters": {
+          "stat": "defense",
+          "slot": "fortification",
+          "amount": 100,
+          "op": "AddPercent"
+        }
       }
     ],
     "category": "conquer",
@@ -1147,10 +1195,29 @@
     "category": "conquer",
     "effects": [
       {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "last_defender_pop_loss",
+          "amount": 0,
+          "op": "MaxClamp"
+        }
+      },
+      {
         "type": "RuleFlag",
         "scope": "ThisBase",
         "parameters": {
           "flag": "high_risk_sabotage"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "defense",
+          "slot": "fortification",
+          "amount": 100,
+          "op": "AddPercent"
         }
       }
     ],
@@ -1980,6 +2047,22 @@
           "stat": "heal_rate",
           "amount": 100,
           "op": "MinClamp"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "condition": {
+          "kind": "AttackerDomain",
+          "domains": [
+            "sea"
+          ]
+        },
+        "parameters": {
+          "stat": "defense",
+          "slot": "fortification",
+          "amount": 100,
+          "op": "AddPercent"
         }
       }
     ]

@@ -998,6 +998,9 @@ enum class ModifierOp_t
     MaxClamp,
     // Clamp the resolved stat value to be >= amount.
     MinClamp,
+    // A geometric factor applied only when the stack has no Add, AddPercent or
+    // MultiplyGeometric contribution: the stat's value while nothing else fills it.
+    Fallback,
 };
 
 // Live integer vs a bound. Numeric conditions share this (`SocialRating_t`, `EffectiveMorale_t`).

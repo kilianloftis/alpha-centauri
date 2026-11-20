@@ -54,6 +54,61 @@ TEST_CASE("ApplyModifierStack: AddPercent is percent points on top of 100%", "[e
     CHECK(ApplyModifierStack(4.0, Stack({{-25.0, ModifierOp_t::AddPercent}})) == Approx(3.0));
 }
 
+TEST_CASE("ApplyModifierStack: Fallback applies only while nothing else fills the stack",
+          "[effects][math]")
+{
+    CHECK(ApplyModifierStack(1.0, Stack({{1.25, ModifierOp_t::Fallback}})) == Approx(1.25));
+    CHECK(ApplyModifierStack(
+              1.0, Stack({{1.25, ModifierOp_t::Fallback}, {100.0, ModifierOp_t::AddPercent}}))
+          == Approx(2.0));
+    CHECK(ApplyModifierStack(
+              1.0, Stack({{1.25, ModifierOp_t::Fallback}, {1.5, ModifierOp_t::MultiplyGeometric}}))
+          == Approx(1.5));
+    CHECK(ApplyModifierStack(2.0, Stack({{1.25, ModifierOp_t::Fallback}, {1.0, ModifierOp_t::Add}}))
+          == Approx(3.0));
+}
+
+TEST_CASE("ApplyModifierStack: clamps bound a Fallback without displacing it", "[effects][math]")
+{
+    CHECK(ApplyModifierStack(1.0, Stack({{1.25, ModifierOp_t::Fallback}, {1.0, ModifierOp_t::MaxClamp}}))
+          == Approx(1.0));
+    CHECK(ApplyModifierStack(1.0, Stack({{1.25, ModifierOp_t::Fallback}, {1.1, ModifierOp_t::MinClamp}}))
+          == Approx(1.25));
+}
+
+TEST_CASE("ApplyLargestModifier: only the largest single contribution applies",
+          "[effects][math]")
+{
+    CHECK(ApplyLargestModifier(1.0, {}) == Approx(1.0));
+    CHECK(ApplyLargestModifier(
+              1.0, Stack({{1.5, ModifierOp_t::MultiplyGeometric},
+                          {2.0, ModifierOp_t::MultiplyGeometric},
+                          {1.25, ModifierOp_t::MultiplyGeometric}}))
+          == Approx(2.0));
+    // Each kind of contribution competes as the value it gives alone.
+    CHECK(ApplyLargestModifier(
+              1.0, Stack({{1.5, ModifierOp_t::MultiplyGeometric}, {75.0, ModifierOp_t::AddPercent},
+                          {50.0, ModifierOp_t::AddPercent}}))
+          == Approx(1.75));
+    CHECK(ApplyLargestModifier(0.0, Stack({{2.0, ModifierOp_t::Add}, {3.0, ModifierOp_t::Add}}))
+          == Approx(3.0));
+}
+
+TEST_CASE("ApplyLargestModifier: clamps bound the winner and a Fallback only stands in",
+          "[effects][math]")
+{
+    CHECK(ApplyLargestModifier(
+              1.0, Stack({{1.5, ModifierOp_t::MultiplyGeometric}, {1.0, ModifierOp_t::MaxClamp}}))
+          == Approx(1.0));
+    CHECK(ApplyLargestModifier(
+              1.0, Stack({{0.5, ModifierOp_t::MultiplyGeometric}, {1.0, ModifierOp_t::MinClamp}}))
+          == Approx(1.0));
+    CHECK(ApplyLargestModifier(1.0, Stack({{1.25, ModifierOp_t::Fallback}})) == Approx(1.25));
+    CHECK(ApplyLargestModifier(
+              1.0, Stack({{2.0, ModifierOp_t::Fallback}, {1.5, ModifierOp_t::MultiplyGeometric}}))
+          == Approx(1.5));
+}
+
 TEST_CASE("FinalizeResolvedStat uses lround for half values", "[effects][math][rounding]")
 {
     CHECK(FinalizeResolvedStat(2.5) == 3);

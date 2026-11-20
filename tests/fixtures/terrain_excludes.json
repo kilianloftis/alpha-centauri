@@ -122,14 +122,16 @@
       "tags": [
         "landform"
       ],
-      "suppress_yield_sources": [
+      "suppress_terrain": [
         "Flat",
         "Rolling",
         "Rocky",
         "Arid",
         "Moist",
         "Wet",
-        "River",
+        "River"
+      ],
+      "suppress_yield_sources": [
         "@resource_bonus"
       ],
       "effects": []

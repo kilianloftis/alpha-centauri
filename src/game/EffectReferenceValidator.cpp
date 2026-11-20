@@ -77,6 +77,7 @@ struct EffectPayloadValidator
     const ImprovementRegistry& rImprovements;
     const SocialRatingRegistry& rSocialRatings;
     const SocialPolicyRegistry& rSocialPolicies;
+    const CombatConfig_t& rCombat;
 
     void operator()(const GrantBuildingEffect_t& rGrant) const
     {
@@ -88,6 +89,10 @@ struct EffectPayloadValidator
 
     void operator()(const StatModifierEffect_t& rModifier) const
     {
+        if (!rModifier.slot.empty() && !DeclaresDefenseSlot(rCombat, rModifier.slot))
+        {
+            ThrowBadReference(rSourceId, "defense slot", rModifier.slot);
+        }
         if (!rModifier.selector)
         {
             return;
@@ -394,13 +399,14 @@ public:
         , m_rSocialRatings(RequireRegistry(rData.socialRatingRegistry, "socialRatingRegistry"))
         , m_rSocialPolicies(RequireRegistry(rData.socialPolicyRegistry, "socialPolicyRegistry"))
         , m_rNativeUnits(RequireRegistry(rData.nativeUnitRegistry, "nativeUnitRegistry"))
+        , m_rCombat(RequireRegistry(rData.combatConfig, "combatConfig"))
     {
     }
 
     void Effects(const std::vector<EffectConfig_t>& rEffects, const std::string& rSourceId) const
     {
         const EffectPayloadValidator payloads{rSourceId, m_rBuildings, m_rImprovements,
-                                              m_rSocialRatings, m_rSocialPolicies};
+                                              m_rSocialRatings, m_rSocialPolicies, m_rCombat};
         for (const EffectConfig_t& rEffect : rEffects)
         {
             std::visit(payloads, rEffect.effect);
@@ -465,6 +471,7 @@ private:
     const SocialRatingRegistry& m_rSocialRatings;
     const SocialPolicyRegistry& m_rSocialPolicies;
     const NativeUnitRegistry& m_rNativeUnits;
+    const CombatConfig_t& m_rCombat;
 };
 
 void CheckMapSources_(const GameDataContext& rData, const EffectSourceChecker_& rCheck)

@@ -102,7 +102,16 @@
     "upkeep": 0,
     "secret_project": true,
     "category": "conquer",
-    "icon": "assets/sprites/projects/proj005.png"
+    "icon": "assets/sprites/projects/proj005.png",
+    "effects": [
+      {
+        "type": "GrantBuilding",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "building_id": "Perimeter_Defense"
+        }
+      }
+    ]
   },
   {
     "id": "Virtual_World",

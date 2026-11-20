@@ -341,6 +341,7 @@ TEST_CASE("The score needs the faction bound to a session", "[ecology]")
     WorldMap map(k_TestMapWidth, k_TestMapHeight, TestMapRules(), Rainfall_t::Average);
     TileInterceptDeployLedger tileInterceptDeploys;
     TileEffectsContext ctx(map, inputs.improvements, &inputs.unitComponents,
+                           inputs.dataContext.buildingRegistry.get(),
                            inputs.dataContext.tileYieldRules,
                            inputs.dataContext.interactionGrids,
                            inputs.dataContext.worldGenDecorationConfig->moisture,

@@ -602,10 +602,10 @@ TEST_CASE("The Alien Artifact defends at value 1 in both kinds of fight", "[comb
     worm.SetXp(2);
     artifact.SetXp(2);
 
-    SECTION("rocky ground does not raise it")
+    SECTION("rocky ground raises it in a conventional fight only")
     {
         fixture.At(9, 9).SetRockiness(Rockiness_t::Rocky);
-        CHECK(Strength_(gun, artifact, fixture).defenseStrength == 256);
+        CHECK(Strength_(gun, artifact, fixture).defenseStrength == 384);
         CHECK(Strength_(worm, artifact, fixture).defenseStrength == 256);
     }
 

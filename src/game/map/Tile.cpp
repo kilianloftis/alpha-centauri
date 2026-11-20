@@ -412,8 +412,15 @@ const std::vector<const ImprovementConfig_t*>& Tile::GetTerrainFeatures() const
 
 bool Tile::HasFeature(std::string_view featureId) const
 {
-    // Intrinsic features answer from tile state, never the improvement list. The switch is
-    // exhaustive over TerrainFeature_t.
+    // Bound tiles answer from the active list, which leaves out dormant terrain.
+    if (m_pOccupants)
+    {
+        const bool bActiveTerrain =
+            std::any_of(m_terrainFeatures.begin(), m_terrainFeatures.end(),
+                        [&](const ImprovementConfig_t* pConfig) { return pConfig->id == featureId; });
+        return bActiveTerrain || HasImprovement(featureId);
+    }
+    // Unbound tiles answer from tile state. The switch is exhaustive over TerrainFeature_t.
     if (const auto feature = magic_enum::enum_cast<TerrainFeature_t>(featureId))
     {
         switch (*feature)
@@ -432,14 +439,7 @@ bool Tile::HasFeature(std::string_view featureId) const
     }
     if (magic_enum::enum_name(m_rockiness) == featureId) return true;
     if (magic_enum::enum_name(m_moisture)  == featureId) return true;
-    // Bound tiles answer from the active list, which leaves out dormant terrain.
-    const bool bActiveTerrain =
-        m_pOccupants ? std::any_of(m_terrainFeatures.begin(), m_terrainFeatures.end(),
-                                   [&](const ImprovementConfig_t* pConfig)
-                                   { return pConfig->id == featureId; })
-                     : HasTerrainFeature(featureId);
-    if (bActiveTerrain) return true;
-    return HasImprovement(featureId);
+    return HasTerrainFeature(featureId) || HasImprovement(featureId);
 }
 
 void Tile::RefreshTerrainFeatures_()
@@ -453,13 +453,21 @@ void Tile::RefreshTerrainFeatures_()
 
     // Get() rather than Find(): ValidateTerrainFeatures has already proven every id below
     // exists in the registry, so a miss here is a broken invariant, not a skippable feature.
+    std::vector<const ImprovementConfig_t*> intrinsic;
     for (const std::string_view id : IntrinsicFeatureIds_())
     {
         const std::string featureId(id);
-        m_terrainFeatures.push_back(&m_pOccupants->Get(featureId));
+        intrinsic.push_back(&m_pOccupants->Get(featureId));
     }
-    // Optional terrain the intrinsic terrain suppresses stays stored but dormant.
-    const std::vector<const ImprovementConfig_t*> intrinsic = m_terrainFeatures;
+    // Terrain the intrinsic terrain suppresses stays stored but dormant: Water keeps a sunken
+    // tile's rockiness, moisture and river, Ocean its fungus.
+    for (const ImprovementConfig_t* pFeature : intrinsic)
+    {
+        if (!SuppressedBy_(intrinsic, *pFeature))
+        {
+            m_terrainFeatures.push_back(pFeature);
+        }
+    }
     for (const ImprovementConfig_t* pFeature : m_optionalTerrain)
     {
         if (pFeature && !SuppressedBy_(intrinsic, *pFeature))

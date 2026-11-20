@@ -132,6 +132,7 @@ TEST_CASE("ParseModifierOp / ParseEffectScope mappings", "[effects][parser]")
     CHECK(EffectConfigParser::ParseModifierOp("AddPercent") == ModifierOp_t::AddPercent);
     CHECK(EffectConfigParser::ParseModifierOp("MultiplyGeometric") == ModifierOp_t::MultiplyGeometric);
     CHECK(EffectConfigParser::ParseModifierOp("MaxClamp") == ModifierOp_t::MaxClamp);
+    CHECK(EffectConfigParser::ParseModifierOp("Fallback") == ModifierOp_t::Fallback);
     CHECK(EffectConfigParser::ParseModifierOp("MinClamp") == ModifierOp_t::MinClamp);
     CHECK_THROWS(EffectConfigParser::ParseModifierOp("Multiply"));
     CHECK_THROWS(EffectConfigParser::ParseModifierOp("Unlimited"));
@@ -247,6 +248,50 @@ TEST_CASE("ParseEffectConfig: StatModifier with explicit fields", "[effects][par
     CHECK(pMod->amount == Approx(3.0));
     CHECK(pMod->op == ModifierOp_t::AddPercent);
     CHECK_FALSE(pMod->selector.has_value());
+    CHECK(pMod->slot.empty());
+}
+
+TEST_CASE("ParseEffectConfig: a StatModifier slot is defense-only", "[effects][parser]")
+{
+    const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "defense", "slot": "walls", "amount": 1.25, "op": "Fallback" }
+    })"));
+    const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
+    REQUIRE(pMod != nullptr);
+    CHECK(pMod->slot == "walls");
+
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "attack", "slot": "walls", "amount": 1.25,
+                        "op": "MultiplyGeometric" }
+    })")));
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "defense", "slot": "", "amount": 1.25, "op": "Fallback" }
+    })")));
+}
+
+TEST_CASE("ParseEffectConfig: a Fallback needs a stack it can be alone in", "[effects][parser]")
+{
+    CHECK_THROWS_WITH(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "nutrients", "amount": 2, "op": "Fallback" }
+    })")), Catch::Matchers::ContainsSubstring("additive"));
+    CHECK_THROWS_WITH(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "defense", "amount": 1.25, "op": "Fallback" }
+    })")), Catch::Matchers::ContainsSubstring("slot"));
+    CHECK_NOTHROW(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "attack", "amount": 1.25, "op": "Fallback" }
+    })")));
 }
 
 TEST_CASE("ParseEffectConfig: defaults — op Add, amount 0", "[effects][parser]")

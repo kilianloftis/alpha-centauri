@@ -1,6 +1,10 @@
 #include "game/effects/TileEffectsContext.h"
 
 #include "game/GameState.h"
+#include "game/base/BaseManager.h"
+#include "game/buildings/BuildingConfig.h"
+#include "game/buildings/BuildingManager.h"
+#include "game/buildings/BuildingRegistry.h"
 #include "game/combat/TileInterceptDeployLedger.h"
 #include "game/faction/Faction.h"
 #include "game/effects/IWorldEffectsSource.h"
@@ -134,10 +138,55 @@ void AppendUnitAuraEffects_(const Tile& rTile, int distance, const WorldMap& rWo
     }
 }
 
-// Single Chebyshev walk: neighbor improvement/terrain auras (distance > 0) plus unit auras
-// (including units on the origin tile at distance 0).
+void AppendBuildingThisTileEffects_(const BuildingConfig_t& rBuilding, const Tile& rHostTile,
+                                    FactionId_t owner, int distance,
+                                    std::vector<ActiveEffect_t>& rOut)
+{
+    const size_t before = rOut.size();
+    AppendTileEffects(rBuilding.effects, rBuilding.id, distance, rOut);
+    StampHostTile_(rOut, before, rHostTile);
+    for (size_t i = before; i < rOut.size(); ++i)
+    {
+        rOut[i].ownerFaction = owner;
+    }
+}
+
+// Constructed and granted facilities on a base tile: ThisTile lane only (faction pool excludes
+// them). A facility both built and granted projects once. pSession is null outside a session
+// and while one tears its bases down.
+void AppendBaseBuildingThisTileEffects_(const IWorldEffectsSource* pSession,
+                                        const Tile& rHostTile, int distance,
+                                        std::vector<ActiveEffect_t>& rOut)
+{
+    if (pSession == nullptr || !rHostTile.HasFeature(ImprovementIds::k_Base))
+    {
+        return;
+    }
+    const BaseManager* pBase = pSession->FindBaseAt(rHostTile);
+    if (pBase == nullptr)
+    {
+        return;
+    }
+    const FactionId_t owner = pBase->GetFaction().GetFactionId();
+    const BuildingManager& rBuildings = pBase->GetBuildingManager();
+    for (const BuildingConfig_t* pBuilding : rBuildings.GetBuildings())
+    {
+        AppendBuildingThisTileEffects_(*pBuilding, rHostTile, owner, distance, rOut);
+    }
+    for (const BuildingConfig_t* pGranted : pBase->GetGrantedBuildings())
+    {
+        if (rBuildings.FindBuilding(pGranted->id) == nullptr)
+        {
+            AppendBuildingThisTileEffects_(*pGranted, rHostTile, owner, distance, rOut);
+        }
+    }
+}
+
+// Single Chebyshev walk: neighbor improvement/terrain/building auras (distance > 0) plus
+// unit auras (including units on the origin tile at distance 0).
 void AppendNeighborAndUnitAreaEffects_(const Tile& rOrigin, const WorldMap& rWorldMap,
-                                       int maxRadius, std::vector<ActiveEffect_t>& rOut)
+                                       const IWorldEffectsSource* pSession, int maxRadius,
+                                       std::vector<ActiveEffect_t>& rOut)
 {
     ForEachTileInChebyshevRadius(rOrigin, rWorldMap, maxRadius,
         [&](const Tile* pNearby, int distance)
@@ -145,6 +194,7 @@ void AppendNeighborAndUnitAreaEffects_(const Tile& rOrigin, const WorldMap& rWor
             if (distance > 0)
             {
                 AppendOccupantEffects_(*pNearby, distance, rWorldMap, rOut);
+                AppendBaseBuildingThisTileEffects_(pSession, *pNearby, distance, rOut);
             }
             AppendUnitAuraEffects_(*pNearby, distance, rWorldMap, rOut);
         });
@@ -240,7 +290,8 @@ int MaxThisTileRadius_(const std::vector<EffectConfig_t>& rEffects)
 }
 
 int MaxAuraRadius_(const ImprovementRegistry& rImprovements,
-                   const UnitComponentRegistry* pUnitComponents)
+                   const UnitComponentRegistry* pUnitComponents,
+                   const BuildingRegistry* pBuildings)
 {
     int radius = 0;
     for (const ImprovementConfig_t& rConfig : rImprovements.GetAll())
@@ -252,6 +303,13 @@ int MaxAuraRadius_(const ImprovementRegistry& rImprovements,
         for (const UnitComponentConfig_t& rComponent : pUnitComponents->GetAll())
         {
             radius = std::max(radius, MaxThisTileRadius_(rComponent.effects));
+        }
+    }
+    if (pBuildings)
+    {
+        for (const BuildingConfig_t& rBuilding : pBuildings->GetAll())
+        {
+            radius = std::max(radius, MaxThisTileRadius_(rBuilding.effects));
         }
     }
     return radius;
@@ -295,6 +353,7 @@ void PartitionYieldEffects_(const Tile& rTile, const std::vector<ActiveEffect_t>
 
 TileEffectsContext::TileEffectsContext(WorldMap& rWorldMap, const ImprovementRegistry& rImprovements,
                                        const UnitComponentRegistry* pUnitComponents,
+                                       const BuildingRegistry* pBuildings,
                                        const TileYieldRulesConfig_t& rYieldRules,
                                        const InteractionGridsConfig_t& rInteractionGrids,
                                        const MoistureDecorationConfig_t& rMoisture,
@@ -304,7 +363,7 @@ TileEffectsContext::TileEffectsContext(WorldMap& rWorldMap, const ImprovementReg
     , m_rYieldRules(rYieldRules)
     , m_rInteractionGrids(rInteractionGrids)
     , m_rMoisture(rMoisture)
-    , m_maxRadius(MaxAuraRadius_(rImprovements, pUnitComponents))
+    , m_maxRadius(MaxAuraRadius_(rImprovements, pUnitComponents, pBuildings))
     , m_rTileInterceptDeploys(rTileInterceptDeploys)
 {
     for (const std::unique_ptr<Tile>& pTile : rWorldMap.GetTiles())
@@ -355,7 +414,8 @@ std::vector<ActiveEffect_t> TileEffectsContext::CollectAreaEffects(const Tile& r
 {
     std::vector<ActiveEffect_t> effects;
     AppendOccupantEffects_(rTile, 0, m_rWorldMap, effects);
-    AppendNeighborAndUnitAreaEffects_(rTile, m_rWorldMap, m_maxRadius, effects);
+    AppendBaseBuildingThisTileEffects_(m_pWorldEffects, rTile, 0, effects);
+    AppendNeighborAndUnitAreaEffects_(rTile, m_rWorldMap, m_pWorldEffects, m_maxRadius, effects);
     if (m_pWorldEffects)
     {
         AppendGlobalScopeEffects(m_pWorldEffects->CollectSessionWorldEffects(),
@@ -501,7 +561,7 @@ void TileEffectsContext::RemoveImprovementsThatCannotRemain_(Tile& rTile, std::s
         std::vector<std::string> removeIds;
         for (const ImprovementConfig_t* pConfig : rTile.GetImprovements())
         {
-            if (!pConfig || pConfig->id == keepId || pConfig->id == ImprovementIds::k_Base)
+            if (!pConfig || pConfig->id == keepId || !IsRemovableByOccupancy(*pConfig))
             {
                 continue;
             }

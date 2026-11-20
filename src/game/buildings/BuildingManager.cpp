@@ -1,8 +1,11 @@
 #include "game/buildings/BuildingManager.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/buildings/BuildingRules.h"
+#include "game/effects/ActiveEffect.h"
+#include "game/effects/EffectEnums.h"
 #include "game/research/ResearchManager.h"
 #include <algorithm>
+#include <span>
 #include <stdexcept>
 
 namespace ac
@@ -91,7 +94,16 @@ std::vector<ActiveEffect_t> BuildingManager::CollectEffects(const BaseManager& r
         {
             continue;
         }
-        AppendActiveEffects(pBuilding->effects, &rOriginBase, pBuilding->id, result);
+        for (const EffectConfig_t& rEffect : pBuilding->effects)
+        {
+            // ThisTile is collected from the base tile in CollectAreaEffects.
+            if (LaneFor(rEffect.scope) == EffectLane_t::TileLocal)
+            {
+                continue;
+            }
+            AppendActiveEffects(std::span<const EffectConfig_t>(&rEffect, 1), &rOriginBase,
+                                pBuilding->id, result);
+        }
     }
     return result;
 }

@@ -56,6 +56,24 @@ struct TileSelectorAnyTile_t
 using TileSelector_t = std::variant<TileSelectorBaseTile_t, TileSelectorHasImprovement_t,
                                     TileSelectorAnyTile_t>;
 
+// How a stat slot's contributions combine.
+enum class SlotCombine_t
+{
+    // One stack, as the stat's own.
+    Stack,
+    // Alternatives that do not add up: only the largest single contribution applies.
+    Largest,
+};
+
+// A named stack of a stat, resolved apart from the stat's own (combat.json defense_slots).
+struct StatSlot_t
+{
+    std::string id;
+    SlotCombine_t combine = SlotCombine_t::Stack;
+
+    bool operator==(const StatSlot_t&) const = default;
+};
+
 struct StatModifierEffect_t
 {
     StatId_t stat = StatId_t::Nutrients;
@@ -101,6 +119,9 @@ struct StatModifierEffect_t
     // When true, this contribution is added after per-tile MaxClamp / MinClamp (classic SMAC
     // resource-bonus specials). Only valid on nutrients/minerals/energy with op Add.
     bool bypassClamp = false;
+    // A combat.json defense slot this contribution resolves in, as a stack of its own read only
+    // by the kinds of fight the slot lists. Empty is the stat's own stack. Only on defense.
+    std::string slot;
 };
 
 // Stats a MineralsConverted modifier may target: not minerals, the input. Energy runs through

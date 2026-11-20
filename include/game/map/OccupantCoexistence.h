@@ -34,10 +34,19 @@ std::vector<std::pair<std::string, std::string>> WaivedPairsFor(
     const Tile& rTile, const ImprovementConfig_t& rCandidate,
     std::span<const CoexistenceOverrideEffect_t> overrides);
 
-// Improvements that cannot share the tile with rIncoming. Placing an improvement never
-// removes terrain.
+// False for the Base: a base's tile marker leaves only with the base, never because another
+// occupant excludes it.
+bool IsRemovableByOccupancy(const ImprovementConfig_t& rOccupant);
+
+// Removable improvements that cannot share the tile with rIncoming. Placing an improvement
+// never removes terrain.
 std::vector<std::string> ImprovementsDisplacedBy(
     const Tile& rTile, const ImprovementConfig_t& rIncoming,
     std::span<const CoexistenceOverrideEffect_t> overrides);
+
+// rPlaced can go on the tile once the improvements it displaces are gone. Terrain and the Base
+// are never displaced, so anything excluded that remains is a hard refusal.
+bool ImprovementApplies(const Tile& rTile, const ImprovementConfig_t& rPlaced,
+                        std::span<const CoexistenceOverrideEffect_t> overrides);
 
 } // namespace ac

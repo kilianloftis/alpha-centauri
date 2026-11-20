@@ -7,14 +7,19 @@
 namespace ac
 {
 
+class BaseManager;
 class Faction;
+class Tile;
 
-// Effects from outside a faction's own pool: peers' WorldGlobal, council laws and governor
-// extras.
+// Effects from outside a faction's own pool: peers' WorldGlobal, council laws, governor
+// extras, and the facilities of the base on a tile.
 class IWorldEffectsSource
 {
 public:
     virtual ~IWorldEffectsSource() = default;
+
+    // The base whose centre is rTile, or nullptr.
+    virtual const BaseManager* FindBaseAt(const Tile& rTile) const = 0;
 
     // Excludes rFor's own WorldGlobal, and reads peers' local pools so council extras are not
     // counted twice.

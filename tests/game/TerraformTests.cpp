@@ -12,6 +12,7 @@
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/map/MapRulesConfig.h"
+#include "game/research/ResearchManager.h"
 #include "game/terraform/TerraformRules.h"
 #include "game/terraform/TerraformMutations.h"
 #include "game/units/Unit.h"
@@ -562,5 +563,38 @@ TEST_CASE("A terraform result that cannot place destroys nothing", "[unit][terra
                                game.fixtures.state));
     CHECK(tile.HasImprovement("Road"));
     CHECK_FALSE(tile.HasImprovement("Farm"));
+}
+
+TEST_CASE("A former cannot build a Bunker on a base tile", "[unit][terraform][base]")
+{
+    TerraformGame_ game;
+    game.pPlayer->GetResearch().AddDiscoveredTech("advanced_military_algorithms");
+    BaseManager& home = game.MakeBase(8, 8);
+    Unit& onBase = game.MakeFormer(8, 8, &home);
+    Unit& offBase = game.MakeFormer(11, 11, &home);
+
+    CHECK(game.StartTerraform(offBase, "Bunker"));
+    CHECK_FALSE(game.StartTerraform(onBase, "Bunker"));
+    CHECK(home.GetTile().HasImprovement("Base"));
+}
+
+TEST_CASE("A Bunker project finishing on a base tile leaves the base", "[unit][terraform][base]")
+{
+    // The order was paid for before a base was founded under the former.
+    TerraformGame_ game;
+    BaseManager& home = game.MakeBase(8, 8);
+    Unit& former = game.MakeFormer(8, 8, &home);
+    Tile& tile = home.GetTile();
+    const std::optional<TerraformProject_t> bunker = FindTerraformProject(
+        "Bunker", game.fixtures.improvements,
+        *game.fixtures.dataContext.terrainOperationRegistry);
+    REQUIRE(bunker);
+
+    std::mt19937 rng(3);
+    CHECK_FALSE(
+        ApplyTerraformResult(tile, *bunker, game.fixtures.state.GetTileEffects(), former, rng,
+                               game.fixtures.state));
+    CHECK(tile.HasImprovement("Base"));
+    CHECK_FALSE(tile.HasImprovement("Bunker"));
 }
 

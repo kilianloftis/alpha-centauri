@@ -226,6 +226,22 @@
           "amount": -1,
           "op": "Add"
         }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "condition": {
+          "kind": "AttackerDomain",
+          "domains": [
+            "land"
+          ]
+        },
+        "parameters": {
+          "stat": "defense",
+          "slot": "terrain",
+          "amount": 1.5,
+          "op": "MultiplyGeometric"
+        }
       }
     ],
     "art": {
@@ -476,9 +492,10 @@
           ]
         },
         "parameters": {
-          "stat": "conventional_defense",
-          "amount": 1.5,
-          "op": "MultiplyGeometric"
+          "stat": "defense",
+          "slot": "fortification",
+          "amount": 50,
+          "op": "AddPercent"
         }
       },
       {
@@ -608,6 +625,7 @@
         "radius": 2,
         "parameters": {
           "stat": "defense",
+          "slot": "sensor",
           "amount": 1.25,
           "op": "MultiplyGeometric"
         },
@@ -1022,7 +1040,12 @@
   {
     "id": "Base",
     "name": "Base",
-    "domain": "land",
+    "excludes": [
+      "Bunker",
+      "Rocky",
+      "Fungus",
+      "Monolith"
+    ],
     "effects": [
       {
         "type": "StatModifier",
@@ -1069,6 +1092,26 @@
         "scope": "ThisTile",
         "parameters": {
           "stat": "defense",
+          "slot": "fortification",
+          "amount": 1.25,
+          "op": "Fallback"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "defense",
+          "slot": "terrain",
+          "amount": 1,
+          "op": "MaxClamp"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "psi_defense",
           "amount": 1.25,
           "op": "MultiplyGeometric"
         }

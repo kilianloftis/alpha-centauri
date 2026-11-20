@@ -1,5 +1,28 @@
 {
   "boarding_home_base_min_pop": 3,
+  "defense_slots": [
+    {
+      "id": "terrain",
+      "kinds": [
+        "Conventional"
+      ],
+      "combine": "Largest"
+    },
+    {
+      "id": "fortification",
+      "kinds": [
+        "Conventional"
+      ]
+    },
+    {
+      "id": "sensor",
+      "kinds": [
+        "Conventional",
+        "Psi"
+      ],
+      "combine": "Largest"
+    }
+  ],
   "effects": [
     {
       "type": "StatModifier",
@@ -65,6 +88,23 @@
         "stat": "psi_defense",
         "amount": 1,
         "op": "Add"
+      }
+    },
+    {
+      "type": "StatModifier",
+      "scope": "WorldGlobal",
+      "condition": {
+        "kind": "DefenderDomain",
+        "domains": [
+          "air",
+          "orbital"
+        ]
+      },
+      "parameters": {
+        "stat": "defense",
+        "slot": "terrain",
+        "amount": 1,
+        "op": "MaxClamp"
       }
     }
   ]

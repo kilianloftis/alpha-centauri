@@ -408,6 +408,79 @@ TEST_CASE("Self Destruct explains that it is not implemented and leaves the unit
     CHECK(rBase.GetProduction().GetMineralStockpile() == 0);
 }
 
+namespace
+{
+
+// A flat land tile at (8, 8) and a colony pod standing on it, selected in a primed view.
+struct FoundBaseView_
+{
+    ViewFixture fixture;
+    std::deque<UnitDesign> designs;
+    Tile& rTile;
+    UnitId_t podId;
+    std::unique_ptr<WorldView> pView;
+
+    FoundBaseView_()
+        : rTile(*fixture.state.GetWorldMap().GetTile(8, 8))
+    {
+        rTile.SetElevation(100);
+        rTile.SetRockiness(Rockiness_t::Flat);
+        podId = MakeUnit_(fixture, 8, 8, nullptr, {"test_chassis", "test_colony_pod"}, designs)
+                    .GetUnitId();
+    }
+
+    void Open()
+    {
+        pView = MakeWorldView_(fixture);
+        PrimeWorldView_(*pView, fixture.graphics);
+        REQUIRE(pView->HandleKey(PlainKey_(Key_t::B)));
+        // As Engine does each frame: the key may have spent the selected pod.
+        fixture.graphics.texts.clear();
+        PrimeWorldView_(*pView, fixture.graphics);
+    }
+};
+
+} // namespace
+
+TEST_CASE("B on bare ground founds without asking", "[ui][world][found-base]")
+{
+    FoundBaseView_ view;
+    view.Open();
+    CHECK_FALSE(view.pView->HasModalElement());
+    CHECK(view.fixture.pPlayer->GetBaseCount() == 1);
+}
+
+TEST_CASE("B on a Bunker asks first; OK founds and destroys the Bunker",
+          "[ui][world][found-base]")
+{
+    FoundBaseView_ view;
+    view.fixture.ctx.AddOccupantWithEffects(view.rTile, "Bunker");
+    view.Open();
+    CHECK(view.pView->HasModalElement());
+    CHECK(view.fixture.graphics.AnyTextContaining(
+        "Founding a base here will destroy the Bunker. Proceed?"));
+    CHECK(view.fixture.pPlayer->GetBaseCount() == 0);
+
+    view.pView->HandleMouse(ClickAtDrawnText_(view.fixture.graphics, "OK"));
+    CHECK_FALSE(view.pView->HasModalElement());
+    CHECK(view.fixture.pPlayer->GetBaseCount() == 1);
+    CHECK_FALSE(view.rTile.HasImprovement("Bunker"));
+    CHECK_FALSE(UnitStillLive_(*view.fixture.pPlayer, view.podId));
+}
+
+TEST_CASE("Cancel on the found-base confirm keeps the pod and the Bunker",
+          "[ui][world][found-base]")
+{
+    FoundBaseView_ view;
+    view.fixture.ctx.AddOccupantWithEffects(view.rTile, "Bunker");
+    view.Open();
+    view.pView->HandleMouse(ClickAtDrawnText_(view.fixture.graphics, "Cancel"));
+    CHECK_FALSE(view.pView->HasModalElement());
+    CHECK(view.fixture.pPlayer->GetBaseCount() == 0);
+    CHECK(view.rTile.HasImprovement("Bunker"));
+    CHECK(UnitStillLive_(*view.fixture.pPlayer, view.podId));
+}
+
 TEST_CASE("A shrouded unit is drawn only while bombard playback lists it", "[ui][world]")
 {
     // Declared first so ~Faction runs while this config is still alive.

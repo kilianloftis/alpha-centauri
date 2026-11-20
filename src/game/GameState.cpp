@@ -187,7 +187,7 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     m_pTileInterceptDeploys = std::make_unique<TileInterceptDeployLedger>();
     m_pTileEffects = std::make_unique<TileEffectsContext>(
         *m_worldMap, *rGameData.improvementRegistry, rGameData.unitComponentRegistry.get(),
-        rGameData.tileYieldRules, rGameData.interactionGrids,
+        rGameData.buildingRegistry.get(), rGameData.tileYieldRules, rGameData.interactionGrids,
         rGameData.worldGenDecorationConfig->moisture, *m_pTileInterceptDeploys);
     m_pTileEffects->BindWorldEffects(*this);
     m_pMoveCosts = std::make_unique<MoveCostRules>(*rGameData.improvementRegistry,

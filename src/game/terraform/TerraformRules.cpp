@@ -44,18 +44,6 @@
 namespace ac
 {
 
-bool ImprovementApplies(const Tile& rTile, const ImprovementConfig_t& rPlaced,
-                        std::span<const CoexistenceOverrideEffect_t> overrides)
-{
-    if (rTile.HasImprovement(rPlaced.id))
-    {
-        return false;
-    }
-    const std::vector<std::string> displaced =
-        ImprovementsDisplacedBy(rTile, rPlaced, overrides);
-    return !OccupantsBlockPlacement(rTile, rPlaced, displaced, overrides);
-}
-
 namespace
 {
 
@@ -561,8 +549,7 @@ SurfaceFlipConsequences_t SurfaceFlipConsequences(const Tile& rTile, bool bNowWa
     {
         const bool bSeaDomain = pImprovement->domain == ImprovementDomain_t::Sea;
         const bool bDomainKept = !pImprovement->domain.has_value() || bSeaDomain == bNowWater;
-        // A destroyed base takes its own marker with it.
-        if (bDomainKept || (pBase && pImprovement->id == ImprovementIds::k_Base))
+        if (bDomainKept)
         {
             continue;
         }

@@ -20,6 +20,7 @@
 #include "game/economy/CommerceConfig.h"
 #include "game/diplomacy/DiplomacyConfig.h"
 #include "game/combat/CombatConfig.h"
+#include "game/combat/CombatConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/TerrainConfig.h"
@@ -110,6 +111,8 @@ void LoadFixtureRegistries(GameDataContext& rData)
     rData.socialRatingRegistry->Load(actest::FixturePath("social_rating_effects.json"));
     LoadMapOccupants(actest::FixturePath("improvements.json"), actest::FixturePath("terrain.json"),
                      *rData.improvementRegistry, *rData.terrainOperationRegistry);
+    // Declares the defense slots the fixture improvements name.
+    *rData.combatConfig = CombatConfigParser::ParseConfig(actest::FixturePath("combat.json"));
 }
 
 } // namespace
@@ -403,6 +406,28 @@ TEST_CASE("ValidateEffectReferences: selector improvement ids must exist", "[eff
         pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
                      actest::ImprovementSelector("Fram"))};
     CHECK_THROWS_WITH(ValidateEffectReferences(data), Catch::Matchers::ContainsSubstring("Fram"));
+}
+
+TEST_CASE("ValidateEffectReferences: defense slots must be declared in combat.json",
+          "[effects][validation]")
+{
+    GameDataContext data;
+    LoadFixtureRegistries(data);
+
+    const auto slotted = [](std::string slot)
+    {
+        StatModifierEffect_t modifier{StatId_t::Defense, 1.25, ModifierOp_t::Fallback};
+        modifier.slot = std::move(slot);
+        EffectConfig_t effect;
+        effect.scope = EffectScope_t::WorldGlobal;
+        effect.effect = modifier;
+        return effect;
+    };
+    data.productionConfig->effects = {slotted("fortification")};
+    CHECK_NOTHROW(ValidateEffectReferences(data));
+
+    data.productionConfig->effects = {slotted("moat")};
+    CHECK_THROWS_WITH(ValidateEffectReferences(data), Catch::Matchers::ContainsSubstring("moat"));
 }
 
 TEST_CASE("ValidateEffectReferences: condition features accept terrain ids and improvement ids",

@@ -179,6 +179,8 @@ int PredictModifyPopulationDelta(int size, const ModifyPopulationEffect_t& rEffe
     case ModifierOp_t::MinClamp:
         throw std::runtime_error(
             "PredictModifyPopulationDelta: clamp ops are not supported");
+    case ModifierOp_t::Fallback:
+        throw std::runtime_error("PredictModifyPopulationDelta: Fallback is not supported");
     }
 
     if (delta < 0)

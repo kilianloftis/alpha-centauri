@@ -1,6 +1,7 @@
 #include "game/map/OccupantCoexistence.h"
 
 #include "game/map/ImprovementConfigParser.h"
+#include "game/map/ImprovementIds.h"
 #include "game/map/Tile.h"
 
 #include <algorithm>
@@ -161,6 +162,11 @@ std::vector<WaiverPair_t> WaivedPairsFor(const Tile& rTile,
     return waived;
 }
 
+bool IsRemovableByOccupancy(const ImprovementConfig_t& rOccupant)
+{
+    return rOccupant.id != ImprovementIds::k_Base;
+}
+
 std::vector<std::string> ImprovementsDisplacedBy(
     const Tile& rTile, const ImprovementConfig_t& rIncoming,
     std::span<const CoexistenceOverrideEffect_t> overrides)
@@ -169,7 +175,7 @@ std::vector<std::string> ImprovementsDisplacedBy(
     std::vector<std::string> displaced;
     for (const ImprovementConfig_t* pExisting : rTile.GetImprovements())
     {
-        if (!pExisting || pExisting->id == rIncoming.id)
+        if (!pExisting || pExisting->id == rIncoming.id || !IsRemovableByOccupancy(*pExisting))
         {
             continue;
         }
@@ -179,6 +185,18 @@ std::vector<std::string> ImprovementsDisplacedBy(
         }
     }
     return displaced;
+}
+
+bool ImprovementApplies(const Tile& rTile, const ImprovementConfig_t& rPlaced,
+                        std::span<const CoexistenceOverrideEffect_t> overrides)
+{
+    if (rTile.HasImprovement(rPlaced.id))
+    {
+        return false;
+    }
+    const std::vector<std::string> displaced =
+        ImprovementsDisplacedBy(rTile, rPlaced, overrides);
+    return !OccupantsBlockPlacement(rTile, rPlaced, displaced, overrides);
 }
 
 } // namespace ac

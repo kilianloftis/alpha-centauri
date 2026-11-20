@@ -55,39 +55,9 @@
         {
           "type": "StatModifier",
           "scope": "ThisTile",
-          "condition": {
-            "kind": "AllOf",
-            "conditions": [
-              {
-                "kind": "DefenderDomain",
-                "domains": [
-                  "land",
-                  "sea"
-                ]
-              },
-              {
-                "kind": "TargetTileHas",
-                "value": "Base",
-                "present": false
-              },
-              {
-                "kind": "AnyOf",
-                "conditions": [
-                  {
-                    "kind": "TargetTileHas",
-                    "value": "Fungus",
-                    "present": false
-                  },
-                  {
-                    "kind": "AttackerIsNativeLife",
-                    "value": false
-                  }
-                ]
-              }
-            ]
-          },
           "parameters": {
-            "stat": "conventional_defense",
+            "stat": "defense",
+            "slot": "terrain",
             "amount": 1.5,
             "op": "MultiplyGeometric"
           }
@@ -206,7 +176,7 @@
       "tags": [
         "landform"
       ],
-      "suppress_yield_sources": [
+      "suppress_terrain": [
         "Flat",
         "Rolling",
         "Rocky",
@@ -215,7 +185,18 @@
         "Wet",
         "River"
       ],
-      "effects": []
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "parameters": {
+            "stat": "defense",
+            "slot": "terrain",
+            "amount": 1,
+            "op": "MaxClamp"
+          }
+        }
+      ]
     },
     {
       "id": "Ocean",
@@ -317,43 +298,9 @@
         {
           "type": "StatModifier",
           "scope": "ThisTile",
-          "condition": {
-            "kind": "AllOf",
-            "conditions": [
-              {
-                "kind": "DefenderDomain",
-                "domains": [
-                  "land",
-                  "sea"
-                ]
-              },
-              {
-                "kind": "TargetTileHas",
-                "value": "Base",
-                "present": false
-              },
-              {
-                "kind": "TargetTileHas",
-                "value": "Rocky",
-                "present": false
-              },
-              {
-                "kind": "TargetTileHas",
-                "value": "Water",
-                "present": false
-              },
-              {
-                "kind": "AttackerIsNativeLife",
-                "value": false
-              },
-              {
-                "kind": "DefenderIsNativeLife",
-                "value": false
-              }
-            ]
-          },
           "parameters": {
-            "stat": "conventional_defense",
+            "stat": "defense",
+            "slot": "terrain",
             "amount": 1.5,
             "op": "MultiplyGeometric"
           }
@@ -365,41 +312,35 @@
             "kind": "AllOf",
             "conditions": [
               {
-                "kind": "DefenderDomain",
-                "domains": [
-                  "land",
-                  "sea"
-                ]
-              },
-              {
-                "kind": "TargetTileHas",
-                "value": "Base",
-                "present": false
+                "kind": "DefenderIsNativeLife",
+                "value": true
               },
               {
                 "kind": "TargetTileHas",
                 "value": "Rocky",
                 "present": false
-              },
-              {
-                "kind": "TargetTileHas",
-                "value": "Water",
-                "present": false
-              },
-              {
-                "kind": "AttackerIsNativeLife",
-                "value": false
-              },
-              {
-                "kind": "DefenderIsNativeLife",
-                "value": true
               }
             ]
           },
           "parameters": {
-            "stat": "conventional_defense",
+            "stat": "defense",
+            "slot": "terrain",
             "amount": 2,
             "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "condition": {
+            "kind": "AttackerIsNativeLife",
+            "value": true
+          },
+          "parameters": {
+            "stat": "defense",
+            "slot": "terrain",
+            "amount": 1,
+            "op": "MaxClamp"
           }
         },
         {

@@ -594,13 +594,49 @@ TEST_CASE("A subverted unit is homed at the actor's nearest base with full moves
 
 TEST_CASE("combat.json requires a non-negative boarding_home_base_min_pop", "[capture][parser]")
 {
-    const TempConfigFile valid("ac_combat_valid.json", R"({ "boarding_home_base_min_pop": 2 })");
+    const TempConfigFile valid("ac_combat_valid.json",
+                               R"({ "boarding_home_base_min_pop": 2, "defense_slots": [] })");
     CHECK(CombatConfigParser::ParseConfig(valid.Path()).boardingHomeBaseMinPop == 2);
 
-    const TempConfigFile missing("ac_combat_missing.json", "{}");
+    const TempConfigFile missing("ac_combat_missing.json", R"({ "defense_slots": [] })");
     CHECK_THROWS_AS(CombatConfigParser::ParseConfig(missing.Path()), std::runtime_error);
 
     const TempConfigFile negative("ac_combat_negative.json",
-                                  R"({ "boarding_home_base_min_pop": -1 })");
+                                  R"({ "boarding_home_base_min_pop": -1, "defense_slots": [] })");
     CHECK_THROWS_AS(CombatConfigParser::ParseConfig(negative.Path()), std::runtime_error);
+}
+
+TEST_CASE("combat.json defense_slots gives each kind of fight its slots", "[combat][parser]")
+{
+    const TempConfigFile valid("ac_combat_slots.json", R"({
+        "boarding_home_base_min_pop": 0,
+        "defense_slots": [
+            { "id": "walls", "kinds": ["Conventional"] },
+            { "id": "watch", "kinds": ["Conventional", "Psi"], "combine": "Largest" }
+        ]
+    })");
+    const CombatConfig_t config = CombatConfigParser::ParseConfig(valid.Path());
+    const StatSlot_t walls{"walls", SlotCombine_t::Stack};
+    const StatSlot_t watch{"watch", SlotCombine_t::Largest};
+    CHECK(config.defenseSlotsByKind.at(CombatKindId_t::Conventional)
+          == std::vector<StatSlot_t>{walls, watch});
+    CHECK(config.defenseSlotsByKind.at(CombatKindId_t::Psi) == std::vector<StatSlot_t>{watch});
+    CHECK(DeclaresDefenseSlot(config, "watch"));
+    CHECK_FALSE(DeclaresDefenseSlot(config, "moat"));
+
+    const auto throws = [](const char* pName, const char* pSlots)
+    {
+        const TempConfigFile file(pName, std::string(R"({ "boarding_home_base_min_pop": 0, )")
+                                             + pSlots + " }");
+        CHECK_THROWS_AS(CombatConfigParser::ParseConfig(file.Path()), std::runtime_error);
+    };
+    throws("ac_combat_no_slots.json", R"("effects": [])");
+    throws("ac_combat_twice.json",
+           R"("defense_slots": [ { "id": "walls", "kinds": ["Psi"] },
+                                 { "id": "walls", "kinds": ["Conventional"] } ])");
+    throws("ac_combat_no_kinds.json", R"("defense_slots": [ { "id": "walls", "kinds": [] } ])");
+    throws("ac_combat_bad_kind.json",
+           R"("defense_slots": [ { "id": "walls", "kinds": ["Artillery"] } ])");
+    throws("ac_combat_bad_combine.json",
+           R"("defense_slots": [ { "id": "walls", "kinds": ["Psi"], "combine": "Product" } ])");
 }

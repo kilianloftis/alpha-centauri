@@ -374,6 +374,63 @@ TEST_CASE("FoundBase fails without on_found_effects or on an illegal tile", "[un
     CHECK(game.pPlayer->GetBaseCount() == 1);
 }
 
+TEST_CASE("Founding is refused on Rocky, Fungus and a Monolith", "[unit][found-base][occupancy]")
+{
+    FoundBaseGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 2, 2);
+    Unit& pod = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_colony_pod"}, &home);
+    Tile& rTile = game.fixtures.At(8, 8);
+    REQUIRE(CanFoundBase(pod));
+
+    SECTION("rocky")
+    {
+        rTile.SetRockiness(Rockiness_t::Rocky);
+        CHECK_FALSE(CanFoundBase(pod));
+    }
+
+    SECTION("fungus")
+    {
+        game.fixtures.ctx.AddOccupantWithEffects(rTile, "Fungus");
+        CHECK_FALSE(CanFoundBase(pod));
+    }
+
+    SECTION("monolith")
+    {
+        game.fixtures.ctx.AddOccupantWithEffects(rTile, "Monolith");
+        CHECK_FALSE(CanFoundBase(pod));
+    }
+}
+
+TEST_CASE("A sea colony founds on a rocky sea floor", "[unit][found-base][occupancy]")
+{
+    FoundBaseGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 2, 2);
+    Tile& water = game.fixtures.At(11, 11);
+    water.SetElevation(-100);
+    water.SetRockiness(Rockiness_t::Rocky);
+    REQUIRE(water.IsWater());
+
+    Unit& seaPod =
+        game.MakeUnit(*game.pPlayer, 11, 11, {"test_sea_chassis", "test_colony_pod"}, &home);
+    CHECK(CanFoundBase(seaPod));
+}
+
+TEST_CASE("Founding on a Bunker destroys it", "[unit][found-base][occupancy]")
+{
+    FoundBaseGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 2, 2);
+    Unit& pod = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis", "test_colony_pod"}, &home);
+    Tile& rTile = game.fixtures.At(8, 8);
+    CHECK(ImprovementsDestroyedByFounding(rTile).empty());
+
+    game.fixtures.ctx.AddOccupantWithEffects(rTile, "Bunker");
+    CHECK(ImprovementsDestroyedByFounding(rTile) == std::vector<std::string>{"Bunker"});
+
+    REQUIRE(game.FoundBase(pod));
+    CHECK(rTile.HasImprovement("Base"));
+    CHECK_FALSE(rTile.HasImprovement("Bunker"));
+}
+
 void CrossElevation_(GameState& rState, Tile& rTile, int deltaMeters)
 {
     const MapRulesConfig_t& rRules = rTile.MapRules();

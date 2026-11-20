@@ -129,6 +129,18 @@ CombatOdds_t ReduceOdds_(int attackerProduct, int defenderProduct)
 
 } // namespace
 
+CombatRatingStats_t DefenseRatingStats(const CombatKind_t& rKind)
+{
+    const CombatConfig_t& rConfig = *CurrentGameState().GetGameData().combatConfig;
+    CombatRatingStats_t stats = rKind.defense;
+    const auto it = rConfig.defenseSlotsByKind.find(rKind.id);
+    if (it != rConfig.defenseSlotsByKind.end())
+    {
+        stats.slots = it->second;
+    }
+    return stats;
+}
+
 CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefender,
                                        const MoraleCalculator& rMorale,
                                        CombatEngagement_t engagement)
@@ -139,8 +151,8 @@ CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefen
     const Fighter_t defender =
         MakeFighter_(rDefender, rAttacker, rDefender, CombatRole_t::Defender, rMorale);
     const CombatKind_t& kind = CombatKindFor_(rAttacker, rDefender, engagement);
-    const CombatRatingStats_t& defenderStats =
-        engagement == CombatEngagement_t::ArtilleryDuel ? kind.attack : kind.defense;
+    const CombatRatingStats_t defenderStats =
+        engagement == CombatEngagement_t::ArtilleryDuel ? kind.attack : DefenseRatingStats(kind);
     const double attackRating = ResolveCombatRating(rAttacker, kind.attack, attacker.ctx,
                                                     attacker.moraleMultiplier);
     const double defenseRating = ResolveCombatRating(rDefender, defenderStats, defender.ctx,

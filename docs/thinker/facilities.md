@@ -17,8 +17,8 @@ different scale today).
 | 1 | Headquarters | 5 | 0 | — | — | Efficiency | 1 effect(s) |
 | 2 | Children's Creche | 5 | 1 | Ethical Calculus | — | Growth/Effic/Morale | 6 effect(s) |
 | 3 | Recycling Tanks | 4 | 0 | Biogenetics | Adv. Ecological Engineering | Bonus Resources | 3 effect(s) |
-| 4 | Perimeter Defense | 5 | 0 | Doctrine: Loyalty | — | Defense +100% | 2 effect(s) |
-| 5 | Tachyon Field | 12 | 2 | Probability Mechanics | — | All Defense +100% | 1 effect(s) |
+| 4 | Perimeter Defense | 5 | 0 | Doctrine: Loyalty | — | Defense +100% | 3 effect(s) |
+| 5 | Tachyon Field | 12 | 2 | Probability Mechanics | — | All Defense +100% | 3 effect(s) |
 | 6 | Recreation Commons | 4 | 1 | Social Psych | Sentient Econometrics | Fewer Drones | 1 effect(s) |
 | 7 | Energy Bank | 8 | 1 | Industrial Economics | Quantum Machinery | Economy Bonus | empty |
 | 8 | Network Node | 8 | 1 | Information Networks | Self-Aware Machines | Labs Bonus | empty |
@@ -41,8 +41,8 @@ different scale today).
 | 25 | Habitation Dome | 16 | 4 | Super Tensile Solids | — | Increase Population Limit | 1 effect(s) |
 | 26 | Pressure Dome | 8 | 0 | Doctrine: Flexibility | — | Submersion/Resources | 4 effect(s) |
 | 27 | Command Center | 4 | 1 | Doctrine: Mobility | — | +2 Morale:Land | empty |
-| 28 | Naval Yard | 8 | 2 | Doctrine: Initiative | — | +2 Morale:Sea,Sea Def +100% | empty |
-| 29 | Aerospace Complex | 8 | 2 | Doctrine: Air Power | — | +2 Morale:Air,Air Def +100% | empty |
+| 28 | Naval Yard | 8 | 2 | Doctrine: Initiative | — | +2 Morale:Sea,Sea Def +100% | 2 effect(s) |
+| 29 | Aerospace Complex | 8 | 2 | Doctrine: Air Power | — | +2 Morale:Air,Air Def +100% | 2 effect(s) |
 | 30 | Bioenhancement Center | 10 | 2 | Neural Grafting | — | +2 Morale:ALL | empty |
 | 31 | Centauri Preserve | 10 | 2 | Centauri Meditation | — | Ecology Bonus | empty |
 | 32 | Temple of Planet | 20 | 3 | Secrets of Alpha Centauri | — | Ecology Bonus | empty |
@@ -73,13 +73,12 @@ Each bullet is one SMAC effect. Tags:
 - **[blocked]** — no seam yet (missing type, consumer, or building→combat/production path)
 
 
-**Counts:** 33 done, 56 not authored, 8 partial, 14 blocked (111 effect bullets).
+**Counts:** 41 done, 58 not authored, 8 partial, 8 blocked (115 effect bullets).
 
 ### Blocked rollup (needs engine work)
 
 | Gap | Facilities |
 |---|---|
-| Building → combat `defense` on the base's defenders (and attacker domain) | Perimeter, Tachyon, Naval Yard, Aerospace, Geosync sensor bonus, Flechette aura |
 | Orbital yield halving / size cap | Sky Hydro, Nessus, Orbital Power (partial: flat +1 works) |
 | Psi Gate teleport order | Psi Gate |
 | Progenitor generator victory | Subspace Generator |
@@ -123,14 +122,18 @@ Each bullet is one SMAC effect. Tags:
 - **Config id:** `Perimeter_Defense`
 - **Alphax:** cost 5, upkeep 0, Doctrine: Loyalty
 - **Effects:**
-  - **[blocked]** Adds one base defense multiplier against land attack (doubles land defense; with Tachyon, triples). — _a building's defense effect has no route to the units defending its base. JSON only has last_defender_pop_loss + high_risk_sabotage_
+  - Adds one base defense multiplier against land attack (doubles land defense; with Tachyon, triples). — _ThisTile `defense` slot `fortification` AddPercent 100 + AttackerDomain land, displacing the Base's `Fallback` ×1.25; Citizens' Defense Force grants it to every base_
+  - Skips population loss when the last defender dies. — _last_defender_pop_loss MaxClamp 0_
+  - Targeted probe sabotage of this facility is high risk. — _high_risk_sabotage; MissionRisk floors to `protected_risk`_
 
 ### 5. Tachyon Field
 
 - **Config id:** `Tachyon_Field`
 - **Alphax:** cost 12, upkeep 2, Probability Mechanics
 - **Effects:**
-  - **[blocked]** Adds one base defense multiplier against all attack domains (stacks with Perimeter / Naval Yard / Aerospace). — _same combat gap as Perimeter; JSON only high_risk_sabotage_
+  - Adds one base defense multiplier against all attack domains (stacks with Perimeter / Naval Yard / Aerospace). — _ThisTile `defense` slot `fortification` AddPercent 100, displacing the Base's `Fallback` ×1.25_
+  - Skips population loss when the last defender dies. — _last_defender_pop_loss MaxClamp 0_
+  - Targeted probe sabotage of this facility is high risk. — _high_risk_sabotage; MissionRisk floors to `protected_risk`_
 
 ### 6. Recreation Commons
 
@@ -326,7 +329,7 @@ Each bullet is one SMAC effect. Tags:
 - **Effects:**
   - Fully repairs damaged sea units at this base in one idle upkeep. — _HealRate MinClamp 100 FactionUnits (SubjectIsOnOriginBase + sea + !BaseIsRioting)_
   - Sea units built here receive +2 morale. — _on_unit_produced GrantXp + SubjectDomain sea_
-  - **[blocked]** Adds +100% defense against sea attack at this base. — _a building's defense effect has no route to the units defending its base_
+  - Adds +100% defense against sea attack at this base. — _ThisTile `defense` slot `fortification` AddPercent 100 + AttackerDomain sea; Maritime Control Center grants it to every base_
 
 ### 29. Aerospace Complex
 
@@ -335,7 +338,7 @@ Each bullet is one SMAC effect. Tags:
 - **Effects:**
   - Fully repairs damaged air units at this base in one idle upkeep. — _HealRate MinClamp 100 FactionUnits (SubjectIsOnOriginBase + air + !BaseIsRioting)_
   - Air units built here receive +2 morale. — _on_unit_produced GrantXp +2 air_
-  - **[blocked]** Adds +100% defense against air attack at this base. — _a building's defense effect has no route to the units defending its base_
+  - Adds +100% defense against air attack at this base. — _ThisTile `defense` slot `fortification` AddPercent 100 + AttackerDomain air, orbital (missiles are air in SMAC); Cloudbase Academy grants it to every base_
   - Required before this base can produce orbital facilities (and Geosync); Cloudbase Academy or Space Elevator SP also satisfy the gate. — _those buildings' required_buildings.any_; `terranx-map.md` § Facility-on-facility
 
 ### 30. Bioenhancement Center
@@ -414,7 +417,7 @@ Each bullet is one SMAC effect. Tags:
 - **Config id:** `Flechette_Defense_System`
 - **Alphax:** cost 12, upkeep 2, N-Space Compression
 - **Effects:**
-  - **[blocked]** Gives +50% defense against conventional missiles to units within two squares. — _buildings cannot project ThisTile radius auras; improvements/units can_
+  - Gives +50% defense against conventional missiles to units within two squares. — _a building ThisTile radius aura from the base tile, as Perimeter's at radius 0_
   - **[blocked]** If you have no Orbital Defense Pods, has a 50% chance to shoot down Planet Busters, Tectonic Missiles, and Fungal Missiles targeting within two squares. — _needs building Intercept aura + 'no ODP' condition; ODP Intercept is FactionGlobal only_
   - **[blocked]** Multiple Flechettes covering the same target stack (two → 25% missile success, and so on). — _Intercept tries sources sequentially; not independent SMAC stack math_
 
@@ -432,7 +435,7 @@ Each bullet is one SMAC effect. Tags:
 - **Alphax:** cost 16, upkeep 4, N-Space Compression
 - **Effects:**
   - **[blocked]** Extends this base's sighting radius to three squares. — _FactionVisibleMap uses fixed k_BaseVisionRadius=2; building vision not folded in_
-  - **[blocked]** Acts as a Sensor Array (+25% defensive bonus). — _same building-to-defender gap; Sensor improvement pattern not available on buildings_
+  - Acts as a Sensor Array (+25% defensive bonus). — _the Sensor improvement's radius-2 `defense` effect as a building ThisTile aura_
   - **[partial]** Can be destroyed by Orbital Defense Pods or probe teams. — _generic ASAT/probe sabotage can destroy buildings; not Geosync-specific rules_
   - May only be produced at a base with Aerospace Complex, or with Cloudbase Academy / Space Elevator owned by the faction. — _required_buildings.any_
 

@@ -28,7 +28,9 @@
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <algorithm>
 #include <memory>
+#include <ranges>
 #include <stdexcept>
 #include <unordered_map>
 #include <vector>
@@ -50,6 +52,154 @@ TEST_CASE("Founding a base registers the Base improvement and its defense bonus 
     const Unit& defender = fixture.MakeUnit(owner, 8, 8, {"test_chassis", "test_weak_armor"});
     const Unit& attacker = fixture.MakeUnit(enemy, 0, 0, {"test_chassis", "test_weapon"});
     CHECK(actest::ConventionalDefenseRating(defender, attacker) == Approx(1.25));
+}
+
+TEST_CASE("Perimeter and Tachyon displace the base intrinsic and stack to triple vs land",
+          "[effects][base][combat]")
+{
+    actest::FactionFixture fixture;
+    Faction& owner = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(owner, 8, 8);
+    Unit& defender = fixture.MakeUnit(owner, 8, 8, {"test_chassis", "test_weak_armor"});
+    const Unit& landAttacker = fixture.MakeUnit(enemy, 0, 0, {"test_chassis", "test_weapon"});
+    const Unit& seaAttacker =
+        fixture.MakeUnit(enemy, 2, 2, {"test_sea_chassis", "test_weapon"});
+
+    CHECK(actest::ConventionalDefenseRating(defender, landAttacker) == Approx(1.25));
+
+    base.GetBuildingManager().AddBuilding("Perimeter_Defense");
+    CHECK(actest::ConventionalDefenseRating(defender, landAttacker) == Approx(2.0));
+    CHECK(actest::ConventionalDefenseRating(defender, seaAttacker) == Approx(1.25));
+
+    base.GetBuildingManager().AddBuilding("Tachyon_Field");
+    CHECK(actest::ConventionalDefenseRating(defender, landAttacker) == Approx(3.0));
+    CHECK(actest::ConventionalDefenseRating(defender, seaAttacker) == Approx(2.0));
+
+    fixture.MoveUnit(defender, 10, 10);
+    CHECK(actest::ConventionalDefenseRating(defender, landAttacker) == Approx(1.0));
+}
+
+TEST_CASE("A defense bonus outside the fortification slot keeps the base intrinsic",
+          "[effects][base][combat]")
+{
+    actest::FactionFixture fixture;
+    Faction& owner = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    fixture.MakeFactionBase(owner, 8, 8);
+    fixture.ctx.AddOccupantWithEffects(fixture.At(9, 9), "Sensor");
+    const Unit& defender = fixture.MakeUnit(owner, 8, 8, {"test_chassis", "test_weak_armor"});
+    const Unit& attacker = fixture.MakeUnit(enemy, 0, 0, {"test_chassis", "test_weapon"});
+
+    CHECK(actest::ConventionalDefenseRating(defender, attacker) == Approx(1.25 * 1.25));
+}
+
+TEST_CASE("Naval Yard and Aerospace Complex defend a base against their own domain",
+          "[effects][base][combat]")
+{
+    actest::FactionFixture fixture;
+    Faction& owner = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(owner, 8, 8);
+    const Unit& defender = fixture.MakeUnit(owner, 8, 8, {"test_chassis", "test_weak_armor"});
+    const Unit& landAttacker = fixture.MakeUnit(enemy, 0, 0, {"test_chassis", "test_weapon"});
+    const Unit& seaAttacker =
+        fixture.MakeUnit(enemy, 2, 2, {"test_sea_chassis", "test_weapon"});
+    const Unit& airAttacker =
+        fixture.MakeUnit(enemy, 4, 4, {"test_flight_chassis", "test_weapon"});
+    const Unit& missileAttacker =
+        fixture.MakeUnit(enemy, 6, 6, {"test_orbital_chassis", "test_weapon"});
+
+    base.GetBuildingManager().AddBuilding("Naval_Yard");
+    CHECK(actest::ConventionalDefenseRating(defender, seaAttacker) == Approx(2.0));
+    CHECK(actest::ConventionalDefenseRating(defender, airAttacker) == Approx(1.25));
+
+    base.GetBuildingManager().AddBuilding("Aerospace_Complex");
+    CHECK(actest::ConventionalDefenseRating(defender, airAttacker) == Approx(2.0));
+    CHECK(actest::ConventionalDefenseRating(defender, missileAttacker) == Approx(2.0));
+    CHECK(actest::ConventionalDefenseRating(defender, landAttacker) == Approx(1.25));
+}
+
+TEST_CASE("Psi combat takes the base intrinsic and never the facility bonus",
+          "[effects][base][combat][psi]")
+{
+    actest::FactionFixture fixture;
+    Faction& owner = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(owner, 8, 8);
+    const Unit& onBase = fixture.MakeUnit(owner, 8, 8, {"test_chassis", "test_weak_armor"});
+    const Unit& offBase = fixture.MakeUnit(owner, 10, 10, {"test_chassis", "test_weak_armor"});
+    const Unit& psiAttacker =
+        fixture.MakeUnit(enemy, 0, 0, {"test_chassis", "test_weapon", "test_psi"});
+
+    const double open = actest::PsiDefenseRating(offBase, psiAttacker);
+    CHECK(actest::PsiDefenseRating(onBase, psiAttacker) == Approx(open * 1.25));
+
+    base.GetBuildingManager().AddBuilding("Perimeter_Defense");
+    base.GetBuildingManager().AddBuilding("Tachyon_Field");
+    CHECK(actest::PsiDefenseRating(onBase, psiAttacker) == Approx(open * 1.25));
+}
+
+TEST_CASE("A project-granted facility defends every owner base, counted once",
+          "[effects][base][combat]")
+{
+    actest::FactionFixture fixture;
+    Faction& owner = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    BaseManager& projectBase = fixture.MakeFactionBase(owner, 2, 2);
+    BaseManager& otherBase = fixture.MakeFactionBase(owner, 8, 8);
+    const Unit& defender = fixture.MakeUnit(owner, 8, 8, {"test_chassis", "test_weak_armor"});
+    const Unit& attacker = fixture.MakeUnit(enemy, 0, 0, {"test_chassis", "test_weapon"});
+
+    projectBase.GetBuildingManager().AddBuilding("Citizens_Defense_Force");
+    CHECK(actest::ConventionalDefenseRating(defender, attacker) == Approx(2.0));
+
+    otherBase.GetBuildingManager().AddBuilding("Perimeter_Defense");
+    CHECK(actest::ConventionalDefenseRating(defender, attacker) == Approx(2.0));
+}
+
+TEST_CASE("Founding a base on a Bunker destroys it", "[effects][base][combat]")
+{
+    actest::FactionFixture fixture;
+    Faction& owner = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    fixture.ctx.AddOccupantWithEffects(fixture.At(8, 8), "Bunker");
+    BaseManager& base = fixture.MakeFactionBase(owner, 8, 8);
+    CHECK_FALSE(fixture.At(8, 8).HasImprovement("Bunker"));
+    const Unit& defender = fixture.MakeUnit(owner, 8, 8, {"test_chassis", "test_weak_armor"});
+    const Unit& attacker = fixture.MakeUnit(enemy, 0, 0, {"test_chassis", "test_weapon"});
+
+    CHECK(actest::ConventionalDefenseRating(defender, attacker) == Approx(1.25));
+
+    base.GetBuildingManager().AddBuilding("Perimeter_Defense");
+    CHECK(actest::ConventionalDefenseRating(defender, attacker) == Approx(2.0));
+}
+
+TEST_CASE("Building ThisTile defense is collected on the base tile only at radius 0",
+          "[effects][base][tile]")
+{
+    actest::FactionFixture fixture;
+    Faction& owner = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(owner, 8, 8);
+    base.GetBuildingManager().AddBuilding("Perimeter_Defense");
+
+    const auto onBase = fixture.state.GetTileEffects().CollectAreaEffects(fixture.At(8, 8));
+    const auto onNeighbor = fixture.state.GetTileEffects().CollectAreaEffects(fixture.At(9, 9));
+    const auto hasPerimeterDefense = [](const std::vector<ActiveEffect_t>& rEffects)
+    {
+        return std::ranges::any_of(rEffects, [](const ActiveEffect_t& rEffect)
+        {
+            const auto* pMod =
+                std::get_if<StatModifierEffect_t>(&rEffect.config->effect);
+            return rEffect.sourceId == "Perimeter_Defense" && pMod
+                && pMod->stat == StatId_t::Defense && pMod->slot == "fortification";
+        });
+    };
+    CHECK(hasPerimeterDefense(onBase));
+    CHECK_FALSE(hasPerimeterDefense(onNeighbor));
+
+    const auto poolEffects = base.CollectBuildingEffects();
+    CHECK_FALSE(hasPerimeterDefense(poolEffects));
 }
 
 TEST_CASE("BaseManager::CollectBuildingEffects tags ThisBase effects with the owning base",

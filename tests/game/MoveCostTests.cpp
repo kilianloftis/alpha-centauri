@@ -83,6 +83,21 @@ TEST_CASE("Improvement move_cost is optional when omitted", "[move-cost]")
     CHECK(pClamp->amount == MovementConstants_t::k_moveFragmentsPerPoint / 3);
 }
 
+TEST_CASE("A rocky sea floor costs a ship no extra move", "[move-cost]")
+{
+    FactionFixture fixture;
+    Tile& sea = fixture.At(9, 9);
+    sea.SetElevation(-100);
+    sea.SetRockiness(Rockiness_t::Rocky);
+    REQUIRE(sea.IsWater());
+
+    MoveCostRules calc(fixture.improvements, MovementConstants_t{});
+    Faction& faction = fixture.MakeFaction();
+    Unit& ship = fixture.MakeUnit(faction, 8, 8, {"test_sea_chassis"});
+    CHECK(calc.ForUnit(ship, fixture.map).EntryTerms(sea).costFragments
+          == MovementConstants_t::k_moveFragmentsPerPoint);
+}
+
 TEST_CASE("MoveCostRules takes max cost or min override", "[move-cost]")
 {
     FactionFixture fixture;

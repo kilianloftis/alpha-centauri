@@ -10,6 +10,7 @@
 #include <ranges>
 #include <span>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -250,8 +251,14 @@ struct StatBreakdown_t
 };
 
 // result = (base + adds) * (1 + percents/100) * geometric; order within a kind does not
-// matter.
+// matter. Fallback factors stand in for geometric only when there are no adds, percents or
+// geometric factors.
 double ApplyModifierStack(double base, const std::vector<std::pair<double, ModifierOp_t>>& contributions);
+
+// Each contribution resolved alone from base, and only the largest result kept; Fallbacks
+// compete only when nothing else contributes. Clamps then bound the winner.
+double ApplyLargestModifier(double base,
+                            const std::vector<std::pair<double, ModifierOp_t>>& contributions);
 
 // The one float-to-int rule for resolved totals: half away from zero.
 inline int FinalizeResolvedStat(double value)
@@ -333,9 +340,9 @@ inline auto FilterByStatId(const std::vector<ActiveEffect_t>& effects, StatId_t 
     return effects | std::views::filter([statId](const ActiveEffect_t& effect)
     {
         const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
-        // Conditions and amount sources stay out of context-free resolution.
+        // Conditions, amount sources and slots stay out of context-free resolution.
         return pStatModifier && pStatModifier->stat == statId && !effect.config->condition
-            && !pStatModifier->amountSource
+            && !pStatModifier->amountSource && pStatModifier->slot.empty()
             && LaneFor(effect.config->scope) != EffectLane_t::FactionPair;
     });
 }
@@ -393,11 +400,12 @@ inline bool AmountSourceEvaluable_(const StatModifierEffect_t& rModifier,
         || OpposingCombatant_(ctx) != nullptr;
 }
 
-inline bool StatModifierMatchesInContext(const ActiveEffect_t& effect, StatId_t statId,
-                                         const EffectContext_t& ctx)
+// A StatModifier on statId in slot (empty: the stat's own stack) that applies in ctx.
+inline bool StatModifierMatchesSlotInContext(const ActiveEffect_t& effect, StatId_t statId,
+                                             std::string_view slot, const EffectContext_t& ctx)
 {
     const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
-    if (!pStatModifier || pStatModifier->stat != statId)
+    if (!pStatModifier || pStatModifier->stat != statId || pStatModifier->slot != slot)
     {
         return false;
     }
@@ -412,6 +420,13 @@ inline bool StatModifierMatchesInContext(const ActiveEffect_t& effect, StatId_t 
     }
     return ConditionSatisfied(*effect.config, ActiveEffectContext(effect, ctx),
                               effect.originBase);
+}
+
+// The stat's own stack: slotted contributions resolve only through their slot.
+inline bool StatModifierMatchesInContext(const ActiveEffect_t& effect, StatId_t statId,
+                                         const EffectContext_t& ctx)
+{
+    return StatModifierMatchesSlotInContext(effect, statId, {}, ctx);
 }
 
 // FilterByStatId for a runtime context such as combat: conditions satisfied by ctx pass.
@@ -480,16 +495,18 @@ double ResolveCombatUnitMultiplicativeStat(const Unit& rUnit, StatId_t statId, d
                                            const EffectContext_t& rCtx,
                                            std::span<const EffectConfig_t> extraEffects);
 
-// The value stat a fight rates a unit on, and the multiplier that scales it in every kind of
-// fight.
+// The value stat a fight rates a unit on, the multiplier that scales it in every kind of
+// fight, and the multiplier's slots this side of this kind of fight reads. Each slot resolves
+// as a stack of its own, so its Fallback and clamps see only that slot's contributions.
 struct CombatRatingStats_t
 {
     StatId_t value;
     StatId_t multiplier;
+    std::span<const StatSlot_t> slots;
 };
 
-// The value stat times the multiplier stat, with moraleMultiplier as one more geometric factor
-// on the multiplier. Unrounded.
+// The value stat times the multiplier stat and each slot, with moraleMultiplier as one more
+// geometric factor on the multiplier. Unrounded.
 double ResolveCombatRating(const Unit& rUnit, CombatRatingStats_t stats,
                            const EffectContext_t& rCtx, double moraleMultiplier);
 

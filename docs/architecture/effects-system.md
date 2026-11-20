@@ -108,7 +108,7 @@ not by which config declared it. Each scope has one "lane":
 | `AllOwnerBases` | every base of the faction | faction pool (`CollectActiveEffects`) |
 | `FactionGlobal` | the faction and every base, plus the faction's live units (unit-domain stat modifiers and rule flags) and its units' move cost (tile-domain stat modifiers). A stat resolved at both levels takes it at both: `away_from_home_drones` is summed per unit and then scaled at the base, so use `AllOwnerBases` or `FactionUnits` to pick one | faction pool (`CollectActiveEffects`); `AppendGlobalScopeEffects` hands units and move cost their domain's slice. A faction's composed pool holds only its own `FactionGlobal` effects |
 | `WorldGlobal` | every resolver that can apply the effect | composed into `Faction::GetActiveEffects()` (local `FactionEffectsPool` + `IWorldEffectsSource` / `GameState::CollectWorldExtras` for peer WorldGlobal and council extras). Bases and faction stats read that pool. `CollectLiveUnitEffects` appends the unit-domain stat modifiers and rule flags (`AppendGlobalScopeEffects`, shared with `FactionGlobal`). `TileEffectsContext::CollectAreaEffects` and move-cost entry append the tile-domain slice from `CollectSessionWorldEffects()`. Intercept bills a `WorldGlobal` charge to the granting faction; a council charge has no building ledger. Turn stages call no-arg `ProduceBaseResources` / `ApplyBaseGrowth`; they do not append a second list. |
-| `FactionUnits` | live units of the faction (home-base narrowed when conditions use `OriginBaseIsHomeBase`; in-square extras use `SubjectIsOnOriginBase`) | faction pool → `CollectLiveUnitEffects`. Combat ratings use `ResolveCombatRating`: the fight's value stat times its `Attack` / `Defense` multiplier, with `MoraleCalculator::CombatMultiplier` at `CombatMoraleLevel` (stated `morale_rank` plus `morale_extra`; defense clamped to `[defense_floor_index, MaxLevel]`) as one more geometric factor. The multiplier is `1 + (combatLevel - baseline_index) * percent_per_level / 100` from `morale_levels.json`, so morale never sums with a percent bonus. Named rows keep `promotion_eligibility_chance`, `promotion_success_chance`, and `planet_pearls` only. `EffectContext_t::combatRole` enables `IsInCombat` (riot rank penalty) and `IsDefending` (SE +2/+3 defend-in-base extra and attack-only Crèche extras via `"value": false`). The rank word is `EffectiveMoraleLevel` with `combatRole` None. Post-combat promotion (`CombatPromotionChance`) seeds eligibility from root `promotion_eligibility_formula` (Lua: `our_strength`, `their_strength`) and success from 1.0, stacks `promotion_eligibility_chance` × `promotion_success_chance` from the **effective** morale level row plus live unit effects including standing-tile unit-domain `ThisTile` modifiers (Base MinClamp 1 on eligibility for defending when `EffectiveMorale` ≤ Hardened), then one continuous roll; success still `SetXp(xp + 1)`. |
+| `FactionUnits` | live units of the faction (home-base narrowed when conditions use `OriginBaseIsHomeBase`; in-square extras use `SubjectIsOnOriginBase`) | faction pool → `CollectLiveUnitEffects`. Combat ratings use `ResolveCombatRating`: the fight's value stat times its `Attack` / `Defense` multiplier and, on defense, each `combat.json` `defense_slots` entry that kind of fight reads (`DefenseRatingStats`; shipping declares `fortification`, read only by conventional fights). A `defense` modifier with a `slot` resolves only in that slot's own stack, never in the plain `Defense` stack, with `MoraleCalculator::CombatMultiplier` at `CombatMoraleLevel` (stated `morale_rank` plus `morale_extra`; defense clamped to `[defense_floor_index, MaxLevel]`) as one more geometric factor. The multiplier is `1 + (combatLevel - baseline_index) * percent_per_level / 100` from `morale_levels.json`, so morale never sums with a percent bonus. Named rows keep `promotion_eligibility_chance`, `promotion_success_chance`, and `planet_pearls` only. `EffectContext_t::combatRole` enables `IsInCombat` (riot rank penalty) and `IsDefending` (SE +2/+3 defend-in-base extra and attack-only Crèche extras via `"value": false`). The rank word is `EffectiveMoraleLevel` with `combatRole` None. Post-combat promotion (`CombatPromotionChance`) seeds eligibility from root `promotion_eligibility_formula` (Lua: `our_strength`, `their_strength`) and success from 1.0, stacks `promotion_eligibility_chance` × `promotion_success_chance` from the **effective** morale level row plus live unit effects including standing-tile unit-domain `ThisTile` modifiers (Base MinClamp 1 on eligibility for defending when `EffectiveMorale` ≤ Hardened), then one continuous roll; success still `SetXp(xp + 1)`. |
 | `ProducedAtThisBase` | units built at the originating base | stamped onto the unit at construction (`Unit::GetProductionGrants`); collected by `CollectLiveUnitEffects` from the unit, not by live pool origin matching. Permanent non-XP train grants. Starting XP (Command Center, Aerospace, prototype) uses triggered `GrantXp` on `on_unit_produced_effects` instead. |
 | `ThisUnit` | the unit itself | `CollectUnitEffects` (design components) |
 | `ThisPop` | the pop itself | `Pop::ApplyTileMultipliers` (per worked-tile Add / %) |
@@ -141,8 +141,14 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 - **Faction-lane scopes on improvements** (e.g. a monolith granting `FactionGlobal` energy):
   improvements will be faction-owned by territory, which isn't implemented yet. The config
   loads; no collector picks it up until territory lands.
-- **`ThisTile` on buildings**: use a `selector: BaseTile` `StatModifier` instead (already
-  supported) — a building-projected tile aura would need a base-tile anchor.
+- **`ThisTile` on buildings**: `CollectAreaEffects` appends the `ThisTile` effects of a base's
+  constructed and granted (`GrantBuilding`) buildings from the base tile (radius /
+  `min_radius` like improvements), stamped with the base owner; a building both built and
+  granted projects once. The base comes from the bound `IWorldEffectsSource::FindBaseAt`, so
+  nothing projects while no session is bound or while `GameState` tears its bases down.
+  `BuildingManager::CollectEffects` excludes the tile lane so those effects never enter the
+  faction pool. Base-domain yield on the center square still uses a `selector: BaseTile`
+  `StatModifier` on `ThisBase`.
 
 ### EffectConfig_t
 - **Header**: `EffectConfig.h` holds `EffectConfig_t` / `EffectVariant_t` / effect structs;
@@ -206,7 +212,13 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
     multiplier that applies in both kinds. `ConventionalAttack` / `ConventionalDefense`
     (Additive) hold weapon and armor values and conventional-only bonuses; `PsiAttack` /
     `PsiDefense` (Additive) hold the psi values from `combat.json` and psi-only bonuses;
-    `Attack` / `Defense` (PureMultiplier) hold bonuses for both kinds. `AttackHandicap`
+    `Attack` / `Defense` (PureMultiplier) hold bonuses for both kinds. A `defense` modifier
+    may name a `slot` from `combat.json` `defense_slots` (`CombatConfig_t::defenseSlotsByKind`):
+    it then resolves in that slot's own stack, which only the listed kinds of fight read
+    (`DefenseRatingStats`), so a `Fallback` or clamp there sees only that slot. A slot declared
+    `"combine": "Largest"` keeps only its largest single contribution (`ApplyLargestModifier`):
+    each resolves alone from the seed, a `Fallback` competes only when nothing else
+    contributes, and clamps bound the winner. `AttackHandicap`
     (PureMultiplier) is the difficulty handicap on the attacker's whole-number strength,
     applied after the partial-move penalty. The parser rejects `Add` on any PureMultiplier
     stat, so a flat value cannot land on a multiplier. `ConventionalDamage` / `PsiDamage`
@@ -992,6 +1004,7 @@ grants fewer units and reports the real count rather than throwing.
 - **Location**: `include/game/effects/EffectConfigParser.h` / `src/game/effects/EffectConfigParser.cpp`.
 - **Responsibilities**:
   - `ParseModifierOp`, `ParseEffectScope` — the canonical string&lt;-&gt;enum mappings for effect-config enums. These previously existed as separate, drifting copies in `BuildingConfigParser` and `UnitComponentConfigParser`. The snake_case id maps (`ParseStatId`, `ParseRuleFlagId`, `ParseSocialRatingId`) live next to their enums in `EffectEnums.h` at `ac` scope, per the one-map-next-to-the-enum guideline.
+  - `Fallback` is a geometric factor that applies only when the stack has no Add, AddPercent or MultiplyGeometric contribution; clamps still bound it. It scales the seed, so the parser rejects it on an Additive stat (seed 0) and on `defense` without a slot (morale always fills that stack). It gives a slot its default: the Base improvement's `defense` Fallback 1.25 in slot `fortification` holds until a facility or Bunker fills the slot.
   - `ModifierOp_t` includes clamping ops: `MaxClamp` and `MinClamp`. `ParseModifierOp` accepts these names; `ApplyModifierStack` applies clamps after the Add / AddPercent / MultiplyGeometric math so clamps bound the final resolved value. The tightest clamp of each kind wins; when a MinClamp and a MaxClamp cross, MinClamp wins. **Only resolve sites that route through `ApplyModifierStack` honour clamps** — the deliberately Add-only collectors (`ResolveAdditiveStat` over a `UnitDesign`, the `MoraleRules` additive pass, stockpile `MineralsConverted`) drop them silently.
   - `ParseFactionFilter` accepts a `PlayerType` kind: `{ "kind": "PlayerType", "type": "Player" | "AI" }`, parsed case-insensitively through `magic_enum`. Two different resolve paths read it: `FactionFilterMatchesOwner` (owner-side — does this effect apply to the faction that *owns* the pool, used when difficulty injects its effect list) and `FactionFilterCoversTarget` (target-side — does this effect reach that *other* faction, used for cross-faction dispatch such as infiltration). Neither substitutes for the other.
   - `ParseNumber` — reads a JSON field as either a number or a numeric string (used for optional numeric params with a caller-supplied default).
@@ -1097,7 +1110,10 @@ grants fewer units and reports the real count rather than throwing.
 - A live `Unit`'s stat getters resolve `ThisUnit` component effects **plus** the faction
   pool's `FactionUnits` effects; `UnitDesign`'s getters stay intrinsic (designer UI).
 - A stat with a flat bonus (e.g. a weapon's base attack) is a `StatModifier` effect with `op: "Add"`. A percentage bonus uses `op: "AddPercent"` (amount in percent points, e.g. `25`); a compounding factor uses `op: "MultiplyGeometric"`.
-- A situational combat bonus (e.g. "+25% attack into Forest" or "+25% attack vs a Base") is a `StatModifier` on `attack`/`defense` with `op: "MultiplyGeometric"`, `amount: 1.25`, plus a `condition` (e.g. `{ "kind": "TargetTileHas", "value": "Forest" }`). A bonus for one kind of fight goes on that kind's value stat instead (`conventional_defense` for Rocky). Combat resolves it in context through `ResolveCombatRating`; a context-free read does not gain it.
+- A situational combat bonus (e.g. "+25% attack into Forest" or "+25% attack vs a Base") is a `StatModifier` on `attack`/`defense` with `op: "MultiplyGeometric"`, `amount: 1.25`, plus a `condition` (e.g. `{ "kind": "TargetTileHas", "value": "Forest" }`). A bonus for one kind of fight goes on that kind's value stat instead (`psi_defense` for the Base's psi bonus). A bonus that belongs to one step of SMAC's defense goes in that step's `defense` slot (`"slot": "<id>"`; declared in `combat.json` `defense_slots` with the kinds of fight that read it; validated by `ValidateEffectReferences`):
+  - `terrain` (conventional): Rocky, Fungus (2 for a native defender off Rocky) and Forest (against a land attacker) are `MultiplyGeometric` in a `"combine": "Largest"` slot, so only the best applies. Whatever cancels terrain is a `MaxClamp` 1 in the slot from its own source: `Base`, `Water`, `Fungus` against a native attacker, and `combat.json` for an air or orbital defender.
+  - `fortification` (conventional): Perimeter / Naval Yard / Aerospace / Tachyon and Bunker `AddPercent`, the Base intrinsic `Fallback`.
+  - `sensor` (both kinds): a `"combine": "Largest"` slot, so overlapping Sensors give one bonus. Combat resolves it in context through `ResolveCombatRating`; a context-free read does not gain it.
 - A unit rule flag (e.g. `flight`) is a `RuleFlag` effect; flags that don't apply are simply omitted rather than written as `false`.
 
 ### Pop Type Effects
@@ -1163,10 +1179,10 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
 - **Unit auras**: unit components can carry `ThisTile`-scoped effects with a radius (e.g. a sensor pod granting `+25%` defense within 2 tiles). `CollectAreaEffects` scans `WorldMap::GetUnitsOnTile` over the aura radius — including units standing on the resolved tile itself — so the aura follows the unit as it moves. Each collected aura stamps `ActiveEffect_t::ownerFaction` from the projecting unit's faction (same attribution as territory-owned improvements). Reach is authored with `SubjectIsOwner` / `SubjectIsForeign`; Detect additionally requires a stamped owner and fails closed without one. `TileEffectsContext` takes the `UnitComponentRegistry` at construction to size its scan bound.
 - **`CollectAreaEffects(tile, worldMap, registry)`**: the single function powering the radius-aware resolvers (yield, moisture recompute, and the standing unit's tile effects). `WorldMap` is needed to look up neighboring tiles and units.
 - **Tile defense**: `CollectLiveUnitEffects` appends the Unit-domain stat modifiers of
-  `CollectAreaEffects(unit tile)`, so Rocky, Fungus, Bunker, Base and a Sensor within 2 tiles
-  reach the defender as `conventional_defense` / `defense` multipliers. Their conditions read
-  the fight: `DefenderDomain`, `AttackerDomain`, `AttackerIsNativeLife`,
-  `DefenderIsNativeLife`, `TargetTileHas`, and for Sensor `IsNativeLifeFaction` false with
+  `CollectAreaEffects(unit tile)`, so Rocky, Fungus, Forest, Bunker, Base and a Sensor within
+  2 tiles reach the defender in their `defense` slots. Their conditions read the fight:
+  `DefenderDomain`, `AttackerDomain`, `AttackerIsNativeLife`, `DefenderIsNativeLife`,
+  `TargetTileHas`, and for Sensor `IsNativeLifeFaction` false with
   `AnyOf`[`SubjectIsOwner`, `EffectIsUnowned`] against the territory stamp.
 - **Energy is never intrinsic**: every resource seeds at `0` per tile, and elevation energy is
   entirely the solar collector's. `SolarCollector` declares one effect — `energy`,
@@ -1278,13 +1294,15 @@ improvement entry covering any sea tile (elevation below `ocean_level_meters` in
 `config/map_rules.json`), and it **stacks** with the depth
 band rather than replacing it: a submerged tile carries `Water` plus exactly one of `Ocean` /
 `OceanShelf` (split at `ocean_shelf_meters`), in that order. Put rules shared by all sea
-tiles on `Water` — including `suppress_yield_sources` for rockiness, moisture, river, and
-`@resource_bonus` (sea tiles still carry those landform features, but they must not contribute
-yield). Shelf-only rules stay on `OceanShelf` (+1 nutrient); deep `Ocean` adds nothing and is
-excluded by sea terraform. `Ocean` lists `Fungus` in `suppress_terrain`: as in SMAC, fungus in
-deeper ocean lies dormant. The tile keeps it (`HasTerrainFeature`), but `HasFeature`,
-`GetTerrainFeatures` and `ForEachOccupant` leave it out, so its effects, its move cost, every
-rule and the renderer see an empty tile until terraforming raises the floor to the shelf. Do not suppress `@landform` from `Water`: that tag includes
+tiles on `Water`. Shelf-only rules stay on `OceanShelf` (+1 nutrient); deep `Ocean` adds nothing
+and is excluded by sea terraform. `suppress_terrain` keeps terrain on the tile but dormant while
+the listing terrain is present: `HasFeature`, `GetTerrainFeatures` and `ForEachOccupant` leave
+it out, so its effects, its move cost, every rule and the renderer see a tile without it, and it
+returns when the condition clears. Only intrinsic terrain suppresses. `Water` lists the land
+features (rockiness, moisture, `River`): a sunken tile keeps them stored (`GetRockiness`), so
+raising it restores them, but at sea Rocky neither defends, slows ships nor refuses a base.
+`Ocean` lists `Fungus`: as in SMAC, fungus in deeper ocean lies dormant (`HasTerrainFeature`
+still sees it) until terraforming raises the floor to the shelf. Do not suppress `@landform` from `Water`: that tag includes
 `OceanShelf` and would erase the shelf nutrient. `AttackerIsEmbarked` is available for
 mod-scoped override conditions.
 

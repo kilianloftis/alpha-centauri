@@ -517,6 +517,41 @@ void RequireScalingOpOnMultiplier_(const StatModifierEffect_t& rModifier)
     }
 }
 
+// A Fallback scales the seed while nothing else fills the stack, so it needs a stack it can
+// be alone in: an Additive stat's seed is 0, and combat morale always fills defense's own stack.
+void RequireReachableFallback_(const StatModifierEffect_t& rModifier)
+{
+    if (rModifier.op != ModifierOp_t::Fallback)
+    {
+        return;
+    }
+    if (KindFor(rModifier.stat) == StatKind_t::Additive)
+    {
+        throw std::runtime_error(
+            "StatModifier op Fallback scales the stat's seed, which is 0 on an additive stat");
+    }
+    if (rModifier.stat == StatId_t::Defense && rModifier.slot.empty())
+    {
+        throw std::runtime_error(
+            "StatModifier op Fallback on defense needs a slot: morale fills defense's own stack");
+    }
+}
+
+// The slot id is checked against combat.json by the reference validator.
+std::string ParseDefenseSlot_(const ConfigReader& rParams, const StatModifierEffect_t& rModifier)
+{
+    if (!rParams.Has("slot"))
+    {
+        return "";
+    }
+    if (rModifier.stat != StatId_t::Defense)
+    {
+        throw std::runtime_error("StatModifier 'slot' is only valid on defense, got '"
+                                 + rParams.StringOr("stat", "") + "'");
+    }
+    return rParams.NonEmptyString("slot");
+}
+
 void ParseStatModifier_(const ConfigReader& rParams, EffectConfig_t& rEffect)
 {
     StatModifierEffect_t statModifier;
@@ -539,6 +574,8 @@ void ParseStatModifier_(const ConfigReader& rParams, EffectConfig_t& rEffect)
     statModifier.bypassClamp = ParseBypassClamp_(rParams, statModifier);
     RequireBombardFloorOp_(statModifier);
     RequireScalingOpOnMultiplier_(statModifier);
+    statModifier.slot = ParseDefenseSlot_(rParams, statModifier);
+    RequireReachableFallback_(statModifier);
     rEffect.effect = statModifier;
 }
 

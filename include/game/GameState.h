@@ -141,7 +141,7 @@ public:
 
     // Base whose center tile is rTile, or nullptr if none.
     BaseManager* FindBaseAt(const Tile& rTile) override;
-    const BaseManager* FindBaseAt(const Tile& rTile) const;
+    const BaseManager* FindBaseAt(const Tile& rTile) const override;
     // Any faction's base closest to rTile by TabletopDiagonalDistance (the binary's base_find
     // and vector_dist), then the lower BaseId. nullptr when no base exists.
     const BaseManager* FindNearestBase(const Tile& rTile) const;

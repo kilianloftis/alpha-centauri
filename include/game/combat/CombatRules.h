@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/combat/CombatConfig.h"
 #include "game/effects/ActiveEffect.h"
 
 namespace ac
@@ -43,9 +44,10 @@ struct CombatStrength_t
 
 // What one kind of fight reads: the value stats each side rates on, the damage a round's winner
 // deals, and the multiplier the loser takes it at. Both kinds share the Attack / Defense
-// multipliers.
+// multipliers; which defense slots each kind reads is combat.json's (DefenseRatingStats).
 struct CombatKind_t
 {
+    CombatKindId_t id;
     CombatRatingStats_t attack;
     CombatRatingStats_t defense;
     StatId_t damage;
@@ -53,18 +55,23 @@ struct CombatKind_t
 };
 
 inline constexpr CombatKind_t k_ConventionalCombat{
-    {StatId_t::ConventionalAttack, StatId_t::Attack},
-    {StatId_t::ConventionalDefense, StatId_t::Defense},
+    CombatKindId_t::Conventional,
+    {StatId_t::ConventionalAttack, StatId_t::Attack, {}},
+    {StatId_t::ConventionalDefense, StatId_t::Defense, {}},
     StatId_t::ConventionalDamage,
     StatId_t::ConventionalDamageTaken,
 };
 
 inline constexpr CombatKind_t k_PsiCombat{
-    {StatId_t::PsiAttack, StatId_t::Attack},
-    {StatId_t::PsiDefense, StatId_t::Defense},
+    CombatKindId_t::Psi,
+    {StatId_t::PsiAttack, StatId_t::Attack, {}},
+    {StatId_t::PsiDefense, StatId_t::Defense, {}},
     StatId_t::PsiDamage,
     StatId_t::PsiDamageTaken,
 };
+
+// rKind's defense stats with the defense slots combat.json gives that kind of fight.
+CombatRatingStats_t DefenseRatingStats(const CombatKind_t& rKind);
 
 // The fight is psi by engagement: Standard when the attacker forces psi combat or the defender
 // forces psi defense; ArtilleryStrike when the attacker forces psi combat; ArtilleryDuel when

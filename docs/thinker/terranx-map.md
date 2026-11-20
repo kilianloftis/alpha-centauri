@@ -404,10 +404,18 @@ means an integer multiply.
    gives 3; else fungus (338) gives 3, or 4 for a native defender; else forest (291) gives
    3 against a land attacker.
 7. Base intrinsic (332), truncated, only on a base with no facility bonus and not against
-   Blink Displacer.
+   Blink Displacer (`M == 2` and no `ABL_BLINK_DISPLACER` via `has_abil` `0x5BF1F0`,
+   `0x50350F`–`0x503548`).
 8. `× M`, exact: one of base facility (Perimeter / Naval Yard / Aerospace by attacker
    triad, Tachyon), else Bunker 3 (not against air), else Open Ground 3 (artillery, no
-   base, not rocky / forest / fungus; `0x503713`–`0x50377A`).
+   base, not rocky / forest / fungus; `0x503713`–`0x50377A`). M starts at 2
+   (`0x5032A8`); Bunker sets 3 unless the attacker is air (`0x5032AF`–`0x5032EF`); a base
+   resets it to 2 (label 332, `0x503301`) and each matching facility adds 2 (Tachyon, label
+   357, at `0x503506`). Against Blink Displacer, M above 2 is clamped back to 2 and the line
+   reads "Base vs. Blink" (label 428, `0x5035BC`–`0x503601`). The base and non-base paths
+   both reach that clamp before the `× M` at `0x503780`, so Blink cancels Bunker as well as
+   the facilities. Open Ground sets its 3 after the clamp (`0x503773`), so Blink leaves it.
+   Thinker clamps only inside its base branch, so its Bunker keeps ×1.5 against Blink.
 9. When the defender's faction is not 0 (`0x503A1E`): Flechette, then Sensor (613) and GSP
    (1123), truncated. Sensor scans the 25 tiles within 2. A land sensor counts when its
    territory (`whose_territory` `0x4E3EF0`) is unowned or the defender's. An ocean sensor
@@ -416,7 +424,8 @@ means an integer multiply.
     Jammer (336), Tracking (337), truncated.
 
 An artillery duel (`CT_WEAPON_ONLY`) rates the defender with `get_basic_offense` and applies
-only Land Based Guns (435) or Altitude (576).
+only Land Based Guns (435) or Altitude (576). That branch (`combat_type & 2`,
+`0x502726`–`0x502A4C`) exits only to the end of the function, so steps 2–10 never run for it.
 
 **Psi offense** (`offense_proto` `0x5C1245`–`0x5C128A`): the Rules psi offense ratio (table at
 `0x94979C`) for the *opponent's* chassis triad, `× 8`; with no opponent, the land entry
@@ -958,6 +967,35 @@ replaces the formula.
 Spends `10 * upgrade_cost` × count for the faction path: set each matching `VEH.unit_id`,
 adjust morale ±1 when gaining/losing `ABL_TRAINED`, rewrite base queues from old→new, mark
 new prototyped / clear old `UNIT_ACTIVE` when custom. Does not rewrite HP/`damage_taken`.
+
+## Base squares and improvements
+
+### Terraform orders on a base (`Console_terraform` `0x4D3470`)
+
+Once a project passes the tech check (`terrain_avail` `0x5BAB40`, `0x4D37D7`), it reaches
+`0x4D38B3`: a tile with the base bit (`items & 1`) and an owner of 0–7 refuses with `#NOTBASE`
+("That function cannot be accomplished at a base.", `0x4D38FE`). No earlier branch jumps past
+that test; the only earlier jumps go to the exit at `0x4D4C81` after a refusal. A former
+therefore can start nothing on a base square, a Bunker included. The AI's `can_terraform`
+(`0x565320`) returns 0 for the same tile on entry (`0x56534F`–`0x56536E`).
+
+### Founding on an improvement (`Console_new_base` `0x4CF7C0`)
+
+The command's popups are `#NEEDCOLONISTS`, `#NOTINTRIAD`, `#FUNGUSDANGUS`, `#NOTONMONOLITH`,
+`#NOTONROCKY`, `#SIMULNO`, `#UNITMOVED`, `#BASETOONEAR` and `#BULLY`. Three refuse on what
+the tile holds:
+
+- `#FUNGUSDANGUS` ("Bases cannot be built in Xenofungus."): fungus (`items & 0x20`) at altitude
+  2 or higher (`0x4CF8A1`–`0x4CF8C1`).
+- `#NOTONMONOLITH`: a Monolith (`items & 0x2000`, `0x4CF8CF`–`0x4CF8E7`).
+- `#NOTONROCKY` ("Bases cannot be built in rocky areas."): rocky level 2 on land with no base
+  already there (`0x4CF91E`–`0x4CF950`).
+
+None tests the Bunker bit (`0x800`). `action_build` (`0x4C96E0`) changes only rockiness (`rocky_set` `0x591BC0`), and
+`base_init` writes only the base bit (`bit_set(x, y, 1, 1)` at `0x4E4BCE`) and its own
+visibility. A colony founded on a Bunker therefore keeps the Bunker under the base. Combat
+ignores it while the base stands, because a base resets M to 2 ("Combat strength and the round
+roll", step 8).
 
 ## Sea bases
 

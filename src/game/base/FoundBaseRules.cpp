@@ -4,8 +4,12 @@
 #include "game/GameState.h"
 #include "game/faction/Faction.h"
 #include "game/base/BaseManager.h"
+#include "game/effects/TileEffectsContext.h"
 #include "game/effects/TriggeredEffectRules.h"
+#include "game/map/ImprovementIds.h"
+#include "game/map/ImprovementRegistry.h"
 #include "game/map/MapUtils.h"
+#include "game/map/OccupantCoexistence.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
@@ -20,6 +24,12 @@ namespace ac
 
 namespace
 {
+
+const ImprovementConfig_t& BaseOccupant_()
+{
+    const ImprovementRegistry& rImprovements = CurrentGameState().GetTileEffects().GetImprovements();
+    return rImprovements.Get(std::string(ImprovementIds::k_Base));
+}
 
 std::vector<const BaseManager*> CollectAllBases_(const GameState& rGameState)
 {
@@ -85,7 +95,12 @@ bool CanFoundBaseAt(const Tile& rTile, FactionId_t founderFactionId,
     {
         return false;
     }
-    return true;
+    return ImprovementApplies(rTile, BaseOccupant_(), {});
+}
+
+std::vector<std::string> ImprovementsDestroyedByFounding(const Tile& rTile)
+{
+    return ImprovementsDisplacedBy(rTile, BaseOccupant_(), {});
 }
 
 bool CanFoundBase(const Unit& rUnit)

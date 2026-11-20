@@ -240,6 +240,87 @@ TEST_CASE("Sea fungus gives no defense bonus", "[effects][tile][defense]")
     CHECK(actest::ConventionalDefenseRating(defender, gun) == Approx(1.0));
 }
 
+TEST_CASE("Overlapping Sensors give one bonus in either kind of fight",
+          "[effects][tile][aura][defense]")
+{
+    actest::FactionFixture fixture;
+    Faction& owner = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    fixture.MakeFactionBase(owner, 8, 2);
+    const Unit& defender = fixture.MakeUnit(owner, 9, 9, k_ArmoredLand);
+    const Unit& attacker = fixture.MakeUnit(enemy, 0, 0, k_LandGun);
+    const double psiBaseline = actest::PsiDefenseRating(defender, attacker);
+
+    fixture.ctx.AddOccupantWithEffects(fixture.At(8, 8), "Sensor");
+    fixture.ctx.AddOccupantWithEffects(fixture.At(10, 10), "Sensor");
+    CHECK(actest::ConventionalDefenseRating(defender, attacker) == Approx(1.25));
+    CHECK(actest::PsiDefenseRating(defender, attacker) == Approx(psiBaseline * 1.25));
+}
+
+TEST_CASE("Forest defends x1.5 against a land attacker only", "[effects][tile][defense]")
+{
+    actest::FactionFixture fixture;
+    Faction& defending = fixture.MakeFaction();
+    Faction& attacking = fixture.MakeFaction();
+    Tile& tile = fixture.At(8, 8);
+    const Unit& defender = fixture.MakeUnit(defending, 8, 8, k_ArmoredLand);
+    const Unit& gun = fixture.MakeUnit(attacking, 0, 0, k_LandGun);
+    const Unit& flyer =
+        fixture.MakeUnit(attacking, 0, 2, {"test_flight_chassis", "test_weapon"});
+    const double psiBaseline = actest::PsiDefenseRating(defender, gun);
+
+    fixture.ctx.AddOccupantWithEffects(tile, "Forest");
+    CHECK(actest::ConventionalDefenseRating(defender, gun) == Approx(1.5));
+    CHECK(actest::ConventionalDefenseRating(defender, flyer) == Approx(1.0));
+    CHECK(actest::PsiDefenseRating(defender, gun) == Approx(psiBaseline));
+
+    SECTION("a base on the forest gives only its own bonus")
+    {
+        fixture.MakeFactionBase(defending, 8, 8);
+        CHECK(actest::ConventionalDefenseRating(defender, gun) == Approx(1.25));
+    }
+}
+
+TEST_CASE("Terrain gives its largest bonus, not the product", "[effects][tile][defense]")
+{
+    actest::FactionFixture fixture;
+    Faction& defending = fixture.MakeFaction();
+    Faction& attacking = fixture.MakeFaction();
+    Tile& tile = fixture.At(8, 8);
+    tile.SetRockiness(Rockiness_t::Rocky);
+    fixture.ctx.AddOccupantWithEffects(tile, "Fungus");
+    const Unit& gun = fixture.MakeUnit(attacking, 0, 0, k_LandGun);
+
+    SECTION("a native defender on rocky fungus gets Rocky's x1.5, not Fungus's x2")
+    {
+        const Unit& native =
+            fixture.MakeUnit(defending, 8, 8, {"native_life_chassis", "test_weak_armor"});
+        CHECK(actest::ConventionalDefenseRating(native, gun) == Approx(1.5));
+    }
+
+    SECTION("terrain and a Bunker multiply")
+    {
+        fixture.ctx.AddOccupantWithEffects(fixture.At(8, 8), "Bunker");
+        const Unit& defender = fixture.MakeUnit(defending, 8, 8, k_ArmoredLand);
+        CHECK(actest::ConventionalDefenseRating(defender, gun) == Approx(2.25));
+    }
+}
+
+TEST_CASE("A rocky sea floor gives no defense bonus", "[effects][tile][defense]")
+{
+    actest::FactionFixture fixture;
+    Faction& defending = fixture.MakeFaction();
+    Faction& attacking = fixture.MakeFaction();
+    Tile& sea = fixture.At(8, 8);
+    sea.SetElevation(-100);
+    sea.SetRockiness(Rockiness_t::Rocky);
+    const Unit& defender =
+        fixture.MakeUnit(defending, 8, 8, {"test_sea_chassis", "test_weak_armor"});
+    const Unit& gun = fixture.MakeUnit(attacking, 0, 0, k_LandGun);
+
+    CHECK(actest::ConventionalDefenseRating(defender, gun) == Approx(1.0));
+}
+
 TEST_CASE("Bunker defends against land and sea attackers, not air", "[effects][tile][defense]")
 {
     actest::FactionFixture fixture;

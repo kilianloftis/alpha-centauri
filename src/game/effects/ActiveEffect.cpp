@@ -530,6 +530,8 @@ double ApplyModifierStack(double base, const std::vector<std::pair<double, Modif
     double addTotal = base;
     double arithmeticFactor = 1.0;
     double geometricFactor = 1.0;
+    double fallbackFactor = 1.0;
+    bool bFilled = false;
     // Infinite bounds are the no-clamp identity, so no "was one present" flag is needed.
     double maxClamp = std::numeric_limits<double>::infinity();
     double minClamp = -std::numeric_limits<double>::infinity();
@@ -537,16 +539,50 @@ double ApplyModifierStack(double base, const std::vector<std::pair<double, Modif
     {
         switch (op)
         {
-            case ModifierOp_t::Add:               addTotal += amount; break;
-            case ModifierOp_t::AddPercent:        arithmeticFactor += amount / 100.0; break;
-            case ModifierOp_t::MultiplyGeometric: geometricFactor *= amount; break;
+            case ModifierOp_t::Add:               addTotal += amount; bFilled = true; break;
+            case ModifierOp_t::AddPercent:        arithmeticFactor += amount / 100.0; bFilled = true; break;
+            case ModifierOp_t::MultiplyGeometric: geometricFactor *= amount; bFilled = true; break;
             case ModifierOp_t::MaxClamp:          maxClamp = std::min(maxClamp, amount); break;
             case ModifierOp_t::MinClamp:          minClamp = std::max(minClamp, amount); break;
+            case ModifierOp_t::Fallback:          fallbackFactor *= amount; break;
         }
+    }
+    if (!bFilled)
+    {
+        geometricFactor = fallbackFactor;
     }
     const double result = addTotal * arithmeticFactor * geometricFactor;
     // MinClamp applied last, so it wins when a MinClamp and a MaxClamp cross.
     return std::max(std::min(result, maxClamp), minClamp);
+}
+
+double ApplyLargestModifier(double base,
+                            const std::vector<std::pair<double, ModifierOp_t>>& contributions)
+{
+    const auto isClamp = [](ModifierOp_t op) {
+        return op == ModifierOp_t::MaxClamp || op == ModifierOp_t::MinClamp;
+    };
+    const bool bFilled = std::ranges::any_of(contributions, [&](const auto& rContribution) {
+        return !isClamp(rContribution.second) && rContribution.second != ModifierOp_t::Fallback;
+    });
+    std::optional<double> largest;
+    std::vector<std::pair<double, ModifierOp_t>> clamps;
+    for (const auto& rContribution : contributions)
+    {
+        const ModifierOp_t op = rContribution.second;
+        if (isClamp(op))
+        {
+            clamps.push_back(rContribution);
+            continue;
+        }
+        if (bFilled && op == ModifierOp_t::Fallback)
+        {
+            continue;
+        }
+        const double alone = ApplyModifierStack(base, {rContribution});
+        largest = std::max(largest.value_or(alone), alone);
+    }
+    return ApplyModifierStack(largest.value_or(base), clamps);
 }
 
 namespace
@@ -1225,6 +1261,33 @@ double ResolveUnitMultiplicative_(const UnitEffects_t& rUnitEffects, StatId_t st
     return ApplyModifierStack(baseValue, contributions);
 }
 
+// One slot of statId, resolved apart from the stat's own stack from the stat's seed.
+double ResolveUnitSlot_(const UnitEffects_t& rUnitEffects, StatId_t statId,
+                        const StatSlot_t& rSlot, const EffectContext_t& rCtx)
+{
+    const EffectContext_t ctx = UnitSubjectContext(rUnitEffects.pUnit, rCtx);
+    auto matching = rUnitEffects.effects
+        | std::views::filter([&](const ActiveEffect_t& rEffect) {
+              return StatModifierMatchesSlotInContext(rEffect, statId, rSlot.id, ctx);
+          });
+    const StatBreakdown_t breakdown = ResolveStatModifiers(matching, SeedFor(statId), &ctx);
+    switch (rSlot.combine)
+    {
+        case SlotCombine_t::Stack:
+            return breakdown.total;
+        case SlotCombine_t::Largest:
+        {
+            std::vector<std::pair<double, ModifierOp_t>> contributions;
+            for (const StatBreakdown_t::Contribution_t& rContribution : breakdown.contributions)
+            {
+                contributions.emplace_back(rContribution.amount, rContribution.op);
+            }
+            return ApplyLargestModifier(SeedFor(statId), contributions);
+        }
+    }
+    return breakdown.total;
+}
+
 // A live unit's effects plus extra ThisUnit configs (planet_pearls rows or the combat
 // morale multiplier), as one Unit-domain bundle.
 UnitEffects_t LiveUnitEffectsWithMorale_(const Unit& rUnit,
@@ -1265,7 +1328,12 @@ double ResolveCombatRating(const Unit& rUnit, CombatRatingStats_t stats,
     const double value = ResolveUnitStat(effects, stats.value, SeedFor(stats.value), &rCtx);
     const double multiplier =
         ResolveUnitStat(effects, stats.multiplier, SeedFor(stats.multiplier), &rCtx);
-    return value * multiplier;
+    double rating = value * multiplier;
+    for (const StatSlot_t& rSlot : stats.slots)
+    {
+        rating *= ResolveUnitSlot_(effects, stats.multiplier, rSlot, rCtx);
+    }
+    return rating;
 }
 
 namespace

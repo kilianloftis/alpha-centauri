@@ -348,7 +348,6 @@
   {
     "id": "Base",
     "name": "Base",
-    "domain": "land",
     "effects": [
       {
         "type": "StatModifier",

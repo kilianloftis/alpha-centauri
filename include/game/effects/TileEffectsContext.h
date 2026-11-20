@@ -12,6 +12,7 @@
 namespace ac
 {
 
+class BuildingRegistry;
 class ImprovementRegistry;
 class IWorldEffectsSource;
 struct MoistureDecorationConfig_t;
@@ -28,10 +29,12 @@ struct InteractionGridsConfig_t;
 class TileEffectsContext : public TileChangeListener
 {
 public:
-    // pUnitComponents sizes the aura scan; nullptr if units never project auras. rYieldRules,
-    // rInteractionGrids, rMoisture and rTileInterceptDeploys must outlive this.
+    // pUnitComponents / pBuildings size the aura scan; nullptr when that source never
+    // projects ThisTile auras. rYieldRules, rInteractionGrids, rMoisture and
+    // rTileInterceptDeploys must outlive this.
     TileEffectsContext(WorldMap& rWorldMap, const ImprovementRegistry& rImprovements,
                        const UnitComponentRegistry* pUnitComponents,
+                       const BuildingRegistry* pBuildings,
                        const TileYieldRulesConfig_t& rYieldRules,
                        const InteractionGridsConfig_t& rInteractionGrids,
                        const MoistureDecorationConfig_t& rMoisture,
@@ -105,7 +108,7 @@ private:
     const TileYieldRulesConfig_t& m_rYieldRules;
     const InteractionGridsConfig_t& m_rInteractionGrids;
     const MoistureDecorationConfig_t& m_rMoisture;
-    // Max ThisTile-scoped effect radius across improvement configs and unit components;
+    // Max ThisTile-scoped effect radius across improvements, unit components, and buildings;
     // bounds the aura scan. Cached in the constructor.
     int m_maxRadius;
     IWorldEffectsSource* m_pWorldEffects = nullptr;

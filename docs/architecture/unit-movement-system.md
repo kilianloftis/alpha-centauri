@@ -43,7 +43,7 @@ graph TD
     end
 
     subgraph Combat
-        CombatRules[CombatRules<br/>roll pools, round outcome,<br/>strike HP floor, odds]
+        CombatRules[CombatRules<br/>roll pools, round outcome,<br/>strike HP floor, odds,<br/>defense slots per kind]
         CollateralRules[CollateralRules<br/>collateral plan,<br/>unprotected non-combatants]
         CollateralMutations[CollateralMutations<br/>applies the collateral plan]
         DisengageRules[DisengageRules<br/>eligibility, retreat tiles]
@@ -55,6 +55,7 @@ graph TD
         CaptureMutations --> CaptureRules
         CaptureMutations --> NativeRules
         CaptureRules --> CombatConfig
+        CombatRules --> CombatConfig
         CombatResolver --> CaptureRules
         CombatResolver --> CaptureMutations
         CollateralMutations --> CaptureMutations
