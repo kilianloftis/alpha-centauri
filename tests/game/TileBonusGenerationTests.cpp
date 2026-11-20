@@ -56,7 +56,7 @@ TEST_CASE("PlaceTileBonuses stamps frequency-weighted improvements on viable til
         }
         const bool hasBonus =
             pTile->HasFeature("Nutrients") || pTile->HasFeature("Minerals")
-            || pTile->HasImprovement("Energy") || pTile->HasFeature("Monolith");
+            || pTile->HasFeature("Energy") || pTile->HasFeature("Monolith");
         if (hasBonus)
         {
             ++bonusTiles;
@@ -100,7 +100,9 @@ TEST_CASE("PlaceTileBonuses stamps water tiles the bonus entry can occupy",
     int waterBonuses = 0;
     for (const auto& pTile : world.GetTiles())
     {
-        const bool hasBonus = pTile->HasFeature("Nutrients") || pTile->HasFeature("Monolith");
+        const bool hasBonus =
+            pTile->HasFeature("Nutrients") || pTile->HasFeature("Minerals")
+            || pTile->HasFeature("Energy") || pTile->HasFeature("Monolith");
         if (!hasBonus)
         {
             continue;

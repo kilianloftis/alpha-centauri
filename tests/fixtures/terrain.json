@@ -351,8 +351,7 @@
           "parameters": {
             "stat": "nutrients",
             "amount": 2,
-            "op": "Add",
-            "bypass_clamp": true
+            "op": "Add"
           }
         }
       ],
@@ -368,6 +367,44 @@
         },
         "overhang": 0.24
       }
+    },
+    {
+      "id": "Minerals",
+      "name": "Minerals",
+      "tags": [
+        "resource_bonus"
+      ],
+      "frequency": 10,
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "parameters": {
+            "stat": "minerals",
+            "amount": 2,
+            "op": "Add"
+          }
+        }
+      ]
+    },
+    {
+      "id": "Energy",
+      "name": "Energy",
+      "tags": [
+        "resource_bonus"
+      ],
+      "frequency": 10,
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "parameters": {
+            "stat": "energy",
+            "amount": 2,
+            "op": "Add"
+          }
+        }
+      ]
     },
     {
       "id": "Monolith",

@@ -14,12 +14,21 @@ using namespace ac;
 namespace
 {
 
-ActiveEffect_t ClampEffect_(actest::EffectPool& rPool, StatId_t stat, double max)
+ActiveEffect_t ClampEffect_(actest::EffectPool& rPool, StatId_t stat, double max,
+                            std::optional<Condition_t> condition = std::nullopt)
 {
     return actest::Active(
         rPool.StatMod(stat, max, ModifierOp_t::MaxClamp, EffectScope_t::FactionGlobal,
-                      actest::AnyTileSelector()),
+                      actest::AnyTileSelector(), std::move(condition)),
         "tile_yield_rules");
+}
+
+Condition_t NoNutrientCapExemption_()
+{
+    return AllOf_t{{
+        TargetTileHas_t{"Nutrients", false},
+        TargetTileHas_t{"Condenser", false},
+    }};
 }
 
 } // namespace
@@ -40,7 +49,7 @@ TEST_CASE("ResolveTileYield: absent MaxClamp leaves yield uncapped",
     CHECK(yield.potential.nutrients == 3);
 }
 
-TEST_CASE("ResolveTileYield: MaxClamp clamps the pre-bypass lane",
+TEST_CASE("ResolveTileYield: MaxClamp clamps when the tile has no exemption",
           "[resources][restrictions]")
 {
     actest::BaseFixture fixture;
@@ -57,7 +66,7 @@ TEST_CASE("ResolveTileYield: MaxClamp clamps the pre-bypass lane",
     CHECK(yield.potential.nutrients == 3);
 }
 
-TEST_CASE("ResolveTileYield: bypass_clamp bonuses bypass MaxClamp",
+TEST_CASE("ResolveTileYield: nutrient bonus lifts MaxClamp and stacks pre-cap",
           "[resources][restrictions]")
 {
     actest::BaseFixture fixture;
@@ -66,14 +75,35 @@ TEST_CASE("ResolveTileYield: bypass_clamp bonuses bypass MaxClamp",
     tile.SetBaseMoisture(Moisture_t::Wet);
     tile.SetMoisture(Moisture_t::Wet);
     fixture.ctx.AddOccupantWithEffects(tile, "Farm");
-    fixture.ctx.AddOccupantWithEffects(tile, "Nutrients"); // +2 after clamp
+    fixture.ctx.AddOccupantWithEffects(tile, "Nutrients");
 
     actest::EffectPool pool;
-    BaseEffects_t caps{base, {ClampEffect_(pool, StatId_t::Nutrients, 2)}};
+    BaseEffects_t caps{base,
+                       {ClampEffect_(pool, StatId_t::Nutrients, 2, NoNutrientCapExemption_())}};
     const TileYieldView_t yield = fixture.ctx.ResolveTileYield(tile, false, caps);
-    // min(Wet+Farm=3, 2) + Nutrients 2 = 4
-    CHECK(yield.effective.nutrients == 4);
+    // Wet+Farm+Nutrients = 5; bonus lifts the cap so the full total stands.
+    CHECK(yield.effective.nutrients == 5);
     CHECK(yield.potential.nutrients == 5);
+}
+
+TEST_CASE("ResolveTileYield: Condenser on the tile lifts the nutrient MaxClamp",
+          "[resources][restrictions]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(8, 2);
+    Tile& tile = fixture.At(8, 8);
+    tile.SetBaseMoisture(Moisture_t::Wet);
+    tile.SetMoisture(Moisture_t::Wet);
+    fixture.ctx.AddOccupantWithEffects(tile, "Farm");
+    fixture.ctx.AddOccupantWithEffects(tile, "Condenser");
+
+    actest::EffectPool pool;
+    BaseEffects_t caps{base,
+                       {ClampEffect_(pool, StatId_t::Nutrients, 2, NoNutrientCapExemption_())}};
+    const TileYieldView_t yield = fixture.ctx.ResolveTileYield(tile, false, caps);
+    // Fixture Condenser has no nutrient AddPercent; Wet+Farm=3 stays, uncapped (not 2).
+    CHECK(yield.effective.nutrients == 3);
+    CHECK(yield.potential.nutrients == 3);
 }
 
 TEST_CASE("Tile resource restrictions: production caps worked tiles but not flat base bonuses",
@@ -140,7 +170,7 @@ TEST_CASE("Preview yield on an unworked tile includes selector modifiers",
           == base.GetPreviewTileYield(farmTile).effective.nutrients);
 }
 
-TEST_CASE("Tile resource restrictions: resource-bonus improvements apply after MaxClamp",
+TEST_CASE("Tile resource restrictions: nutrient bonus lifts the worked-tile MaxClamp",
           "[resources][restrictions][bonus]")
 {
     actest::FactionFixture fixture;
@@ -151,11 +181,10 @@ TEST_CASE("Tile resource restrictions: resource-bonus improvements apply after M
     rich.SetBaseMoisture(Moisture_t::Wet);
     rich.SetMoisture(Moisture_t::Wet); // +2 nutrients
     fixture.ctx.AddOccupantWithEffects(rich, "Farm"); // +1
-    fixture.ctx.AddOccupantWithEffects(rich, "Nutrients"); // +2 after clamp
+    fixture.ctx.AddOccupantWithEffects(rich, "Nutrients"); // +2 pre-cap; lifts the clamp
 
     base.UserAssignBestAvailableWorker(&rich);
 
-    // min(Wet+Farm=3, 2) + Nutrients bonus 2 = 4
-    CHECK(base.GetWorkedTileYield(rich).effective.nutrients == 4);
-    CHECK(base.GetPreviewTileYield(rich).effective.nutrients == 4);
+    CHECK(base.GetWorkedTileYield(rich).effective.nutrients == 5);
+    CHECK(base.GetPreviewTileYield(rich).effective.nutrients == 5);
 }

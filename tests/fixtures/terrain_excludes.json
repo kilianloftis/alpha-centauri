@@ -229,8 +229,7 @@
           "parameters": {
             "stat": "nutrients",
             "amount": 2,
-            "op": "Add",
-            "bypass_clamp": true
+            "op": "Add"
           }
         }
       ]

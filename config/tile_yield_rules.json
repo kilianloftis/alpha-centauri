@@ -5,6 +5,13 @@
       "type": "StatModifier",
       "scope": "FactionGlobal",
       "removed_by_tech": "gene_splicing",
+      "condition": {
+        "kind": "AllOf",
+        "conditions": [
+          { "kind": "TargetTileHas", "value": "Nutrients", "present": false },
+          { "kind": "TargetTileHas", "value": "Condenser", "present": false }
+        ]
+      },
       "parameters": {
         "stat": "nutrients",
         "amount": 2,
@@ -16,6 +23,11 @@
       "type": "StatModifier",
       "scope": "FactionGlobal",
       "removed_by_tech": "ecological_engineering",
+      "condition": {
+        "kind": "TargetTileHas",
+        "value": "Minerals",
+        "present": false
+      },
       "parameters": {
         "stat": "minerals",
         "amount": 2,
@@ -27,6 +39,11 @@
       "type": "StatModifier",
       "scope": "FactionGlobal",
       "removed_by_tech": "environmental_economics",
+      "condition": {
+        "kind": "TargetTileHas",
+        "value": "Energy",
+        "present": false
+      },
       "parameters": {
         "stat": "energy",
         "amount": 2,
