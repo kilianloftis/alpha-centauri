@@ -51,8 +51,8 @@ TEST_CASE("Improvement coexistence is enforced in both directions", "[map][impro
     const ImprovementConfig_t& rMonolith = world.improvements.Get("Monolith");
     const ImprovementConfig_t& rNutrients = world.improvements.Get("Nutrients");
 
-    // Monolith excludes @resource_bonus; Nutrients (tagged resource_bonus) declares no excludes
-    // of its own. Only the Monolith side of the pair is written down.
+    // SMAC lets a resource bonus share a monolith tile; Monolith only excludes itself (and
+    // landmarks in shipping). Nutrients declares no excludes of its own.
     REQUIRE(rNutrients.excludes.empty());
 
     CHECK(CanBuildImprovement(rTile, rMonolith, {}, {}));
@@ -60,10 +60,8 @@ TEST_CASE("Improvement coexistence is enforced in both directions", "[map][impro
 
     rTile.AddTerrainFeature(rMonolith);
 
-    // Forward direction: Monolith excludes itself.
     CHECK_FALSE(CanBuildImprovement(rTile, rMonolith, {}, {}));
-    // Reverse direction: the incumbent's excludes bind the candidate too. This one used to pass.
-    CHECK_FALSE(CanBuildImprovement(rTile, rNutrients, {}, {}));
+    CHECK(CanBuildImprovement(rTile, rNutrients, {}, {}));
 }
 
 TEST_CASE("An intrinsic terrain feature excludes a candidate that does not exclude it back",

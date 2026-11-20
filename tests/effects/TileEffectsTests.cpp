@@ -1158,7 +1158,7 @@ TEST_CASE("Economy AnyTile energy skips fungus tiles via TargetTileHas present f
     CHECK(fixture.ctx.ResolveTileYield(clear, false, baseEffects).effective.energy == 1);
 }
 
-TEST_CASE("Monolith replaces tile yield with 2-2-2",
+TEST_CASE("Monolith replaces terrain yield, keeps river energy, and stacks resource bonuses",
           "[effects][tile][yield][monolith]")
 {
     actest::WorldFixture world;
@@ -1171,9 +1171,28 @@ TEST_CASE("Monolith replaces tile yield with 2-2-2",
     world.ctx.AddOccupantWithEffects(tile, "Monolith");
 
     const TileResources_t yield = world.ctx.ResolveTileYield(tile).effective;
-    CHECK(yield.nutrients == 2);
+    // Monolith 2 + Nutrients 2; landform/farm suppressed.
+    CHECK(yield.nutrients == 4);
     CHECK(yield.minerals == 2);
-    CHECK(yield.energy == 2);
+    // Monolith 2 + River 1; bare resolve has no faction MaxClamp.
+    CHECK(yield.energy == 3);
+}
+
+TEST_CASE("Minerals grants +1 with Mine and Road",
+          "[effects][tile][yield][mine]")
+{
+    actest::WorldFixture world;
+    Tile& withRoad = world.At(8, 8);
+    Tile& withoutRoad = world.At(9, 9);
+    world.ctx.AddOccupantWithEffects(withRoad, "Minerals");
+    world.ctx.AddOccupantWithEffects(withRoad, "Mine");
+    world.ctx.AddOccupantWithEffects(withRoad, "Road");
+    world.ctx.AddOccupantWithEffects(withoutRoad, "Minerals");
+    world.ctx.AddOccupantWithEffects(withoutRoad, "Mine");
+
+    // Fixture Mine +2; Minerals +2; Minerals' Mine+Road term +1.
+    CHECK(world.ctx.ResolveTileYield(withRoad).effective.minerals == 5);
+    CHECK(world.ctx.ResolveTileYield(withoutRoad).effective.minerals == 4);
 }
 
 TEST_CASE("TerraformSpreadGrowthAttempts matches SMAC alien_fauna formula",

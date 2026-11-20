@@ -428,6 +428,22 @@
             "amount": 1,
             "op": "Add"
           }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "condition": {
+            "kind": "AllOf",
+            "values": [
+              "Mine",
+              "Road"
+            ]
+          },
+          "parameters": {
+            "stat": "minerals",
+            "amount": 1,
+            "op": "Add"
+          }
         }
       ]
     },
@@ -495,6 +511,22 @@
         {
           "type": "StatModifier",
           "scope": "ThisTile",
+          "parameters": {
+            "stat": "minerals",
+            "amount": 1,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "condition": {
+            "kind": "AllOf",
+            "values": [
+              "Mine",
+              "Road"
+            ]
+          },
           "parameters": {
             "stat": "minerals",
             "amount": 1,
@@ -634,6 +666,22 @@
             "amount": 1,
             "op": "Add"
           }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "condition": {
+            "kind": "AllOf",
+            "values": [
+              "Mine",
+              "Road"
+            ]
+          },
+          "parameters": {
+            "stat": "minerals",
+            "amount": 1,
+            "op": "Add"
+          }
         }
       ]
     },
@@ -743,6 +791,22 @@
             "amount": 2,
             "op": "Add"
           }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "condition": {
+            "kind": "AllOf",
+            "values": [
+              "Mine",
+              "Road"
+            ]
+          },
+          "parameters": {
+            "stat": "minerals",
+            "amount": 1,
+            "op": "Add"
+          }
         }
       ],
       "art": {
@@ -797,22 +861,19 @@
     {
       "id": "Monolith",
       "name": "Monolith",
-      "description": "An alien monolith; tile yields are fixed at 2 nutrients, 2 minerals, and 2 energy. Investigating heals the unit and may grant experience (once per unit across all monoliths), with a chance the monolith vanishes.",
+      "description": "An alien monolith; base tile yields are 2 nutrients, 2 minerals, and 2 energy (resource bonuses still stack). Investigating heals the unit and may grant experience (once per unit across all monoliths), with a chance the monolith vanishes.",
       "tags": [
         "resource_bonus"
       ],
       "frequency": 3,
       "excludes": [
         "@landmark",
-        "@resource_bonus",
         "Monolith"
       ],
       "suppress_yield_sources": [
         "@landform",
-        "River",
         "@land_terraform",
-        "@sea_terraform",
-        "@resource_bonus"
+        "@sea_terraform"
       ],
       "effects": [
         {

@@ -384,6 +384,22 @@
             "amount": 2,
             "op": "Add"
           }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "condition": {
+            "kind": "AllOf",
+            "values": [
+              "Mine",
+              "Road"
+            ]
+          },
+          "parameters": {
+            "stat": "minerals",
+            "amount": 1,
+            "op": "Add"
+          }
         }
       ]
     },
@@ -414,15 +430,12 @@
       ],
       "frequency": 3,
       "excludes": [
-        "@resource_bonus",
         "Monolith"
       ],
       "suppress_yield_sources": [
         "@landform",
-        "River",
         "@land_terraform",
-        "SoilEnricher",
-        "@resource_bonus"
+        "SoilEnricher"
       ],
       "effects": [
         {
