@@ -699,6 +699,33 @@ struct ConditionEvaluator_
         return CompareSatisfied(level, rMorale.op, rMorale.value);
     }
 
+    bool operator()(const ResourceOutput_t& rOutput) const
+    {
+        if (!ctx.tileResourceOutput.has_value())
+        {
+            return false;
+        }
+        const TileResources_t& rProbe = *ctx.tileResourceOutput;
+        int live = 0;
+        if (rOutput.stat == StatId_t::Nutrients)
+        {
+            live = rProbe.nutrients;
+        }
+        else if (rOutput.stat == StatId_t::Minerals)
+        {
+            live = rProbe.minerals;
+        }
+        else if (rOutput.stat == StatId_t::Energy)
+        {
+            live = rProbe.energy;
+        }
+        else
+        {
+            return false;
+        }
+        return CompareSatisfied(live, rOutput.op, rOutput.value);
+    }
+
     bool operator()(const OriginBaseHasBuilding_t& rHas) const
     {
         if (pOriginBase == nullptr)
@@ -955,6 +982,7 @@ bool ConditionNeedsSituationalContext(const Condition_t& rCondition)
                                || std::is_same_v<T, InOwnTerritory_t>
                                || std::is_same_v<T, SocialRating_t>
                                || std::is_same_v<T, EffectiveMorale_t>
+                               || std::is_same_v<T, ResourceOutput_t>
                                || std::is_same_v<T, OriginBaseHasBuilding_t>
                                || std::is_same_v<T, AttackerIsEmbarked_t>
                                || std::is_same_v<T, HasAirdroppedThisTurn_t>
@@ -979,6 +1007,35 @@ bool ConditionNeedsSituationalContext(const Condition_t& rCondition)
             else
             {
                 static_assert(k_AlwaysFalse<T>, "Unhandled Condition_t alternative");
+            }
+        },
+        rCondition.AsVariant());
+}
+
+bool ConditionDependsOnResourceOutput(const Condition_t& rCondition)
+{
+    return std::visit(
+        [](const auto& rAlt) -> bool
+        {
+            using T = std::decay_t<decltype(rAlt)>;
+            if constexpr (std::is_same_v<T, ResourceOutput_t>)
+            {
+                return true;
+            }
+            else if constexpr (std::is_same_v<T, AllOf_t> || std::is_same_v<T, AnyOf_t>)
+            {
+                for (const Condition_t& rNested : rAlt.conditions)
+                {
+                    if (ConditionDependsOnResourceOutput(rNested))
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            else
+            {
+                return false;
             }
         },
         rCondition.AsVariant());

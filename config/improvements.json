@@ -313,6 +313,12 @@
       {
         "type": "StatModifier",
         "scope": "ThisTile",
+        "condition": {
+          "kind": "ResourceOutput",
+          "stat": "nutrients",
+          "op": "Gt",
+          "value": 1
+        },
         "parameters": {
           "stat": "nutrients",
           "amount": -1,
@@ -978,6 +984,12 @@
       {
         "type": "StatModifier",
         "scope": "ThisTile",
+        "condition": {
+          "kind": "ResourceOutput",
+          "stat": "nutrients",
+          "op": "Gt",
+          "value": 1
+        },
         "parameters": {
           "stat": "nutrients",
           "amount": -1,

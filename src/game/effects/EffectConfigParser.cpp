@@ -1109,7 +1109,7 @@ Condition_t ParseSocialRatingCondition_(const nlohmann::json& rJson)
     const auto op = magic_enum::enum_cast<CompareOp_t>(rJson.value("op", ""));
     if (!op.has_value())
     {
-        throw std::runtime_error("SocialRating condition 'op' must be Eq, Le, or Ge");
+        throw std::runtime_error("SocialRating condition 'op' must be Eq, Le, Ge, Gt, or Lt");
     }
     if (!rJson.contains("value") || !rJson.at("value").is_number_integer())
     {
@@ -1123,13 +1123,34 @@ Condition_t ParseEffectiveMoraleCondition_(const nlohmann::json& rJson)
     const auto op = magic_enum::enum_cast<CompareOp_t>(rJson.value("op", ""));
     if (!op.has_value())
     {
-        throw std::runtime_error("EffectiveMorale condition 'op' must be Eq, Le, or Ge");
+        throw std::runtime_error("EffectiveMorale condition 'op' must be Eq, Le, Ge, Gt, or Lt");
     }
     if (!rJson.contains("value") || !rJson.at("value").is_number_integer())
     {
         throw std::runtime_error("EffectiveMorale condition requires an integer 'value'");
     }
     return EffectiveMorale_t{*op, rJson.at("value").get<int>()};
+}
+
+Condition_t ParseResourceOutputCondition_(const nlohmann::json& rJson)
+{
+    const std::string statWire = RequireConditionString_(rJson, "stat", "ResourceOutput");
+    const StatId_t stat = ParseStatId(statWire);
+    if (stat != StatId_t::Nutrients && stat != StatId_t::Minerals && stat != StatId_t::Energy)
+    {
+        throw std::runtime_error(
+            "ResourceOutput condition 'stat' must be nutrients, minerals, or energy");
+    }
+    const auto op = magic_enum::enum_cast<CompareOp_t>(rJson.value("op", ""));
+    if (!op.has_value())
+    {
+        throw std::runtime_error("ResourceOutput condition 'op' must be Eq, Le, Ge, Gt, or Lt");
+    }
+    if (!rJson.contains("value") || !rJson.at("value").is_number_integer())
+    {
+        throw std::runtime_error("ResourceOutput condition requires an integer 'value'");
+    }
+    return ResourceOutput_t{stat, *op, rJson.at("value").get<int>()};
 }
 
 Condition_t ParseTargetTileHasCondition_(const nlohmann::json& rJson)
@@ -1164,6 +1185,7 @@ const std::unordered_map<std::string, ParseConditionFn_>& ConditionParsers_()
          }},
         {"SocialRating", ParseSocialRatingCondition_},
         {"EffectiveMorale", ParseEffectiveMoraleCondition_},
+        {"ResourceOutput", ParseResourceOutputCondition_},
         {"OriginBaseHasBuilding",
          [](const nlohmann::json& rJson) -> Condition_t {
              const std::string what = "OriginBaseHasBuilding";

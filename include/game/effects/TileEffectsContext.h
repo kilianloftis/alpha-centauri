@@ -83,9 +83,10 @@ public:
     void RemoveOccupantWithEffects(Tile& rTile, const std::string& occupantId);
 
 private:
-    // One resource lane from partitioned pointers.
+    // One resource lane from partitioned pointers. ctx must carry tileResourceOutput when
+    // ResourceOutput-gated modifiers should match.
     int ResolveResource_(const Tile& rTile, std::span<const ActiveEffect_t*> effects,
-                         StatId_t stat, const Faction* pFaction) const;
+                         StatId_t stat, const EffectContext_t& rCtx) const;
     TileResources_t ResolveResources_(const Tile& rTile, std::span<const ActiveEffect_t*> effects,
                                       const Faction* pFaction) const;
 

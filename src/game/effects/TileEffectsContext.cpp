@@ -27,6 +27,7 @@
 #include "game/effects/InteractionGridsConfig.h"
 #include <algorithm>
 #include <cmath>
+#include <ranges>
 #include <span>
 #include <type_traits>
 #include <unordered_set>
@@ -439,22 +440,60 @@ TileYieldView_t TileEffectsContext::ResolveTileYield(const Tile& rTile, bool bIs
     return ResolveYieldFromEffects_(rTile, effects, pFaction);
 }
 
+bool EffectDependsOnResourceOutput_(const ActiveEffect_t& rEffect)
+{
+    return rEffect.config->condition
+        && ConditionDependsOnResourceOutput(*rEffect.config->condition);
+}
+
+// Sum of independent Add amounts for one resource (Mine penalty and similar left out).
+double AdditiveProbeTotal_(std::span<const ActiveEffect_t*> effects, StatId_t stat,
+                           const EffectContext_t& rCtx)
+{
+    double addTotal = SeedFor(stat);
+    for (const ActiveEffect_t* pEffect : effects)
+    {
+        if (EffectDependsOnResourceOutput_(*pEffect))
+        {
+            continue;
+        }
+        if (!StatModifierMatchesInContext(*pEffect, stat, rCtx))
+        {
+            continue;
+        }
+        const StatModifierEffect_t* pMod =
+            std::get_if<StatModifierEffect_t>(&pEffect->config->effect);
+        if (pMod == nullptr || pMod->op != ModifierOp_t::Add)
+        {
+            continue;
+        }
+        addTotal += AmountSourceValue(*pMod, &rCtx);
+    }
+    return addTotal;
+}
+
+TileResources_t AdditiveResourceProbe_(std::span<const ActiveEffect_t*> effects,
+                                       const EffectContext_t& rCtx)
+{
+    return TileResources_t{
+        FinalizeResolvedStat(AdditiveProbeTotal_(effects, StatId_t::Nutrients, rCtx)),
+        FinalizeResolvedStat(AdditiveProbeTotal_(effects, StatId_t::Energy, rCtx)),
+        FinalizeResolvedStat(AdditiveProbeTotal_(effects, StatId_t::Minerals, rCtx)),
+    };
+}
+
 int TileEffectsContext::ResolveResource_(const Tile& rTile,
                                          std::span<const ActiveEffect_t*> effects,
-                                         StatId_t stat, const Faction* pFaction) const
+                                         StatId_t stat, const EffectContext_t& rCtx) const
 {
-    // The receiving tile: only radius-0 effects use ElevationEnergy, and min_radius keeps the
-    // Mirror's ring flat. pFaction subjects owned_by_territory auras (Mirror → Solar).
-    const EffectContext_t ctx{
-        .targetTile = &rTile, .pFaction = pFaction, .pTileYieldRules = &m_rYieldRules};
     auto matching = effects
         | std::views::transform([](const ActiveEffect_t* pEffect) -> const ActiveEffect_t& {
               return *pEffect;
           })
         | std::views::filter([&](const ActiveEffect_t& effect) {
-              return StatModifierMatchesInContext(effect, stat, ctx);
+              return StatModifierMatchesInContext(effect, stat, rCtx);
           });
-    const double total = ResolveStatModifiersTotal(matching, SeedFor(stat), &ctx);
+    const double total = ResolveStatModifiersTotal(matching, SeedFor(stat), &rCtx);
     return FinalizeResolvedStat(total);
 }
 
@@ -477,10 +516,15 @@ TileEffectsContext::YieldLanes_t TileEffectsContext::ResolveYieldLanes_(
 TileResources_t TileEffectsContext::ResolveResources_(
     const Tile& rTile, std::span<const ActiveEffect_t*> effects, const Faction* pFaction) const
 {
+    // pFaction subjects owned_by_territory auras (Mirror → Solar). Probe excludes
+    // ResourceOutput-gated Adds; the stamp lets those re-match for the full stack.
+    EffectContext_t ctx{.targetTile = &rTile, .pFaction = pFaction,
+                        .pTileYieldRules = &m_rYieldRules};
+    ctx.tileResourceOutput = AdditiveResourceProbe_(effects, ctx);
     return TileResources_t{
-        ResolveResource_(rTile, effects, StatId_t::Nutrients, pFaction),
-        ResolveResource_(rTile, effects, StatId_t::Energy, pFaction),
-        ResolveResource_(rTile, effects, StatId_t::Minerals, pFaction),
+        ResolveResource_(rTile, effects, StatId_t::Nutrients, ctx),
+        ResolveResource_(rTile, effects, StatId_t::Energy, ctx),
+        ResolveResource_(rTile, effects, StatId_t::Minerals, ctx),
     };
 }
 

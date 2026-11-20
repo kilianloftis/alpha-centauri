@@ -145,6 +145,9 @@ struct EffectContext_t
     // Copied from ActiveEffect_t::ownerFaction before ConditionSatisfied on that effect.
     // SubjectIsOwner / SubjectIsForeign read it.
     std::optional<FactionId_t> effectOwnerFaction;
+    // Additive tile-resource probe (independent Adds only) stamped by TileEffectsContext
+    // before ResourceOutput-gated modifiers re-match. Unset outside yield resolve.
+    std::optional<TileResources_t> tileResourceOutput;
 };
 
 // Stamps effectOwnerFaction from the ActiveEffect so polarity conditions can evaluate.
@@ -188,6 +191,9 @@ bool ConditionSatisfied(const Condition_t& rCondition, const EffectContext_t& ct
 // True when the condition needs subjects beyond pUnit, keeping it out of context-free
 // resolution.
 bool ConditionNeedsSituationalContext(const Condition_t& rCondition);
+
+// True when the condition tree contains ResourceOutput (nested AllOf/AnyOf included).
+bool ConditionDependsOnResourceOutput(const Condition_t& rCondition);
 
 struct BuildingConfig_t;
 

@@ -306,6 +306,21 @@
       {
         "type": "StatModifier",
         "scope": "ThisTile",
+        "condition": {
+          "kind": "ResourceOutput",
+          "stat": "nutrients",
+          "op": "Gt",
+          "value": 1
+        },
+        "parameters": {
+          "stat": "nutrients",
+          "amount": -1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
         "parameters": {
           "stat": "eco_damage_contribution",
           "amount": 1,

@@ -506,6 +506,65 @@ TEST_CASE("ResolveTileYield: Rocky minerals match Rolling without a mine",
     CHECK(world.ctx.ResolveTileYield(rocky).effective.minerals == 1);
 }
 
+TEST_CASE("ResolveTileYield: Rocky zeroes rainfall but keeps jungle nutrients",
+          "[effects][tile][yield]")
+{
+    actest::WorldFixture world;
+    Tile& wetRocky = world.At(8, 8);
+    wetRocky.SetRockiness(Rockiness_t::Rocky);
+    wetRocky.SetMoisture(Moisture_t::Wet);
+
+    Tile& moistRockyJungle = world.At(9, 9);
+    moistRockyJungle.SetRockiness(Rockiness_t::Rocky);
+    moistRockyJungle.SetMoisture(Moisture_t::Moist);
+    world.ctx.AddOccupantWithEffects(moistRockyJungle, "MonsoonJungle");
+
+    CHECK(world.ctx.ResolveTileYield(wetRocky).effective.nutrients == 0);
+    // Rainfall suppressed; jungle landmark +1 remains (SMAC order).
+    CHECK(world.ctx.ResolveTileYield(moistRockyJungle).effective.nutrients == 1);
+}
+
+TEST_CASE("ResolveTileYield: Mine nutrient penalty only while nutrients so far exceed 1",
+          "[effects][tile][yield][mine]")
+{
+    actest::WorldFixture world;
+
+    Tile& arid = world.At(6, 6);
+    arid.SetMoisture(Moisture_t::Arid);
+    world.ctx.AddOccupantWithEffects(arid, "Mine");
+    CHECK(world.ctx.ResolveTileYield(arid).effective.nutrients == 0);
+
+    Tile& moist = world.At(7, 7);
+    moist.SetMoisture(Moisture_t::Moist);
+    world.ctx.AddOccupantWithEffects(moist, "Mine");
+    CHECK(world.ctx.ResolveTileYield(moist).effective.nutrients == 1);
+
+    Tile& wet = world.At(8, 8);
+    wet.SetMoisture(Moisture_t::Wet);
+    world.ctx.AddOccupantWithEffects(wet, "Mine");
+    CHECK(world.ctx.ResolveTileYield(wet).effective.nutrients == 1);
+
+    Tile& wetFarm = world.At(9, 9);
+    wetFarm.SetMoisture(Moisture_t::Wet);
+    world.ctx.AddOccupantWithEffects(wetFarm, "Farm");
+    world.ctx.AddOccupantWithEffects(wetFarm, "Mine");
+    CHECK(world.ctx.ResolveTileYield(wetFarm).effective.nutrients == 2);
+
+    Tile& rockyWet = world.At(10, 10);
+    rockyWet.SetRockiness(Rockiness_t::Rocky);
+    rockyWet.SetMoisture(Moisture_t::Wet);
+    world.ctx.AddOccupantWithEffects(rockyWet, "Mine");
+    CHECK(world.ctx.ResolveTileYield(rockyWet).effective.nutrients == 0);
+
+    Tile& rockyJungleMine = world.At(11, 11);
+    rockyJungleMine.SetRockiness(Rockiness_t::Rocky);
+    rockyJungleMine.SetMoisture(Moisture_t::Moist);
+    world.ctx.AddOccupantWithEffects(rockyJungleMine, "MonsoonJungle");
+    world.ctx.AddOccupantWithEffects(rockyJungleMine, "Mine");
+    // Probe is jungle +1 only; penalty stays off.
+    CHECK(world.ctx.ResolveTileYield(rockyJungleMine).effective.nutrients == 1);
+}
+
 TEST_CASE("ResolveTileYield: deep ocean nutrients match the shelf row",
           "[effects][tile][yield]")
 {

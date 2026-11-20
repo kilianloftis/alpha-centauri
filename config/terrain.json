@@ -42,6 +42,10 @@
         "landform"
       ],
       "move_cost": 2,
+      "suppress_yield_sources": [
+        "Moist",
+        "Wet"
+      ],
       "effects": [
         {
           "type": "StatModifier",

@@ -151,7 +151,7 @@ TEST_CASE("ParseModifierOp / ParseEffectScope mappings", "[effects][parser]")
     CHECK_THROWS(EffectConfigParser::ParseEffectScope("Global"));
 }
 
-TEST_CASE("CompareSatisfied: Eq, Le, Ge", "[effects][compare]")
+TEST_CASE("CompareSatisfied: Eq, Le, Ge, Gt, Lt", "[effects][compare]")
 {
     CHECK(CompareSatisfied(2, CompareOp_t::Eq, 2));
     CHECK_FALSE(CompareSatisfied(2, CompareOp_t::Eq, 3));
@@ -161,6 +161,10 @@ TEST_CASE("CompareSatisfied: Eq, Le, Ge", "[effects][compare]")
     CHECK(CompareSatisfied(1, CompareOp_t::Ge, 1));
     CHECK(CompareSatisfied(2, CompareOp_t::Ge, 1));
     CHECK_FALSE(CompareSatisfied(0, CompareOp_t::Ge, 1));
+    CHECK(CompareSatisfied(2, CompareOp_t::Gt, 1));
+    CHECK_FALSE(CompareSatisfied(1, CompareOp_t::Gt, 1));
+    CHECK(CompareSatisfied(0, CompareOp_t::Lt, 1));
+    CHECK_FALSE(CompareSatisfied(1, CompareOp_t::Lt, 1));
 }
 
 TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]")
@@ -1036,6 +1040,20 @@ TEST_CASE("ParseEffectConfig: conditions", "[effects][parser][condition]")
         CHECK(pEffective->op == CompareOp_t::Le);
         CHECK(pEffective->value == 3);
         CHECK(ConditionNeedsSituationalContext(effective));
+
+        const Condition_t resourceOutput = EffectConfigParser::ParseCondition(json::parse(R"({
+            "kind": "ResourceOutput", "stat": "nutrients", "op": "Gt", "value": 1
+        })"));
+        const auto* pOutput = std::get_if<ResourceOutput_t>(&resourceOutput.AsVariant());
+        REQUIRE(pOutput);
+        CHECK(pOutput->stat == StatId_t::Nutrients);
+        CHECK(pOutput->op == CompareOp_t::Gt);
+        CHECK(pOutput->value == 1);
+        CHECK(ConditionNeedsSituationalContext(resourceOutput));
+        CHECK(ConditionDependsOnResourceOutput(resourceOutput));
+        CHECK_FALSE(ConditionDependsOnResourceOutput(effective));
+        CHECK_THROWS(EffectConfigParser::ParseCondition(json::parse(
+            R"({ "kind": "ResourceOutput", "stat": "defense", "op": "Gt", "value": 1 })")));
     }
 
     SECTION("IsHeadquarters condition")

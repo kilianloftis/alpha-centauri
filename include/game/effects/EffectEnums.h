@@ -1003,12 +1003,15 @@ enum class ModifierOp_t
     Fallback,
 };
 
-// Live integer vs a bound. Numeric conditions share this (`SocialRating_t`, `EffectiveMorale_t`).
+// Live integer vs a bound. Numeric conditions share this (`SocialRating_t`,
+// `EffectiveMorale_t`, `ResourceOutput_t`).
 enum class CompareOp_t
 {
     Eq,
     Le,
     Ge,
+    Gt,
+    Lt,
 };
 
 inline bool CompareSatisfied(int live, CompareOp_t op, int bound)
@@ -1018,6 +1021,8 @@ inline bool CompareSatisfied(int live, CompareOp_t op, int bound)
         case CompareOp_t::Eq: return live == bound;
         case CompareOp_t::Le: return live <= bound;
         case CompareOp_t::Ge: return live >= bound;
+        case CompareOp_t::Gt: return live > bound;
+        case CompareOp_t::Lt: return live < bound;
     }
     return false;
 }

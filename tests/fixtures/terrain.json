@@ -33,6 +33,10 @@
         "landform"
       ],
       "move_cost": 2,
+      "suppress_yield_sources": [
+        "Moist",
+        "Wet"
+      ],
       "effects": [
         {
           "type": "StatModifier",
@@ -463,7 +467,17 @@
         "landmark"
       ],
       "domain": "land",
-      "effects": [],
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "parameters": {
+            "stat": "nutrients",
+            "amount": 1,
+            "op": "Add"
+          }
+        }
+      ],
       "art": {
         "layer": "landmark",
         "tiles": {

@@ -385,6 +385,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   - `AttackerIsNativeLife_t`, `DefenderIsNativeLife_t` — situational. The attacker's or defender's design `native_life` flag matches `bMatches` (JSON `value`, default true); fails closed without that combatant. Rocky and Fungus use them.
   - `SocialRating_t` — situational. True when the unit owner's faction-wide social rating satisfies `CompareOp_t` against `value`. Absent unit fails closed.
   - `EffectiveMorale_t` — situational. True when `EffectiveMoraleLevel(pUnit, ctx, moraleCalculator)` satisfies `CompareOp_t` against `value`. Absent unit fails closed. Used by Base improvement `ThisTile` promotion eligibility MinClamp.
+  - `ResourceOutput_t` — situational. True when `EffectContext_t::tileResourceOutput`'s named tile resource (`nutrients` / `minerals` / `energy`) satisfies `CompareOp_t` against `value`. Yield resolve stamps that probe from independent `Add`s (effects whose condition tree has no `ResourceOutput`) before gated modifiers re-match — Mine / Mining Platform nutrient −1 uses `Gt` 1. Fail closed when the probe is unset.
   - `OriginBaseHasBuilding_t` — situational. True when the effect's `originBase` has a constructed copy of `buildingId`, matching `bPresent` (JSON `value`). Distinct from `BaseHasBuilding_t` (`EffectContext_t::pBase`). Absent origin fails closed.
   - `SubjectDesign_t` — identity predicate. True when `EffectContext_t::pUnit`'s design id equals `designId`. Absent unit fails closed. Load validation checks the id against `NativeUnitRegistry`.
   - `IsNativeLife_t` — identity predicate. True when the design's `native_life` RuleFlag equals `bMatches` (JSON `value`, default true). A composed design carries the flag on a component. Absent unit fails closed.
@@ -400,7 +401,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 - **Shape**: `std::variant` of `UnitFilterDomain_t` / `UnitFilterHasComponent_t` / `UnitFilterHasFlag_t` / `UnitFilterIsPrototype_t` with required fields as plain members. `IsPrototype` reads `Unit::IsPrototype()`, latched in the constructor from `IsPrototype` (`ProductionRules`) when the unit was produced (`pProducedAt` set — "first one you built") before the faction's ledger records the design. It is deliberately *not* a live read of the ledger: that would make the filter answer differently before and after the unit spawned, and only the constructor's resolve would ever see `true`.
 
 ### CompareOp_t
-- **Purpose**: `Eq` / `Le` / `Ge` of a live integer against a bound (`CompareSatisfied`). Numeric conditions share it; `SocialRating_t` and `EffectiveMorale_t` are the callers. Distinct from `ModifierOp_t` (how a stat stacks).
+- **Purpose**: `Eq` / `Le` / `Ge` / `Gt` / `Lt` of a live integer against a bound (`CompareSatisfied`). Numeric conditions share it; `SocialRating_t`, `EffectiveMorale_t`, and `ResourceOutput_t` are the callers. Distinct from `ModifierOp_t` (how a stat stacks).
 
 ### ModifierOp_t
 - **Purpose**: Describes how a stat modifier combines with the running total.
