@@ -16,7 +16,7 @@ different scale today).
 |---|---|---:|---:|---|---|---|---|
 | 1 | Headquarters | 5 | 0 | — | — | Efficiency | 1 effect(s) |
 | 2 | Children's Creche | 5 | 1 | Ethical Calculus | — | Growth/Effic/Morale | 6 effect(s) |
-| 3 | Recycling Tanks | 4 | 0 | Biogenetics | Adv. Ecological Engineering | Bonus Resources | 3 effect(s) |
+| 3 | Recycling Tanks | 4 | 0 | Biogenetics | Adv. Ecological Engineering | Bonus Resources | 3 effect(s) BaseTile |
 | 4 | Perimeter Defense | 5 | 0 | Doctrine: Loyalty | — | Defense +100% | 3 effect(s) |
 | 5 | Tachyon Field | 12 | 2 | Probability Mechanics | — | All Defense +100% | 3 effect(s) |
 | 6 | Recreation Commons | 4 | 1 | Social Psych | Sentient Econometrics | Fewer Drones | 1 effect(s) |
@@ -26,8 +26,8 @@ different scale today).
 | 10 | Skunkworks | 6 | 1 | Advanced Subatomic Theory | — | Prototypes Free | 2 effect(s) |
 | 11 | Hologram Theatre | 6 | 3 | Planetary Networks | — | Psych and Fewer Drones | empty |
 | 12 | Paradise Garden | 12 | 4 | Sentient Econometrics | — | +2 Talents | empty |
-| 13 | Tree Farm | 12 | 3 | Environmental Economics | — | Econ/Psych/Forest | empty |
-| 14 | Hybrid Forest | 24 | 4 | Planetary Economics | — | Econ/Psych/Forest | empty |
+| 13 | Tree Farm | 12 | 3 | Environmental Economics | — | Econ/Psych/Forest | forest + eco_terraform |
+| 14 | Hybrid Forest | 24 | 4 | Planetary Economics | — | Econ/Psych/Forest | forest + eco_terraform |
 | 15 | Fusion Lab | 12 | 3 | Fusion Power | — | Econ and Labs Bonus | empty |
 | 16 | Quantum Lab | 24 | 4 | Quantum Power | — | Econ and Labs Bonus | empty |
 | 17 | Research Hospital | 12 | 3 | Gene Splicing | — | Labs and Psych Bonus | 1 effect(s) |
@@ -113,9 +113,9 @@ Each bullet is one SMAC effect. Tags:
 - **Config id:** `Recycling_Tanks`
 - **Alphax:** cost 4, upkeep 0, Biogenetics; obsolete Adv. Ecological Engineering
 - **Effects:**
-  - Adds +1 nutrient on the base square.
-  - Adds +1 mineral on the base square.
-  - Adds +1 energy on the base square.
+  - Adds +1 nutrient on the base square. — _nutrients Add BaseTile_
+  - Adds +1 mineral on the base square. — _minerals Add BaseTile_
+  - Adds +1 energy on the base square. — _energy Add BaseTile_
 
 ### 4. Perimeter Defense
 
@@ -194,16 +194,16 @@ Each bullet is one SMAC effect. Tags:
 - **Effects:**
   - Increases psych output at this base by 50%.
   - Increases economy output at this base by 50%.
-  - Adds nutrient on forest squares worked by this base. — _nutrients + HasImprovement Forest_
-  - Cuts at least half of the ecological damage from terraforming at this base. — _eco_terraform_scale ×0.5; fixtures show pattern_
+  - Adds nutrient on forest squares worked by this base. — _nutrients +1 HasImprovement Forest_
+  - Cuts at least half of the ecological damage from terraforming at this base. — _eco_terraform_scale ×0.5_
 
 ### 14. Hybrid Forest
 
 - **Config id:** `Hybrid_Forest`
 - **Alphax:** cost 24, upkeep 4, Planetary Economics
 - **Effects:**
-  - Adds nutrient on forest squares worked by this base.
-  - Adds energy on forest squares worked by this base.
+  - Adds nutrient on forest squares worked by this base. — _nutrients +1 HasImprovement Forest_
+  - Adds energy on forest squares worked by this base. — _energy +1 HasImprovement Forest_
   - Increases psych output at this base by 50%.
   - Increases economy output at this base by 50%.
   - Together with Tree Farm, eliminates ecological damage from terraforming at this base. — _eco_terraform_scale ×0_
@@ -312,7 +312,7 @@ Each bullet is one SMAC effect. Tags:
 - **Alphax:** cost 8, upkeep 0, Doctrine: Flexibility
 - **Effects:**
   - Lets the base occupy and survive on water. — _may_occupy_water_
-  - Counts as Recycling Tanks (+1 nutrient, mineral, and energy on the base square). — _flat ThisBase +1s authored_
+  - Counts as Recycling Tanks (+1 nutrient, mineral, and energy on the base square). — _BaseTile +1s; tanks require none dome_
 
 ### 27. Command Center
 

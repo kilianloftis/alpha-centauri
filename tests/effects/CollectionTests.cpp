@@ -191,7 +191,7 @@ TEST_CASE("CollectTileEffects: terrain features contribute from cached configs",
         const auto effects = CollectTileEffects(tile);
         REQUIRE(effects.size() == 2);
         CHECK(effects[0].sourceId == "Rocky");
-        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Minerals), 0.0, nullptr).total == 2.0);
+        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Minerals), 0.0, nullptr).total == 1.0);
     }
 
     SECTION("river and moisture stack with rockiness")

@@ -93,15 +93,15 @@ TEST_CASE("Supply crawl credits only the chosen resource to the home base", "[un
     const int nutrientsBefore = base.GetNutrientProduction();
 
     Tile& rocky = fixture.At(12, 12);
-    rocky.SetRockiness(Rockiness_t::Rocky); // +2 minerals
+    rocky.SetRockiness(Rockiness_t::Rocky); // +1 mineral
     rocky.SetMoisture(Moisture_t::Wet);     // +2 nutrients (ignored when crawling minerals)
 
     Unit& crawler = fixture.MakeUnit(faction, 12, 12, {"test_chassis", "test_supply_crawler"}, &base);
     REQUIRE(TryStartSupplyCrawl(crawler, StatId_t::Minerals));
 
-    CHECK(base.GetMineralProduction() == mineralsBefore + 2);
+    CHECK(base.GetMineralProduction() == mineralsBefore + 1);
     CHECK(base.GetNutrientProduction() == nutrientsBefore);
 
     base.ProduceResources();
-    CHECK(base.GetResources().ConsumeMinerals() >= mineralsBefore + 2);
+    CHECK(base.GetResources().ConsumeMinerals() >= mineralsBefore + 1);
 }

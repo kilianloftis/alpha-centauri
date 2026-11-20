@@ -13,6 +13,7 @@ namespace ac
 {
 
 class BuildingRegistry;
+class Faction;
 class ImprovementRegistry;
 class IWorldEffectsSource;
 struct MoistureDecorationConfig_t;
@@ -84,9 +85,9 @@ public:
 private:
     // One resource lane from partitioned pointers.
     int ResolveResource_(const Tile& rTile, std::span<const ActiveEffect_t*> effects,
-                         StatId_t stat) const;
-    TileResources_t ResolveResources_(const Tile& rTile,
-                                      std::span<const ActiveEffect_t*> effects) const;
+                         StatId_t stat, const Faction* pFaction) const;
+    TileResources_t ResolveResources_(const Tile& rTile, std::span<const ActiveEffect_t*> effects,
+                                      const Faction* pFaction) const;
 
     // Pointer-partition + resolve into effective (clamped) / potential (unclamped) totals.
     // Both include bypass_clamp Adds.
@@ -95,13 +96,15 @@ private:
         TileResources_t effective;
         TileResources_t potential;
     };
-    YieldLanes_t ResolveYieldLanes_(const Tile& rTile,
-                                    const std::vector<ActiveEffect_t>& effects) const;
+    YieldLanes_t ResolveYieldLanes_(const Tile& rTile, const std::vector<ActiveEffect_t>& effects,
+                                    const Faction* pFaction) const;
 
     void RemoveImprovementsThatCannotRemain_(Tile& rTile, std::string_view keepId);
 
+    // pFaction subjects Mirror (and similar) SubjectIsOwner auras when resolving for a base.
     TileYieldView_t ResolveYieldFromEffects_(const Tile& rTile,
-                                             const std::vector<ActiveEffect_t>& effects) const;
+                                             const std::vector<ActiveEffect_t>& effects,
+                                             const Faction* pFaction) const;
 
     WorldMap& m_rWorldMap;
     const ImprovementRegistry& m_rImprovements;

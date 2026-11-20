@@ -385,7 +385,7 @@ TEST_CASE("ResolveTileYield: each resource resolves from the matching StatId_t (
     tile.SetElevation(1000); // one elevation band
     // River excludes Mine, so a river here would remove the mine.
     world.ctx.AddOccupantWithEffects(tile, "Farm"); // +1 nutrients
-    world.ctx.AddOccupantWithEffects(tile, "Mine"); // +2 minerals
+    world.ctx.AddOccupantWithEffects(tile, "Mine"); // +2 minerals (fixture Mine)
     // SolarCollector excludes Mine, so adding it would remove the mine.
     world.ctx.AddOccupantWithEffects(tile, "Mirror");
 
@@ -436,7 +436,7 @@ TEST_CASE("ResolveTileYield: a Mirror boosts adjacent solar collectors only",
     }
 }
 
-TEST_CASE("ResolveTileYield: a Mirror is its own solar collector but not its own beneficiary",
+TEST_CASE("ResolveTileYield: a Mirror is its own solar collector but does not buff Mirrors",
           "[effects][tile][yield][aura]")
 {
     actest::WorldFixture world;
@@ -447,13 +447,12 @@ TEST_CASE("ResolveTileYield: a Mirror is its own solar collector but not its own
     // Counts as a collector: two elevation bands. Does not add its own +1 (min_radius 1).
     CHECK(world.ctx.ResolveTileYield(host).effective.energy == 2);
 
-    // A second mirror adjacent to the first: each is a collector the other can see, so both
-    // gain exactly one +1 — from the neighbour, never from themselves.
+    // Neighbouring Mirrors do not buff each other — only SolarCollector tiles do.
     Tile& second = world.At(9, 9);
     second.SetElevation(1000);
     world.ctx.AddOccupantWithEffects(second, "Mirror");
-    CHECK(world.ctx.ResolveTileYield(host).effective.energy == 3);   // 2 bands + 1 from second
-    CHECK(world.ctx.ResolveTileYield(second).effective.energy == 2); // 1 band  + 1 from host
+    CHECK(world.ctx.ResolveTileYield(host).effective.energy == 2);
+    CHECK(world.ctx.ResolveTileYield(second).effective.energy == 1);
 }
 
 TEST_CASE("ResolveTileYield with base effects: selector-carrying modifiers apply per matching tile",
@@ -492,6 +491,58 @@ TEST_CASE("ResolveTileYield with base effects: BaseTile selector applies only to
 
     CHECK(fixture.ctx.ResolveTileYield(tile, true, baseEffects).effective.energy == 2);
     CHECK(fixture.ctx.ResolveTileYield(tile, false, baseEffects).effective.energy == 0);
+}
+
+TEST_CASE("ResolveTileYield: Rocky minerals match Rolling without a mine",
+          "[effects][tile][yield]")
+{
+    actest::WorldFixture world;
+    Tile& rolling = world.At(8, 8);
+    rolling.SetRockiness(Rockiness_t::Rolling);
+    Tile& rocky = world.At(9, 9);
+    rocky.SetRockiness(Rockiness_t::Rocky);
+
+    CHECK(world.ctx.ResolveTileYield(rolling).effective.minerals == 1);
+    CHECK(world.ctx.ResolveTileYield(rocky).effective.minerals == 1);
+}
+
+TEST_CASE("ResolveTileYield: deep ocean nutrients match the shelf row",
+          "[effects][tile][yield]")
+{
+    actest::WorldFixture world;
+    Tile& deep = world.At(8, 8);
+    deep.SetElevation(deep.MapRules().oceanShelfMeters - 1);
+
+    CHECK(deep.IsWater());
+    CHECK_FALSE(deep.HasFeature("OceanShelf"));
+    CHECK(deep.HasFeature("Ocean"));
+    CHECK(world.ctx.ResolveTileYield(deep).effective.nutrients == 1);
+}
+
+TEST_CASE("ResolveTileYield with base effects: Forest selector boosts forest squares",
+          "[effects][tile][yield][selector]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(8, 2);
+    Tile& forestTile = fixture.At(8, 8);
+    Tile& plainTile = fixture.At(9, 9);
+    fixture.ctx.AddOccupantWithEffects(forestTile, "Forest");
+
+    actest::EffectPool pool;
+    const BaseEffects_t baseEffects{base, {
+        actest::Active(pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
+                                    actest::ImprovementSelector("Forest")), "tree_farm"),
+        actest::Active(pool.StatMod(StatId_t::Energy, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
+                                    actest::ImprovementSelector("Forest")), "hybrid_forest"),
+    }};
+
+    // Forest 1-2-1 plus Tree Farm nutrient and Hybrid energy.
+    const TileResources_t forest =
+        fixture.ctx.ResolveTileYield(forestTile, false, baseEffects).effective;
+    CHECK(forest.nutrients == 2);
+    CHECK(forest.minerals == 2);
+    CHECK(forest.energy == 2);
+    CHECK(fixture.ctx.ResolveTileYield(plainTile, false, baseEffects).effective.nutrients == 0);
 }
 
 TEST_CASE("ResolveTileYield with base effects: AnyTile selector applies to every worked tile",
@@ -675,7 +726,7 @@ TEST_CASE("CanBuildImprovement: excludes-list features block construction", "[ef
     CHECK(CanBuildImprovement(tile, *pFarm, {}, {}));
 }
 
-TEST_CASE("ResolveTileYield: sea suppresses landform/resource yields; OceanShelf is +1 nutrient",
+TEST_CASE("ResolveTileYield: sea suppresses landform/resource yields; Ocean and shelf are +1 nutrient",
           "[effects][tile][yield]")
 {
     actest::WorldFixture world;
@@ -699,7 +750,7 @@ TEST_CASE("ResolveTileYield: sea suppresses landform/resource yields; OceanShelf
     CHECK(tile.HasFeature("Ocean"));
     {
         const TileResources_t yield = world.ctx.ResolveTileYield(tile).effective;
-        CHECK(yield.nutrients == 0);
+        CHECK(yield.nutrients == 1);
         CHECK(yield.minerals == 0);
         CHECK(yield.energy == 0);
     }

@@ -729,6 +729,7 @@
       "land_terraform"
     ],
     "domain": "land",
+    "owned_by_territory": true,
     "excludes": [
       "SolarCollector",
       "ThermalBorehole"
@@ -752,23 +753,24 @@
         "radius": 1,
         "min_radius": 1,
         "condition": {
-          "kind": "TargetTileHas",
-          "value": "SolarCollector"
-        },
-        "parameters": {
-          "stat": "energy",
-          "amount": 1,
-          "op": "Add"
-        }
-      },
-      {
-        "type": "StatModifier",
-        "scope": "ThisTile",
-        "radius": 1,
-        "min_radius": 1,
-        "condition": {
-          "kind": "TargetTileHas",
-          "value": "Mirror"
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "TargetTileHas",
+              "value": "SolarCollector"
+            },
+            {
+              "kind": "AnyOf",
+              "conditions": [
+                {
+                  "kind": "SubjectIsOwner"
+                },
+                {
+                  "kind": "EffectIsUnowned"
+                }
+              ]
+            }
+          ]
         },
         "parameters": {
           "stat": "energy",

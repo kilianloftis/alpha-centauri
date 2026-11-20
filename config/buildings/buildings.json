@@ -191,7 +191,9 @@
         "scope": "ThisBase",
         "parameters": {
           "stat": "nutrients",
-          "amount": 1
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "BaseTile" }
         }
       },
       {
@@ -199,7 +201,9 @@
         "scope": "ThisBase",
         "parameters": {
           "stat": "minerals",
-          "amount": 1
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "BaseTile" }
         }
       },
       {
@@ -207,7 +211,9 @@
         "scope": "ThisBase",
         "parameters": {
           "stat": "energy",
-          "amount": 1
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "BaseTile" }
         }
       }
     ]
@@ -527,7 +533,31 @@
     "upkeep": 3,
     "secret_project": false,
     "category": "build",
-    "icon": "assets/sprites/facilities/fac012.png"
+    "icon": "assets/sprites/facilities/fac012.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 1,
+          "op": "Add",
+          "selector": {
+            "kind": "HasImprovement",
+            "improvement": "Forest"
+          }
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "eco_terraform_scale",
+          "amount": 0.5,
+          "op": "MultiplyGeometric"
+        }
+      }
+    ]
   },
   {
     "id": "Hybrid_Forest",
@@ -551,7 +581,44 @@
         }
       ]
     },
-    "icon": "assets/sprites/facilities/fac013.png"
+    "icon": "assets/sprites/facilities/fac013.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 1,
+          "op": "Add",
+          "selector": {
+            "kind": "HasImprovement",
+            "improvement": "Forest"
+          }
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "energy",
+          "amount": 1,
+          "op": "Add",
+          "selector": {
+            "kind": "HasImprovement",
+            "improvement": "Forest"
+          }
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "eco_terraform_scale",
+          "amount": 0,
+          "op": "MultiplyGeometric"
+        }
+      }
+    ]
   },
   {
     "id": "Fusion_Lab",
@@ -887,7 +954,9 @@
         "scope": "ThisBase",
         "parameters": {
           "stat": "nutrients",
-          "amount": 1
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "BaseTile" }
         }
       },
       {
@@ -895,7 +964,9 @@
         "scope": "ThisBase",
         "parameters": {
           "stat": "minerals",
-          "amount": 1
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "BaseTile" }
         }
       },
       {
@@ -903,7 +974,9 @@
         "scope": "ThisBase",
         "parameters": {
           "stat": "energy",
-          "amount": 1
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "BaseTile" }
         }
       }
     ]

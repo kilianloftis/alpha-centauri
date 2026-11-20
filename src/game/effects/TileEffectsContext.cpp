@@ -426,7 +426,7 @@ std::vector<ActiveEffect_t> TileEffectsContext::CollectAreaEffects(const Tile& r
 
 TileYieldView_t TileEffectsContext::ResolveTileYield(const Tile& rTile) const
 {
-    return ResolveYieldFromEffects_(rTile, CollectAreaEffects(rTile));
+    return ResolveYieldFromEffects_(rTile, CollectAreaEffects(rTile), nullptr);
 }
 
 TileYieldView_t TileEffectsContext::ResolveTileYield(const Tile& rTile, bool bIsBaseTile,
@@ -434,16 +434,19 @@ TileYieldView_t TileEffectsContext::ResolveTileYield(const Tile& rTile, bool bIs
 {
     std::vector<ActiveEffect_t> effects = CollectAreaEffects(rTile);
     AppendMatchingTileModifiers_(rBaseEffects.effects, rTile, bIsBaseTile, effects);
-    return ResolveYieldFromEffects_(rTile, effects);
+    const Faction* pFaction =
+        rBaseEffects.pBase != nullptr ? &rBaseEffects.pBase->GetFaction() : nullptr;
+    return ResolveYieldFromEffects_(rTile, effects, pFaction);
 }
 
 int TileEffectsContext::ResolveResource_(const Tile& rTile,
                                          std::span<const ActiveEffect_t*> effects,
-                                         StatId_t stat) const
+                                         StatId_t stat, const Faction* pFaction) const
 {
     // The receiving tile: only radius-0 effects use ElevationEnergy, and min_radius keeps the
-    // Mirror's ring flat.
-    const EffectContext_t ctx{.targetTile = &rTile, .pTileYieldRules = &m_rYieldRules};
+    // Mirror's ring flat. pFaction subjects owned_by_territory auras (Mirror → Solar).
+    const EffectContext_t ctx{
+        .targetTile = &rTile, .pFaction = pFaction, .pTileYieldRules = &m_rYieldRules};
     auto matching = effects
         | std::views::transform([](const ActiveEffect_t* pEffect) -> const ActiveEffect_t& {
               return *pEffect;
@@ -456,35 +459,35 @@ int TileEffectsContext::ResolveResource_(const Tile& rTile,
 }
 
 TileEffectsContext::YieldLanes_t TileEffectsContext::ResolveYieldLanes_(
-    const Tile& rTile, const std::vector<ActiveEffect_t>& effects) const
+    const Tile& rTile, const std::vector<ActiveEffect_t>& effects, const Faction* pFaction) const
 {
     std::vector<const ActiveEffect_t*> beforeClamp;
     std::vector<const ActiveEffect_t*> bypassClamp;
     PartitionYieldEffects_(rTile, effects, beforeClamp, bypassClamp);
 
-    const TileResources_t preClamped = ResolveResources_(rTile, beforeClamp);
+    const TileResources_t preClamped = ResolveResources_(rTile, beforeClamp, pFaction);
     // UI potential yield: the same effects with the clamps left out.
     std::vector<const ActiveEffect_t*> unclamped = WithoutClamps_(beforeClamp);
-    const TileResources_t preUnclamped = ResolveResources_(rTile, unclamped);
-    const TileResources_t bypass = ResolveResources_(rTile, bypassClamp);
+    const TileResources_t preUnclamped = ResolveResources_(rTile, unclamped, pFaction);
+    const TileResources_t bypass = ResolveResources_(rTile, bypassClamp, pFaction);
     return YieldLanes_t{SumResources_(preClamped, bypass), SumResources_(preUnclamped, bypass)};
 }
 
 // Every resource seeds at 0; elevation energy comes from ElevationEnergy effects.
 TileResources_t TileEffectsContext::ResolveResources_(
-    const Tile& rTile, std::span<const ActiveEffect_t*> effects) const
+    const Tile& rTile, std::span<const ActiveEffect_t*> effects, const Faction* pFaction) const
 {
     return TileResources_t{
-        ResolveResource_(rTile, effects, StatId_t::Nutrients),
-        ResolveResource_(rTile, effects, StatId_t::Energy),
-        ResolveResource_(rTile, effects, StatId_t::Minerals),
+        ResolveResource_(rTile, effects, StatId_t::Nutrients, pFaction),
+        ResolveResource_(rTile, effects, StatId_t::Energy, pFaction),
+        ResolveResource_(rTile, effects, StatId_t::Minerals, pFaction),
     };
 }
 
 TileYieldView_t TileEffectsContext::ResolveYieldFromEffects_(
-    const Tile& rTile, const std::vector<ActiveEffect_t>& effects) const
+    const Tile& rTile, const std::vector<ActiveEffect_t>& effects, const Faction* pFaction) const
 {
-    const YieldLanes_t lanes = ResolveYieldLanes_(rTile, effects);
+    const YieldLanes_t lanes = ResolveYieldLanes_(rTile, effects, pFaction);
     return TileYieldView_t{lanes.effective, lanes.potential};
 }
 

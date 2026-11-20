@@ -369,9 +369,10 @@ TEST_CASE("Base-level minerals AddPercent scales worked minerals",
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8);
+    // Enough pops that Rocky +1 tiles still leave room for a −10% AddPercent to round down.
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 8, 5);
 
-    // Pack the workable area with Rocky (+2 minerals each). Base center is worked for free;
+    // Pack the workable area with Rocky (+1 mineral each). Base center is worked for free;
     // AutoAssignWorkers places the starting workers on the best remaining tiles.
     for (int dx = -1; dx <= 1; ++dx)
     {
@@ -383,7 +384,7 @@ TEST_CASE("Base-level minerals AddPercent scales worked minerals",
     base.GetWorkerAssignments().AutoAssignWorkers();
 
     const int worked = base.GetMineralProduction();
-    REQUIRE(worked >= 8);
+    REQUIRE(worked >= 6);
 
     base.GetBuildingManager().AddBuilding("minerals_amplifier");
     const int expected = FinalizeResolvedStat(static_cast<double>(worked) * 0.9);

@@ -200,7 +200,12 @@ most once per subject — and only an entry that actually changed something spen
     {
       "type": "StatModifier",
       "scope": "ThisBase",
-      "parameters": { "stat": "nutrients", "amount": "1" }
+      "parameters": {
+        "stat": "nutrients",
+        "amount": 1,
+        "op": "Add",
+        "selector": { "kind": "BaseTile" }
+      }
     }
   ]
 }

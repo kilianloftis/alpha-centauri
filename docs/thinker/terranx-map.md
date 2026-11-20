@@ -1047,6 +1047,155 @@ Runs only when the tile crosses the shore line (`(old < 3) != (new < 3)`, `0x591
 Thinker's `alt_set` clamps the reduced pop at 0 before testing it (`Fix:`, the original can
 store a negative byte). Otherwise it follows the same flow.
 
+The mask in step 1 keeps `0x7E1377A3`, so a crossing clears road, mag tube, mine, solar, bunker,
+farm, airbase, soil enricher, forest, condenser, mirror, borehole and sensor (`0x81EC885C`) in
+both directions. Fungus, river, bonus resources and the Monolith stay.
+
+## Terraforming
+
+### `Terraform[]` (`0x691878`, 20 × 32 bytes)
+
+Static data, not read from `alphax.txt`. `+0x10` is the bit a project sets, `+0x14` the bits it
+clears on completion, `+0x18` the rate (`#TERRAIN` turns). Thinker's `TerraformRules` table is
+the same. Clear masks:
+
+| Project | Clears |
+|---------|--------|
+| Farm, Soil Enricher | forest |
+| Mine, Solar, Condenser, Echelon Mirror | mine, solar, forest, condenser, mirror, borehole, sensor |
+| Forest | mine, solar, farm, soil enricher, forest, fungus, condenser, mirror, borehole |
+| Bunker / Airbase | each other |
+| Sensor | mine, solar, condenser, mirror, borehole |
+| Remove Fungus | fungus |
+| Plant Fungus | mine, solar, farm, soil enricher, forest |
+| Thermal Borehole | mine, solar, farm, forest, condenser, mirror, borehole, sensor |
+| Road, Mag Tube, Aquifer, Raise, Lower, Level | nothing |
+
+At sea the farm, mine and solar bits are Kelp Farm, Mining Platform and Tidal Harness, so a
+Kelp Farm shares its tile with either of the other two. `#TERRAIN`'s sea column is `Disable`
+(never) for Soil Enricher, Forest, Road, Mag Tube, Bunker, Airbase, Sensor, Condenser, Mirror,
+Borehole, Aquifer and Level Terrain.
+
+### Starting a project (`Console_terraform` `0x4D3470`)
+
+After the tech check and `#NOTBASE` ("Terraform orders on a base"), each refusal ends the
+command:
+
+- `ALREADYBUILT`: the tile already has the project's bit (`0x4D393D`).
+- `NOTONMONOLITH`: a Monolith tile, for any project with a bit except road, mag tube and plant
+  fungus (`0x4D39CC`).
+- Deep ocean (altitude below the shelf) at sea, for anything but raise and lower: `LOWTIDAL`
+  ("Sea enhancements can only be built on shelf ocean squares"). An aquatic faction
+  (`rule_flags & 0x100`) is refused only until it has tech `0x3E`, Adv. Ecological Engineering
+  (`NEEDADVECOENG`) (`0x4D3A3D`–`0x4D3AE9`).
+- Volcano landmark: farm and forest refused (`NOTONVOLCANO`); every project at the crater
+  centre, landmark code 0, refused (`NOTONVOLCANO1`) (`0x4D3B47`–`0x4D3C10`).
+- Rocky land: farm and forest refused (`NOTINROCKY`, `0x4D3C15`).
+- Fungus at shelf altitude or above: a road needs `tech_preq_build_road_fungus` (`0x94977C`,
+  CentEmp); any other project with a bit needs `tech_preq_improv_fungus` (`0x949774`, CentPsi)
+  (`NOTINFUNGUS` / `NOTYETFUNGUS`, `0x4D3C85`–`0x4D3E1C`). Building does not clear the fungus.
+- Solar: refused when `energy_yield(flag = 1)` is 0 (`LOWSOLAR`, `0x4D3E46`).
+- Thermal Borehole: refused when a land neighbour has a borehole or holds an own unit with the
+  borehole order (`0x12`) (`TWOBOREHOLES`), or a land neighbour sits at a lower altitude level
+  (`NOBOREHOLE`) (`0x4D3EBC`–`0x4D40D1`).
+- Aquifer: refused when a land neighbour has a river (`NOAQUIFER`, `0x4D4159`–`0x4D41DF`).
+- Level Terrain: refused on flat (`TOOFLAT`, `0x4D4270`).
+- Raise: refused at altitude 6 on land (`TOOHIGH`) and on the shelf at sea (`SEATOOHIGH`), so a
+  sea Former never makes land. Lower: refused at altitude 0 (`SEATOOLOW`) and at altitude 3 on
+  land (`TOOLOW`) (`0x4D4314`–`0x4D4630`). `GameRules & 0x800000` refuses both
+  (`NOTINSCENARIO`).
+- Raise and lower then quote `terraform_cost` (`TERRACOST` / `TERRAPAY`), refused without the
+  credits. Each tile in an altitude-sized area around the target (counts at `0x66F8B8` raise and
+  `0x66F8C8` lower) whose territory belongs to a faction the terraformer holds Pact, Treaty or
+  Truce with gets `break_treaty(mask 7)` (`0x4D498F`). Cancelling refunds and ends the command.
+  Otherwise, outside multiplayer (`MultiplayerActive` `0x93F660`), it calls
+  `double_cross(terraformer, owner, -1)` (`0x4D49D1`).
+
+`HASFARM` and `HASROAD` name the order upgrades: the farm order on a land farm becomes Soil
+Enricher, and the road order on a road becomes Mag Tube, each once the tech is known
+(`action_terraform` start). Soil Enricher is reached only through a farm.
+
+### Work (`action_terraform` `0x4C9B00`, `contribution` `0x4C9A50`)
+
+- Turns are the rate, then (`0x4C9C0D` jump table): Solar adds `rate × rockiness / 2`; road
+  and mag tube take their own rate +1 on a river, +2 in fungus, and +2 in forest or else
+  +rockiness; Remove Fungus halves with Fungicidal (ability `0x2000`). A non-human faction at
+  `DiffLevel > 3` takes one turn off when turns exceed 3 (`0x4C9CBF`). Work needed is
+  `2 × turns`.
+- `contribution` is 2 per turn, 4 with Super Former (ability `0x1`). Plant and remove fungus
+  double with Xenoempathy Dome; every other project gains ×1.5 with Weather Paradigm. Formers on
+  the same tile with the same order pool their work.
+- On completion the clear mask, then the bit, is written. Aquifer adds a river source and runs
+  `world_climate`; raise and lower move one altitude level (`world_raise_alt` /
+  `world_lower_alt`, each ring k pulled to within k + 1 levels) and run `world_climate`; Level
+  steps rockiness down one; Condenser and Borehole run `world_climate`.
+- Losing a forest on land to any project but Raise Land credits `minerals_harvesting_forest`
+  (`#RULES`, 5) to the former's home base, else the nearest own base (`HARVESTFOREST`,
+  `0x4CA24C`–`0x4CA346`).
+
+### `terraform_cost` (`0x4C9420`)
+
+The raise and lower quote. With `d = |altitude − 3|`: `(d + 2)²`, ×6 on fungus at shelf altitude
+or above, ×4 at sea (×2 once any faction owns Doctrine: Air Power), × `(|dx| + |dy|) / 2` to
+the nearest own base clamped 1..100. When the nearest enemy base is not a Pact partner and
+`(enemy pop + 2) × own range / 3` exceeds `(own pop + 2) × enemy range / 3`, the cost scales by
+that ratio. `rule_flags & 0x2000` halves it. The result is halved and clamped to 1..30000.
+Thinker's rewrite multiplies non-fungus tiles by 2 where the original does not, doubling their
+cost.
+
+### Tile yields (`crop_yield` `0x4E6E50`, `mine_yield` `0x4E7310`, `energy_yield` `0x4E7750`)
+
+Base squares are under "Sea bases". Each function tries the base square, then Borehole and
+Monolith, then fungus (shelf altitude or above), then sea or land. `#RESOURCEINFO` names the
+`ResInfo` rows.
+
+- **Nutrients, land** (`0x4E7228`–`0x4E7272`): rainfall level (0 / 1 / 2), but 0 when rocky;
+  + bonus row on a nutrient bonus; +1 on a jungle landmark; floored at 0; + improved-land row
+  for a farm unless rocky; + `nutrient_effect_mine_sq` (−1) for a mine only while the value is
+  above 1. Forest replaces this with the forest row + bonus + Tree Farm + Hybrid Forest +
+  landmark (`0x4E718F`).
+- **Nutrients, sea** (`0x4E70FD`): the ocean row (1) on every water tile, deep ocean too;
+  bonus; landmark; a kelp farm adds the improved-sea row (+1 Aquafarm) on the shelf, or anywhere
+  with the expansion; the mine penalty as on land.
+- Then Soil Enricher `v += v / 2`, then Condenser `v += v / 2`, each truncating
+  (`0x4E7278`–`0x4E729C`). The cap is 2 unless the faction has Gene Splicing, the tile has a
+  nutrient bonus, or the tile has a condenser (`0x4E729E`).
+- **Minerals, land** (`0x4E7676`): the start value is the bonus row plus 1 on a mineral
+  landmark. Forest adds its row. No mine: +1 on rolling or rocky. Mine: + rockiness (0–2), then
+  + `max(1, rockiness)` + 1 with a bonus or landmark, limited to
+  `limit_mineral_inc_for_mine_wo_road` (1) unless the tile has a road. Flat / rolling / rocky
+  with a mine give 1 / 2 / 3, rocky with a road 4. The cap is 2 unless EcoEng or a mineral bonus.
+- **Minerals, sea** (`0x4E75B9`): the ocean row; +1 on the shelf for an aquatic faction
+  (Thinker gates it behind `aquatic_bonus_minerals`); a platform on the shelf, or anywhere with
+  the expansion, adds the improved-sea row, +1 with `tech_preq_mining_platform_bonus`, +1 with
+  Subsea Trunkline.
+- **Energy** (`0x4E7BB2`): land solar and mirror start at `max(0, altitude − 2)`.
+  Solar adds 1 per neighbouring mirror whose tile owner is `CurrentBase`'s faction
+  (`0x4E7BFB`–`0x4E7C78`); a mirror gets nothing from other mirrors. Forest: its row + Hybrid
+  Forest. Sea on the shelf or with the expansion: the ocean row, + improved-sea row and
+  Thermocline for a tidal harness.
+- Then, for everything but fungus (`0x4E7C7A`; the fungus branch jumps to `0x4E7D4B`): +1 river
+  on land, + bonus row, +1 energy landmark, +1 Merchant Exchange base, +1 when Economy (plus 1
+  in a golden age) is at least 2. A
+  Monolith and a Borehole get this block too. The cap is 2 unless EnvEcon or an energy bonus.
+- **Fungus**: each resource is `clamp(clamp(PLANET, −3, 0) + tech_fungus_*, 0, 99)` plus
+  Manifold Harmonics, with no cap. Rockiness, moisture, improvements, river, bonuses and
+  landmarks do not count. `tech_fungus_*` sum the `#TECHNOLOGY` fungus flags (Ecology and
+  CentPsi nutrients; TempMec, CentMed and AlphCen energy; Thresh, Matter and CentGen minerals)
+  and the faction's `FUNGNUTRIENT` / `FUNGMINERALS` / `FUNGENERGY` (Gaians: nutrient +1).
+
+### Forest and kelp growth (`alien_fauna` `0x522180`, top)
+
+`MapAreaTiles / (CurrentTurn / 4 + 32)` samples (`0x522192`–`0x5221B1`). Each draws x and y and
+snaps x to the row's parity. The origin must hold a forest on land or a kelp farm at sea. Of its
+eight neighbours, a candidate is on the same surface, at shelf altitude or above, not arid above
+altitude 4, not on a volcano or dune landmark, not rocky, and holds no base, forest, farm, mine
+or solar (`items & 0x208051`). It scores `4 × (3 − rainfall) − rockiness`; the first highest
+wins. The winner gets the forest or farm bit, and the fungus bit is cleared
+(`and al, 0xDF`, `0x522409`). Nothing else on the tile is cleared. The player is told
+`FORESTGROWS` / `KELPGROWS` when the base `base_find_3` returns is theirs and, beyond
+`BaseFindDist` 3 (`0x90EA04`), the tile is in their territory.
+
 ## Facility-on-facility production prerequisites
 
 ### `facility_avail` (`0x5BA0E0`)

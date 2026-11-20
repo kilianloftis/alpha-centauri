@@ -1620,7 +1620,9 @@
         "scope": "ThisBase",
         "parameters": {
           "stat": "nutrients",
-          "amount": 1
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "BaseTile" }
         }
       },
       {
@@ -1628,7 +1630,9 @@
         "scope": "ThisBase",
         "parameters": {
           "stat": "minerals",
-          "amount": 1
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "BaseTile" }
         }
       },
       {
@@ -1636,7 +1640,48 @@
         "scope": "ThisBase",
         "parameters": {
           "stat": "energy",
-          "amount": 1
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "BaseTile" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "Recycling_Tanks",
+    "name": "Recycling Tanks",
+    "category": "grow",
+    "mineral_cost": 5,
+    "upkeep": 0,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "BaseTile" }
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "BaseTile" }
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "energy",
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "BaseTile" }
         }
       }
     ]

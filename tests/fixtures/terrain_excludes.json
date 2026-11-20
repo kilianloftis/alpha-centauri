@@ -39,7 +39,7 @@
           "scope": "ThisTile",
           "parameters": {
             "stat": "minerals",
-            "amount": 2,
+            "amount": 1,
             "op": "Add"
           }
         },
@@ -142,7 +142,17 @@
       "tags": [
         "landform"
       ],
-      "effects": []
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "parameters": {
+            "stat": "nutrients",
+            "amount": 1,
+            "op": "Add"
+          }
+        }
+      ]
     },
     {
       "id": "OceanShelf",

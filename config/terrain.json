@@ -48,7 +48,7 @@
           "scope": "ThisTile",
           "parameters": {
             "stat": "minerals",
-            "amount": 2,
+            "amount": 1,
             "op": "Add"
           }
         },
@@ -207,7 +207,17 @@
       "suppress_terrain": [
         "Fungus"
       ],
-      "effects": [],
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "ThisTile",
+          "parameters": {
+            "stat": "nutrients",
+            "amount": 1,
+            "op": "Add"
+          }
+        }
+      ],
       "art": {
         "layer": "landform",
         "variants": {

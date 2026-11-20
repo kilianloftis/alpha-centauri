@@ -1480,7 +1480,9 @@
         "scope": "ThisBase",
         "parameters": {
           "stat": "nutrients",
-          "amount": 1
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "BaseTile" }
         }
       },
       {
@@ -1488,7 +1490,9 @@
         "scope": "ThisBase",
         "parameters": {
           "stat": "minerals",
-          "amount": 1
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "BaseTile" }
         }
       },
       {
@@ -1496,7 +1500,9 @@
         "scope": "ThisBase",
         "parameters": {
           "stat": "energy",
-          "amount": 1
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "BaseTile" }
         }
       }
     ]
