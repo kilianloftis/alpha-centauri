@@ -55,7 +55,19 @@
     "name": "Centauri Ecology",
     "category": "grow",
     "ai_weights": { "power": 0, "tech": 1, "wealth": 2, "growth": 3 },
-    "icon": "assets/sprites/techs/tech006.png"
+    "icon": "assets/sprites/techs/tech006.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "HasImprovement", "improvement": "Fungus" }
+        }
+      }
+    ]
   },
   {
     "id": "superconductor",
@@ -325,6 +337,18 @@
     "prerequisites": [
       "eudaimonia",
       "matter_transmission"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "stat": "energy",
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "HasImprovement", "improvement": "Fungus" }
+        }
+      }
     ]
   },
   {
@@ -552,6 +576,18 @@
     "prerequisites": [
       "ecological_engineering",
       "centauri_empathy"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "stat": "energy",
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "HasImprovement", "improvement": "Fungus" }
+        }
+      }
     ]
   },
   {
@@ -687,6 +723,18 @@
     "prerequisites": [
       "secrets_of_the_manifolds",
       "temporal_mechanics"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "HasImprovement", "improvement": "Fungus" }
+        }
+      }
     ]
   },
   {
@@ -786,6 +834,18 @@
     "prerequisites": [
       "centauri_genetics",
       "advanced_ecological_engineering"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "HasImprovement", "improvement": "Fungus" }
+        }
+      }
     ]
   },
   {
@@ -797,6 +857,18 @@
     "prerequisites": [
       "centauri_psi",
       "sentient_econometrics"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "stat": "energy",
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "HasImprovement", "improvement": "Fungus" }
+        }
+      }
     ]
   },
   {
@@ -871,6 +943,16 @@
         "parameters": {
           "flag": "inc_gene_warfare_defense"
         }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "HasImprovement", "improvement": "Fungus" }
+        }
       }
     ]
   },
@@ -916,6 +998,18 @@
     "prerequisites": [
       "centauri_meditation",
       "retroviral_engineering"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "HasImprovement", "improvement": "Fungus" }
+        }
+      }
     ]
   },
   {

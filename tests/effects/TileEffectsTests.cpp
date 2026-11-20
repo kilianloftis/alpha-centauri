@@ -529,22 +529,27 @@ TEST_CASE("ResolveTileYield: Mine nutrient penalty only while nutrients so far e
 {
     actest::WorldFixture world;
 
+    // Base moisture must be set: AddOccupantWithEffects recomputes effective moisture from it.
     Tile& arid = world.At(6, 6);
+    arid.SetBaseMoisture(Moisture_t::Arid);
     arid.SetMoisture(Moisture_t::Arid);
     world.ctx.AddOccupantWithEffects(arid, "Mine");
     CHECK(world.ctx.ResolveTileYield(arid).effective.nutrients == 0);
 
     Tile& moist = world.At(7, 7);
+    moist.SetBaseMoisture(Moisture_t::Moist);
     moist.SetMoisture(Moisture_t::Moist);
     world.ctx.AddOccupantWithEffects(moist, "Mine");
     CHECK(world.ctx.ResolveTileYield(moist).effective.nutrients == 1);
 
     Tile& wet = world.At(8, 8);
+    wet.SetBaseMoisture(Moisture_t::Wet);
     wet.SetMoisture(Moisture_t::Wet);
     world.ctx.AddOccupantWithEffects(wet, "Mine");
     CHECK(world.ctx.ResolveTileYield(wet).effective.nutrients == 1);
 
     Tile& wetFarm = world.At(9, 9);
+    wetFarm.SetBaseMoisture(Moisture_t::Wet);
     wetFarm.SetMoisture(Moisture_t::Wet);
     world.ctx.AddOccupantWithEffects(wetFarm, "Farm");
     world.ctx.AddOccupantWithEffects(wetFarm, "Mine");
@@ -552,12 +557,14 @@ TEST_CASE("ResolveTileYield: Mine nutrient penalty only while nutrients so far e
 
     Tile& rockyWet = world.At(10, 10);
     rockyWet.SetRockiness(Rockiness_t::Rocky);
+    rockyWet.SetBaseMoisture(Moisture_t::Wet);
     rockyWet.SetMoisture(Moisture_t::Wet);
     world.ctx.AddOccupantWithEffects(rockyWet, "Mine");
     CHECK(world.ctx.ResolveTileYield(rockyWet).effective.nutrients == 0);
 
     Tile& rockyJungleMine = world.At(11, 11);
     rockyJungleMine.SetRockiness(Rockiness_t::Rocky);
+    rockyJungleMine.SetBaseMoisture(Moisture_t::Moist);
     rockyJungleMine.SetMoisture(Moisture_t::Moist);
     world.ctx.AddOccupantWithEffects(rockyJungleMine, "MonsoonJungle");
     world.ctx.AddOccupantWithEffects(rockyJungleMine, "Mine");
@@ -982,7 +989,7 @@ TEST_CASE("Forest suppresses rockiness/moisture but keeps resource bonuses",
     CHECK(yield.energy == 1);
 }
 
-TEST_CASE("Fungus overrides tile yield to 1 nutrient",
+TEST_CASE("Fungus replaces terrain yield with Planet/tech inputs (bare fungus is 0/0/0)",
           "[effects][tile][yield][fungus]")
 {
     actest::WorldFixture world;
@@ -992,10 +999,12 @@ TEST_CASE("Fungus overrides tile yield to 1 nutrient",
     tile.SetHasRiver(true);
     world.ctx.AddOccupantWithEffects(tile, "Farm");
     world.ctx.AddOccupantWithEffects(tile, "Nutrients");
+    world.ctx.AddOccupantWithEffects(tile, "MonsoonJungle");
     world.ctx.AddOccupantWithEffects(tile, "Fungus");
 
+    // Suppresses landform/terraform/bonus/River/landmark; no Planet/tech inputs yet.
     const TileResources_t yield = world.ctx.ResolveTileYield(tile).effective;
-    CHECK(yield.nutrients == 1);
+    CHECK(yield.nutrients == 0);
     CHECK(yield.minerals == 0);
     CHECK(yield.energy == 0);
 }
@@ -1017,10 +1026,10 @@ TEST_CASE("Fungus in deeper ocean has no effect until the floor reaches the shel
     CHECK(dormant.minerals == bare.minerals);
     CHECK(dormant.energy == bare.energy);
 
-    // On the shelf the fungus takes over the tile's yield again.
+    // On the shelf the fungus takes over; without Planet/tech inputs it yields 0/0/0.
     rFungus.SetElevation(rFungus.MapRules().oceanShelfMeters);
     const TileResources_t awake = world.ctx.ResolveTileYield(rFungus).effective;
-    CHECK(awake.nutrients == 1);
+    CHECK(awake.nutrients == 0);
     CHECK(awake.minerals == 0);
     CHECK(awake.energy == 0);
 }
@@ -1042,9 +1051,111 @@ TEST_CASE("Fungus yield can be boosted by base-effect selectors",
     }};
 
     const TileResources_t yield = fixture.ctx.ResolveTileYield(tile, false, baseEffects).effective;
-    CHECK(yield.nutrients == 2);
+    CHECK(yield.nutrients == 1);
     CHECK(yield.minerals == 0);
     CHECK(yield.energy == 0);
+}
+
+TEST_CASE("ResolveTileYield floors each resource at 0",
+          "[effects][tile][yield]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(8, 2);
+    Tile& tile = fixture.At(8, 8);
+
+    actest::EffectPool pool;
+    const BaseEffects_t baseEffects{base, {
+        actest::Active(pool.StatMod(StatId_t::Nutrients, -5.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
+                                    actest::AnyTileSelector()), "penalty"),
+    }};
+
+    CHECK(fixture.ctx.ResolveTileYield(tile, false, baseEffects).effective.nutrients == 0);
+}
+
+TEST_CASE("Fungus yield stacks Planet clamp contribution with tech fungus Adds",
+          "[effects][tile][yield][fungus]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(8, 2);
+    Tile& tile = fixture.At(8, 8);
+    fixture.ctx.AddOccupantWithEffects(tile, "Fungus");
+
+    actest::EffectPool pool;
+    // Planet −2 on fungus + Ecology-style +1 nutrient → floor at 0.
+    const BaseEffects_t planetOnly{base, {
+        actest::Active(pool.StatMod(StatId_t::Nutrients, -2.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
+                                    actest::ImprovementSelector("Fungus")), "planet"),
+        actest::Active(pool.StatMod(StatId_t::Minerals, -2.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
+                                    actest::ImprovementSelector("Fungus")), "planet"),
+        actest::Active(pool.StatMod(StatId_t::Energy, -2.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
+                                    actest::ImprovementSelector("Fungus")), "planet"),
+    }};
+    CHECK(fixture.ctx.ResolveTileYield(tile, false, planetOnly).effective.nutrients == 0);
+
+    const BaseEffects_t planetAndTech{base, {
+        actest::Active(pool.StatMod(StatId_t::Nutrients, -2.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
+                                    actest::ImprovementSelector("Fungus")), "planet"),
+        actest::Active(pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
+                                    actest::ImprovementSelector("Fungus")), "ecology"),
+        actest::Active(pool.StatMod(StatId_t::Minerals, -2.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
+                                    actest::ImprovementSelector("Fungus")), "planet"),
+        actest::Active(pool.StatMod(StatId_t::Energy, -2.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
+                                    actest::ImprovementSelector("Fungus")), "planet"),
+    }};
+    CHECK(fixture.ctx.ResolveTileYield(tile, false, planetAndTech).effective.nutrients == 0);
+
+    const BaseEffects_t techOnly{base, {
+        actest::Active(pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
+                                    actest::ImprovementSelector("Fungus")), "ecology"),
+    }};
+    CHECK(fixture.ctx.ResolveTileYield(tile, false, techOnly).effective.nutrients == 1);
+}
+
+TEST_CASE("Fungus suppresses tile_yield_rules MaxClamp so fungus yield is uncapped",
+          "[effects][tile][yield][fungus]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(8, 2);
+    Tile& tile = fixture.At(8, 8);
+    fixture.ctx.AddOccupantWithEffects(tile, "Fungus");
+
+    actest::EffectPool pool;
+    const BaseEffects_t baseEffects{base, {
+        actest::Active(pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
+                                    actest::ImprovementSelector("Fungus")), "ecology"),
+        actest::Active(pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
+                                    actest::ImprovementSelector("Fungus")), "centauri_psi"),
+        actest::Active(pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
+                                    actest::ImprovementSelector("Fungus")), "fung_nutrient"),
+        actest::Active(pool.StatMod(StatId_t::Nutrients, 2.0, ModifierOp_t::MaxClamp,
+                                    EffectScope_t::FactionGlobal, actest::AnyTileSelector()),
+                       "tile_yield_rules"),
+    }};
+
+    const TileYieldView_t yield = fixture.ctx.ResolveTileYield(tile, false, baseEffects);
+    CHECK(yield.effective.nutrients == 3);
+    CHECK(yield.potential.nutrients == 3);
+}
+
+TEST_CASE("Economy AnyTile energy skips fungus tiles via TargetTileHas present false",
+          "[effects][tile][yield][fungus][economy]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(8, 2);
+    Tile& fungus = fixture.At(8, 8);
+    Tile& clear = fixture.At(9, 9);
+    fixture.ctx.AddOccupantWithEffects(fungus, "Fungus");
+
+    actest::EffectPool pool;
+    const Condition_t noFungus = TargetTileHas_t{"Fungus", false};
+    const BaseEffects_t baseEffects{base, {
+        actest::Active(pool.StatMod(StatId_t::Energy, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
+                                    actest::AnyTileSelector(), noFungus),
+                       "se_rating_economy_2"),
+    }};
+
+    CHECK(fixture.ctx.ResolveTileYield(fungus, false, baseEffects).effective.energy == 0);
+    CHECK(fixture.ctx.ResolveTileYield(clear, false, baseEffects).effective.energy == 1);
 }
 
 TEST_CASE("Monolith replaces tile yield with 2-2-2",

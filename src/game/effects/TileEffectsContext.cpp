@@ -494,7 +494,8 @@ int TileEffectsContext::ResolveResource_(const Tile& rTile,
               return StatModifierMatchesInContext(effect, stat, rCtx);
           });
     const double total = ResolveStatModifiersTotal(matching, SeedFor(stat), &rCtx);
-    return FinalizeResolvedStat(total);
+    // Tile resources never go below 0 (SMAC floors the running yield; fungus Planet+tech too).
+    return std::max(0, FinalizeResolvedStat(total));
 }
 
 TileEffectsContext::YieldLanes_t TileEffectsContext::ResolveYieldLanes_(

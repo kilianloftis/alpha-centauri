@@ -163,6 +163,11 @@
         {
           "type": "StatModifier",
           "scope": "AllOwnerBases",
+          "condition": {
+            "kind": "TargetTileHas",
+            "value": "Fungus",
+            "present": false
+          },
           "parameters": {
             "stat": "energy",
             "amount": 1,
@@ -177,6 +182,11 @@
         {
           "type": "StatModifier",
           "scope": "AllOwnerBases",
+          "condition": {
+            "kind": "TargetTileHas",
+            "value": "Fungus",
+            "present": false
+          },
           "parameters": {
             "stat": "energy",
             "amount": 1,
@@ -200,6 +210,11 @@
         {
           "type": "StatModifier",
           "scope": "AllOwnerBases",
+          "condition": {
+            "kind": "TargetTileHas",
+            "value": "Fungus",
+            "present": false
+          },
           "parameters": {
             "stat": "energy",
             "amount": 1,
@@ -232,6 +247,11 @@
         {
           "type": "StatModifier",
           "scope": "AllOwnerBases",
+          "condition": {
+            "kind": "TargetTileHas",
+            "value": "Fungus",
+            "present": false
+          },
           "parameters": {
             "stat": "energy",
             "amount": 1,
@@ -1137,6 +1157,45 @@
             "amount": 6,
             "op": "MultiplyGeometric"
           }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "nutrients",
+            "amount": -3,
+            "op": "Add",
+            "selector": {
+              "kind": "HasImprovement",
+              "improvement": "Fungus"
+            }
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "minerals",
+            "amount": -3,
+            "op": "Add",
+            "selector": {
+              "kind": "HasImprovement",
+              "improvement": "Fungus"
+            }
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "energy",
+            "amount": -3,
+            "op": "Add",
+            "selector": {
+              "kind": "HasImprovement",
+              "improvement": "Fungus"
+            }
+          }
         }
       ],
       "-2": [
@@ -1148,6 +1207,45 @@
             "amount": 5,
             "op": "MultiplyGeometric"
           }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "nutrients",
+            "amount": -2,
+            "op": "Add",
+            "selector": {
+              "kind": "HasImprovement",
+              "improvement": "Fungus"
+            }
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "minerals",
+            "amount": -2,
+            "op": "Add",
+            "selector": {
+              "kind": "HasImprovement",
+              "improvement": "Fungus"
+            }
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "energy",
+            "amount": -2,
+            "op": "Add",
+            "selector": {
+              "kind": "HasImprovement",
+              "improvement": "Fungus"
+            }
+          }
         }
       ],
       "-1": [
@@ -1158,6 +1256,45 @@
             "stat": "ecological_damage",
             "amount": 4,
             "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "nutrients",
+            "amount": -1,
+            "op": "Add",
+            "selector": {
+              "kind": "HasImprovement",
+              "improvement": "Fungus"
+            }
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "minerals",
+            "amount": -1,
+            "op": "Add",
+            "selector": {
+              "kind": "HasImprovement",
+              "improvement": "Fungus"
+            }
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "energy",
+            "amount": -1,
+            "op": "Add",
+            "selector": {
+              "kind": "HasImprovement",
+              "improvement": "Fungus"
+            }
           }
         }
       ],

@@ -190,18 +190,10 @@
         "TidalHarness",
         "@resource_bonus",
         "Minerals",
-        "Energy"
+        "Energy",
+        "tile_yield_rules"
       ],
       "effects": [
-        {
-          "type": "StatModifier",
-          "scope": "ThisTile",
-          "parameters": {
-            "stat": "nutrients",
-            "amount": 1,
-            "op": "Add"
-          }
-        },
         {
           "type": "StatModifier",
           "scope": "ThisTile",

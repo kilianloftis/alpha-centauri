@@ -273,7 +273,10 @@
         "@landform",
         "@land_terraform",
         "@sea_terraform",
-        "@resource_bonus"
+        "@resource_bonus",
+        "tile_yield_rules",
+        "River",
+        "@landmark"
       ],
       "effects": [
         {
@@ -298,15 +301,6 @@
             "stat": "max_heal_percent",
             "amount": 100,
             "op": "MinClamp"
-          }
-        },
-        {
-          "type": "StatModifier",
-          "scope": "ThisTile",
-          "parameters": {
-            "stat": "nutrients",
-            "amount": 1,
-            "op": "Add"
           }
         },
         {
