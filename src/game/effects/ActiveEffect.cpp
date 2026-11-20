@@ -120,12 +120,18 @@ double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double sca
                 throw std::runtime_error(
                     "AmountSourceValue: elevation_energy_step_meters must be > 0");
             }
-            // Rounded up, so any land above sea level is worth a point; ocean
-            // yields nothing.
-            const double elevation = static_cast<double>(rTile.GetElevation());
-            const double step = static_cast<double>(rYieldRules.elevationEnergyStepMeters);
-            const double bands = std::ceil(elevation / step);
-            return std::max(0.0, bands) * scale;
+            // Shore land is 1; each step of elevation_energy_step_meters adds one.
+            // docs/thinker/terranx-map.md — Tile yields (solar / mirror energy).
+            const int oceanLevel = rTile.MapRules().oceanLevelMeters;
+            const int elevation = rTile.GetElevation();
+            if (elevation < oceanLevel)
+            {
+                return 0.0;
+            }
+            const int aboveOcean = elevation - oceanLevel;
+            const int step = rYieldRules.elevationEnergyStepMeters;
+            const int bands = 1 + aboveOcean / step;
+            return static_cast<double>(bands) * scale;
         }
         default:
             ThrowNoEvaluation_(source, "Tile");

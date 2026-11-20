@@ -349,28 +349,28 @@ TEST_CASE("ResolveTileYield: bare tiles start at zero; SolarCollector applies el
         CHECK(yield.energy == 0);
     }
 
-    SECTION("a solar collector's whole yield is ceil(elevation / step)")
+    SECTION("a solar collector uses SMAC shore + floor((elev − ocean) / step)")
     {
         tile.SetElevation(1000);
         CHECK(world.ctx.ResolveTileYield(tile).effective.energy == 0);
         world.ctx.AddOccupantWithEffects(tile, "SolarCollector");
-        CHECK(world.ctx.ResolveTileYield(tile).effective.energy == 1);
+        CHECK(world.ctx.ResolveTileYield(tile).effective.energy == 2);
         tile.SetElevation(2500);
         CHECK(world.ctx.ResolveTileYield(tile).effective.energy == 3);
     }
 
-    SECTION("rounded up, so any land above sea level is worth a point")
-    {
-        tile.SetElevation(1);
-        world.ctx.AddOccupantWithEffects(tile, "SolarCollector");
-        CHECK(world.ctx.ResolveTileYield(tile).effective.energy == 1);
-    }
-
-    SECTION("sea level and below yield nothing")
+    SECTION("shore land at 0 m and just above still yields 1")
     {
         world.ctx.AddOccupantWithEffects(tile, "SolarCollector");
         tile.SetElevation(0);
-        CHECK(world.ctx.ResolveTileYield(tile).effective.energy == 0);
+        CHECK(world.ctx.ResolveTileYield(tile).effective.energy == 1);
+        tile.SetElevation(1);
+        CHECK(world.ctx.ResolveTileYield(tile).effective.energy == 1);
+    }
+
+    SECTION("below ocean level yields nothing")
+    {
+        world.ctx.AddOccupantWithEffects(tile, "SolarCollector");
         tile.SetElevation(-2000);
         CHECK(world.ctx.ResolveTileYield(tile).effective.energy == 0);
     }
@@ -392,7 +392,7 @@ TEST_CASE("ResolveTileYield: each resource resolves from the matching StatId_t (
     const TileResources_t yield = world.ctx.ResolveTileYield(tile).effective;
     CHECK(yield.nutrients == 1);
     CHECK(yield.minerals == 2);
-    CHECK(yield.energy == 1); // mirror ceil(1000/1000) = 1
+    CHECK(yield.energy == 2); // mirror: shore + 1 step at 1000 m
 }
 
 TEST_CASE("ResolveTileYield: terrain classification contributes through the same registry ids",
@@ -424,7 +424,7 @@ TEST_CASE("ResolveTileYield: a Mirror boosts adjacent solar collectors only",
         Tile& neighbour = world.At(9, 9);
         neighbour.SetElevation(2000);
         world.ctx.AddOccupantWithEffects(neighbour, "SolarCollector");
-        CHECK(world.ctx.ResolveTileYield(neighbour).effective.energy == 3); // 2 bands + mirror 1
+        CHECK(world.ctx.ResolveTileYield(neighbour).effective.energy == 4); // 3 bands + mirror 1
     }
 
     SECTION("out of range gets nothing")
@@ -432,7 +432,7 @@ TEST_CASE("ResolveTileYield: a Mirror boosts adjacent solar collectors only",
         Tile& far = world.At(10, 10); // distance 2
         far.SetElevation(1000);
         world.ctx.AddOccupantWithEffects(far, "SolarCollector");
-        CHECK(world.ctx.ResolveTileYield(far).effective.energy == 1); // its own band only
+        CHECK(world.ctx.ResolveTileYield(far).effective.energy == 2); // its own bands only
     }
 }
 
@@ -444,15 +444,15 @@ TEST_CASE("ResolveTileYield: a Mirror is its own solar collector but does not bu
     host.SetElevation(2000);
     world.ctx.AddOccupantWithEffects(host, "Mirror");
 
-    // Counts as a collector: two elevation bands. Does not add its own +1 (min_radius 1).
-    CHECK(world.ctx.ResolveTileYield(host).effective.energy == 2);
+    // Counts as a collector: shore + 2 steps. Does not add its own +1 (min_radius 1).
+    CHECK(world.ctx.ResolveTileYield(host).effective.energy == 3);
 
     // Neighbouring Mirrors do not buff each other — only SolarCollector tiles do.
     Tile& second = world.At(9, 9);
     second.SetElevation(1000);
     world.ctx.AddOccupantWithEffects(second, "Mirror");
-    CHECK(world.ctx.ResolveTileYield(host).effective.energy == 2);
-    CHECK(world.ctx.ResolveTileYield(second).effective.energy == 1);
+    CHECK(world.ctx.ResolveTileYield(host).effective.energy == 3);
+    CHECK(world.ctx.ResolveTileYield(second).effective.energy == 2);
 }
 
 TEST_CASE("ResolveTileYield with base effects: selector-carrying modifiers apply per matching tile",

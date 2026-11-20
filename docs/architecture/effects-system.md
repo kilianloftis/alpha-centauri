@@ -1188,8 +1188,10 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
 - **Energy is never intrinsic**: every resource seeds at `0` per tile, and elevation energy is
   entirely the solar collector's. `SolarCollector` declares one effect — `energy`,
   `amount_source: ElevationEnergy` — whose contribution is
-  `ceil(elevation / elevation_energy_step_meters)`, rounded **up** so any land above sea level
-  is worth a point, and clamped at `0` so sea level and below yield nothing. `Mirror` declares
+  `1 + floor((elevation − ocean_level) / elevation_energy_step_meters)` on land, and `0`
+  below ocean level (shore land at 0 m is 1; matches
+  `docs/thinker/terranx-map.md` Tile yields energy `max(0, altitude − 2)` with one
+  altitude level per step). `Mirror` declares
   the same effect (it *is* a collector) plus a `min_radius: 1, radius: 1` `+1 energy` aura
   conditioned on `TargetTileHas` `SolarCollector` or `Mirror` — two effects rather than one
   because `TargetTileHas` takes a single id, and safe from double-counting because the two

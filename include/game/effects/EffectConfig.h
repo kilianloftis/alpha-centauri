@@ -83,8 +83,8 @@ struct StatModifierEffect_t
     // EffectContext_t (docs/architecture/effects-system.md).
     enum class AmountSource_t
     {
-        // ceil(tile elevation / elevation_energy_step_meters), at least 0: all of a solar
-        // collector's energy. Energy, ThisTile only.
+        // 1 + floor((elevation − ocean) / step) on land, else 0. Energy, ThisTile only;
+        // step from tile_yield_rules.json. docs/thinker/terranx-map.md — Tile yields.
         ElevationEnergy,
         // Minerals a stockpile converts; stockpile output stats, ThisBase only.
         MineralsConverted,

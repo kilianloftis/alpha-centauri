@@ -317,12 +317,12 @@ TEST_CASE("ResolveStatModifiers: amount_source ElevationEnergy scales bands by a
 
     Tile tile(0, 0);
     tile.BindMapRules(actest::TestMapRules());
-    tile.SetElevation(2000); // 2 bands at a 1000m step
+    tile.SetElevation(2000); // shore + 2 steps at 1000 m → 3 bands
     const TileYieldRulesConfig_t yieldRules{.elevationEnergyStepMeters = 1000};
     const EffectContext_t ctx{.targetTile = &tile, .pTileYieldRules = &yieldRules};
     const std::vector<ActiveEffect_t> effects = {Active(rConfig, "solar")};
 
-    CHECK(ResolveStatModifiers(effects, 0.0, &ctx).total == Approx(4.0)); // 2 bands * 2
+    CHECK(ResolveStatModifiers(effects, 0.0, &ctx).total == Approx(6.0)); // 3 bands * 2
     CHECK_THROWS_AS(ResolveStatModifiers(effects, 0.0, nullptr), std::runtime_error);
     CHECK(std::ranges::distance(FilterByStatId(effects, StatId_t::Energy)) == 0);
     CHECK(std::ranges::distance(FilterByStatIdInContext(effects, StatId_t::Energy, ctx)) == 1);
