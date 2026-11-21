@@ -327,20 +327,21 @@ TEST_CASE("Difficulty discounts only an AI's probes against a player, on Thinker
     Faction& rHuman = fixtures.MakeFaction();
     Faction& rAi = fixtures.MakeFaction();
     BaseManager& rAiBase = fixtures.MakeFactionBase(rAi, 5, 5);
+    // What a 100-credit quote costs after the actor's steps.
     const auto actorCost = [](const Faction& rActor, const Faction& rTarget)
     {
         EffectContext_t ctx;
         ctx.pPartnerFaction = &rTarget;
-        return ResolveFactionStat(rActor.GetActiveEffects(), StatId_t::ProbeActorCost, 1.0, &ctx);
+        return ResolveFactionStat(rActor.GetActiveEffects(), StatId_t::ProbeActorCost, 100.0, &ctx);
     };
 
     // No level makes an AI's bases cheaper to probe.
-    CHECK(ResolveBaseStat_(rAiBase, StatId_t::ProbeActionCost, 1.0) == Approx(1.0));
-    CHECK(actorCost(rAi, rHuman) == Approx(1.0));
+    CHECK(ResolveBaseStat_(rAiBase, StatId_t::ProbeActionCost, 100.0) == Approx(100.0));
+    CHECK(actorCost(rAi, rHuman) == Approx(100.0));
 
     SelectDifficulty_(fixtures, "thinker");
-    CHECK(actorCost(rAi, rHuman) == Approx(0.75));
-    CHECK(actorCost(rHuman, rAi) == Approx(1.0));
+    CHECK(actorCost(rAi, rHuman) == Approx(75.0));
+    CHECK(actorCost(rHuman, rAi) == Approx(100.0));
 }
 
 TEST_CASE("Command Center MaxClamp follows difficulty", "[difficulty][effects][upkeep]")

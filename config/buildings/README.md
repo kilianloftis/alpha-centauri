@@ -101,7 +101,7 @@ Each entry in `effects` describes a single gameplay effect applied when the buil
 | Value | Description |
 |---|---|
 | `GrantBuilding` | Expands another building's effects onto this one by ID (`parameters.building_id`) — no constructed copy, no maintenance. To actually build it, use the triggered `AddBuilding` instead. |
-| `StatModifier` | Adds or multiplies a named stat (`parameters.stat`, `parameters.amount`, `parameters.op`; on `defense`, optional `parameters.slot` naming a `combat.json` `defense_slots` entry, which resolves as its own stack read only by that slot's kinds of fight) |
+| `StatModifier` | Adds or multiplies a named stat (`parameters.stat`, `parameters.amount`, `parameters.op`; on `defense`, optional `parameters.slot` naming a `combat.json` `defense_slots` entry, which resolves as its own stack read only by that slot's kinds of fight and scales the strength at the slot's `stage`; `parameters.stage`, an integer, with `op` `MultiplyStaged` only) |
 | `RuleFlag` | Enables a named gameplay rule (`parameters.flag`) |
 | `ForbiddenSocialPolicy` | Blocks adopting a social policy (`parameters.policy`) |
 | `SocialPolicyImpunity` | Ignores negative SocialRatingModifier Adds from that policy while it is active (`parameters.policy`) |
@@ -111,7 +111,7 @@ Each entry in `effects` describes a single gameplay effect applied when the buil
 | `Intercept` | Pre-combat intercept (`parameters.chance`, optional `cooldown_turns`, `chance_of_destruction_on_fail`; requires `condition`) |
 | `Scramble` | Unit may scramble to become the combat defender (`parameters.range`; requires `condition` on the attacker) |
 
-`amount`/`value` accept a JSON number, a numeric string, or a fraction string such as `"1/3"`. `op` is one of `Add`, `AddPercent` (amount in percent points, e.g. `25` = +25%), `MultiplyGeometric` (factor form, e.g. `0.5`), `MaxClamp`, `MinClamp`, `Fallback` (a factor on the seed applied only when no Add, AddPercent or MultiplyGeometric contribution fills the stat; rejected on additive stats and on `defense` without a slot) — defaults to `Add`.
+`amount`/`value` accept a JSON number, a numeric string, or a fraction string such as `"1/3"`. `op` is one of `Add`, `AddPercent` (amount in percent points, e.g. `25` = +25%), `MultiplyGeometric` (factor form, e.g. `0.5`), `MultiplyStaged` (factor form applied in ascending `stage` order, truncated toward zero after each stage; not on multiplier stats other than `attack` / `defense`, nor with a `slot`), `MaxClamp`, `MinClamp`, `Fallback` (a factor on the seed applied only when no Add, AddPercent, MultiplyGeometric or MultiplyStaged contribution fills the stat; rejected on additive stats and on `defense` without a slot) — defaults to `Add`.
 
 Any effect may carry an optional top-level `condition` object making it situational, e.g. a combat bonus that only applies against certain targets:
 

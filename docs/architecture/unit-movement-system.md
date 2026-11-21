@@ -264,16 +264,16 @@ Damage per lost round is the winner's `conventional_damage` or `psi_damage` for 
 fight times the receiver's `conventional_damage_taken` or `psi_damage_taken`, rounded and at
 least 1, resolved once with the strengths.
 `DefenderWinChance` is the defender's share of that ratio.
-When the attacker has fewer than one movement point of fragments left, `ResolveCombatStrength`
-multiplies the resolved attack rating by that leftover fraction of a point; a full point
-or more leaves attack strength unchanged. The post-combat spend (`SpendAttack`, UnitMutations) is `AttackMoveFragments`: one
-point, or the rest of the turn when `AttackingEndsTurn`, bombarding, or destroying an
-enhancement. After a fight or a
-duel, `UnitAttackExecutor` applies stack collateral when the defender died, then
-`TryPromote` on the survivor `PromotionCandidate` names (`CombatPromotionChance`:
-eligibility × success from effective morale, `our_strength`/`their_strength`, and live
-effects);
-a strike never promotes.
+`ResolveCombatStrength` takes each side's `ResolveFighterStrength` (the rating at
+`k_CombatStrengthScale`, rounded down, then its staged steps and defense slots in stage
+order, each truncated). It then multiplies the attack strength by the leftover fraction of a
+point when the attacker has less than one movement point of fragments left, and applies the
+difficulty `attack_handicap`. The post-combat spend (`SpendAttack`, UnitMutations) is
+`AttackMoveFragments`: one point, or the rest of the turn when `AttackingEndsTurn`,
+bombarding, or destroying an enhancement. After a fight or a duel, `UnitAttackExecutor`
+applies stack collateral when the defender died, then `TryPromote` on the survivor
+`PromotionCandidate` names (`CombatPromotionChance`: eligibility × success from effective
+morale, `our_strength`/`their_strength`, and live effects); a strike never promotes.
 
 **Destroy Enhancement.** `D` on a combat unit (`IsCombatUnit`) or Former (`terraform` flag)
 opens a picker of `DestroyEnhancementOptions` on the unit's tile: every non-Base improvement

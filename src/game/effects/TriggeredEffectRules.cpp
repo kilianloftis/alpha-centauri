@@ -175,6 +175,9 @@ int PredictModifyPopulationDelta(int size, const ModifyPopulationEffect_t& rEffe
     case ModifierOp_t::MultiplyGeometric:
         throw std::runtime_error(
             "PredictModifyPopulationDelta: MultiplyGeometric is not supported");
+    case ModifierOp_t::MultiplyStaged:
+        throw std::runtime_error(
+            "PredictModifyPopulationDelta: MultiplyStaged is not supported");
     case ModifierOp_t::MaxClamp:
     case ModifierOp_t::MinClamp:
         throw std::runtime_error(

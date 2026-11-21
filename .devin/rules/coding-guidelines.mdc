@@ -127,7 +127,13 @@ still control end-to-end. Unknown leftover keys may fail a known-key whitelist o
 like any other typo; do not special-case the retired name.
 When asked to address review findings or implement a review/plan, treat every finding as in-scope unless the user explicitly defers it. Severity ranks order of work, not whether it gets done — do not park fixes as "optional polish" or "leave as-is."
 
-## UI style JSON
+## JSON files: edit, do not reformat
+Change only the keys, values, or entries the task needs. Do **not** rewrite a JSON file with
+`json.dumps` / `json.load` round-trips, pretty-printers, or bulk indent “cleanup” that expands
+compact objects, reorders keys, or reshuffles whitespace unrelated to the edit. Prefer
+surgical edits (`StrReplace`, targeted script mutations of the touched nodes only). If a tool
+rewrote the whole file, restore the prior formatting for untouched regions before finishing.
+
 `config/ui/style.json` and `tests/fixtures/ui/style.json` keep scalar arrays compact (one
 value-line per array, not one element per line). Do not rewrite them with
 `json.dumps(..., indent=2)`. Run `python tools/format_ui_style_json.py` after bulk edits.

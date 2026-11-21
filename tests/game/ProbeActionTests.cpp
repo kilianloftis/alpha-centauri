@@ -1177,7 +1177,7 @@ TEST_CASE("Mind-control quote halves when the actor is the former owner",
     targetBase.GetPopulation().NotifyCaptured(game.pPlayer->GetFactionId(),
                                               game.pAi->GetFactionId());
     CHECK(QuoteProbeActionCost(*pAction, *game.pPlayer, *target)
-          == static_cast<int>(std::lround(*fullCost * 0.5)));
+          == static_cast<int>(std::trunc(*fullCost * 0.5)));
 }
 
 TEST_CASE("Mind-control quote doubles when the actor has victimized the target",
@@ -1399,7 +1399,7 @@ TEST_CASE("Subverting a unit divides first, halves all but colony pods and forme
 
     CHECK(QuoteSubvert_(game, probe, pod) == SubvertFormula_(pod, 12));
     const double halved = SubvertFormula_(combat, 12) * 0.5;
-    CHECK(QuoteSubvert_(game, probe, combat) == static_cast<int>(std::lround(halved)));
+    CHECK(QuoteSubvert_(game, probe, combat) == static_cast<int>(std::trunc(halved)));
     CHECK(QuoteSubvert_(game, probe, polyCombat) == SubvertFormula_(polyCombat, 12));
 }
 
@@ -1492,12 +1492,42 @@ TEST_CASE("An AI pays the hardest difficulties' discount against a player, and a
 
     SelectDifficulty_(game, "thinker");
     CHECK(QuoteSubvert_(game, aiProbe, playerPod)
-          == static_cast<int>(std::lround(aiPaysAtTalent * 0.75)));
+          == static_cast<int>(std::trunc(aiPaysAtTalent * 0.75)));
     CHECK(QuoteSubvert_(game, playerProbe, aiPod) == playerPaysAtTalent);
 
     SelectDifficulty_(game, "transcend");
     CHECK(QuoteSubvert_(game, aiProbe, playerPod)
-          == static_cast<int>(std::lround(aiPaysAtTalent * 0.6)));
+          == static_cast<int>(std::trunc(aiPaysAtTalent * 0.6)));
+}
+
+TEST_CASE("An AI's difficulty discount truncates before Nethack's", "[probe][cost][difficulty]")
+{
+    ProbeGame_ game;
+    StatModifierEffect_t nethackStep;
+    nethackStep.stat = StatId_t::ProbeActorCost;
+    nethackStep.amount = 0.75;
+    nethackStep.op = ModifierOp_t::MultiplyStaged;
+    nethackStep.stage = 150;
+    BuildingConfig_t nethack;
+    nethack.id = "test_staged_nethack";
+    nethack.name = "Test Staged Nethack";
+    nethack.effects.push_back(EffectConfig_t{});
+    nethack.effects.back().effect = nethackStep;
+    nethack.effects.back().scope = EffectScope_t::FactionGlobal;
+    std::vector<BuildingConfig_t> buildings = game.fixtures.buildings().GetAll();
+    buildings.push_back(nethack);
+    game.fixtures.buildings().Assign(std::move(buildings));
+
+    BaseManager& aiHome = game.MakeBase(*game.pAi, 8, 14);
+    aiHome.GetBuildingManager().AddBuilding("test_staged_nethack");
+    SelectDifficulty_(game, "transcend");
+
+    EffectContext_t ctx;
+    ctx.pPartnerFaction = game.pPlayer;
+    const double cost =
+        ResolveFactionStat(game.pAi->GetActiveEffects(), StatId_t::ProbeActorCost, 5.0, &ctx);
+    // trunc(trunc(5 * 0.6) * 0.75) = 2; Nethack first would give trunc(trunc(5 * 0.75) * 0.6) = 1.
+    CHECK(cost == 2.0);
 }
 
 namespace
@@ -1540,7 +1570,7 @@ TEST_CASE("A riot halves the mind-control quote and a golden age doubles it, thr
     riot.bRioting = true;
     riot.consecutiveRiotTurns = 1;
     targetBase.GetPopulation().RestoreMoodState(riot);
-    CHECK(QuoteMindControl_(game, probe, targetBase) == static_cast<int>(std::lround(before * 0.5)));
+    CHECK(QuoteMindControl_(game, probe, targetBase) == static_cast<int>(std::trunc(before * 0.5)));
 
     MoodState_t goldenAge;
     goldenAge.bInGoldenAge = true;
@@ -1554,7 +1584,7 @@ TEST_CASE("A riot halves the mind-control quote and a golden age doubles it, thr
     CHECK(QuoteMindControl_(game, probe, targetBase) == before);
 }
 
-TEST_CASE("Base-quote factors combine into one multiplier, rounded once",
+TEST_CASE("Base-quote factors truncate in stage order",
           "[probe][cost][mind-control]")
 {
     ProbeGame_ game;
@@ -1564,13 +1594,15 @@ TEST_CASE("Base-quote factors combine into one multiplier, rounded once",
     const int before = QuoteMindControl_(game, probe, targetBase);
     REQUIRE(before % 2 == 1);
 
-    // Halving then doubling leaves an odd quote whole, where the binary's integer steps lose one.
+    // Former ×0.5 then GA ×2: trunc loses the odd unit (product-then-round would keep it).
     targetBase.GetPopulation().NotifyCaptured(game.pPlayer->GetFactionId(),
                                               game.pAi->GetFactionId());
     MoodState_t goldenAge;
     goldenAge.bInGoldenAge = true;
     targetBase.GetPopulation().RestoreMoodState(goldenAge);
-    CHECK(QuoteMindControl_(game, probe, targetBase) == before);
+    const int expected =
+        static_cast<int>(std::trunc(std::trunc(static_cast<double>(before) * 0.5) * 2.0));
+    CHECK(QuoteMindControl_(game, probe, targetBase) == expected);
 }
 
 TEST_CASE("Pact's mind-control surcharge is the diplomacy config's partner scale",
@@ -1694,7 +1726,7 @@ TEST_CASE("A probe cost effect counts for the side that owns it: probe_action_co
     CHECK(QuoteMindControl_(game, probe, targetBase) == before);
 
     playerHome.GetBuildingManager().AddBuilding("test_nethack");
-    const int withNethack = static_cast<int>(std::lround(before * 0.75));
+    const int withNethack = static_cast<int>(std::trunc(before * 0.75));
     CHECK(QuoteMindControl_(game, probe, targetBase) == withNethack);
 
     // A target that owns the actor-side effect is no cheaper for it.
@@ -1702,7 +1734,7 @@ TEST_CASE("A probe cost effect counts for the side that owns it: probe_action_co
     CHECK(QuoteMindControl_(game, probe, targetBase) == withNethack);
 
     // The actor side reaches unit subversion too.
-    CHECK(QuoteSubvert_(game, probe, victim) == static_cast<int>(std::lround(unitBefore * 0.75)));
+    CHECK(QuoteSubvert_(game, probe, victim) == static_cast<int>(std::trunc(unitBefore * 0.75)));
 }
 
 TEST_CASE("A quote follows its action's cost formula", "[probe][cost][config]")
@@ -1781,8 +1813,8 @@ TEST_CASE("SE Probe scales both a base's mind-control cost and a unit's subversi
     // SE Probe -2 halves both, per the fixture's level effects.
     targetBase.GetBuildingManager().AddBuilding("test_low_probe");
     CHECK(QuoteMindControl_(game, probe, targetBase)
-          == static_cast<int>(std::lround(baseBefore * 0.5)));
-    CHECK(QuoteSubvert_(game, probe, victim) == static_cast<int>(std::lround(unitBefore * 0.5)));
+          == static_cast<int>(std::trunc(baseBefore * 0.5)));
+    CHECK(QuoteSubvert_(game, probe, victim) == static_cast<int>(std::trunc(unitBefore * 0.5)));
 }
 
 TEST_CASE("Infiltrate against a Treaty partner does not declare Vendetta",

@@ -1431,7 +1431,8 @@
           "parameters": {
             "stat": "probe_action_cost",
             "amount": 0.5,
-            "op": "MultiplyGeometric"
+            "op": "MultiplyStaged",
+            "stage": 170
           }
         },
         {
@@ -1440,7 +1441,8 @@
           "parameters": {
             "stat": "probe_action_cost",
             "amount": 0.5,
-            "op": "MultiplyGeometric"
+            "op": "MultiplyStaged",
+            "stage": 170
           }
         }
       ],
@@ -1460,7 +1462,8 @@
           "parameters": {
             "stat": "probe_action_cost",
             "amount": 0.75,
-            "op": "MultiplyGeometric"
+            "op": "MultiplyStaged",
+            "stage": 170
           }
         },
         {
@@ -1469,7 +1472,8 @@
           "parameters": {
             "stat": "probe_action_cost",
             "amount": 0.75,
-            "op": "MultiplyGeometric"
+            "op": "MultiplyStaged",
+            "stage": 170
           }
         }
       ],
@@ -1493,7 +1497,8 @@
           "parameters": {
             "stat": "probe_action_cost",
             "amount": 1.5,
-            "op": "MultiplyGeometric"
+            "op": "MultiplyStaged",
+            "stage": 170
           }
         },
         {
@@ -1502,7 +1507,8 @@
           "parameters": {
             "stat": "probe_action_cost",
             "amount": 1.5,
-            "op": "MultiplyGeometric"
+            "op": "MultiplyStaged",
+            "stage": 170
           }
         }
       ],
@@ -1526,7 +1532,8 @@
           "parameters": {
             "stat": "probe_action_cost",
             "amount": 2,
-            "op": "MultiplyGeometric"
+            "op": "MultiplyStaged",
+            "stage": 170
           }
         },
         {
@@ -1535,7 +1542,8 @@
           "parameters": {
             "stat": "probe_action_cost",
             "amount": 2,
-            "op": "MultiplyGeometric"
+            "op": "MultiplyStaged",
+            "stage": 170
           }
         }
       ],

@@ -616,7 +616,8 @@
           "parameters": {
             "stat": "defense",
             "amount": 1.5,
-            "op": "MultiplyGeometric"
+            "op": "MultiplyStaged",
+            "stage": 30
           }
         },
         {

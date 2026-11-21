@@ -131,6 +131,7 @@ TEST_CASE("ParseModifierOp / ParseEffectScope mappings", "[effects][parser]")
     CHECK(EffectConfigParser::ParseModifierOp("Add") == ModifierOp_t::Add);
     CHECK(EffectConfigParser::ParseModifierOp("AddPercent") == ModifierOp_t::AddPercent);
     CHECK(EffectConfigParser::ParseModifierOp("MultiplyGeometric") == ModifierOp_t::MultiplyGeometric);
+    CHECK(EffectConfigParser::ParseModifierOp("MultiplyStaged") == ModifierOp_t::MultiplyStaged);
     CHECK(EffectConfigParser::ParseModifierOp("MaxClamp") == ModifierOp_t::MaxClamp);
     CHECK(EffectConfigParser::ParseModifierOp("Fallback") == ModifierOp_t::Fallback);
     CHECK(EffectConfigParser::ParseModifierOp("MinClamp") == ModifierOp_t::MinClamp);
@@ -1159,6 +1160,51 @@ TEST_CASE("ParseEffectConfig: StatModifier amount accepts a rational string", "[
     CHECK(pModifier->stat == StatId_t::CaptureFacilitiesDestroyed);
     CHECK(pModifier->op == ModifierOp_t::MultiplyGeometric);
     CHECK(pModifier->amount == Approx(1.0 / 3.0));
+}
+
+TEST_CASE("ParseEffectConfig: MultiplyStaged requires stage; stage forbidden on other ops",
+          "[effects][parser]")
+{
+    const EffectConfig_t staged = EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "nutrients", "amount": 1.5, "op": "MultiplyStaged", "stage": 1 }
+    })"));
+    const auto* pStaged = std::get_if<StatModifierEffect_t>(&staged.effect);
+    REQUIRE(pStaged);
+    CHECK(pStaged->op == ModifierOp_t::MultiplyStaged);
+    CHECK(pStaged->stage == 1);
+
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "nutrients", "amount": 1.5, "op": "MultiplyStaged" }
+    })")));
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "nutrients", "amount": 50, "op": "AddPercent", "stage": 1 }
+    })")));
+}
+
+TEST_CASE("ParseEffectConfig: MultiplyStaged needs a whole running value", "[effects][parser]")
+{
+    const auto parse = [](const char* pParameters)
+    {
+        return EffectConfigParser::ParseEffectConfig(json::parse(
+            std::string(R"({ "type": "StatModifier", "scope": "ThisUnit", "parameters": )")
+            + pParameters + " }"));
+    };
+    CHECK_NOTHROW(parse(R"({ "stat": "defense", "amount": 2, "op": "MultiplyStaged",
+                             "stage": 90 })"));
+    CHECK_NOTHROW(parse(R"({ "stat": "attack_handicap", "amount": 0.5, "op": "MultiplyStaged",
+                             "stage": 1 })"));
+    // A multiplier stat's seed of 1 would truncate to 0 or 1.
+    CHECK_THROWS(parse(R"({ "stat": "collateral_susceptibility", "amount": 0.5,
+                            "op": "MultiplyStaged", "stage": 1 })"));
+    // A slot's factor is itself one step of the strength.
+    CHECK_THROWS(parse(R"({ "stat": "defense", "slot": "sensor", "amount": 1.25,
+                            "op": "MultiplyStaged", "stage": 1 })"));
 }
 
 TEST_CASE("ParseEffectConfig: move_cost MaxClamp stores move fragments", "[effects][parser][movement]")
@@ -2200,7 +2246,7 @@ TEST_CASE("ParseEffectConfig: InteractionOverride and AttackerIsEmbarked",
 
 TEST_CASE("ParseEffectConfig: a multiplier stat rejects a flat Add", "[effects][parser]")
 {
-    for (const char* stat : {"attack", "defense", "attack_handicap"})
+    for (const char* stat : {"attack", "defense"})
     {
         const json flatJson = json::parse(std::string(R"({
             "type": "StatModifier", "scope": "ThisUnit",

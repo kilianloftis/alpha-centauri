@@ -286,6 +286,11 @@
     ]
   },
   {
+    "id": "Naval_Yard",
+    "name": "Naval Yard",
+    "category": "conquer"
+  },
+  {
     "id": "Aerospace_Complex",
     "name": "Aerospace Complex (+2 starting XP to air units)",
     "on_unit_produced_effects": [

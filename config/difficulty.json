@@ -29,7 +29,8 @@
           "parameters": {
             "stat": "attack_handicap",
             "amount": 2,
-            "op": "MultiplyGeometric"
+            "op": "MultiplyStaged",
+            "stage": 200
           }
         },
         {
@@ -43,7 +44,8 @@
           "parameters": {
             "stat": "attack_handicap",
             "amount": 0.25,
-            "op": "MultiplyGeometric"
+            "op": "MultiplyStaged",
+            "stage": 200
           }
         },
         {
@@ -208,7 +210,8 @@
           "parameters": {
             "stat": "attack_handicap",
             "amount": 1.5,
-            "op": "MultiplyGeometric"
+            "op": "MultiplyStaged",
+            "stage": 200
           }
         },
         {
@@ -222,7 +225,8 @@
           "parameters": {
             "stat": "attack_handicap",
             "amount": 0.5,
-            "op": "MultiplyGeometric"
+            "op": "MultiplyStaged",
+            "stage": 200
           }
         },
         {
@@ -380,7 +384,8 @@
           "parameters": {
             "stat": "attack_handicap",
             "amount": 0.75,
-            "op": "MultiplyGeometric"
+            "op": "MultiplyStaged",
+            "stage": 200
           }
         },
         {
@@ -622,7 +627,8 @@
           "parameters": {
             "stat": "probe_actor_cost",
             "amount": 0.75,
-            "op": "MultiplyGeometric"
+            "op": "MultiplyStaged",
+            "stage": 90
           }
         },
         {
@@ -758,7 +764,8 @@
           "parameters": {
             "stat": "probe_actor_cost",
             "amount": 0.6,
-            "op": "MultiplyGeometric"
+            "op": "MultiplyStaged",
+            "stage": 90
           }
         },
         {

@@ -36,11 +36,13 @@
 #include <magic_enum.hpp>
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <span>
 #include <stdexcept>
 #include <iostream>
 #include <set>
 #include <limits>
+#include <map>
 #include <string_view>
 #include <type_traits>
 #include <variant>
@@ -531,7 +533,25 @@ std::vector<ActiveEffect_t> ExpandGrantBuildingEffects(
     return effects;
 }
 
-double ApplyModifierStack(double base, const std::vector<std::pair<double, ModifierOp_t>>& contributions)
+namespace
+{
+
+// Each stage's factor, ascending, truncated toward zero after each. The tolerance keeps a
+// product that is whole in decimal (100 × 1.15) at its whole value despite binary error.
+double ApplyStagedFactors_(double value, const std::map<int, double>& rFactorsByStage)
+{
+    constexpr double k_WholeTolerance = 1e-9;
+    for (const auto& [stage, factor] : rFactorsByStage)
+    {
+        const double scaled = value * factor;
+        value = std::trunc(scaled + std::copysign(k_WholeTolerance, scaled));
+    }
+    return value;
+}
+
+} // namespace
+
+double ApplyModifierStack(double base, const std::vector<ModifierContribution_t>& contributions)
 {
     double addTotal = base;
     double arithmeticFactor = 1.0;
@@ -541,13 +561,19 @@ double ApplyModifierStack(double base, const std::vector<std::pair<double, Modif
     // Infinite bounds are the no-clamp identity, so no "was one present" flag is needed.
     double maxClamp = std::numeric_limits<double>::infinity();
     double minClamp = -std::numeric_limits<double>::infinity();
-    for (const auto& [amount, op] : contributions)
+    std::map<int, double> stagedFactors;
+    for (const auto& [amount, op, stage] : contributions)
     {
         switch (op)
         {
             case ModifierOp_t::Add:               addTotal += amount; bFilled = true; break;
             case ModifierOp_t::AddPercent:        arithmeticFactor += amount / 100.0; bFilled = true; break;
             case ModifierOp_t::MultiplyGeometric: geometricFactor *= amount; bFilled = true; break;
+            case ModifierOp_t::MultiplyStaged:
+                stagedFactors.emplace(stage, 1.0);
+                stagedFactors[stage] *= amount;
+                bFilled = true;
+                break;
             case ModifierOp_t::MaxClamp:          maxClamp = std::min(maxClamp, amount); break;
             case ModifierOp_t::MinClamp:          minClamp = std::max(minClamp, amount); break;
             case ModifierOp_t::Fallback:          fallbackFactor *= amount; break;
@@ -557,25 +583,26 @@ double ApplyModifierStack(double base, const std::vector<std::pair<double, Modif
     {
         geometricFactor = fallbackFactor;
     }
-    const double result = addTotal * arithmeticFactor * geometricFactor;
+    const double staged = ApplyStagedFactors_(addTotal * arithmeticFactor, stagedFactors);
+    const double result = staged * geometricFactor;
     // MinClamp applied last, so it wins when a MinClamp and a MaxClamp cross.
     return std::max(std::min(result, maxClamp), minClamp);
 }
 
 double ApplyLargestModifier(double base,
-                            const std::vector<std::pair<double, ModifierOp_t>>& contributions)
+                            const std::vector<ModifierContribution_t>& contributions)
 {
     const auto isClamp = [](ModifierOp_t op) {
         return op == ModifierOp_t::MaxClamp || op == ModifierOp_t::MinClamp;
     };
     const bool bFilled = std::ranges::any_of(contributions, [&](const auto& rContribution) {
-        return !isClamp(rContribution.second) && rContribution.second != ModifierOp_t::Fallback;
+        return !isClamp(rContribution.op) && rContribution.op != ModifierOp_t::Fallback;
     });
     std::optional<double> largest;
-    std::vector<std::pair<double, ModifierOp_t>> clamps;
+    std::vector<ModifierContribution_t> clamps;
     for (const auto& rContribution : contributions)
     {
-        const ModifierOp_t op = rContribution.second;
+        const ModifierOp_t op = rContribution.op;
         if (isClamp(op))
         {
             clamps.push_back(rContribution);
@@ -1310,7 +1337,7 @@ double ResolveUnitMultiplicative_(const UnitEffects_t& rUnitEffects, StatId_t st
                                   double baseValue, const EffectContext_t& rCtx)
 {
     const EffectContext_t ctx = UnitSubjectContext(rUnitEffects.pUnit, rCtx);
-    std::vector<std::pair<double, ModifierOp_t>> contributions;
+    std::vector<ModifierContribution_t> contributions;
     for (const ActiveEffect_t& rEffect :
          FilterByStatIdInContext(rUnitEffects.effects, statId, ctx))
     {
@@ -1318,7 +1345,7 @@ double ResolveUnitMultiplicative_(const UnitEffects_t& rUnitEffects, StatId_t st
             std::get_if<StatModifierEffect_t>(&rEffect.config->effect);
         if (pModifier && pModifier->op != ModifierOp_t::Add)
         {
-            contributions.emplace_back(AmountSourceValue(*pModifier, &ctx), pModifier->op);
+            contributions.push_back(ContributionFor(*pModifier, &ctx));
         }
     }
     return ApplyModifierStack(baseValue, contributions);
@@ -1340,11 +1367,8 @@ double ResolveUnitSlot_(const UnitEffects_t& rUnitEffects, StatId_t statId,
             return breakdown.total;
         case SlotCombine_t::Largest:
         {
-            std::vector<std::pair<double, ModifierOp_t>> contributions;
-            for (const StatBreakdown_t::Contribution_t& rContribution : breakdown.contributions)
-            {
-                contributions.emplace_back(rContribution.amount, rContribution.op);
-            }
+            const std::vector<ModifierContribution_t> contributions(
+                breakdown.contributions.begin(), breakdown.contributions.end());
             return ApplyLargestModifier(SeedFor(statId), contributions);
         }
     }
@@ -1359,6 +1383,28 @@ UnitEffects_t LiveUnitEffectsWithMorale_(const Unit& rUnit,
     UnitEffects_t unitEffects = CollectLiveUnitEffects(rUnit);
     AppendActiveEffects(extraEffects, nullptr, "morale_level", unitEffects.effects);
     return unitEffects;
+}
+
+bool IsStaged_(const ModifierContribution_t& rContribution)
+{
+    return rContribution.op == ModifierOp_t::MultiplyStaged;
+}
+
+// The multiplier's MultiplyStaged contributions, with each slot's factor as one more step at
+// the slot's stage.
+std::vector<ModifierContribution_t> CombatStrengthSteps_(const UnitEffects_t& rEffects,
+                                                         CombatRatingStats_t stats,
+                                                         const EffectContext_t& rCtx)
+{
+    std::vector<ModifierContribution_t> steps = CollectStatContributions(
+        FilterByStatIdInContext(rEffects.effects, stats.multiplier, rCtx), &rCtx);
+    std::erase_if(steps, std::not_fn(IsStaged_));
+    for (const StatSlot_t& rSlot : stats.slots)
+    {
+        const double factor = ResolveUnitSlot_(rEffects, stats.multiplier, rSlot, rCtx);
+        steps.push_back(ModifierContribution_t{factor, ModifierOp_t::MultiplyStaged, rSlot.stage});
+    }
+    return steps;
 }
 
 } // namespace
@@ -1388,15 +1434,23 @@ double ResolveCombatRating(const Unit& rUnit, CombatRatingStats_t stats,
         StatModifierEffect_t{stats.multiplier, moraleMultiplier, ModifierOp_t::MultiplyGeometric};
     const std::span<const EffectConfig_t> extraEffects(&morale, 1);
     const UnitEffects_t effects = LiveUnitEffectsWithMorale_(rUnit, extraEffects);
-    const double value = ResolveUnitStat(effects, stats.value, SeedFor(stats.value), &rCtx);
-    const double multiplier =
-        ResolveUnitStat(effects, stats.multiplier, SeedFor(stats.multiplier), &rCtx);
-    double rating = value * multiplier;
-    for (const StatSlot_t& rSlot : stats.slots)
-    {
-        rating *= ResolveUnitSlot_(effects, stats.multiplier, rSlot, rCtx);
-    }
-    return rating;
+    const EffectContext_t ctx = UnitSubjectContext(effects.pUnit, rCtx);
+    const double value = ResolveUnitStat(effects, stats.value, SeedFor(stats.value), &ctx);
+    std::vector<ModifierContribution_t> multiplierStack = CollectStatContributions(
+        FilterByStatIdInContext(effects.effects, stats.multiplier, ctx), &ctx);
+    std::erase_if(multiplierStack, IsStaged_);
+    const double multiplier = ApplyModifierStack(SeedFor(stats.multiplier), multiplierStack);
+    return value * multiplier;
+}
+
+int ApplyCombatStrengthSteps(int strength, const Unit& rUnit, CombatRatingStats_t stats,
+                             const EffectContext_t& rCtx)
+{
+    const UnitEffects_t effects = CollectLiveUnitEffects(rUnit);
+    const EffectContext_t ctx = UnitSubjectContext(effects.pUnit, rCtx);
+    const std::vector<ModifierContribution_t> steps = CombatStrengthSteps_(effects, stats, ctx);
+    const double stepped = ApplyModifierStack(static_cast<double>(strength), steps);
+    return static_cast<int>(stepped);
 }
 
 namespace

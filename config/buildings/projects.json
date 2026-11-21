@@ -811,7 +811,8 @@
         "parameters": {
           "stat": "probe_actor_cost",
           "amount": 0.75,
-          "op": "MultiplyGeometric"
+          "op": "MultiplyStaged",
+          "stage": 150
         }
       }
     ]

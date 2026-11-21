@@ -253,12 +253,20 @@ inline ac::EffectContext_t FightContext(const ac::Unit& rAttacker, const ac::Uni
     return ctx;
 }
 
+// rUnit's whole-number strength at neutral morale, in rating units.
+inline double NeutralMoraleRating(const ac::Unit& rUnit, ac::CombatRatingStats_t stats,
+                                  const ac::EffectContext_t& rCtx)
+{
+    const int strength = ac::ResolveFighterStrength(rUnit, stats, rCtx, 1.0);
+    return static_cast<double>(strength) / static_cast<double>(ac::k_CombatStrengthScale);
+}
+
 // rAttacker's conventional attack rating against rDefender, at neutral morale: its
 // conventional_attack value times its attack multiplier.
 inline double ConventionalAttackRating(const ac::Unit& rAttacker, const ac::Unit& rDefender)
 {
     const ac::EffectContext_t ctx = FightContext(rAttacker, rDefender, ac::CombatRole_t::Attacker);
-    return ac::ResolveCombatRating(rAttacker, ac::k_ConventionalCombat.attack, ctx, 1.0);
+    return NeutralMoraleRating(rAttacker, ac::k_ConventionalCombat.attack, ctx);
 }
 
 // rDefender's conventional defense rating on its tile when rAttacker attacks it, at neutral
@@ -267,7 +275,7 @@ inline double ConventionalDefenseRating(const ac::Unit& rDefender, const ac::Uni
 {
     const ac::EffectContext_t ctx = FightContext(rAttacker, rDefender, ac::CombatRole_t::Defender);
     const ac::CombatRatingStats_t stats = ac::DefenseRatingStats(ac::k_ConventionalCombat);
-    return ac::ResolveCombatRating(rDefender, stats, ctx, 1.0);
+    return NeutralMoraleRating(rDefender, stats, ctx);
 }
 
 // rDefender's psi defense rating on its tile when rAttacker attacks it, at neutral morale.
@@ -275,7 +283,7 @@ inline double PsiDefenseRating(const ac::Unit& rDefender, const ac::Unit& rAttac
 {
     const ac::EffectContext_t ctx = FightContext(rAttacker, rDefender, ac::CombatRole_t::Defender);
     const ac::CombatRatingStats_t stats = ac::DefenseRatingStats(ac::k_PsiCombat);
-    return ac::ResolveCombatRating(rDefender, stats, ctx, 1.0);
+    return NeutralMoraleRating(rDefender, stats, ctx);
 }
 
 inline ac::Condition_t HasComponentCondition(std::string componentId)

@@ -3,6 +3,7 @@
   "defense_slots": [
     {
       "id": "terrain",
+      "stage": 60,
       "kinds": [
         "Conventional"
       ],
@@ -10,12 +11,14 @@
     },
     {
       "id": "fortification",
+      "stage": 70,
       "kinds": [
         "Conventional"
       ]
     },
     {
       "id": "sensor",
+      "stage": 80,
       "kinds": [
         "Conventional",
         "Psi"

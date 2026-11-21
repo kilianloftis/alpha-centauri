@@ -644,6 +644,16 @@
         "type": "StatModifier",
         "scope": "ThisTile",
         "parameters": {
+          "stat": "nutrients",
+          "amount": 1.5,
+          "op": "MultiplyStaged",
+          "stage": 2
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
           "stat": "eco_damage_contribution",
           "amount": 5,
           "op": "Add"
@@ -656,6 +666,38 @@
           "stat": "eco_damage_worked_contribution",
           "amount": 5,
           "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "SoilEnricher",
+    "name": "Soil Enricher",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "advanced_ecological_engineering"
+        }
+      ]
+    },
+    "turns_required": 8,
+    "tags": [
+      "land_terraform"
+    ],
+    "domain": "land",
+    "excludes": [
+      "Forest",
+      "ThermalBorehole"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 1.5,
+          "op": "MultiplyStaged",
+          "stage": 1
         }
       }
     ]

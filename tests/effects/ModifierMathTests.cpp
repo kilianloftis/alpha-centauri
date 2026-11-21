@@ -3,6 +3,7 @@
 // Documented contract (docs/architecture/effects-system.md):
 //   total = (baseValue + sum of Add amounts)
 //         * (1 + sum of AddPercent amounts / 100)   <- one arithmetic factor, percent points
+//         then each MultiplyStaged stage, truncated toward zero
 //         * (product of MultiplyGeometric factors)
 
 #include "TestHelpers.h"
@@ -27,7 +28,17 @@ using Catch::Approx;
 
 namespace
 {
-std::vector<std::pair<double, ModifierOp_t>> Stack(std::initializer_list<std::pair<double, ModifierOp_t>> init)
+ModifierContribution_t C(double amount, ModifierOp_t op)
+{
+    return ModifierContribution_t{amount, op, 0};
+}
+
+ModifierContribution_t Staged(double amount, int stage)
+{
+    return ModifierContribution_t{amount, ModifierOp_t::MultiplyStaged, stage};
+}
+
+std::vector<ModifierContribution_t> Stack(std::initializer_list<ModifierContribution_t> init)
 {
     return {init};
 }
@@ -42,37 +53,42 @@ TEST_CASE("ApplyModifierStack: empty stack returns the base value", "[effects][m
 
 TEST_CASE("ApplyModifierStack: Add contributions sum onto the base", "[effects][math]")
 {
-    CHECK(ApplyModifierStack(0.0, Stack({{2.0, ModifierOp_t::Add}})) == Approx(2.0));
-    CHECK(ApplyModifierStack(1.0, Stack({{2.0, ModifierOp_t::Add}, {3.0, ModifierOp_t::Add}})) == Approx(6.0));
-    CHECK(ApplyModifierStack(4.0, Stack({{-1.0, ModifierOp_t::Add}})) == Approx(3.0));
+    CHECK(ApplyModifierStack(0.0, Stack({C(2.0, ModifierOp_t::Add)})) == Approx(2.0));
+    CHECK(ApplyModifierStack(1.0, Stack({C(2.0, ModifierOp_t::Add), C(3.0, ModifierOp_t::Add)}))
+          == Approx(6.0));
+    CHECK(ApplyModifierStack(4.0, Stack({C(-1.0, ModifierOp_t::Add)})) == Approx(3.0));
 }
 
 TEST_CASE("ApplyModifierStack: AddPercent is percent points on top of 100%", "[effects][math]")
 {
     // 25 means +25%, matching the UI display.
-    CHECK(ApplyModifierStack(4.0, Stack({{25.0, ModifierOp_t::AddPercent}})) == Approx(5.0));
-    CHECK(ApplyModifierStack(4.0, Stack({{-25.0, ModifierOp_t::AddPercent}})) == Approx(3.0));
+    CHECK(ApplyModifierStack(4.0, Stack({C(25.0, ModifierOp_t::AddPercent)})) == Approx(5.0));
+    CHECK(ApplyModifierStack(4.0, Stack({C(-25.0, ModifierOp_t::AddPercent)})) == Approx(3.0));
 }
 
 TEST_CASE("ApplyModifierStack: Fallback applies only while nothing else fills the stack",
           "[effects][math]")
 {
-    CHECK(ApplyModifierStack(1.0, Stack({{1.25, ModifierOp_t::Fallback}})) == Approx(1.25));
+    CHECK(ApplyModifierStack(1.0, Stack({C(1.25, ModifierOp_t::Fallback)})) == Approx(1.25));
     CHECK(ApplyModifierStack(
-              1.0, Stack({{1.25, ModifierOp_t::Fallback}, {100.0, ModifierOp_t::AddPercent}}))
+              1.0, Stack({C(1.25, ModifierOp_t::Fallback), C(100.0, ModifierOp_t::AddPercent)}))
           == Approx(2.0));
     CHECK(ApplyModifierStack(
-              1.0, Stack({{1.25, ModifierOp_t::Fallback}, {1.5, ModifierOp_t::MultiplyGeometric}}))
+              1.0, Stack({C(1.25, ModifierOp_t::Fallback), C(1.5, ModifierOp_t::MultiplyGeometric)}))
           == Approx(1.5));
-    CHECK(ApplyModifierStack(2.0, Stack({{1.25, ModifierOp_t::Fallback}, {1.0, ModifierOp_t::Add}}))
+    CHECK(ApplyModifierStack(2.0, Stack({C(1.25, ModifierOp_t::Fallback), C(1.0, ModifierOp_t::Add)}))
           == Approx(3.0));
+    CHECK(ApplyModifierStack(
+              1.0,
+              Stack({C(1.25, ModifierOp_t::Fallback), Staged(1.5, 1)}))
+          == Approx(1.0));
 }
 
 TEST_CASE("ApplyModifierStack: clamps bound a Fallback without displacing it", "[effects][math]")
 {
-    CHECK(ApplyModifierStack(1.0, Stack({{1.25, ModifierOp_t::Fallback}, {1.0, ModifierOp_t::MaxClamp}}))
+    CHECK(ApplyModifierStack(1.0, Stack({C(1.25, ModifierOp_t::Fallback), C(1.0, ModifierOp_t::MaxClamp)}))
           == Approx(1.0));
-    CHECK(ApplyModifierStack(1.0, Stack({{1.25, ModifierOp_t::Fallback}, {1.1, ModifierOp_t::MinClamp}}))
+    CHECK(ApplyModifierStack(1.0, Stack({C(1.25, ModifierOp_t::Fallback), C(1.1, ModifierOp_t::MinClamp)}))
           == Approx(1.25));
 }
 
@@ -81,16 +97,16 @@ TEST_CASE("ApplyLargestModifier: only the largest single contribution applies",
 {
     CHECK(ApplyLargestModifier(1.0, {}) == Approx(1.0));
     CHECK(ApplyLargestModifier(
-              1.0, Stack({{1.5, ModifierOp_t::MultiplyGeometric},
-                          {2.0, ModifierOp_t::MultiplyGeometric},
-                          {1.25, ModifierOp_t::MultiplyGeometric}}))
+              1.0, Stack({C(1.5, ModifierOp_t::MultiplyGeometric),
+                          C(2.0, ModifierOp_t::MultiplyGeometric),
+                          C(1.25, ModifierOp_t::MultiplyGeometric)}))
           == Approx(2.0));
     // Each kind of contribution competes as the value it gives alone.
     CHECK(ApplyLargestModifier(
-              1.0, Stack({{1.5, ModifierOp_t::MultiplyGeometric}, {75.0, ModifierOp_t::AddPercent},
-                          {50.0, ModifierOp_t::AddPercent}}))
+              1.0, Stack({C(1.5, ModifierOp_t::MultiplyGeometric), C(75.0, ModifierOp_t::AddPercent),
+                          C(50.0, ModifierOp_t::AddPercent)}))
           == Approx(1.75));
-    CHECK(ApplyLargestModifier(0.0, Stack({{2.0, ModifierOp_t::Add}, {3.0, ModifierOp_t::Add}}))
+    CHECK(ApplyLargestModifier(0.0, Stack({C(2.0, ModifierOp_t::Add), C(3.0, ModifierOp_t::Add)}))
           == Approx(3.0));
 }
 
@@ -98,14 +114,14 @@ TEST_CASE("ApplyLargestModifier: clamps bound the winner and a Fallback only sta
           "[effects][math]")
 {
     CHECK(ApplyLargestModifier(
-              1.0, Stack({{1.5, ModifierOp_t::MultiplyGeometric}, {1.0, ModifierOp_t::MaxClamp}}))
+              1.0, Stack({C(1.5, ModifierOp_t::MultiplyGeometric), C(1.0, ModifierOp_t::MaxClamp)}))
           == Approx(1.0));
     CHECK(ApplyLargestModifier(
-              1.0, Stack({{0.5, ModifierOp_t::MultiplyGeometric}, {1.0, ModifierOp_t::MinClamp}}))
+              1.0, Stack({C(0.5, ModifierOp_t::MultiplyGeometric), C(1.0, ModifierOp_t::MinClamp)}))
           == Approx(1.0));
-    CHECK(ApplyLargestModifier(1.0, Stack({{1.25, ModifierOp_t::Fallback}})) == Approx(1.25));
+    CHECK(ApplyLargestModifier(1.0, Stack({C(1.25, ModifierOp_t::Fallback)})) == Approx(1.25));
     CHECK(ApplyLargestModifier(
-              1.0, Stack({{2.0, ModifierOp_t::Fallback}, {1.5, ModifierOp_t::MultiplyGeometric}}))
+              1.0, Stack({C(2.0, ModifierOp_t::Fallback), C(1.5, ModifierOp_t::MultiplyGeometric)}))
           == Approx(1.5));
 }
 
@@ -115,7 +131,7 @@ TEST_CASE("FinalizeResolvedStat uses lround for half values", "[effects][math][r
     CHECK(FinalizeResolvedStat(1.5) == 2);
     CHECK(FinalizeResolvedStat(2.4) == 2);
     // Strength-2 attacker with +25% → 2.5 → 3 (shared ResolveStat / combat rule).
-    CHECK(FinalizeResolvedStat(ApplyModifierStack(2.0, Stack({{25.0, ModifierOp_t::AddPercent}})))
+    CHECK(FinalizeResolvedStat(ApplyModifierStack(2.0, Stack({C(25.0, ModifierOp_t::AddPercent)})))
           == 3);
 }
 
@@ -123,77 +139,115 @@ TEST_CASE("ApplyModifierStack: multiple AddPercent contributions combine arithme
           "[effects][math]")
 {
     // +25% and +25% must be x1.5 (1 + 0.25 + 0.25), NOT x1.5625 (1.25 * 1.25).
-    CHECK(ApplyModifierStack(4.0, Stack({{25.0, ModifierOp_t::AddPercent}, {25.0, ModifierOp_t::AddPercent}}))
+    CHECK(ApplyModifierStack(4.0, Stack({C(25.0, ModifierOp_t::AddPercent), C(25.0, ModifierOp_t::AddPercent)}))
           == Approx(6.0));
     // +50% and -50% cancel exactly.
-    CHECK(ApplyModifierStack(8.0, Stack({{50.0, ModifierOp_t::AddPercent}, {-50.0, ModifierOp_t::AddPercent}}))
+    CHECK(ApplyModifierStack(8.0, Stack({C(50.0, ModifierOp_t::AddPercent), C(-50.0, ModifierOp_t::AddPercent)}))
           == Approx(8.0));
 }
 
 TEST_CASE("ApplyModifierStack: -100% floors the arithmetic factor at zero output", "[effects][math]")
 {
-    CHECK(ApplyModifierStack(10.0, Stack({{-100.0, ModifierOp_t::AddPercent}})) == Approx(0.0));
+    CHECK(ApplyModifierStack(10.0, Stack({C(-100.0, ModifierOp_t::AddPercent)})) == Approx(0.0));
 }
 
 TEST_CASE("ApplyModifierStack: MultiplyGeometric factors multiply the running total", "[effects][math]")
 {
     // Factor form: 0.5 halves.
-    CHECK(ApplyModifierStack(8.0, Stack({{0.5, ModifierOp_t::MultiplyGeometric}})) == Approx(4.0));
-    CHECK(ApplyModifierStack(8.0, Stack({{0.5, ModifierOp_t::MultiplyGeometric}, {0.5, ModifierOp_t::MultiplyGeometric}}))
+    CHECK(ApplyModifierStack(8.0, Stack({C(0.5, ModifierOp_t::MultiplyGeometric)})) == Approx(4.0));
+    CHECK(ApplyModifierStack(8.0, Stack({C(0.5, ModifierOp_t::MultiplyGeometric),
+                                       C(0.5, ModifierOp_t::MultiplyGeometric)}))
           == Approx(2.0));
-    CHECK(ApplyModifierStack(3.0, Stack({{2.0, ModifierOp_t::MultiplyGeometric}})) == Approx(6.0));
+    CHECK(ApplyModifierStack(3.0, Stack({C(2.0, ModifierOp_t::MultiplyGeometric)})) == Approx(6.0));
+}
+
+TEST_CASE("ApplyModifierStack: MultiplyStaged truncates toward zero in stage order",
+          "[effects][math]")
+{
+    // trunc(trunc(5 * 1.5) * 1.5) = 10, where one product truncated gives 11.
+    CHECK(ApplyModifierStack(5.0, Stack({Staged(1.5, 2), Staged(1.5, 1)})) == Approx(10.0));
+    CHECK(ApplyModifierStack(5.0, Stack({Staged(1.5, 10), Staged(1.5, 30)})) == Approx(10.0));
+    // Order matters: halving 5 first loses the odd unit before doubling.
+    CHECK(ApplyModifierStack(5.0, Stack({Staged(0.5, 1), Staged(2.0, 2)})) == Approx(4.0));
+    CHECK(ApplyModifierStack(5.0, Stack({Staged(0.5, 2), Staged(2.0, 1)})) == Approx(5.0));
+}
+
+TEST_CASE("ApplyModifierStack: MultiplyStaged factors sharing a stage truncate once",
+          "[effects][math]")
+{
+    CHECK(ApplyModifierStack(5.0, Stack({Staged(1.5, 1), Staged(1.5, 1)})) == Approx(11.0));
+}
+
+TEST_CASE("ApplyModifierStack: a staged product whole in decimal stays whole", "[effects][math]")
+{
+    // 100 * 1.15 is 114.99999999999999 in binary; SMAC's 100 * 115 / 100 is 115.
+    CHECK(ApplyModifierStack(100.0, Stack({Staged(1.15, 1)})) == Approx(115.0));
+}
+
+TEST_CASE("ApplyModifierStack: MultiplyStaged follows the arithmetic factor and precedes "
+          "geometric factors and clamps",
+          "[effects][math]")
+{
+    // trunc((2 + 1) * 1.5) = 4, then * 0.5 = 2, then MaxClamp 1.5.
+    CHECK(ApplyModifierStack(2.0, Stack({C(1.0, ModifierOp_t::Add), Staged(1.5, 1),
+                                         C(0.5, ModifierOp_t::MultiplyGeometric)}))
+          == Approx(2.0));
+    CHECK(ApplyModifierStack(2.0, Stack({C(1.0, ModifierOp_t::Add), Staged(1.5, 1),
+                                         C(0.5, ModifierOp_t::MultiplyGeometric),
+                                         C(1.5, ModifierOp_t::MaxClamp)}))
+          == Approx(1.5));
 }
 
 TEST_CASE("ApplyModifierStack: combined ops follow (base+adds) * arithmetic * geometric", "[effects][math]")
 {
     // (2 + 4) * (1 + 0.5) * 0.5 = 4.5
-    const auto stack = Stack({{4.0, ModifierOp_t::Add},
-                              {50.0, ModifierOp_t::AddPercent},
-                              {0.5, ModifierOp_t::MultiplyGeometric}});
+    const auto stack = Stack({C(4.0, ModifierOp_t::Add),
+                              C(50.0, ModifierOp_t::AddPercent),
+                              C(0.5, ModifierOp_t::MultiplyGeometric)});
     CHECK(ApplyModifierStack(2.0, stack) == Approx(4.5));
 }
 
 TEST_CASE("ApplyModifierStack: clamps bound the value after the arithmetic", "[effects][math]")
 {
     // The clamp sees (2 + 4) * 1.5 = 9, not the 2.0 seed.
-    const auto capped = Stack({{4.0, ModifierOp_t::Add},
-                               {50.0, ModifierOp_t::AddPercent},
-                               {5.0, ModifierOp_t::MaxClamp}});
+    const auto capped = Stack({C(4.0, ModifierOp_t::Add),
+                               C(50.0, ModifierOp_t::AddPercent),
+                               C(5.0, ModifierOp_t::MaxClamp)});
     CHECK(ApplyModifierStack(2.0, capped) == Approx(5.0));
 
     // A clamp that is not reached leaves the value alone.
-    CHECK(ApplyModifierStack(2.0, Stack({{99.0, ModifierOp_t::MaxClamp}})) == Approx(2.0));
-    CHECK(ApplyModifierStack(2.0, Stack({{1.0, ModifierOp_t::MinClamp}})) == Approx(2.0));
-    CHECK(ApplyModifierStack(2.0, Stack({{7.0, ModifierOp_t::MinClamp}})) == Approx(7.0));
+    CHECK(ApplyModifierStack(2.0, Stack({C(99.0, ModifierOp_t::MaxClamp)})) == Approx(2.0));
+    CHECK(ApplyModifierStack(2.0, Stack({C(1.0, ModifierOp_t::MinClamp)})) == Approx(2.0));
+    CHECK(ApplyModifierStack(2.0, Stack({C(7.0, ModifierOp_t::MinClamp)})) == Approx(7.0));
 }
 
 TEST_CASE("ApplyModifierStack: the tightest clamp of each kind wins", "[effects][math]")
 {
-    CHECK(ApplyModifierStack(10.0, Stack({{5.0, ModifierOp_t::MaxClamp},
-                                          {3.0, ModifierOp_t::MaxClamp}})) == Approx(3.0));
-    CHECK(ApplyModifierStack(0.0, Stack({{5.0, ModifierOp_t::MinClamp},
-                                         {7.0, ModifierOp_t::MinClamp}})) == Approx(7.0));
+    CHECK(ApplyModifierStack(10.0, Stack({C(5.0, ModifierOp_t::MaxClamp),
+                                          C(3.0, ModifierOp_t::MaxClamp)})) == Approx(3.0));
+    CHECK(ApplyModifierStack(0.0, Stack({C(5.0, ModifierOp_t::MinClamp),
+                                         C(7.0, ModifierOp_t::MinClamp)})) == Approx(7.0));
 
     // Crossed bounds: MinClamp is applied last and therefore wins.
-    CHECK(ApplyModifierStack(4.0, Stack({{1.0, ModifierOp_t::MaxClamp},
-                                         {6.0, ModifierOp_t::MinClamp}})) == Approx(6.0));
+    CHECK(ApplyModifierStack(4.0, Stack({C(1.0, ModifierOp_t::MaxClamp),
+                                         C(6.0, ModifierOp_t::MinClamp)})) == Approx(6.0));
 }
 
 TEST_CASE("ApplyModifierStack: a MaxClamp 0 zeroes a RawScaled seed", "[effects][math]")
 {
     // How Perimeter Defense and Citizen difficulty cancel a pop-loss seed.
-    CHECK(ApplyModifierStack(3.0, Stack({{0.0, ModifierOp_t::MaxClamp}})) == Approx(0.0));
+    CHECK(ApplyModifierStack(3.0, Stack({C(0.0, ModifierOp_t::MaxClamp)})) == Approx(0.0));
 }
 
 TEST_CASE("ApplyModifierStack: result does not depend on contribution order", "[effects][math]")
 {
     // An Add listed after a percent/geometric contribution still lands in the additive pool.
-    const auto ordered  = Stack({{4.0, ModifierOp_t::Add},
-                                 {50.0, ModifierOp_t::AddPercent},
-                                 {0.5, ModifierOp_t::MultiplyGeometric}});
-    const auto reversed = Stack({{0.5, ModifierOp_t::MultiplyGeometric},
-                                 {50.0, ModifierOp_t::AddPercent},
-                                 {4.0, ModifierOp_t::Add}});
+    const auto ordered  = Stack({C(4.0, ModifierOp_t::Add),
+                                 C(50.0, ModifierOp_t::AddPercent),
+                                 C(0.5, ModifierOp_t::MultiplyGeometric)});
+    const auto reversed = Stack({C(0.5, ModifierOp_t::MultiplyGeometric),
+                                 C(50.0, ModifierOp_t::AddPercent),
+                                 C(4.0, ModifierOp_t::Add)});
     CHECK(ApplyModifierStack(2.0, ordered) == Approx(ApplyModifierStack(2.0, reversed)));
 }
 

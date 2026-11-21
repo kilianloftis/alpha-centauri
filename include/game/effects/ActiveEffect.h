@@ -242,29 +242,37 @@ std::vector<ActiveEffect_t> ExpandGrantBuildingEffects(
     const BuildingRegistry& rRegistry,
     const std::vector<const BaseManager*>& rBases);
 
+// One stack entry for ApplyModifierStack / ApplyLargestModifier. stage is read only for
+// MultiplyStaged.
+struct ModifierContribution_t
+{
+    double amount = 0.0;
+    ModifierOp_t op = ModifierOp_t::Add;
+    int stage = 0;
+};
+
 struct StatBreakdown_t
 {
     double total = 0.0;
 
-    struct Contribution_t
+    struct Contribution_t : ModifierContribution_t
     {
         std::string sourceId;
-        double amount;
-        ModifierOp_t op;
     };
 
     std::vector<Contribution_t> contributions;
 };
 
-// result = (base + adds) * (1 + percents/100) * geometric; order within a kind does not
-// matter. Fallback factors stand in for geometric only when there are no adds, percents or
-// geometric factors.
-double ApplyModifierStack(double base, const std::vector<std::pair<double, ModifierOp_t>>& contributions);
+// (base + adds) * (1 + percents/100), then each MultiplyStaged stage in ascending order,
+// truncated toward zero after each, then * geometric product, then clamps. Factors that share
+// a stage multiply before that stage truncates. Fallback stands in for geometric only when
+// there are no adds, percents, geometric or staged factors.
+double ApplyModifierStack(double base, const std::vector<ModifierContribution_t>& contributions);
 
 // Each contribution resolved alone from base, and only the largest result kept; Fallbacks
 // compete only when nothing else contributes. Clamps then bound the winner.
 double ApplyLargestModifier(double base,
-                            const std::vector<std::pair<double, ModifierOp_t>>& contributions);
+                            const std::vector<ModifierContribution_t>& contributions);
 
 // The one float-to-int rule for resolved totals: half away from zero.
 inline int FinalizeResolvedStat(double value)
@@ -278,6 +286,13 @@ inline int FloorResolvedStat(double value)
 {
     constexpr double k_WholeTolerance = 1e-9;
     return static_cast<int>(std::floor(value + k_WholeTolerance));
+}
+
+inline ModifierContribution_t ContributionFor(const StatModifierEffect_t& rModifier,
+                                              const EffectContext_t* pCtx)
+{
+    return ModifierContribution_t{AmountSourceValue(rModifier, pCtx), rModifier.op,
+                                  rModifier.stage};
 }
 
 // Never defaulted: a pure multiplier from a 0 base resolves to 0, so callers state the seed.
@@ -297,10 +312,8 @@ StatBreakdown_t ResolveStatModifiers(Range&& matching, double baseValue,
             continue;
         }
 
-        StatBreakdown_t::Contribution_t contribution;
+        StatBreakdown_t::Contribution_t contribution{ContributionFor(*pStatModifier, pCtx)};
         contribution.sourceId = active.sourceId;
-        contribution.amount = AmountSourceValue(*pStatModifier, pCtx);
-        contribution.op = pStatModifier->op;
         breakdown.contributions.push_back(contribution);
     }
 
@@ -310,32 +323,36 @@ StatBreakdown_t ResolveStatModifiers(Range&& matching, double baseValue,
                   return a.sourceId < b.sourceId;
               });
 
-    std::vector<std::pair<double, ModifierOp_t>> stack;
-    stack.reserve(breakdown.contributions.size());
-    for (const StatBreakdown_t::Contribution_t& c : breakdown.contributions)
-    {
-        stack.emplace_back(c.amount, c.op);
-    }
+    const std::vector<ModifierContribution_t> stack(breakdown.contributions.begin(),
+                                                    breakdown.contributions.end());
     breakdown.total = ApplyModifierStack(baseValue, stack);
     return breakdown;
 }
 
-// Same filter loop and ApplyModifierStack as ResolveStatModifiers, but skips the sorted
-// Contribution list — for hot paths that only need .total (e.g. per-tile yield).
+// Each StatModifier in matching as a stack entry, unsorted.
+template <std::ranges::input_range Range>
+std::vector<ModifierContribution_t> CollectStatContributions(Range&& matching,
+                                                             const EffectContext_t* pCtx)
+{
+    std::vector<ModifierContribution_t> stack;
+    for (const ActiveEffect_t& active : matching)
+    {
+        const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&active.config->effect);
+        if (pStatModifier)
+        {
+            stack.push_back(ContributionFor(*pStatModifier, pCtx));
+        }
+    }
+    return stack;
+}
+
+// ResolveStatModifiers without the sorted Contribution list, for hot paths that only need
+// .total (e.g. per-tile yield).
 template <std::ranges::input_range Range>
 double ResolveStatModifiersTotal(Range&& matching, double baseValue,
                                  const EffectContext_t* pCtx)
 {
-    std::vector<std::pair<double, ModifierOp_t>> stack;
-    for (const ActiveEffect_t& active : matching)
-    {
-        const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&active.config->effect);
-        if (!pStatModifier)
-        {
-            continue;
-        }
-        stack.emplace_back(AmountSourceValue(*pStatModifier, pCtx), pStatModifier->op);
-    }
+    const std::vector<ModifierContribution_t> stack = CollectStatContributions(matching, pCtx);
     return ApplyModifierStack(baseValue, stack);
 }
 
@@ -511,10 +528,15 @@ struct CombatRatingStats_t
     std::span<const StatSlot_t> slots;
 };
 
-// The value stat times the multiplier stat and each slot, with moraleMultiplier as one more
+// The value stat times the multiplier stat's unstaged stack, with moraleMultiplier as one more
 // geometric factor on the multiplier. Unrounded.
 double ResolveCombatRating(const Unit& rUnit, CombatRatingStats_t stats,
                            const EffectContext_t& rCtx, double moraleMultiplier);
+
+// The multiplier's MultiplyStaged steps and each slot's factor, at the slot's stage, applied to
+// a whole-number strength in stage order and truncated after each.
+int ApplyCombatStrengthSteps(int strength, const Unit& rUnit, CombatRatingStats_t stats,
+                             const EffectContext_t& rCtx);
 
 // The base's share of the pool: its own ThisBase effects and every faction-wide one. The only
 // way to build a BaseEffects_t, and eager so it can be cached.

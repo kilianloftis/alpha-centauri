@@ -73,6 +73,11 @@ inline constexpr CombatKind_t k_PsiCombat{
 // rKind's defense stats with the defense slots combat.json gives that kind of fight.
 CombatRatingStats_t DefenseRatingStats(const CombatKind_t& rKind);
 
+// One side's whole-number strength at k_CombatStrengthScale: its rating rounded down once, then
+// its staged steps. The attacker-only partial-move and handicap steps come after.
+int ResolveFighterStrength(const Unit& rUnit, CombatRatingStats_t stats,
+                           const EffectContext_t& rCtx, double moraleMultiplier);
+
 // The fight is psi by engagement: Standard when the attacker forces psi combat or the defender
 // forces psi defense; ArtilleryStrike when the attacker forces psi combat; ArtilleryDuel when
 // either side forces psi combat (weapon vs weapon). Each side's rating is its value stat for the

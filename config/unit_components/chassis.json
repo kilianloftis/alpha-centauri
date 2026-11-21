@@ -40,7 +40,8 @@
         "parameters": {
           "stat": "attack",
           "amount": 1.25,
-          "op": "MultiplyGeometric"
+          "op": "MultiplyStaged",
+          "stage": 66
         },
         "condition": {
           "kind": "TargetTileHas",

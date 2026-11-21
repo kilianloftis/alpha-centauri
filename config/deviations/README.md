@@ -210,20 +210,6 @@ absent.
 - **Where:** `CombatRules.h` odds ratio.
 - **Missing:** the original and Thinker versions and a switch.
 
-### Combat rating rounds once `[Ours]`
-
-- **Original:** strengths are exact integers (`rating × 8 × (morale + 6)`, 256 for a
-  Disciplined rating 1). Each percent modifier truncates in a fixed order, interleaved with
-  exact terrain and fortification multiplies ("Combat strength and the round roll").
-- **Ours:** ratings stay exact; `ResolveCombatStrength` rounds the rating × 256 down once,
-  then rounds down again after the partial-move penalty and after the difficulty handicap,
-  as SMAC does. Inside the rating, each multiplier applies exactly instead of truncating.
-  A strength is 1 higher than SMAC's when three or more 25% steps stack on an odd morale
-  factor (about 0.4% of conventional defense combinations), or when a 10% step comes before
-  a 50% one, as a Planet rating step before Empath Song does.
-- **Where:** `CombatRules.cpp` `ResolveCombatStrength`, `FloorResolvedStat`.
-- **Missing:** the original version: ordered truncating steps inside the rating.
-
 ### Combat modifiers with no effect yet `[Ours]`
 
 - **Original:** Flechette, GSP, Pholus Mutagen, Trance, Comm Jammer, Pulse, Non

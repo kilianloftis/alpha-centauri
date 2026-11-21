@@ -810,8 +810,9 @@
         "scope": "ThisUnit",
         "parameters": {
           "stat": "attack",
-          "amount": 100,
-          "op": "AddPercent"
+          "amount": 2.0,
+          "op": "MultiplyStaged",
+          "stage": 100
         },
         "condition": {
           "kind": "DefenderDomain",
@@ -826,8 +827,9 @@
         "scope": "ThisUnit",
         "parameters": {
           "stat": "attack",
-          "amount": -50,
-          "op": "AddPercent"
+          "amount": 0.5,
+          "op": "MultiplyStaged",
+          "stage": 100
         },
         "condition": {
           "kind": "DefenderDomain",
@@ -882,8 +884,9 @@
         "scope": "ThisUnit",
         "parameters": {
           "stat": "attack",
-          "amount": -50,
-          "op": "AddPercent"
+          "amount": 0.5,
+          "op": "MultiplyStaged",
+          "stage": 20
         },
         "condition": {
           "kind": "HasAirdroppedThisTurn"
@@ -937,8 +940,9 @@
         "scope": "ThisUnit",
         "parameters": {
           "stat": "defense",
-          "amount": 100,
-          "op": "AddPercent"
+          "amount": 2,
+          "op": "MultiplyStaged",
+          "stage": 90
         },
         "condition": {
           "kind": "AllOf",
@@ -2152,7 +2156,8 @@
         "parameters": {
           "stat": "probe_action_cost",
           "amount": 2,
-          "op": "MultiplyGeometric"
+          "op": "MultiplyStaged",
+          "stage": 180
         }
       }
     ]

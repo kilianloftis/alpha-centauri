@@ -156,7 +156,8 @@
         "parameters": {
           "stat": "defense",
           "amount": 2,
-          "op": "MultiplyGeometric"
+          "op": "MultiplyStaged",
+          "stage": 90
         },
         "condition": {
           "kind": "AllOf",
@@ -238,7 +239,8 @@
         "parameters": {
           "stat": "attack",
           "amount": 2,
-          "op": "MultiplyGeometric"
+          "op": "MultiplyStaged",
+          "stage": 100
         },
         "condition": {
           "kind": "DefenderDomain",
@@ -254,7 +256,8 @@
         "parameters": {
           "stat": "attack",
           "amount": 0.5,
-          "op": "MultiplyGeometric"
+          "op": "MultiplyStaged",
+          "stage": 100
         },
         "condition": {
           "kind": "DefenderDomain",
@@ -310,7 +313,8 @@
         "parameters": {
           "stat": "attack",
           "amount": 0.5,
-          "op": "MultiplyGeometric"
+          "op": "MultiplyStaged",
+          "stage": 20
         },
         "condition": {
           "kind": "HasAirdroppedThisTurn"
@@ -485,7 +489,8 @@
         "parameters": {
           "stat": "probe_action_cost",
           "amount": 2,
-          "op": "MultiplyGeometric"
+          "op": "MultiplyStaged",
+          "stage": 180
         }
       }
     ]

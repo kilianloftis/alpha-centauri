@@ -152,6 +152,26 @@ TEST_CASE("Partial movement scales attack strength by the leftover fraction of a
     }
 }
 
+TEST_CASE("Defense slots scale the whole-number strength in stage order", "[combat][staged]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    fixture.MakeFactionBase(enemy, 9, 9);
+    fixture.ctx.AddOccupantWithEffects(fixture.At(8, 8), "Sensor");
+
+    Unit& attacker = fixture.MakeUnit(player, 8, 8, {"test_chassis", "test_weapon"});
+    Unit& defender = fixture.MakeUnit(enemy, 9, 9, {"test_chassis", "test_armor"});
+    attacker.SetXp(2);
+    defender.SetXp(2);
+
+    CombatHarness_ harness(fixture, /*seed*/ 1);
+    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+    // Armor 3 → 768; the Base's fortification ×1.25 → 960; Sensor ×1.25 → 1200.
+    CHECK(result.strength.defenseStrength == 1200);
+}
+
 TEST_CASE("AAA Tracking doubles defense vs air and orbital attackers", "[combat][aaa]")
 {
     FactionFixture fixture;

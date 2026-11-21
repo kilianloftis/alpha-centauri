@@ -40,7 +40,8 @@ enum class StatId_t
     ConventionalDefense,
     PsiDefense,
     Defense,
-    // Scales the attacker's whole-number strength after the partial-move penalty.
+    // The attacker's whole-number strength after the partial-move penalty (RawScaled), seeded
+    // with that strength.
     AttackHandicap,
     Movement,
     Vision,
@@ -140,17 +141,18 @@ enum class StatId_t
     // Facility energy upkeep (RawScaled from BuildingConfig_t::upkeep), per building type with an
     // optional buildingFilter.
     FacilityEnergyUpkeep,
-    // The target side of a mind-control or subversion cost (PureMultiplier), resolved on the base
-    // or unit being probed with the actor as partner, so scope picks the quote: SE Probe, riot,
-    // golden age and former owner reach bases; the plan baseline, Poly and SE Probe's
-    // FactionUnits copies reach units.
+    // The target side of a mind-control or subversion cost (RawScaled, seeded with the formula
+    // result), resolved on the base or unit being probed with the actor as partner, so scope
+    // picks the quote: SE Probe, riot, golden age and former owner reach bases; the plan
+    // baseline, Poly and SE Probe's FactionUnits copies reach units.
     ProbeActionCost,
-    // The actor side (PureMultiplier, Faction), resolved on the faction paying with the target
-    // faction as partner: Nethack, Pact, the AI-vs-player discount, atrocity victim.
+    // The actor side (RawScaled, Faction), resolved on the faction paying with the target faction
+    // as partner: Nethack, Pact, the AI-vs-player discount, atrocity victim. A quote applies its
+    // steps in one stage order with the target side's.
     ProbeActorCost,
-    // The HQ distance in a mind-control or subversion cost (PureMultiplier), resolved like
-    // ProbeActionCost and truncated: Genejack x2 and Children's Creche x0.5 on bases, Punishment
-    // Sphere x0.5 on its base and the units homed there.
+    // The HQ distance in a mind-control or subversion cost (RawScaled, seeded with the raw
+    // distance), resolved like ProbeActionCost: Genejack x2 and Children's Creche x0.5 on bases,
+    // Punishment Sphere x0.5 on its base and the units homed there.
     ProbeDistanceScale,
     // Additive local probe defense (Covert Ops Center +2, etc.). Added to SE Probe before
     // the success/escape clamp.
@@ -407,18 +409,14 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::PrototypeSurchargeScale:
         case StatId_t::RetoolPenaltyScale:
         case StatId_t::UpgradeCostScale:
-        case StatId_t::ProbeActionCost:
-        case StatId_t::ProbeActorCost:
         case StatId_t::ProbeFailureScale:
         case StatId_t::ProbeSuccessScale:
-        case StatId_t::ProbeDistanceScale:
         case StatId_t::PlagueDamageScale:
         case StatId_t::TechCost:
         case StatId_t::CommerceRate:
         case StatId_t::Bureaucracy:
         case StatId_t::Attack:
         case StatId_t::Defense:
-        case StatId_t::AttackHandicap:
         case StatId_t::EcologicalDamage:
         case StatId_t::PlanetFaunaCargoScale:
         case StatId_t::EcoTerraformScale:
@@ -436,6 +434,10 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::UpheavalCostScale:
         case StatId_t::GiftGivenValue:
         case StatId_t::GiftReceivedValue:
+        case StatId_t::ProbeActionCost:
+        case StatId_t::ProbeActorCost:
+        case StatId_t::ProbeDistanceScale:
+        case StatId_t::AttackHandicap:
         case StatId_t::MoveCost:             return StatKind_t::RawScaled;
     }
     return StatKind_t::Additive; // unreachable; all enumerators handled above
@@ -993,13 +995,17 @@ enum class ModifierOp_t
     // All AddPercent contributions sum into a single arithmetic factor before the geometric step.
     AddPercent,
     MultiplyGeometric,
+    // A factor applied after the arithmetic factor in ascending StatModifierEffect_t::stage
+    // order, truncating toward zero after each stage. Factors sharing a stage multiply first.
+    MultiplyStaged,
     // Clamps apply after the arithmetic; the tightest of each kind wins, and MinClamp beats a
     // crossing MaxClamp. Clamps the value to <= amount.
     MaxClamp,
     // Clamp the resolved stat value to be >= amount.
     MinClamp,
-    // A geometric factor applied only when the stack has no Add, AddPercent or
-    // MultiplyGeometric contribution: the stat's value while nothing else fills it.
+    // A geometric factor applied only when the stack has no Add, AddPercent,
+    // MultiplyGeometric, or MultiplyStaged contribution: the stat's value while nothing else
+    // fills it.
     Fallback,
 };
 

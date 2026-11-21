@@ -68,12 +68,12 @@ The atrocity thresholds are ones: each is a single session integer, not a modifi
 with tech or facilities.
 
 Combat handicap is an effects-channel case: Citizen / Specialist / Talent put
-`attack_handicap` `MultiplyGeometric` on `FactionUnits` with `PartnerPlayerType` (human
+`attack_handicap` `MultiplyStaged` on `FactionUnits` with `PartnerPlayerType` (human
 attack boost vs AI; AI offense cut vs the player). Talent’s Planet-only cut also requires
 `IsNativeLifeFaction`. `MakeFighter_` sets `pPartnerFaction` to the opposing faction so those
-conditions resolve in combat. Only the attacker resolves `attack_handicap`, after the
-partial-move penalty has scaled its whole-number strength, so a duel defender rated on attack
-takes none (terranx-map.md "After `battle_compute`").
+conditions resolve in combat. Only the attacker resolves `attack_handicap`, seeded with its
+whole-number strength after the partial-move penalty and truncated, so a duel defender rated on
+attack takes none (terranx-map.md "After `battle_compute`").
 
 ## Resolving the session level
 

@@ -98,11 +98,13 @@ int PartialMoveAttack_(const Unit& rAttacker, int strength)
     return strength * remainingFragments / perPoint;
 }
 
-double AttackHandicap_(const Fighter_t& rAttacker)
+int ApplyAttackHandicap_(const Fighter_t& rAttacker, int strength)
 {
-    const double seed = SeedFor(StatId_t::AttackHandicap);
-    return ResolveMultiplicativeStat(rAttacker.rUnit, StatId_t::AttackHandicap, seed,
-                                     rAttacker.ctx);
+    const UnitEffects_t effects = CollectLiveUnitEffects(rAttacker.rUnit);
+    const double seed = static_cast<double>(strength);
+    const double handicapped =
+        ResolveUnitStat(effects, StatId_t::AttackHandicap, seed, &rAttacker.ctx);
+    return FloorResolvedStat(handicapped);
 }
 
 int HitsToKill_(int hp, int damagePerHit)
@@ -141,6 +143,14 @@ CombatRatingStats_t DefenseRatingStats(const CombatKind_t& rKind)
     return stats;
 }
 
+int ResolveFighterStrength(const Unit& rUnit, CombatRatingStats_t stats,
+                           const EffectContext_t& rCtx, double moraleMultiplier)
+{
+    const double rating = ResolveCombatRating(rUnit, stats, rCtx, moraleMultiplier);
+    const int scaled = FloorResolvedStat(rating * k_CombatStrengthScale);
+    return ApplyCombatStrengthSteps(scaled, rUnit, stats, rCtx);
+}
+
 CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefender,
                                        const MoraleCalculator& rMorale,
                                        CombatEngagement_t engagement)
@@ -153,16 +163,12 @@ CombatStrength_t ResolveCombatStrength(const Unit& rAttacker, const Unit& rDefen
     const CombatKind_t& kind = CombatKindFor_(rAttacker, rDefender, engagement);
     const CombatRatingStats_t defenderStats =
         engagement == CombatEngagement_t::ArtilleryDuel ? kind.attack : DefenseRatingStats(kind);
-    const double attackRating = ResolveCombatRating(rAttacker, kind.attack, attacker.ctx,
-                                                    attacker.moraleMultiplier);
-    const double defenseRating = ResolveCombatRating(rDefender, defenderStats, defender.ctx,
-                                                     defender.moraleMultiplier);
-
-    strength.attackStrength = FloorResolvedStat(attackRating * k_CombatStrengthScale);
-    strength.defenseStrength = FloorResolvedStat(defenseRating * k_CombatStrengthScale);
+    strength.attackStrength = ResolveFighterStrength(rAttacker, kind.attack, attacker.ctx,
+                                                     attacker.moraleMultiplier);
+    strength.defenseStrength = ResolveFighterStrength(rDefender, defenderStats, defender.ctx,
+                                                      defender.moraleMultiplier);
     strength.attackStrength = PartialMoveAttack_(rAttacker, strength.attackStrength);
-    const double handicapped = strength.attackStrength * AttackHandicap_(attacker);
-    strength.attackStrength = FloorResolvedStat(handicapped);
+    strength.attackStrength = ApplyAttackHandicap_(attacker, strength.attackStrength);
     strength.attackerRoundDamage = RoundDamage_(defender, attacker, kind);
     strength.defenderRoundDamage = RoundDamage_(attacker, defender, kind);
     return strength;

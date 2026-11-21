@@ -27,7 +27,8 @@
       "parameters": {
         "stat": "probe_action_cost",
         "amount": 0.5,
-        "op": "MultiplyGeometric"
+        "op": "MultiplyStaged",
+        "stage": 190
       },
       "condition": {
         "kind": "DesignPlan",
@@ -44,7 +45,8 @@
       "parameters": {
         "stat": "probe_action_cost",
         "amount": 0.5,
-        "op": "MultiplyGeometric"
+        "op": "MultiplyStaged",
+        "stage": 110
       },
       "condition": {
         "kind": "PartnerIsFormerOwner"
@@ -56,7 +58,8 @@
       "parameters": {
         "stat": "probe_actor_cost",
         "amount": 2,
-        "op": "MultiplyGeometric"
+        "op": "MultiplyStaged",
+        "stage": 140
       },
       "condition": {
         "kind": "AllOf",

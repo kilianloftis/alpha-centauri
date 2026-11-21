@@ -1,4 +1,5 @@
 #include "GameFixtures.h"
+#include "TestHelpers.h"
 
 #include "game/CurrentGameState.h"
 #include "game/faction/Faction.h"
@@ -355,15 +356,10 @@ TEST_CASE("Post-airdrop attack applies HasAirdroppedThisTurn penalty", "[unit][a
     REQUIRE(attacker.Latches().HasAirdroppedThisTurn());
 
     Unit& defender = game.MakeUnit(*game.pAi, 10, 10, {"test_chassis", "test_weapon"});
-    EffectContext_t ctx;
-    ctx.pUnit = &attacker;
-    ctx.pAttacker = &attacker;
-    ctx.combatRole = CombatRole_t::Attacker;
-    const double penalized = ResolveCombatRating(attacker, k_ConventionalCombat.attack, ctx, 1.0);
+    const double penalized = actest::ConventionalAttackRating(attacker, defender);
     attacker.Latches().Advance();
-    const double normal = ResolveCombatRating(attacker, k_ConventionalCombat.attack, ctx, 1.0);
+    const double normal = actest::ConventionalAttackRating(attacker, defender);
     CHECK(penalized < normal);
-    (void)defender;
     (void)rMap;
 }
 

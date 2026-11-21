@@ -537,6 +537,42 @@ void RequireReachableFallback_(const StatModifierEffect_t& rModifier)
     }
 }
 
+// Staged steps truncate the running value, so it must be a whole quantity: a seeded count or
+// cost, an additive total, or the combat strength attack and defense scale.
+void RequireWholeStagedValue_(const StatModifierEffect_t& rModifier)
+{
+    if (rModifier.op != ModifierOp_t::MultiplyStaged)
+    {
+        return;
+    }
+    if (!rModifier.slot.empty())
+    {
+        throw std::runtime_error(
+            "StatModifier op MultiplyStaged cannot take a slot: the slot's factor is a step");
+    }
+    const bool bCombatMultiplier =
+        rModifier.stat == StatId_t::Attack || rModifier.stat == StatId_t::Defense;
+    if (KindFor(rModifier.stat) == StatKind_t::PureMultiplier && !bCombatMultiplier)
+    {
+        throw std::runtime_error(
+            "StatModifier op MultiplyStaged would truncate a multiplier stat's seed of 1; use "
+            "MultiplyGeometric");
+    }
+}
+
+int ParseModifierStage_(const ConfigReader& rParams, ModifierOp_t op)
+{
+    if (op == ModifierOp_t::MultiplyStaged)
+    {
+        return rParams.Int("stage");
+    }
+    if (rParams.Has("stage"))
+    {
+        rParams.FailKey("stage", "is only valid with op MultiplyStaged");
+    }
+    return 0;
+}
+
 // The slot id is checked against combat.json by the reference validator.
 std::string ParseDefenseSlot_(const ConfigReader& rParams, const StatModifierEffect_t& rModifier)
 {
@@ -576,6 +612,8 @@ void ParseStatModifier_(const ConfigReader& rParams, EffectConfig_t& rEffect)
     RequireScalingOpOnMultiplier_(statModifier);
     statModifier.slot = ParseDefenseSlot_(rParams, statModifier);
     RequireReachableFallback_(statModifier);
+    statModifier.stage = ParseModifierStage_(rParams, statModifier.op);
+    RequireWholeStagedValue_(statModifier);
     rEffect.effect = statModifier;
 }
 

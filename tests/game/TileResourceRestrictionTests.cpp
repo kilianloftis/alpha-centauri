@@ -101,9 +101,9 @@ TEST_CASE("ResolveTileYield: Condenser on the tile lifts the nutrient MaxClamp",
     BaseEffects_t caps{base,
                        {ClampEffect_(pool, StatId_t::Nutrients, 2, NoNutrientCapExemption_())}};
     const TileYieldView_t yield = fixture.ctx.ResolveTileYield(tile, false, caps);
-    // Fixture Condenser has no nutrient AddPercent; Wet+Farm=3 stays, uncapped (not 2).
-    CHECK(yield.effective.nutrients == 3);
-    CHECK(yield.potential.nutrients == 3);
+    // Condenser MultiplyStaged ×1.5 lifts the MaxClamp 2: Wet+Farm 3 → trunc 4 (not clamped to 2).
+    CHECK(yield.effective.nutrients == 4);
+    CHECK(yield.potential.nutrients == 4);
 }
 
 TEST_CASE("Tile resource restrictions: production caps worked tiles but not flat base bonuses",

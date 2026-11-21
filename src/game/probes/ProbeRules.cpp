@@ -63,32 +63,39 @@ const ProbeCalculator& Calculator_()
     return *CurrentGameState().GetGameData().probeCalculator;
 }
 
-// A target-side probe cost stat on a base target, with the actor as partner.
-double ResolveOnTargetBase_(const BaseManager& rBase, StatId_t stat, const Faction& rActor)
+// A target-side probe cost stat's steps on a base target, with the actor as partner.
+std::vector<ModifierContribution_t> OnTargetBase_(const BaseManager& rBase, StatId_t stat,
+                                                  const Faction& rActor)
 {
     EffectContext_t ctx;
     ctx.pBase = &rBase;
     ctx.pPartnerFaction = &rActor;
-    return ResolveBaseStat(rBase.GetBaseEffects(), stat, SeedFor(stat), &ctx);
+    return CollectStatContributions(FilterBaseLevelByStatId(rBase.GetBaseEffects(), stat, &ctx),
+                                    &ctx);
 }
 
 // The same Base stat on a unit target, from the unit's own live effects. Resolved by hand, as
 // AwayFromHomeDrones resolves a unit stat from a base's list: scope keeps base-only factors out.
-double ResolveOnTargetUnit_(const Unit& rUnit, StatId_t stat, const Faction& rActor)
+std::vector<ModifierContribution_t> OnTargetUnit_(const Unit& rUnit, StatId_t stat,
+                                                  const Faction& rActor)
 {
     const UnitEffects_t unitEffects = CollectLiveUnitEffects(rUnit);
     EffectContext_t ctx = UnitSubjectContext(&rUnit, EffectContext_t{});
     ctx.pPartnerFaction = &rActor;
-    return ResolveStatModifiersTotal(FilterByStatIdInContext(unitEffects.effects, stat, ctx),
-                                     SeedFor(stat), &ctx);
+    return CollectStatContributions(FilterByStatIdInContext(unitEffects.effects, stat, ctx),
+                                    &ctx);
 }
 
 // The actor side: what rActor's effects make it pay toward the target named in rCtx (partner,
 // and the base for a base quote, which TargetIsBase reads).
-double ResolveActorCost_(const Faction& rActor, const EffectContext_t& rCtx)
+std::vector<ModifierContribution_t> ActorCostSteps_(const Faction& rActor,
+                                                    const EffectContext_t& rCtx)
 {
-    return ResolveFactionStat(rActor.GetActiveEffects(), StatId_t::ProbeActorCost,
-                              SeedFor(StatId_t::ProbeActorCost), &rCtx);
+    EffectContext_t ctx = rCtx;
+    ctx.pFaction = &rActor;
+    const FactionEffects_t& rEffects = rActor.GetActiveEffects();
+    return CollectStatContributions(
+        FilterByStatIdInContext(rEffects.effects, StatId_t::ProbeActorCost, ctx), &ctx);
 }
 
 // An Additive target-side stat (hunter, bust chance) from the target's effect source; 0 without one.
@@ -143,18 +150,20 @@ void SumMindControlGarrison_(const Tile& rTile, const WorldMap& rMap,
     }
 }
 
-// Truncated toward zero, which equals the binary's sequential integer x2 and /2 steps.
-int ScaleTruncating_(int value, double scale)
+int ApplyDistanceSteps_(int rawDistance, const std::vector<ModifierContribution_t>& rSteps)
 {
-    const double scaled = static_cast<double>(value) * scale;
+    const double scaled = ApplyModifierStack(static_cast<double>(rawDistance), rSteps);
     return static_cast<int>(scaled);
 }
 
-// The binary's integer steps after the formula become one multiplier, rounded once.
-int ApplyProbeCostMultiplier_(int rawCost, double multiplier)
+// The target's and the actor's steps after the formula run in one stage order, as SMAC
+// interleaves them (Pact before former owner, atrocity before Nethack).
+int ApplyProbeCostSteps_(int rawCost, std::vector<ModifierContribution_t> steps,
+                         const std::vector<ModifierContribution_t>& rActorSteps)
 {
-    const int scaled = static_cast<int>(std::lround(rawCost * multiplier));
-    return std::max(1, scaled);
+    steps.insert(steps.end(), rActorSteps.begin(), rActorSteps.end());
+    const double scaled = ApplyModifierStack(static_cast<double>(rawCost), steps);
+    return std::max(1, static_cast<int>(scaled));
 }
 
 // TODO: SMAC charges x1.5 to a faction that wants revenge (DIPLO_WANT_REVENGE) when the target
@@ -169,21 +178,23 @@ std::optional<int> QuoteBaseActionCost_(const ProbeCostConfig_t& rCost, const Fa
     {
         return std::nullopt;
     }
-    const double distScale = ResolveOnTargetBase_(rBase, StatId_t::ProbeDistanceScale, rActor);
+    const std::vector<ModifierContribution_t> distanceSteps =
+        OnTargetBase_(rBase, StatId_t::ProbeDistanceScale, rActor);
     const GameState& rGame = CurrentGameState();
     MindControlCostInputs_t inputs;
     SumMindControlGarrison_(rBase.GetTile(), rMap, inputs);
     inputs.mindControlTotal = rGame.GetMindControlLedger().Total(rActor.GetFactionId());
     inputs.population = rBase.GetPopulation().GetSize();
     inputs.energy = rTargetFaction.GetEconomy().GetEnergy();
-    inputs.distance = ScaleTruncating_(rawDistance, distScale);
+    inputs.distance = ApplyDistanceSteps_(rawDistance, distanceSteps);
     const int formula = Calculator_().MindControlCost(rCost, inputs);
     EffectContext_t actorCtx;
     actorCtx.pPartnerFaction = &rTargetFaction;
     actorCtx.pBase = &rBase;
-    const double targetScale = ResolveOnTargetBase_(rBase, StatId_t::ProbeActionCost, rActor);
-    const double actorScale = ResolveActorCost_(rActor, actorCtx);
-    return ApplyProbeCostMultiplier_(formula, targetScale * actorScale);
+    const std::vector<ModifierContribution_t> targetSteps =
+        OnTargetBase_(rBase, StatId_t::ProbeActionCost, rActor);
+    const std::vector<ModifierContribution_t> actorSteps = ActorCostSteps_(rActor, actorCtx);
+    return ApplyProbeCostSteps_(formula, targetSteps, actorSteps);
 }
 
 int QuoteUnitActionCost_(const ProbeCostConfig_t& rCost, const Faction& rActor,
@@ -192,19 +203,19 @@ int QuoteUnitActionCost_(const ProbeCostConfig_t& rCost, const Faction& rActor,
     const Faction& rTargetFaction = rTargetUnit.GetFaction();
     const int mineralCost = std::max(1, rTargetUnit.GetDesign().GetBaseCost());
     const int rawDistance = HeadquartersDistance(rTargetFaction, rTargetUnit.GetTile());
-    const double distScale =
-        ResolveOnTargetUnit_(rTargetUnit, StatId_t::ProbeDistanceScale, rActor);
+    const std::vector<ModifierContribution_t> distanceSteps =
+        OnTargetUnit_(rTargetUnit, StatId_t::ProbeDistanceScale, rActor);
     SubvertCostInputs_t inputs;
     inputs.mineralCost = mineralCost;
     inputs.energy = rTargetFaction.GetEconomy().GetEnergy();
-    inputs.distance = ScaleTruncating_(rawDistance, distScale);
+    inputs.distance = ApplyDistanceSteps_(rawDistance, distanceSteps);
     const int formula = Calculator_().SubvertCost(rCost, inputs);
     EffectContext_t actorCtx;
     actorCtx.pPartnerFaction = &rTargetFaction;
-    const double targetScale =
-        ResolveOnTargetUnit_(rTargetUnit, StatId_t::ProbeActionCost, rActor);
-    const double actorScale = ResolveActorCost_(rActor, actorCtx);
-    return ApplyProbeCostMultiplier_(formula, targetScale * actorScale);
+    const std::vector<ModifierContribution_t> targetSteps =
+        OnTargetUnit_(rTargetUnit, StatId_t::ProbeActionCost, rActor);
+    const std::vector<ModifierContribution_t> actorSteps = ActorCostSteps_(rActor, actorCtx);
+    return ApplyProbeCostSteps_(formula, targetSteps, actorSteps);
 }
 
 bool ActorMeetsActionPrereqs_(const Unit& rProbe, const ProbeActionConfig_t& rAction)

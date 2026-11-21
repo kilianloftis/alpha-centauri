@@ -70,6 +70,8 @@ struct StatSlot_t
 {
     std::string id;
     SlotCombine_t combine = SlotCombine_t::Stack;
+    // Where the slot's factor falls among the stat's MultiplyStaged steps.
+    int stage = 0;
 
     bool operator==(const StatSlot_t&) const = default;
 };
@@ -79,6 +81,8 @@ struct StatModifierEffect_t
     StatId_t stat = StatId_t::Nutrients;
     double amount = 0.0;
     ModifierOp_t op = ModifierOp_t::Add;
+    // MultiplyStaged's place in its stack; the parser allows it on that op alone.
+    int stage = 0;
     // Scales `amount` by a runtime value instead of adding it. Each source needs its subject on
     // EffectContext_t (docs/architecture/effects-system.md).
     enum class AmountSource_t

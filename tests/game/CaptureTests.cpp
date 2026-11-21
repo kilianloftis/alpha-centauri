@@ -611,13 +611,13 @@ TEST_CASE("combat.json defense_slots gives each kind of fight its slots", "[comb
     const TempConfigFile valid("ac_combat_slots.json", R"({
         "boarding_home_base_min_pop": 0,
         "defense_slots": [
-            { "id": "walls", "kinds": ["Conventional"] },
-            { "id": "watch", "kinds": ["Conventional", "Psi"], "combine": "Largest" }
+            { "id": "walls", "stage": 60, "kinds": ["Conventional"] },
+            { "id": "watch", "stage": 80, "kinds": ["Conventional", "Psi"], "combine": "Largest" }
         ]
     })");
     const CombatConfig_t config = CombatConfigParser::ParseConfig(valid.Path());
-    const StatSlot_t walls{"walls", SlotCombine_t::Stack};
-    const StatSlot_t watch{"watch", SlotCombine_t::Largest};
+    const StatSlot_t walls{"walls", SlotCombine_t::Stack, 60};
+    const StatSlot_t watch{"watch", SlotCombine_t::Largest, 80};
     CHECK(config.defenseSlotsByKind.at(CombatKindId_t::Conventional)
           == std::vector<StatSlot_t>{walls, watch});
     CHECK(config.defenseSlotsByKind.at(CombatKindId_t::Psi) == std::vector<StatSlot_t>{watch});
@@ -632,11 +632,14 @@ TEST_CASE("combat.json defense_slots gives each kind of fight its slots", "[comb
     };
     throws("ac_combat_no_slots.json", R"("effects": [])");
     throws("ac_combat_twice.json",
-           R"("defense_slots": [ { "id": "walls", "kinds": ["Psi"] },
-                                 { "id": "walls", "kinds": ["Conventional"] } ])");
-    throws("ac_combat_no_kinds.json", R"("defense_slots": [ { "id": "walls", "kinds": [] } ])");
+           R"("defense_slots": [ { "id": "walls", "stage": 1, "kinds": ["Psi"] },
+                                 { "id": "walls", "stage": 2, "kinds": ["Conventional"] } ])");
+    throws("ac_combat_no_stage.json", R"("defense_slots": [ { "id": "walls", "kinds": ["Psi"] } ])");
+    throws("ac_combat_no_kinds.json",
+           R"("defense_slots": [ { "id": "walls", "stage": 1, "kinds": [] } ])");
     throws("ac_combat_bad_kind.json",
-           R"("defense_slots": [ { "id": "walls", "kinds": ["Artillery"] } ])");
+           R"("defense_slots": [ { "id": "walls", "stage": 1, "kinds": ["Artillery"] } ])");
     throws("ac_combat_bad_combine.json",
-           R"("defense_slots": [ { "id": "walls", "kinds": ["Psi"], "combine": "Product" } ])");
+           R"("defense_slots": [ { "id": "walls", "stage": 1, "kinds": ["Psi"],
+                                   "combine": "Product" } ])");
 }

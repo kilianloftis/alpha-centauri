@@ -435,8 +435,9 @@
         "scope": "ThisTile",
         "parameters": {
           "stat": "nutrients",
-          "amount": 50,
-          "op": "AddPercent"
+          "amount": 1.5,
+          "op": "MultiplyStaged",
+          "stage": 1
         }
       },
       {
@@ -817,8 +818,9 @@
         "scope": "ThisTile",
         "parameters": {
           "stat": "nutrients",
-          "amount": 50,
-          "op": "AddPercent"
+          "amount": 1.5,
+          "op": "MultiplyStaged",
+          "stage": 2
         }
       },
       {

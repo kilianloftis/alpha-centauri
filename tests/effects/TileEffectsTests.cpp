@@ -524,6 +524,26 @@ TEST_CASE("ResolveTileYield: Rocky zeroes rainfall but keeps jungle nutrients",
     CHECK(world.ctx.ResolveTileYield(moistRockyJungle).effective.nutrients == 1);
 }
 
+TEST_CASE("ResolveTileYield: Soil Enricher then Condenser half nutrients with trunc",
+          "[effects][tile][yield][staged]")
+{
+    actest::WorldFixture world;
+    Tile& tile = world.At(8, 8);
+    tile.SetBaseMoisture(Moisture_t::Wet);
+    tile.SetMoisture(Moisture_t::Wet);
+    world.ctx.AddOccupantWithEffects(tile, "Farm");
+    // Wet 2 + Farm 1 = 3.
+    CHECK(world.ctx.ResolveTileYield(tile).effective.nutrients == 3);
+
+    world.ctx.AddOccupantWithEffects(tile, "SoilEnricher");
+    // trunc(3 * 1.5) = 4.
+    CHECK(world.ctx.ResolveTileYield(tile).effective.nutrients == 4);
+
+    world.ctx.AddOccupantWithEffects(tile, "Condenser");
+    // trunc(4 * 1.5) = 6; Condenser also raises moisture but wet is already max.
+    CHECK(world.ctx.ResolveTileYield(tile).effective.nutrients == 6);
+}
+
 TEST_CASE("ResolveTileYield: Mine nutrient penalty only while nutrients so far exceed 1",
           "[effects][tile][yield][mine]")
 {

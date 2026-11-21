@@ -14,9 +14,10 @@ namespace
 
 void ParseDefenseSlot_(const ConfigReader& rSlot, CombatConfig_t& rConfig)
 {
-    rSlot.RejectUnknownKeys({"id", "kinds", "combine"});
+    rSlot.RejectUnknownKeys({"id", "stage", "kinds", "combine"});
     StatSlot_t slot;
     slot.id = rSlot.NonEmptyString("id");
+    slot.stage = rSlot.Int("stage");
     if (DeclaresDefenseSlot(rConfig, slot.id))
     {
         rSlot.FailKey("id", "is declared twice: '" + slot.id + "'");
