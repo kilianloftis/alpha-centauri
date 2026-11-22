@@ -7,6 +7,7 @@
 #include "game/effects/TriggeredEffect.h"
 #include "game/effects/InteractionGridsConfig.h"
 #include "game/movement/MovementRules.h"
+#include "game/terraform/ElevationRules.h"
 #include "game/terraform/TerraformMutations.h"
 #include "game/terraform/TerraformRules.h"
 #include "game/units/SupplyCrawlMutations.h"

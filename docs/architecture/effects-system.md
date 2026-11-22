@@ -664,7 +664,7 @@ both name the right faction with no extra plumbing. `severity` is `AtrocitySever
 `config/atrocities.json`. See `atrocity-system.md`.
 
 `Earthquake` raises the context tile through `ApplyEarthquake`
-(`include/game/terraform/ElevationChange.h`): `levels` rolls of `[level_min_meters,
+(`include/game/terraform/ElevationMutations.h`): `levels` rolls of `[level_min_meters,
 level_max_meters]` from `config/map_rules.json` (shipping both 1000 m), then the neighbor slope
 relaxation. Exactly
 one magnitude source is authored — `levels` is a literal (a scripted quake), `levels_stat`

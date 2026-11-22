@@ -2,20 +2,16 @@
 
 #include "game/base/BaseTypes.h"
 #include "game/map/ImprovementConfigParser.h"
-#include "game/map/MapRulesConfig.h"
 #include "game/map/TerrainConfig.h"
 #include "game/map/Tile.h"
-#include "game/units/UnitDomain.h"
 
 #include <optional>
 #include <span>
 #include <string>
-#include <vector>
 
 namespace ac
 {
 
-class BaseManager;
 class Faction;
 class ImprovementRegistry;
 class TerrainOperationRegistry;
@@ -47,9 +43,6 @@ std::optional<TerraformProject_t> FindTerraformProject(const std::string& rId,
                                                       const ImprovementRegistry& rImprovements,
                                                       const TerrainOperationRegistry& rOperations);
 
-// These read the elevation rules of the world the tile or unit stands in.
-int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId);
-
 bool CanStartTerraform(const Unit& rUnit, const TerraformProject_t& rProject);
 
 // Whether rUnit may start projectId (a buildable improvement or a terrain operation) on its tile
@@ -57,67 +50,6 @@ bool CanStartTerraform(const Unit& rUnit, const TerraformProject_t& rProject);
 bool CanStartTerraformProject(const Unit& rUnit, const std::string& projectId);
 
 int TerraformEnergyCost(const Unit& rUnit, const TerraformProject_t& rProject);
-
-
-// Elevation after a max-sized level change in that direction, clamped to Planet's range.
-int FormerElevationAfterMaxLevel(const Tile& rTile, bool bRaise, const MapRulesConfig_t& rRules);
-
-// True when that change moves the tile, is not raise from the top altitude band (TOOHIGH),
-// and the enter grid still allows this Former on the resulting surface.
-// docs/thinker/terranx-map.md "Starting a project".
-bool FormerElevationChangeAllowed(const Unit& rUnit, bool bRaise, const MapRulesConfig_t& rRules);
-
-// SMAC alien_fauna growth: MapAreaTiles / (turn/4 + 32) samples per turn, turnIndex counted
-// from the first playable year.
-int TerraformSpreadGrowthAttempts(int mapTileCount, int turnIndex);
-
-struct SurfaceFlipConsequences_t
-{
-    std::vector<std::string> removedImprovements;
-    // True when a base on new water may not occupy water and must be razed.
-    bool bRazeBase = false;
-    // Units whose domain no longer matches the surface. They die unless a base on the tile is
-    // still standing after the flip.
-    std::vector<Unit*> strandedUnits;
-};
-
-// A flip removes every improvement whose domain is not the new surface (an omitted domain stays),
-// except the Base marker of a base on the tile. A base that may occupy water, or whose tile became
-// land, is untouched and shelters the units on it; any other base on new water is razed.
-SurfaceFlipConsequences_t SurfaceFlipConsequences(const Tile& rTile, bool bNowWater,
-                                                  const BaseManager* pBase);
-
-struct TerraformSpread_t
-{
-    const Tile* pTarget = nullptr;
-    const ImprovementConfig_t* pImprovement = nullptr;
-};
-
-// Forest spreads from land, KelpFarm from sea, onto the best eligible neighbour (arid and flat
-// first). Empty when rOrigin holds neither or no neighbour qualifies.
-std::optional<TerraformSpread_t> PickSpreadTarget(const Tile& rOrigin);
-
-struct ElevationSeed_t
-{
-    const Tile* pTile = nullptr;
-    int deltaMeters = 0;
-};
-
-struct ElevationWrite_t
-{
-    const Tile* pTile = nullptr;
-    int elevation = 0;
-};
-
-// Every write a change makes, in order: seeds move within the band and Planet's range, then each
-// moved tile pulls its neighbours within the slope limit. Throws on a band outside Planet's range.
-std::vector<ElevationWrite_t> PlanElevationChange(std::span<const ElevationSeed_t> seeds,
-                                                  int floorMeters, int ceilingMeters,
-                                                  const MapRulesConfig_t& rRules);
-
-// The sum of the level rolls, capped at Planet's full elevation span.
-int EarthquakeDeltaMeters(std::span<const int> levelRollsMeters,
-                          const MapRulesConfig_t& rRules);
 
 // The faction a Former's raise or lower land aggrieves by drying land, from the climate rerun's
 // changes in scan order. A tile that got drier records the faction holding the nearest base of

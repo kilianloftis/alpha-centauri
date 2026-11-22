@@ -219,6 +219,12 @@ add_library(ac-core STATIC
     game/movement/AirdropRules.cpp
     game/terraform/TerraformRules.cpp
     game/terraform/TerraformMutations.cpp
+    game/terraform/ElevationRules.cpp
+    game/terraform/ElevationMutations.cpp
+    game/terraform/TerraformSpreadRules.cpp
+    game/terraform/TerraformSpreadMutations.cpp
+    game/terraform/SurfaceFlipRules.cpp
+    game/terraform/SurfaceFlipMutations.cpp
     game/units/AdHocDesign.cpp
     game/base/BaseConquestCalculator.cpp
     game/base/BaseConquestConfigParser.cpp
@@ -255,10 +261,7 @@ add_library(ac-core STATIC
     game/map/TerrainConfigParser.cpp
     game/effects/CoexistenceResolve.cpp
     game/map/MapRulesConfigParser.cpp
-    game/terraform/ElevationChange.cpp
-    game/terraform/SurfaceOccupancy.cpp
     game/map/TerrainFeatureValidation.cpp
-    game/terraform/TerraformSpread.cpp
     game/worldgen/WorldGenPresetConfigParser.cpp
     game/worldgen/WorldGenDecorationConfigParser.cpp
     game/worldgen/LandmarkConfigParser.cpp

@@ -1,11 +1,11 @@
-#include "game/terraform/SurfaceOccupancy.h"
+#include "game/terraform/SurfaceFlipMutations.h"
 
 #include "game/faction/Faction.h"
 #include "game/base/BaseManager.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/Tile.h"
-#include "game/terraform/TerraformRules.h"
+#include "game/terraform/SurfaceFlipRules.h"
 #include "game/CurrentGameState.h"
 #include "game/GameState.h"
 #include "game/PlayerInteractionQueue.h"

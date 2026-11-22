@@ -1,12 +1,12 @@
-#include "game/terraform/ElevationChange.h"
+#include "game/terraform/ElevationMutations.h"
 
 #include "game/CurrentGameState.h"
 #include "game/GameState.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
-#include "game/terraform/SurfaceOccupancy.h"
-#include "game/terraform/TerraformRules.h"
+#include "game/terraform/ElevationRules.h"
+#include "game/terraform/SurfaceFlipMutations.h"
 #include "lib/RandomRoll.h"
 
 #include <optional>

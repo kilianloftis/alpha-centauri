@@ -3,8 +3,8 @@
 #include "TestTempDir.h"
 
 #include "game/CurrentGameState.h"
-#include "game/terraform/ElevationChange.h"
-#include "game/terraform/TerraformRules.h"
+#include "game/terraform/ElevationMutations.h"
+#include "game/terraform/ElevationRules.h"
 #include "game/map/MapRulesConfigParser.h"
 #include "game/worldgen/WorldGenPresetConfigParser.h"
 #include "game/map/Tile.h"

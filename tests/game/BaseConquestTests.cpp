@@ -12,7 +12,7 @@
 #include "game/buildings/BuildingManager.h"
 #include "game/buildings/BuildingRules.h"
 #include "game/population/PopulationManager.h"
-#include "game/terraform/SurfaceOccupancy.h"
+#include "game/terraform/SurfaceFlipMutations.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/combat/AttackRules.h"

@@ -5,7 +5,7 @@
 #include "game/effects/TileEffectsContext.h"
 #include "game/units/UnitManager.h"
 #include "game/base/BaseManager.h"
-#include "game/terraform/ElevationChange.h"
+#include "game/terraform/ElevationMutations.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"

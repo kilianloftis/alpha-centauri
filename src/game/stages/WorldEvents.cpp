@@ -2,7 +2,7 @@
 #include "game/GameState.h"
 #include "game/effects/TriggeredEffectDispatch.h"
 #include "game/natives/PlanetFaunaMutations.h"
-#include "game/terraform/TerraformSpread.h"
+#include "game/terraform/TerraformSpreadMutations.h"
 #include "game/stages/TurnStageRegistrar.h"
 #include "game/world-events/WorldEventConfig.h"
 #include "game/world-events/WorldEventTracker.h"

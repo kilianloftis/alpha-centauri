@@ -1,10 +1,10 @@
-#include "game/terraform/TerraformSpread.h"
+#include "game/terraform/TerraformSpreadMutations.h"
 
 #include "game/CurrentGameState.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
-#include "game/terraform/TerraformRules.h"
+#include "game/terraform/TerraformSpreadRules.h"
 #include "lib/RandomRoll.h"
 
 #include <optional>

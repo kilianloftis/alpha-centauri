@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/terraform/ElevationChange.h"
+#include "game/terraform/ElevationMutations.h"
 
 #include <vector>
 
