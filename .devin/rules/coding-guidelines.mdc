@@ -88,10 +88,12 @@ unless a change touches it. A change that breaks one is not finished.
    content we have not added yet that a documented SMAC mechanic needs (Morgan's
    `gift_given_value` before Morgan ships), or a step of a plan in `.devin/plans/`. Build only
    what that consumer needs, name it in the mechanic's docs, and test it through a fixture
-   config. "A mod might want it" and "it could be useful later" are not consumers. An interface is needed when it narrows what its consumer can reach
-   or breaks a header cycle. A test is not a caller for a getter, setter or hook added only so the
-   test can reach inside. A struct is a return type only when a function returns more than one
-   thing.
+   config. "A mod might want it" and "it could be useful later" are not consumers *of C++ API
+   surface* — unused getters, one-impl interfaces, Lua hooks with no in-repo caller. They are
+   not a reason to withhold config knobs; see Moddability. An interface is needed when it
+   narrows what its consumer can reach or breaks a header cycle. A test is not a caller for a
+   getter, setter or hook added only so the test can reach inside. A struct is a return type
+   only when a function returns more than one thing.
 7. **One level of abstraction per function.** A function either does the work or calls the steps
    that do it. A block you have to read and sum up before you know which step it is, is a step
    that needs a name. A comment labelling a block, a bare `{ }` scope, a multi-line lambda in the
@@ -165,10 +167,14 @@ value-line per array, not one element per line). Do not rewrite them with
   ```
 
 ## Moddability
-- Numbers, ids and switches a modder would change live in config, not C++ — including values
-  the binary inlined. Calculator coefficients follow `calculators.mdc`. Prefer existing
-  config, effects, Lua, and rule-switch seams over new speculative hooks.
-- A Lua or plugin hook is added with the mod feature that calls it.
+- Numbers, ids, formulas, and mechanic switches a player or modder would tune live in config,
+  not C++ — including values the binary inlined. Prefer giving each tunable its own knob where
+  the thing it varies lives (improvement-local prefs on that improvement; map-wide sample rates
+  on `map_rules`). Shipping peers may share the same numbers; identical values on Forest and
+  Kelp are fine — the point is each can be changed independently.
+- Prefer existing config, effects, Lua, and rule-switch seams over new C++ hooks. A Lua or
+  plugin hook is added with the mod feature that calls it.
+- Calculator coefficients follow `calculators.mdc`.
 
 ## Code Formatting
 

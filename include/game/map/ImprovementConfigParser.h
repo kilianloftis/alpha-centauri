@@ -4,6 +4,7 @@
 #include "game/effects/TriggeredEffect.h"
 #include "game/display/OccupantArt.h"
 #include "game/research/TechRequirement.h"
+#include "lib/Formula.h"
 #include "lib/config/ConfigReader.h"
 #include <optional>
 #include <string>
@@ -32,13 +33,32 @@ enum class OccupantPlacement_t
     Improvement,
 };
 
+// Former energy price: a flat int, or a Lua formula (elev_band, nearest_base_distance).
+struct FormerEnergyCost_t
+{
+    int flat = 0;
+    std::optional<Formula_t> formula;
+};
+
 // A tile occupant that grants effects: an improvement or a terrain feature, told apart by
 // `placement`. The construction half of an improvement a former can build.
 struct FormerProject_t
 {
     int turnsRequired = 0;
-    int energyCost = 0;
+    FormerEnergyCost_t energyCost;
     RequiredTechs_t requiredTechs;
+};
+
+// Parses energy_cost as a non-negative int or a formula string. Absent → flat 0.
+FormerEnergyCost_t ParseFormerEnergyCost(const ConfigReader& rReader);
+
+// WorldEvents growth onto a Chebyshev-1 neighbour (Forest, KelpFarm). Absent = does not spread.
+struct ImprovementSpread_t
+{
+    // Neighbor preference (moisture, rockiness ordinals).
+    Formula_t scoreFormula;
+    // Land: at or below this always qualifies; above needs non-arid. Sea uses ocean_shelf_meters.
+    std::optional<int> altitudeLimitMeters;
 };
 
 struct ImprovementConfig_t
@@ -70,6 +90,7 @@ struct ImprovementConfig_t
     std::vector<std::string> suppressTerrain;
     // When true, downhill river flow marks this tile then stops (ThermalBorehole).
     bool terminatesRiver = false;
+    std::optional<ImprovementSpread_t> spreads;
     // Move cost in fragments (move points in JSON). A tile uses the highest among its features,
     // then any move_cost MaxClamp; with none, defaultMoveCost.
     std::optional<int> moveCostFragments;

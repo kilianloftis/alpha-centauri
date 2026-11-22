@@ -46,6 +46,8 @@ struct MoraleConfig_t;
 class MoraleCalculator;
 class CommerceCalculator;
 class AllocationImbalanceCalculator;
+class FormerEnergyCostCalculator;
+class TerraformSpreadCalculator;
 class ProbeCalculator;
 class DiplomacyCalculator;
 class BaseConquestCalculator;
@@ -149,6 +151,8 @@ struct GameDataContext
     std::unique_ptr<MoraleCalculator> moraleCalculator;
     std::unique_ptr<CommerceCalculator> commerceCalculator;
     std::unique_ptr<AllocationImbalanceCalculator> allocationImbalanceCalculator;
+    std::unique_ptr<FormerEnergyCostCalculator> formerEnergyCostCalculator;
+    std::unique_ptr<TerraformSpreadCalculator> terraformSpreadCalculator;
     std::unique_ptr<ProbeCalculator> probeCalculator;
     std::unique_ptr<DiplomacyCalculator> diplomacyCalculator;
     std::unique_ptr<BaseConquestCalculator> baseConquestCalculator;

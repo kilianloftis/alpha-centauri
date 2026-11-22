@@ -1,6 +1,7 @@
 #include "game/terraform/TerraformSpreadMutations.h"
 
 #include "game/CurrentGameState.h"
+#include "game/GameState.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"

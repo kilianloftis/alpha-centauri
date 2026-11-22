@@ -74,14 +74,9 @@ void ValidateTerrainFeatures(const ImprovementRegistry& rOccupants)
     RequireTerrainEnum_<Moisture_t>(rOccupants, "moisture");
     RequireTerrainEnum_<TerrainFeature_t>(rOccupants, "terrain feature");
 
-    // Named in C++, not by an enum: without the entry, spread no-ops and fungus placement throws
-    // at the first patch.
+    // Named in C++, not by an enum: without the entry, fungus placement throws at the first patch.
     RequireOccupant_(rOccupants, ImprovementIds::k_Fungus, OccupantPlacement_t::Terrain,
                      "fungus placement");
-    for (const std::string_view id : {ImprovementIds::k_Forest, ImprovementIds::k_KelpFarm})
-    {
-        RequireOccupant_(rOccupants, id, OccupantPlacement_t::Improvement, "terraform spread");
-    }
 }
 
 } // namespace ac

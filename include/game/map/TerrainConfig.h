@@ -10,13 +10,6 @@
 namespace ac
 {
 
-// Where a Former project's energy price comes from.
-enum class EnergyCostSource_t
-{
-    Flat,            // energy_cost exactly as authored
-    RaiseLowerQuote, // elevation band plus distance to the nearest owned base
-};
-
 // Which Formers may run a project on the tile they are standing on.
 enum class FormerDomainRule_t
 {
@@ -32,7 +25,6 @@ struct TerrainOperationConfig_t
     std::string name;
     // The same former-project half an improvement carries; always present.
     FormerProject_t project;
-    EnergyCostSource_t energyCostSource = EnergyCostSource_t::Flat;
     FormerDomainRule_t formerDomain = FormerDomainRule_t::MatchesTile;
     // Tile surface the operation may run on. Empty means either land or sea.
     std::optional<ImprovementDomain_t> domain;

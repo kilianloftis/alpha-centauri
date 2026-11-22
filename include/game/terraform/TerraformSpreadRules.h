@@ -14,12 +14,12 @@ struct TerraformSpread_t
     const ImprovementConfig_t* pImprovement = nullptr;
 };
 
-// SMAC alien_fauna growth: MapAreaTiles / (turn/4 + 32) samples per turn, turnIndex counted
-// from the first playable year.
+// Samples per turn from map_rules spread_attempts_formula. turnIndex is counted from the first
+// playable year (docs/thinker/terranx-map.md "Forest and kelp growth").
 int TerraformSpreadGrowthAttempts(int mapTileCount, int turnIndex);
 
-// Forest spreads from land, KelpFarm from sea, onto the best eligible neighbour (arid and flat
-// first). Empty when rOrigin holds neither or no neighbour qualifies.
+// An improvement with a spreads object on rOrigin grows onto the best eligible neighbour.
+// Empty when none spread or no neighbour qualifies.
 std::optional<TerraformSpread_t> PickSpreadTarget(const Tile& rOrigin);
 
 } // namespace ac

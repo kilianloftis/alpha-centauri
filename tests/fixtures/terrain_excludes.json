@@ -373,8 +373,7 @@
       "id": "RaiseLand",
       "name": "Raise Land",
       "turns_required": 12,
-      "energy_cost": 0,
-      "energy_cost_source": "RaiseLowerQuote",
+      "energy_cost": "elev_band * 8 + nearest_base_distance * 2",
       "former_domain": "Any",
       "on_complete_effects": [
         {
@@ -389,8 +388,7 @@
       "id": "LowerLand",
       "name": "Lower Land",
       "turns_required": 12,
-      "energy_cost": 0,
-      "energy_cost_source": "RaiseLowerQuote",
+      "energy_cost": "elev_band * 8 + nearest_base_distance * 2",
       "former_domain": "Any",
       "on_complete_effects": [
         {

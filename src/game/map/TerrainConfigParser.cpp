@@ -32,10 +32,6 @@ TerrainOperationConfig_t ParseOperation_(const ConfigReader& rReader)
     TerrainOperationConfig_t config;
     config.id = rReader.NonEmptyString("id");
     config.name = rReader.String("name");
-    config.energyCostSource =
-        rReader.Has("energy_cost_source")
-            ? rReader.Enum<EnergyCostSource_t>("energy_cost_source", "energy_cost_source")
-            : EnergyCostSource_t::Flat;
     config.formerDomain = rReader.Has("former_domain")
                               ? rReader.Enum<FormerDomainRule_t>("former_domain", "former_domain")
                               : FormerDomainRule_t::MatchesTile;
@@ -51,8 +47,7 @@ TerrainOperationConfig_t ParseOperation_(const ConfigReader& rReader)
                         "must name at least one effect, or the project can never do anything");
     }
     config.project.turnsRequired = rReader.IntAtLeast("turns_required", 1);
-    config.project.energyCost =
-        rReader.Has("energy_cost") ? rReader.IntAtLeast("energy_cost", 0) : 0;
+    config.project.energyCost = ParseFormerEnergyCost(rReader);
     config.project.requiredTechs = ParseRequiredTechs(rReader);
     return config;
 }

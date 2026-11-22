@@ -998,7 +998,8 @@ TEST_CASE("Forest suppresses rockiness/moisture but keeps resource bonuses",
 {
     actest::WorldFixture world;
     Tile& tile = world.At(8, 8);
-    tile.SetRockiness(Rockiness_t::Rocky);
+    // Rolling, not Rocky: Forest excludes Rocky, so the two cannot share a tile.
+    tile.SetRockiness(Rockiness_t::Rolling);
     tile.SetMoisture(Moisture_t::Wet);
     world.ctx.AddOccupantWithEffects(tile, "Forest");
     world.ctx.AddOccupantWithEffects(tile, "Nutrients");
@@ -1213,14 +1214,6 @@ TEST_CASE("Minerals grants +1 with Mine and Road",
     // Fixture Mine +2; Minerals +2; Minerals' Mine+Road term +1.
     CHECK(world.ctx.ResolveTileYield(withRoad).effective.minerals == 5);
     CHECK(world.ctx.ResolveTileYield(withoutRoad).effective.minerals == 4);
-}
-
-TEST_CASE("TerraformSpreadGrowthAttempts matches SMAC alien_fauna formula",
-          "[terraform][spread]")
-{
-    CHECK(TerraformSpreadGrowthAttempts(3200, 0) == 100);   // 3200 / 32
-    CHECK(TerraformSpreadGrowthAttempts(3200, 100) == 56);  // 3200 / (25 + 32)
-    CHECK(TerraformSpreadGrowthAttempts(0, 0) == 0);
 }
 
 TEST_CASE("TrySpreadTerraformFromTile spreads Forest onto open land and leaves fungus",

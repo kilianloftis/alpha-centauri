@@ -454,7 +454,8 @@ One directory under `include/game/` and `src/game/` per domain. The filename suf
 - `stages/`: the turn processor, stage infrastructure and mod hooks, every turn stage
 - `supply/`: supply-pod config, event-group stamp index, open rules and mutations
 - `terraform/`: `TerraformRules` / `TerraformMutations` (projects, rainfall grievance),
-  `ElevationRules` / `ElevationMutations`, `TerraformSpreadRules` / `TerraformSpreadMutations`,
+  `ElevationRules` / `ElevationMutations`, `FormerEnergyCostCalculator`,
+  `TerraformSpreadCalculator` / `TerraformSpreadRules` / `TerraformSpreadMutations`,
   `SurfaceFlipRules` / `SurfaceFlipMutations`
 - `units/`: the unit aggregate, designs, components and slots, upgrade rules/cost/mutations,
   turn-event ledger (`UnitTurnLatches`), idle healing (`HealingRules` / `HealingMutations`),

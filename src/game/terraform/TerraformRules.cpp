@@ -21,6 +21,7 @@
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/terraform/ElevationRules.h"
+#include "game/terraform/FormerEnergyCostCalculator.h"
 #include "game/effects/TriggeredEffectDispatch.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDomain.h"
@@ -130,7 +131,6 @@ std::optional<TerraformProject_t> FindTerraformProject(const std::string& rId,
         project.id = pOperation->id;
         project.name = pOperation->name;
         project.project = pOperation->project;
-        project.energyCostSource = pOperation->energyCostSource;
         project.formerDomain = pOperation->formerDomain;
         project.domain = pOperation->domain;
         project.onCompleteEffects = pOperation->onCompleteEffects;
@@ -141,11 +141,15 @@ std::optional<TerraformProject_t> FindTerraformProject(const std::string& rId,
 
 int TerraformEnergyCost(const Unit& rUnit, const TerraformProject_t& rProject)
 {
-    if (rProject.energyCostSource == EnergyCostSource_t::RaiseLowerQuote)
+    const FormerEnergyCost_t& rCost = rProject.project.energyCost;
+    if (!rCost.formula.has_value())
     {
-        return QuoteRaiseLowerEnergyCost(rUnit.GetTile(), rUnit.GetFaction().GetFactionId());
+        return rCost.flat;
     }
-    return rProject.project.energyCost;
+    const Tile& rTile = rUnit.GetTile();
+    return CurrentGameState().GetGameData().formerEnergyCostCalculator->Cost(
+        rCost, RaiseLowerElevBand(rTile),
+        NearestOwnedBaseDistance(rTile, rUnit.GetFaction().GetFactionId()));
 }
 
 bool CanStartTerraformProject(const Unit& rUnit, const std::string& projectId)

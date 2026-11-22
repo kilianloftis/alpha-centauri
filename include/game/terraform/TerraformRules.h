@@ -27,7 +27,6 @@ struct TerraformProject_t
     std::string id;
     std::string name;
     FormerProject_t project;
-    EnergyCostSource_t energyCostSource = EnergyCostSource_t::Flat;
     FormerDomainRule_t formerDomain = FormerDomainRule_t::MatchesTile;
     // Surface this project may run on. From the improvement's domain, or an operation's
     // domain; empty means either surface.

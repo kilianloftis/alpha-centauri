@@ -15,7 +15,6 @@
 #include "game/production/ProductionManager.h"
 #include "game/terraform/ElevationMutations.h"
 #include "game/map/ImprovementIds.h"
-#include "game/terraform/SurfaceFlipMutations.h"
 #include "game/terraform/SurfaceFlipRules.h"
 #include "game/base/BaseMutations.h"
 #include "game/base/BaseRules.h"
@@ -456,13 +455,13 @@ TEST_CASE("A land colony pod cannot found on water; a sea pod can and may occupy
     BaseManager* pLandFounded = game.FoundBase(seaOnLand);
     REQUIRE(pLandFounded);
     CHECK_FALSE(pLandFounded->MayOccupyWater());
-    CHECK_FALSE(pLandFounded->GetBuildingManager().HasBuilding(k_PressureDomeBuildingId));
+    CHECK_FALSE(pLandFounded->GetBuildingManager().HasBuilding("Pressure_Dome"));
 
     Unit& seaPod = game.MakeUnit(*game.pPlayer, 11, 11, {"test_sea_chassis", "test_colony_pod"}, &home);
     BaseManager* pSea = game.FoundBase(seaPod);
     REQUIRE(pSea);
     CHECK(pSea->GetTile().IsWater());
-    CHECK(pSea->GetBuildingManager().HasBuilding(k_PressureDomeBuildingId));
+    CHECK(pSea->GetBuildingManager().HasBuilding("Pressure_Dome"));
     CHECK(pSea->MayOccupyWater());
     CHECK(pSea->GetTile().HasImprovement(ImprovementIds::k_Base));
 }
@@ -565,7 +564,7 @@ TEST_CASE("A domed base and a sea base keep their tiles across a flip",
     FoundBaseGame_ game;
     game.MakeBase(*game.pPlayer, 14, 14);
     BaseManager& domed = game.MakeBase(*game.pPlayer, 5, 11);
-    domed.GetBuildingManager().AddBuilding(k_PressureDomeBuildingId);
+    domed.GetBuildingManager().AddBuilding("Pressure_Dome");
     game.fixtures.state.GetTileEffects().AddOccupantWithEffects(domed.GetTile(), "Farm");
     const int domedSize = domed.GetPopulation().GetSize();
     CrossElevation_(game.fixtures.state, domed.GetTile(), -500);
@@ -630,7 +629,7 @@ TEST_CASE("A flip kills units on the wrong surface unless a standing base shelte
 
     game.MakeBase(*game.pPlayer, 14, 14);
     BaseManager& domed = game.MakeBase(*game.pPlayer, 8, 8);
-    domed.GetBuildingManager().AddBuilding(k_PressureDomeBuildingId);
+    domed.GetBuildingManager().AddBuilding("Pressure_Dome");
     Unit& garrison = game.MakeUnit(*game.pPlayer, 8, 8, {"test_chassis"});
     const UnitId_t garrisonId = garrison.GetUnitId();
     CrossElevation_(game.fixtures.state, domed.GetTile(), -500);
@@ -659,7 +658,7 @@ TEST_CASE("A flip to water marks an undomed base for raze and keeps a domed one"
     BaseManager& land = game.MakeBase(*game.pPlayer, 8, 8);
     game.fixtures.state.GetTileEffects().AddOccupantWithEffects(land.GetTile(), "Farm");
     BaseManager& domed = game.MakeBase(*game.pPlayer, 5, 11);
-    domed.GetBuildingManager().AddBuilding(k_PressureDomeBuildingId);
+    domed.GetBuildingManager().AddBuilding("Pressure_Dome");
 
     const SurfaceFlipConsequences_t flooded =
         SurfaceFlipConsequences(land.GetTile(), /*bNowWater=*/true, &land);
@@ -683,7 +682,7 @@ TEST_CASE("Pressure Dome alone grants +1 nutrients minerals and energy",
     const int minerals = base.GetMineralProduction();
     const int energy = base.GetEnergyProduction();
 
-    base.GetBuildingManager().AddBuilding(k_PressureDomeBuildingId);
+    base.GetBuildingManager().AddBuilding("Pressure_Dome");
     CHECK(base.MayOccupyWater());
     CHECK(base.GetNutrientProduction() == nutrients + 1);
     CHECK(base.GetMineralProduction() == minerals + 1);

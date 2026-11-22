@@ -47,8 +47,6 @@ void ValidateElevationRules_(const ConfigReader& rReader, const MapRulesConfig_t
                   rConfig.oceanLevelMeters);
     RequireAtLeast_(rReader, "level_max_meters", rConfig.levelMaxMeters, "level_min_meters",
                     rConfig.levelMinMeters);
-    RequireAtLeast_(rReader, "spread_altitude_limit_meters", rConfig.spreadAltitudeLimitMeters,
-                    "ocean_level_meters", rConfig.oceanLevelMeters);
 }
 
 int RequirePositiveMeters_(const ConfigReader& rReader, const char* pKey)
@@ -71,8 +69,8 @@ MapRulesConfig_t ParseMapRules_(const ConfigReader& rReader)
     config.maxAdjacentDifferenceMeters =
         RequirePositiveMeters_(rReader, "max_adjacent_difference_meters");
     config.referenceLevelMeters = RequirePositiveMeters_(rReader, "reference_level_meters");
-    config.spreadAltitudeLimitMeters =
-        RequireWholeMeters_(rReader, "spread_altitude_limit_meters");
+    config.spreadAttemptsFormula =
+        rReader.Formula("spread_attempts_formula", {"map_tiles", "turn"});
     config.missingHeadquartersDistance = rReader.IntAtLeast("missing_headquarters_distance", 1);
 
     ValidateElevationRules_(rReader, config);

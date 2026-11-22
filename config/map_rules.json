@@ -5,6 +5,6 @@
   "level_max_meters": 1000,
   "max_adjacent_difference_meters": 1500,
   "reference_level_meters": 1000,
-  "spread_altitude_limit_meters": 1000,
+  "spread_attempts_formula": "math.floor(map_tiles / (math.floor(turn / 4) + 32))",
   "missing_headquarters_distance": 12
 }

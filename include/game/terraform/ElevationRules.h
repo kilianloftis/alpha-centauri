@@ -24,8 +24,11 @@ struct ElevationWrite_t
     int elevation = 0;
 };
 
-// These read the elevation rules of the world the tile or unit stands in.
-int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId);
+// Elevation band for raise/lower energy formulas: |elev| / reference_level_meters + 1.
+int RaiseLowerElevBand(const Tile& rTile);
+
+// Chebyshev distance to the nearest own base, or max(width, height) when the faction has none.
+int NearestOwnedBaseDistance(const Tile& rTile, FactionId_t factionId);
 
 // Elevation after a max-sized level change in that direction, clamped to Planet's range.
 int FormerElevationAfterMaxLevel(const Tile& rTile, bool bRaise, const MapRulesConfig_t& rRules);

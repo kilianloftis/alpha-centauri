@@ -1,5 +1,8 @@
 #include "game/worldgen/WorldGenPresetConfigParser.h"
+
+#include "game/map/ImprovementRegistry.h"
 #include "lib/config/JsonConfigLoader.h"
+
 #include <stdexcept>
 #include <string>
 
@@ -89,12 +92,24 @@ void WorldGenPresetConfigParser::ValidateAgainstMapRules(
                                  + "' min_elevation must be <= map ocean_shelf_meters ("
                                  + std::to_string(rMapRules.oceanShelfMeters) + ")");
     }
-    if (rPreset.maxElevation < rMapRules.spreadAltitudeLimitMeters)
+}
+
+void WorldGenPresetConfigParser::ValidateAgainstSpreadLimits(
+    const WorldGenPresetConfig_t& rPreset, const ImprovementRegistry& rOccupants)
+{
+    for (const ImprovementConfig_t& rConfig : rOccupants.GetAll())
     {
-        throw std::runtime_error(
-            "World gen preset '" + rPreset.id
-            + "' max_elevation must be >= map spread_altitude_limit_meters ("
-            + std::to_string(rMapRules.spreadAltitudeLimitMeters) + ")");
+        if (!rConfig.spreads || !rConfig.spreads->altitudeLimitMeters)
+        {
+            continue;
+        }
+        const int altitudeLimit = *rConfig.spreads->altitudeLimitMeters;
+        if (rPreset.maxElevation < altitudeLimit)
+        {
+            throw std::runtime_error(
+                "World gen preset '" + rPreset.id + "' max_elevation must be >= '" + rConfig.id
+                + "' spreads.altitude_limit_meters (" + std::to_string(altitudeLimit) + ")");
+        }
     }
 }
 

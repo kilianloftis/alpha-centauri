@@ -1,5 +1,7 @@
 #pragma once
 
+#include "lib/Formula.h"
+
 namespace ac
 {
 
@@ -22,9 +24,9 @@ struct MapRulesConfig_t
     int maxAdjacentDifferenceMeters = 0;
     // Former eligibility and the raise/lower energy band. Not the rolled level size.
     int referenceLevelMeters = 0;
-    // Land above this takes forest and fungus spread only when moist or wet. Separate from
-    // reference_level_meters so a mod can move either.
-    int spreadAltitudeLimitMeters = 0;
+    // Terraform spread samples per turn (map_tiles, turn). Per-improvement score/altitude live
+    // on ImprovementSpread_t.
+    Formula_t spreadAttemptsFormula;
     // Headquarters distance of a faction that has none (terranx vulnerable: 12).
     int missingHeadquartersDistance = 0;
 };

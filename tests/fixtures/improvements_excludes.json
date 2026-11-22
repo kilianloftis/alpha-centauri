@@ -123,6 +123,10 @@
     "id": "Forest",
     "name": "Forest",
     "turns_required": 4,
+    "spreads": {
+      "score_formula": "4 * (3 - moisture) - rockiness",
+      "altitude_limit_meters": 1000
+    },
     "tags": [
       "land_terraform"
     ],
@@ -181,6 +185,9 @@
     "id": "KelpFarm",
     "name": "Kelp Farm",
     "turns_required": 4,
+    "spreads": {
+      "score_formula": "4 * (3 - moisture) - rockiness"
+    },
     "tags": [
       "sea_terraform"
     ],

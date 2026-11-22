@@ -1078,10 +1078,11 @@ grants fewer units and reports the real count rather than throwing.
   never silently no-ops the whole check.
 - **`ValidateTerrainFeatures(occupants)`** (`game/map/TerrainFeatureValidation.h`) runs
   alongside it: every `Rockiness_t`, `Moisture_t` and `TerrainFeature_t` enumerator, plus
-  Fungus, must be present with `placement` Terrain; Forest and KelpFarm must be present with
-  `placement` Improvement. `Tile` mirrors those enums into
-  `GetTerrainFeatures()` by name, so a missing entry would otherwise cost a tile its terrain
-  effects silently.
+  Fungus, must be present with `placement` Terrain. Improvements that grow each turn declare a
+  `spreads` object (`score_formula`, optional `altitude_limit_meters`) in `improvements.json`
+  (shipping Forest and KelpFarm); there is no fixed id list.
+  `Tile` mirrors those enums into `GetTerrainFeatures()` by name, so a missing entry would
+  otherwise cost a tile its terrain effects silently.
 - **Coverage**: every effect-declaring config — buildings, improvements, pop types, unit
   components, social policies, each rating level's effect list, factions, council proposals,
   council governor effects, probe actions, `tileYieldRules`, and production.

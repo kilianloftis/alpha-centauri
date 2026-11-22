@@ -27,6 +27,8 @@
 #include "game/production/ProductionConfigParser.h"
 #include "game/economy/AllocationImbalanceCalculator.h"
 #include "game/economy/AllocationImbalanceConfigParser.h"
+#include "game/terraform/FormerEnergyCostCalculator.h"
+#include "game/terraform/TerraformSpreadCalculator.h"
 #include "game/economy/CommerceConfigParser.h"
 #include "game/diplomacy/DiplomacyConfigParser.h"
 #include "game/population/GrowthConfigParser.h"
@@ -234,6 +236,8 @@ void LoadWorldGenData_(GameDataContext& rData)
     for (const WorldGenPresetConfig_t& rPreset : rData.worldGenPresetRegistry->GetAll())
     {
         WorldGenPresetConfigParser::ValidateAgainstMapRules(rPreset, rData.mapRules);
+        WorldGenPresetConfigParser::ValidateAgainstSpreadLimits(rPreset,
+                                                                *rData.improvementRegistry);
     }
     rData.worldGenDecorationConfig =
         ParseOwned_<WorldGenDecorationConfigParser>(rPaths.worldGenDecoration);
@@ -306,6 +310,9 @@ void LoadFormulasAndCalculators_(GameDataContext& rData)
         AllocationImbalanceConfigParser::ParseConfig(rPaths.energyAllocationFormula, rLua));
     rData.allocationImbalanceCalculator = std::make_unique<AllocationImbalanceCalculator>(
         *rData.allocationImbalanceConfig, rLua);
+    rData.formerEnergyCostCalculator = std::make_unique<FormerEnergyCostCalculator>(rLua);
+    rData.terraformSpreadCalculator = std::make_unique<TerraformSpreadCalculator>(
+        rData.mapRules.spreadAttemptsFormula, rLua);
     rData.probeCalculator = std::make_unique<ProbeCalculator>(rLua);
     rData.diplomacyCalculator = std::make_unique<DiplomacyCalculator>(*rData.diplomacyConfig);
     rData.baseConquestCalculator =
@@ -372,6 +379,8 @@ void ThrowIfIncomplete(const GameDataContext& rData)
         {rData.moraleCalculator.get(), "moraleCalculator"},
         {rData.commerceCalculator.get(), "commerceCalculator"},
         {rData.allocationImbalanceCalculator.get(), "allocationImbalanceCalculator"},
+        {rData.formerEnergyCostCalculator.get(), "formerEnergyCostCalculator"},
+        {rData.terraformSpreadCalculator.get(), "terraformSpreadCalculator"},
         {rData.probeCalculator.get(), "probeCalculator"},
         {rData.diplomacyCalculator.get(), "diplomacyCalculator"},
         {rData.baseConquestCalculator.get(), "baseConquestCalculator"},

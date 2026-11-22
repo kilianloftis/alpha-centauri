@@ -4,13 +4,14 @@
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
 #include "game/map/ImprovementIds.h"
-#include "game/map/ImprovementRegistry.h"
 #include "game/map/MapUtils.h"
 #include "game/map/OccupantCoexistence.h"
 #include "game/map/WorldMap.h"
+#include "game/terraform/TerraformSpreadCalculator.h"
 
 #include <algorithm>
 #include <optional>
+#include <stdexcept>
 
 namespace ac
 {
@@ -18,21 +19,31 @@ namespace ac
 namespace
 {
 
-// Thinker/SMAC neighbor preference: arid and flatter tiles score higher.
-int SpreadNeighborScore_(const Tile& rTile)
+const TerraformSpreadCalculator& SpreadCalculator_()
+{
+    return *CurrentGameState().GetGameData().terraformSpreadCalculator;
+}
+
+// docs/thinker/terranx-map.md "Forest and kelp growth": arid and flatter tiles score higher.
+int SpreadNeighborScore_(const Tile& rTile, const ImprovementSpread_t& rSpread)
 {
     const int moisture = static_cast<int>(rTile.GetMoisture());
     const int rockiness = static_cast<int>(rTile.GetRockiness());
-    return 4 * (3 - moisture) - rockiness;
+    return SpreadCalculator_().NeighborScore(rSpread.scoreFormula, moisture, rockiness);
 }
 
-bool MeetsAltitudeGate_(const Tile& rTile)
+bool MeetsAltitudeGate_(const Tile& rTile, const ImprovementSpread_t& rSpread)
 {
     if (rTile.IsWater())
     {
         return rTile.GetElevation() >= rTile.MapRules().oceanShelfMeters;
     }
-    if (rTile.GetElevation() <= rTile.MapRules().spreadAltitudeLimitMeters)
+    if (!rSpread.altitudeLimitMeters)
+    {
+        throw std::logic_error(
+            "MeetsAltitudeGate_: land spread requires altitude_limit_meters on the improvement");
+    }
+    if (rTile.GetElevation() <= *rSpread.altitudeLimitMeters)
     {
         return true;
     }
@@ -44,7 +55,8 @@ bool MeetsAltitudeGate_(const Tile& rTile)
 bool IsEligibleSpreadNeighbor_(const Tile& rNeighbor, bool bWantSea,
                                const ImprovementConfig_t& rConfig)
 {
-    if (rNeighbor.IsWater() != bWantSea || !MeetsAltitudeGate_(rNeighbor))
+    const ImprovementSpread_t& rSpread = *rConfig.spreads;
+    if (rNeighbor.IsWater() != bWantSea || !MeetsAltitudeGate_(rNeighbor, rSpread))
     {
         return false;
     }
@@ -52,41 +64,26 @@ bool IsEligibleSpreadNeighbor_(const Tile& rNeighbor, bool bWantSea,
     {
         return false;
     }
-    // SMAC never spreads forest onto rocky tiles.
-    if (!bWantSea && rNeighbor.GetRockiness() == Rockiness_t::Rocky)
-    {
-        return false;
-    }
     return CanBuildImprovement(rNeighbor, rConfig, {}, {});
 }
 
-} // namespace
-
-int TerraformSpreadGrowthAttempts(int mapTileCount, int turnIndex)
+const ImprovementConfig_t* SpreadingImprovementOn_(const Tile& rOrigin)
 {
-    if (mapTileCount <= 0)
+    for (const ImprovementConfig_t* pConfig : rOrigin.GetImprovements())
     {
-        return 0;
+        if (pConfig->spreads)
+        {
+            return pConfig;
+        }
     }
-    const int turn = std::max(0, turnIndex);
-    return mapTileCount / (turn / 4 + 32);
+    return nullptr;
 }
 
-std::optional<TerraformSpread_t> PickSpreadTarget(const Tile& rOrigin)
+std::optional<TerraformSpread_t> BestNeighborFor_(const Tile& rOrigin,
+                                                  const ImprovementConfig_t& rConfig)
 {
     const bool bWantSea = rOrigin.IsWater();
-    const std::string improvementId(bWantSea ? ImprovementIds::k_KelpFarm
-                                             : ImprovementIds::k_Forest);
-    if (!rOrigin.HasImprovement(improvementId))
-    {
-        return std::nullopt;
-    }
-    const GameState& rGame = CurrentGameState();
-    const ImprovementRegistry& rImprovements = *rGame.GetGameData().improvementRegistry;
-    const WorldMap& rWorldMap = rGame.GetWorldMap();
-    // Present by construction: ValidateTerrainFeatures proves both ids exist at load.
-    const ImprovementConfig_t& rConfig = rImprovements.Get(improvementId);
-
+    const WorldMap& rWorldMap = CurrentGameState().GetWorldMap();
     const Tile* pBest = nullptr;
     int bestScore = 0;
     ForEachNeighborInChebyshevRadius(rOrigin, rWorldMap, 1,
@@ -96,7 +93,7 @@ std::optional<TerraformSpread_t> PickSpreadTarget(const Tile& rOrigin)
             {
                 return;
             }
-            const int score = SpreadNeighborScore_(*pNeighbor);
+            const int score = SpreadNeighborScore_(*pNeighbor, *rConfig.spreads);
             if (pBest == nullptr || score > bestScore)
             {
                 bestScore = score;
@@ -108,6 +105,23 @@ std::optional<TerraformSpread_t> PickSpreadTarget(const Tile& rOrigin)
         return std::nullopt;
     }
     return TerraformSpread_t{pBest, &rConfig};
+}
+
+} // namespace
+
+int TerraformSpreadGrowthAttempts(int mapTileCount, int turnIndex)
+{
+    return SpreadCalculator_().GrowthAttempts(mapTileCount, turnIndex);
+}
+
+std::optional<TerraformSpread_t> PickSpreadTarget(const Tile& rOrigin)
+{
+    const ImprovementConfig_t* pConfig = SpreadingImprovementOn_(rOrigin);
+    if (pConfig == nullptr)
+    {
+        return std::nullopt;
+    }
+    return BestNeighborFor_(rOrigin, *pConfig);
 }
 
 } // namespace ac

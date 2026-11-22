@@ -60,7 +60,9 @@ MapRulesConfig_t ShippingRules_()
     rules.levelMaxMeters = 1000;
     rules.maxAdjacentDifferenceMeters = 1500;
     rules.referenceLevelMeters = 1000;
-    rules.spreadAltitudeLimitMeters = 1000;
+    rules.spreadAttemptsFormula = Formula_t{
+        "math.floor(map_tiles / (math.floor(turn / 4) + 32))", {"map_tiles", "turn"}};
+    rules.missingHeadquartersDistance = 12;
     return rules;
 }
 
@@ -113,92 +115,77 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
     const std::filesystem::path path =
         actest::TestTempDir::Path() / "ac_bad_elevation_rules.json";
 
-    WriteTempRules_(path, R"({
+    // Shared keys every case needs so the failure under test is the only missing/invalid one.
+    constexpr const char* k_Spread = R"keys(
+        "spread_attempts_formula": "math.floor(map_tiles / (math.floor(turn / 4) + 32))")keys";
+
+    WriteTempRules_(path, std::string(R"({
         "ocean_level_meters": 0,
         "ocean_shelf_meters": -2000,
         "level_min_meters": 500,
         "level_max_meters": 1500,
         "reference_level_meters": 1000,
-        "spread_altitude_limit_meters": 1000,
-        "missing_headquarters_distance": 12
-    })");
+        "missing_headquarters_distance": 12,)")
+                            + k_Spread + "}");
     CHECK_THROWS_WITH(MapRulesConfigParser::ParseConfig(path.string()),
                       ContainsSubstring("max_adjacent_difference_meters"));
 
-    WriteTempRules_(path, R"({
+    WriteTempRules_(path, std::string(R"({
         "ocean_level_meters": 0,
         "ocean_shelf_meters": -2000,
         "level_min_meters": 1500,
         "level_max_meters": 500,
         "max_adjacent_difference_meters": 1500,
         "reference_level_meters": 1000,
-        "spread_altitude_limit_meters": 1000,
-        "missing_headquarters_distance": 12
-    })");
+        "missing_headquarters_distance": 12,)")
+                            + k_Spread + "}");
     CHECK_THROWS_WITH(MapRulesConfigParser::ParseConfig(path.string()),
                       ContainsSubstring("level_max_meters"));
 
-    WriteTempRules_(path, R"({
+    WriteTempRules_(path, std::string(R"({
         "ocean_level_meters": 0,
         "ocean_shelf_meters": 0,
         "level_min_meters": 500,
         "level_max_meters": 1500,
         "max_adjacent_difference_meters": 1500,
         "reference_level_meters": 1000,
-        "spread_altitude_limit_meters": 1000,
-        "missing_headquarters_distance": 12
-    })");
+        "missing_headquarters_distance": 12,)")
+                            + k_Spread + "}");
     CHECK_THROWS_WITH(MapRulesConfigParser::ParseConfig(path.string()),
                       ContainsSubstring("ocean_shelf_meters"));
 
-    WriteTempRules_(path, R"({
+    WriteTempRules_(path, std::string(R"({
         "ocean_level_meters": 0,
         "ocean_shelf_meters": -2000,
         "level_min_meters": 500,
         "level_max_meters": 1500,
         "max_adjacent_difference_meters": 0,
         "reference_level_meters": 1000,
-        "spread_altitude_limit_meters": 1000,
-        "missing_headquarters_distance": 12
-    })");
+        "missing_headquarters_distance": 12,)")
+                            + k_Spread + "}");
     CHECK_THROWS_WITH(MapRulesConfigParser::ParseConfig(path.string()),
                       ContainsSubstring("max_adjacent_difference_meters"));
 
-    WriteTempRules_(path, R"({
+    WriteTempRules_(path, std::string(R"({
         "ocean_level_meters": 0,
         "ocean_shelf_meters": -2000,
         "level_min_meters": 500,
         "level_max_meters": 1500,
         "max_adjacent_difference_meters": 1500,
-        "reference_level_meters": 1000,
-        "spread_altitude_limit_meters": -500,
-        "missing_headquarters_distance": 12
-    })");
-    CHECK_THROWS_WITH(MapRulesConfigParser::ParseConfig(path.string()),
-                      ContainsSubstring("spread_altitude_limit_meters"));
-
-    WriteTempRules_(path, R"({
-        "ocean_level_meters": 0,
-        "ocean_shelf_meters": -2000,
-        "level_min_meters": 500,
-        "level_max_meters": 1500,
-        "max_adjacent_difference_meters": 1500,
-        "reference_level_meters": 1000,
-        "spread_altitude_limit_meters": 1000
-    })");
+        "reference_level_meters": 1000,)")
+                            + k_Spread + "}");
     CHECK_THROWS_WITH(MapRulesConfigParser::ParseConfig(path.string()),
                       ContainsSubstring("missing_headquarters_distance"));
 
-    WriteTempRules_(path, R"({
+    WriteTempRules_(path, std::string(R"({
         "ocean_level_meters": 0,
         "ocean_shelf_meters": -2000,
         "level_min_meters": 500,
         "level_max_meters": 1500,
         "max_adjacent_difference_meters": 1500,
         "reference_level_meters": 1000,
-        "spread_altitude_limit_meters": 1000,
-        "missing_headquarters_distance": 0
-    })");
+        "missing_headquarters_distance": 0,)")
+                            + k_Spread + "}");
     CHECK_THROWS_WITH(MapRulesConfigParser::ParseConfig(path.string()),
                       ContainsSubstring("missing_headquarters_distance"));
 
@@ -210,7 +197,6 @@ TEST_CASE("A preset's elevation range is the world storage range", "[map][elevat
     MapRulesConfig_t rules;
     rules.oceanLevelMeters = 0;
     rules.oceanShelfMeters = -2000;
-    rules.spreadAltitudeLimitMeters = 1000;
 
     WorldGenPresetConfig_t preset;
     preset.id = "highlands";
@@ -221,9 +207,9 @@ TEST_CASE("A preset's elevation range is the world storage range", "[map][elevat
     CHECK(rules.minElevationMeters == -3000);
     CHECK(rules.maxElevationMeters == 2500);
 
-    preset.maxElevation = 500;
+    preset.maxElevation = -100;
     CHECK_THROWS_WITH(WorldGenPresetConfigParser::ApplyElevationRange(rules, preset),
-                      ContainsSubstring("spread_altitude_limit_meters"));
+                      ContainsSubstring("ocean_level_meters"));
 
     preset.maxElevation = 2500;
     preset.minElevation = -1000;

@@ -221,6 +221,8 @@ add_library(ac-core STATIC
     game/terraform/TerraformMutations.cpp
     game/terraform/ElevationRules.cpp
     game/terraform/ElevationMutations.cpp
+    game/terraform/FormerEnergyCostCalculator.cpp
+    game/terraform/TerraformSpreadCalculator.cpp
     game/terraform/TerraformSpreadRules.cpp
     game/terraform/TerraformSpreadMutations.cpp
     game/terraform/SurfaceFlipRules.cpp

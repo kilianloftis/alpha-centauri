@@ -30,6 +30,8 @@
 #include "game/ecology/EcoDamageConfig.h"
 #include "game/economy/AllocationImbalanceCalculator.h"
 #include "game/economy/AllocationImbalanceConfigParser.h"
+#include "game/terraform/FormerEnergyCostCalculator.h"
+#include "game/terraform/TerraformSpreadCalculator.h"
 #include "game/economy/CommerceCalculator.h"
 #include "game/economy/CommerceConfigParser.h"
 #include "game/economy/ResourceManager.h"
@@ -182,6 +184,10 @@ SessionInputs::SessionInputs(const OccupantFiles_t& rOccupants,
     dataContext.allocationImbalanceCalculator =
         std::make_unique<ac::AllocationImbalanceCalculator>(
             *dataContext.allocationImbalanceConfig, *dataContext.luaRuntime);
+    dataContext.formerEnergyCostCalculator =
+        std::make_unique<ac::FormerEnergyCostCalculator>(*dataContext.luaRuntime);
+    dataContext.terraformSpreadCalculator = std::make_unique<ac::TerraformSpreadCalculator>(
+        dataContext.mapRules.spreadAttemptsFormula, *dataContext.luaRuntime);
     dataContext.diplomacyConfig = std::make_unique<ac::DiplomacyConfig_t>(
         ac::DiplomacyConfigParser::ParseConfig(FixturePath("diplomacy.json")));
     dataContext.combatConfig = std::make_unique<ac::CombatConfig_t>(

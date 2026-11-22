@@ -12,6 +12,7 @@
 #include "game/effects/EffectEnums.h"
 
 #include <algorithm>
+#include <cmath>
 #include <iterator>
 #include <magic_enum.hpp>
 #include <span>
@@ -197,18 +198,26 @@ void RejectProjectFields_(const ConfigReader& rReader)
             rReader.FailKey(pField, "belongs on a terrain operation, not on a terrain feature");
         }
     }
+    if (rReader.Has("spreads"))
+    {
+        rReader.FailKey("spreads", "belongs on an improvement, not on a terrain feature");
+    }
 }
 
-// Absent when turns_required is 0: nothing a former can build.
+bool EnergyCostIsSet_(const FormerEnergyCost_t& rCost)
+{
+    return rCost.formula.has_value() || rCost.flat != 0;
+}
+
 std::optional<FormerProject_t> ParseFormerProject_(const ConfigReader& rReader)
 {
     FormerProject_t project;
     project.turnsRequired =
         rReader.Has("turns_required") ? rReader.IntAtLeast("turns_required", 0) : 0;
-    project.energyCost = rReader.Has("energy_cost") ? rReader.IntAtLeast("energy_cost", 0) : 0;
+    project.energyCost = ParseFormerEnergyCost(rReader);
     project.requiredTechs = ParseRequiredTechs(rReader);
     if (project.turnsRequired == 0
-        && (project.energyCost != 0 || HasTechRequirements(project.requiredTechs)))
+        && (EnergyCostIsSet_(project.energyCost) || HasTechRequirements(project.requiredTechs)))
     {
         rReader.Fail("'energy_cost' / 'required_techs' need a 'turns_required' > 0, or no former "
                      "can ever build it");
@@ -229,7 +238,49 @@ std::optional<ImprovementDomain_t> ParseImprovementDomain_(const ConfigReader& r
     return rReader.Enum<ImprovementDomain_t>("domain", "improvement domain");
 }
 
+std::optional<ImprovementSpread_t> ParseImprovementSpread_(const ConfigReader& rReader)
+{
+    if (!rReader.Has("spreads"))
+    {
+        return std::nullopt;
+    }
+    const ConfigReader spread = rReader.Object("spreads");
+    ImprovementSpread_t config;
+    config.scoreFormula = spread.Formula("score_formula", {"moisture", "rockiness"});
+    if (spread.Has("altitude_limit_meters"))
+    {
+        const double meters = spread.Number("altitude_limit_meters");
+        if (meters != std::floor(meters))
+        {
+            spread.FailKey("altitude_limit_meters", "must be a whole number of meters");
+        }
+        config.altitudeLimitMeters = static_cast<int>(meters);
+    }
+    return config;
+}
+
 } // namespace
+
+FormerEnergyCost_t ParseFormerEnergyCost(const ConfigReader& rReader)
+{
+    FormerEnergyCost_t cost;
+    if (!rReader.Has("energy_cost"))
+    {
+        return cost;
+    }
+    const nlohmann::json& rValue = rReader.Json().at("energy_cost");
+    if (rValue.is_number())
+    {
+        cost.flat = rReader.IntAtLeast("energy_cost", 0);
+        return cost;
+    }
+    if (rValue.is_string())
+    {
+        cost.formula = rReader.Formula("energy_cost", {"elev_band", "nearest_base_distance"});
+        return cost;
+    }
+    rReader.FailKey("energy_cost", "must be a non-negative integer or a formula string");
+}
 
 bool IsBuildable(const ImprovementConfig_t& rConfig)
 {
@@ -324,6 +375,16 @@ ImprovementConfig_t ParseImprovementBody(const ConfigReader& rReader,
     config.suppressYieldSources = rReader.StringArray("suppress_yield_sources");
     config.suppressTerrain = rReader.StringArray("suppress_terrain");
     config.terminatesRiver = rReader.BoolOr("terminates_river", false);
+    if (placement == OccupantPlacement_t::Improvement)
+    {
+        config.spreads = ParseImprovementSpread_(rReader);
+        if (config.spreads && config.domain == ImprovementDomain_t::Land
+            && !config.spreads->altitudeLimitMeters)
+        {
+            rReader.FailKey("spreads",
+                            "land spreading improvements require altitude_limit_meters");
+        }
+    }
     if (rReader.Has("move_cost"))
     {
         config.moveCostFragments = ParseMoveCostFragments_(rReader, "move_cost");

@@ -12,7 +12,6 @@
 #include "game/buildings/BuildingManager.h"
 #include "game/buildings/BuildingRules.h"
 #include "game/population/PopulationManager.h"
-#include "game/terraform/SurfaceFlipMutations.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/combat/AttackRules.h"
@@ -994,7 +993,7 @@ TEST_CASE("Pressure Dome on a sea base survives capture's random facility loss",
     ConquestGame_ game;
     FillWater_(game.fixtures.state.GetWorldMap());
     BaseManager& rBase = game.MakeBase(*game.pAi, 9, 9, /*pop=*/3);
-    rBase.GetBuildingManager().AddBuilding(k_PressureDomeBuildingId);
+    rBase.GetBuildingManager().AddBuilding("Pressure_Dome");
     rBase.GetBuildingManager().AddBuilding("test_facility_a");
     Unit& capturer =
         game.MakeUnit(*game.pPlayer, 9, 9, {"test_sea_chassis", "test_weapon"});
@@ -1002,12 +1001,12 @@ TEST_CASE("Pressure Dome on a sea base survives capture's random facility loss",
     const CaptureOutcome_t plan = PlanCapture(capturer, rBase);
     for (const BuildingConfig_t* pBuilding : plan.facilityCandidates)
     {
-        CHECK(pBuilding->id != k_PressureDomeBuildingId);
+        CHECK(pBuilding->id != "Pressure_Dome");
     }
 
     std::mt19937 rng(1);
     ResolveBaseEntryConquest(capturer, game.fixtures.state, rng);
-    CHECK(rBase.GetBuildingManager().HasBuilding(k_PressureDomeBuildingId));
+    CHECK(rBase.GetBuildingManager().HasBuilding("Pressure_Dome"));
 }
 
 TEST_CASE("Liberation by the former owner skips capture facility loss", "[unit][conquest]")

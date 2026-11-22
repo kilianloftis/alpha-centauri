@@ -22,15 +22,19 @@
 namespace ac
 {
 
-int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId)
+int RaiseLowerElevBand(const Tile& rTile)
 {
     const MapRulesConfig_t& rRules = rTile.MapRules();
     if (rRules.referenceLevelMeters <= 0)
     {
-        throw std::logic_error("QuoteRaiseLowerEnergyCost: reference_level_meters must be > 0");
+        throw std::logic_error("RaiseLowerElevBand: reference_level_meters must be > 0");
     }
+    return std::abs(rTile.GetElevation()) / rRules.referenceLevelMeters + 1;
+}
+
+int NearestOwnedBaseDistance(const Tile& rTile, FactionId_t factionId)
+{
     const WorldMap& rWorldMap = CurrentGameState().GetWorldMap();
-    const int elevBand = std::abs(rTile.GetElevation()) / rRules.referenceLevelMeters + 1;
     int nearest = std::numeric_limits<int>::max();
     const int mapWidth = rWorldMap.GetWidth();
 
@@ -47,9 +51,9 @@ int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId)
     }
     if (nearest == std::numeric_limits<int>::max())
     {
-        nearest = std::max(rWorldMap.GetWidth(), rWorldMap.GetHeight());
+        return std::max(rWorldMap.GetWidth(), rWorldMap.GetHeight());
     }
-    return elevBand * 8 + nearest * 2;
+    return nearest;
 }
 
 int FormerElevationAfterMaxLevel(const Tile& rTile, bool bRaise, const MapRulesConfig_t& rRules)
