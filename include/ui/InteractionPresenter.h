@@ -54,6 +54,7 @@ private:
     void PresentCaptureNotice_(const CaptureNoticeInteraction_t& rNotice);
     void PresentHeadquartersEscape_(const HeadquartersEscapeInteraction_t& rEscape);
     void PresentSupplyPodNotice_(const SupplyPodNoticeInteraction_t& rNotice);
+    void PresentSubmergenceNotice_(const SubmergenceNoticeInteraction_t& rNotice);
     // The player's own Headquarters: pay to move it, or let it go.
     void OfferHeadquartersEscape_(const HeadquartersEscapeInteraction_t& rEscape);
     // An AI's Headquarters has already moved.

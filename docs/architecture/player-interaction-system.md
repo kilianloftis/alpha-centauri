@@ -72,6 +72,7 @@ The visit is an overload set, so a new `PlayerInteraction_t` alternative fails t
 | `AtrocityNoticeInteraction_t` | `NoticePopup` from `AtrocityNoticeCopy`; gated by `PauseOnEventId_t::AtrocityCommitted` |
 | `CaptureNoticeInteraction_t` | `NoticePopup` from `CaptureNoticeCopy` (captor vs victim battle report); completes without a modal for any other audience |
 | `HeadquartersEscapeInteraction_t` | The player's own: Let it go / Fly the command staff → `EvacuateHeadquarters` → Complete; completes without asking unless `MayEvacuateHeadquarters` still holds. An AI's: `NoticePopup` that it has moved |
+| `SubmergenceNoticeInteraction_t` | `NoticePopup` from `SubmergenceNoticeCopy` (own vs foreign submerged base); camera tile to the lost base |
 
 Modal widgets used from here must set `ShouldClose` **before** invoking their callback: `UIManager::CanAdvanceTurn` counts a still-open modal as a reason to refuse `Advance`, so a callback that completes an interaction would otherwise leave the turn stalled.
 
@@ -95,6 +96,7 @@ Modal widgets used from here must set `ShouldClose` **before** invoking their ca
 - Atrocity committed → `AtrocityNoticeInteraction_t`; `AtrocityNoticeCopy` phrases the notice.
 - A fight handed units to the attacker (Marine Detachment boarding, or artifacts taken on defeat) → `CaptureNoticeInteraction_t` when the player is the captor or the victim; `CaptureNoticeCopy` phrases it.
 - A captured Headquarters with somewhere to escape to (`TakeBase`) → `HeadquartersEscapeInteraction_t`: an offer for the player's own, news after an AI has already moved its.
+- A base razed by rising seas (`ReconcileSurfaceFlips`) → `SubmergenceNoticeInteraction_t` when the base is the player's or on a visible tile; `SubmergenceNoticeCopy` phrases it.
 
 **Follow-on PRs on the same spine**
 

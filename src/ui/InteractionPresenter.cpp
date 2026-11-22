@@ -29,6 +29,7 @@
 #include "ui/CaptureNotices.h"
 #include "ui/ProbeNotices.h"
 #include "ui/SupplyPodNotices.h"
+#include "ui/SubmergenceNotices.h"
 #include "ui/UIManager.h"
 #include "ui/ViewFactory.h"
 #include "ui/style/UiStyle.h"
@@ -144,6 +145,9 @@ void InteractionPresenter::PresentFront_(const PlayerInteraction_t& rPayload)
             { PresentHeadquartersEscape_(rEscape); },
             [this](const SupplyPodNoticeInteraction_t& rNotice)
             { PresentSupplyPodNotice_(rNotice); },
+            [this](const SubmergenceNoticeInteraction_t& rNotice) {
+                PresentSubmergenceNotice_(rNotice);
+            },
         },
         rPayload);
 }
@@ -521,6 +525,14 @@ void InteractionPresenter::PresentAtrocityNotice_(const AtrocityNoticeInteractio
 void InteractionPresenter::PresentSupplyPodNotice_(const SupplyPodNoticeInteraction_t& rNotice)
 {
     const SupplyPodNoticeCopy_t copy = SupplyPodNoticeCopy(rNotice, m_rViews.GetText());
+    PresentNotice_(
+        NoticeInteraction_t{std::nullopt, copy.title, copy.body, rNotice.cameraTile});
+}
+
+void InteractionPresenter::PresentSubmergenceNotice_(const SubmergenceNoticeInteraction_t& rNotice)
+{
+    const FactionId_t audienceId = m_rGameState.GetPlayerFaction().GetFactionId();
+    const SubmergenceNoticeCopy_t copy = SubmergenceNoticeCopy(rNotice, audienceId);
     PresentNotice_(
         NoticeInteraction_t{std::nullopt, copy.title, copy.body, rNotice.cameraTile});
 }

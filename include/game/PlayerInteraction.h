@@ -197,6 +197,16 @@ struct SupplyPodNoticeInteraction_t
     std::optional<std::string> factionName;
 };
 
+// A base was razed by rising seas. Names are snapshotted at enqueue because the base is
+// destroyed before the presenter runs; ownerId drives own vs foreign wording.
+struct SubmergenceNoticeInteraction_t
+{
+    FactionId_t ownerId = 0;
+    std::string baseName;
+    std::string ownerFactionName;
+    std::optional<TileCoord_t> cameraTile;
+};
+
 using PlayerInteraction_t = std::variant<
     NoticeInteraction_t,
     OpenViewInteraction_t,
@@ -212,7 +222,8 @@ using PlayerInteraction_t = std::variant<
     AtrocityNoticeInteraction_t,
     CaptureNoticeInteraction_t,
     HeadquartersEscapeInteraction_t,
-    SupplyPodNoticeInteraction_t
+    SupplyPodNoticeInteraction_t,
+    SubmergenceNoticeInteraction_t
 >;
 
 // Every queued item pauses turn processing for its audience until CompleteFront.

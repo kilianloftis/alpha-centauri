@@ -185,6 +185,7 @@ add_executable(effects-tests
     ui/AtrocityNoticesTests.cpp
     ui/CaptureNoticesTests.cpp
     ui/ProbeNoticesTests.cpp
+    ui/SubmergenceNoticesTests.cpp
     lib/SignalTests.cpp
     lib/ConfigLibraryTests.cpp
     lib/EventBusTests.cpp

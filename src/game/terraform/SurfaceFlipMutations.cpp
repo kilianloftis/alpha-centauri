@@ -11,7 +11,6 @@
 #include "game/PlayerInteractionQueue.h"
 #include "game/units/UnitManager.h"
 
-#include <string>
 #include <vector>
 
 namespace ac
@@ -32,16 +31,18 @@ void RemoveImprovements_(TileEffectsContext& rTileEffects, Tile& rTile,
 void NoticeSubmergence_(GameState& rGameState, const BaseManager& rBase)
 {
     const Faction& rPlayer = rGameState.GetPlayerFaction();
-    const bool bOwn = &rBase.GetFaction() == &rPlayer;
+    const Faction& rOwner = rBase.GetFaction();
+    const bool bOwn = &rOwner == &rPlayer;
     if (!bOwn && !rPlayer.GetVisibleMap().IsVisible(rBase.GetTile()))
     {
         return;
     }
-    const std::string whose = bOwn ? "" : rBase.GetFaction().GetDefinition().identity.name + " ";
-    const std::string body =
-        "The " + whose + "base " + rBase.GetName() + " has been lost beneath the rising sea.";
-    EnqueueForPlayer(rGameState, NoticeInteraction_t{std::nullopt, "Base Submerged", body,
-                                                     rBase.GetTile().GetCoord()});
+    SubmergenceNoticeInteraction_t notice;
+    notice.ownerId = rOwner.GetFactionId();
+    notice.baseName = rBase.GetName();
+    notice.ownerFactionName = rOwner.GetDefinition().identity.name;
+    notice.cameraTile = rBase.GetTile().GetCoord();
+    EnqueueForPlayer(rGameState, std::move(notice));
 }
 
 void DestroyUnits_(const std::vector<Unit*>& rUnits)
