@@ -661,7 +661,7 @@ TEST_CASE("A flip to water marks an undomed base for raze and keeps a domed one"
     domed.GetBuildingManager().AddBuilding("Pressure_Dome");
 
     const SurfaceFlipConsequences_t flooded =
-        SurfaceFlipConsequences(land.GetTile(), /*bNowWater=*/true, &land);
+        SurfaceFlipConsequences(land.GetTile(), /*bNowWater=*/true, land);
     CHECK(flooded.bRazeBase);
     CHECK(std::ranges::count(flooded.removedImprovements, std::string(ImprovementIds::k_Base))
           == 0);
@@ -669,7 +669,7 @@ TEST_CASE("A flip to water marks an undomed base for raze and keeps a domed one"
     CHECK_FALSE(land.IsRazed());
 
     const SurfaceFlipConsequences_t spared =
-        SurfaceFlipConsequences(domed.GetTile(), /*bNowWater=*/true, &domed);
+        SurfaceFlipConsequences(domed.GetTile(), /*bNowWater=*/true, domed);
     CHECK_FALSE(spared.bRazeBase);
 }
 

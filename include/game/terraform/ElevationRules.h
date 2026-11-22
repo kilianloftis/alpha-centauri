@@ -30,13 +30,15 @@ int RaiseLowerElevBand(const Tile& rTile);
 // Chebyshev distance to the nearest own base, or max(width, height) when the faction has none.
 int NearestOwnedBaseDistance(const Tile& rTile, FactionId_t factionId);
 
-// Elevation after a max-sized level change in that direction, clamped to Planet's range.
-int FormerElevationAfterMaxLevel(const Tile& rTile, bool bRaise, const MapRulesConfig_t& rRules);
+// Elevation after a max-sized raise or lower, clamped to Planet's range.
+int FormerElevationAfterRaiseMaxLevel(const Tile& rTile, const MapRulesConfig_t& rRules);
+int FormerElevationAfterLowerMaxLevel(const Tile& rTile, const MapRulesConfig_t& rRules);
 
 // True when that change moves the tile, is not raise from the top altitude band (TOOHIGH),
 // and the enter grid still allows this Former on the resulting surface.
 // docs/thinker/terranx-map.md "Starting a project".
-bool FormerElevationChangeAllowed(const Unit& rUnit, bool bRaise, const MapRulesConfig_t& rRules);
+bool FormerRaiseAllowed(const Unit& rUnit, const MapRulesConfig_t& rRules);
+bool FormerLowerAllowed(const Unit& rUnit, const MapRulesConfig_t& rRules);
 
 // Every write a change makes, in order: seeds move within the band and Planet's range, then each
 // moved tile pulls its neighbours within the slope limit. Throws on a band outside Planet's range.

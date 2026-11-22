@@ -19,7 +19,9 @@
 #include "game/base/BaseConquestRules.h"
 #include "game/base/BaseManager.h"
 #include "game/production/ProductionManager.h"
+#include "game/effects/TileEffectsContext.h"
 #include "game/map/ImprovementConfigParser.h"
+#include "game/map/ImprovementRegistry.h"
 #include "game/map/Tile.h"
 #include "game/movement/TerritoryEntryMutations.h"
 #include "game/units/Unit.h"
@@ -30,6 +32,8 @@
 #include "ui/ProbeNotices.h"
 #include "ui/SupplyPodNotices.h"
 #include "ui/SubmergenceNotices.h"
+#include "ui/TerraformNoEffectNotices.h"
+#include "game/terraform/TerraformRules.h"
 #include "ui/UIManager.h"
 #include "ui/ViewFactory.h"
 #include "ui/style/UiStyle.h"
@@ -147,6 +151,9 @@ void InteractionPresenter::PresentFront_(const PlayerInteraction_t& rPayload)
             { PresentSupplyPodNotice_(rNotice); },
             [this](const SubmergenceNoticeInteraction_t& rNotice) {
                 PresentSubmergenceNotice_(rNotice);
+            },
+            [this](const TerraformNoEffectInteraction_t& rNotice) {
+                PresentTerraformNoEffectNotice_(rNotice);
             },
         },
         rPayload);
@@ -533,6 +540,19 @@ void InteractionPresenter::PresentSubmergenceNotice_(const SubmergenceNoticeInte
 {
     const FactionId_t audienceId = m_rGameState.GetPlayerFaction().GetFactionId();
     const SubmergenceNoticeCopy_t copy = SubmergenceNoticeCopy(rNotice, audienceId);
+    PresentNotice_(
+        NoticeInteraction_t{std::nullopt, copy.title, copy.body, rNotice.cameraTile});
+}
+
+void InteractionPresenter::PresentTerraformNoEffectNotice_(
+    const TerraformNoEffectInteraction_t& rNotice)
+{
+    const GameDataContext& rData = m_rGameState.GetGameData();
+    const ImprovementRegistry& rImprovements = m_rGameState.GetTileEffects().GetImprovements();
+    const std::optional<TerraformProject_t> project =
+        FindTerraformProject(rNotice.projectId, rImprovements, *rData.terrainOperationRegistry);
+    const std::string& rProjectName = project ? project->name : rNotice.projectId;
+    const TerraformNoEffectNoticeCopy_t copy = TerraformNoEffectNoticeCopy(rProjectName);
     PresentNotice_(
         NoticeInteraction_t{std::nullopt, copy.title, copy.body, rNotice.cameraTile});
 }

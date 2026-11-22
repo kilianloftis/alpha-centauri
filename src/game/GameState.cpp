@@ -754,6 +754,14 @@ bool GameState::ApplyTerraformCompleteEffects(Tile& rTile, const TerraformProjec
     return !results.empty();
 }
 
+void GameState::OnTerraformNoEffect(Unit& rFormer, const std::string& projectId)
+{
+    TerraformNoEffectInteraction_t notice;
+    notice.projectId = projectId;
+    notice.cameraTile = rFormer.GetTile().GetCoord();
+    EnqueueForPlayer(*this, std::move(notice));
+}
+
 TileEffectsContext& GameState::GetTileEffects()
 {
     return *m_pTileEffects;

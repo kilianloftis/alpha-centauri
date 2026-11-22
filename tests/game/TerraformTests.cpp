@@ -13,6 +13,8 @@
 #include "game/map/WorldMap.h"
 #include "game/map/MapRulesConfig.h"
 #include "game/research/ResearchManager.h"
+#include "game/PlayerInteraction.h"
+#include "game/PlayerInteractionQueue.h"
 #include "game/terraform/ElevationRules.h"
 #include "game/terraform/TerraformRules.h"
 #include "game/terraform/TerraformMutations.h"
@@ -264,11 +266,11 @@ TEST_CASE("A sea Former cannot raise across the waterline", "[unit][terraform][e
     REQUIRE(sea.IsWater());
     Unit& seaFormer = game.MakeFormer(10, 10, &home, nullptr, "test_sea_chassis");
 
-    CHECK_FALSE(FormerElevationChangeAllowed(seaFormer, /*bRaise=*/true, rRules));
+    CHECK_FALSE(FormerRaiseAllowed(seaFormer, rRules));
     CHECK_FALSE(game.StartTerraform(seaFormer, "RaiseLand"));
 
     sea.SetElevation(rRules.oceanLevelMeters - rRules.levelMaxMeters - 1);
-    CHECK(FormerElevationChangeAllowed(seaFormer, /*bRaise=*/true, rRules));
+    CHECK(FormerRaiseAllowed(seaFormer, rRules));
 }
 
 TEST_CASE("A land Former cannot raise from the top altitude band", "[unit][terraform][elevation]")
@@ -282,11 +284,11 @@ TEST_CASE("A land Former cannot raise from the top altitude band", "[unit][terra
     const int topBandStart = rRules.maxElevationMeters - rRules.referenceLevelMeters;
 
     tile.SetElevation(topBandStart);
-    CHECK_FALSE(FormerElevationChangeAllowed(former, /*bRaise=*/true, rRules));
+    CHECK_FALSE(FormerRaiseAllowed(former, rRules));
     CHECK_FALSE(game.StartTerraform(former, "RaiseLand"));
 
     tile.SetElevation(topBandStart - 1);
-    CHECK(FormerElevationChangeAllowed(former, /*bRaise=*/true, rRules));
+    CHECK(FormerRaiseAllowed(former, rRules));
 }
 
 TEST_CASE("Land-domain projects refuse a sea tile", "[unit][terraform][domain]")
@@ -369,6 +371,38 @@ TEST_CASE("Lowering land stops at Planet's floor instead of throwing",
     CHECK(tile.GetElevation() == floor);
 }
 
+TEST_CASE("A paid terraform that finishes with no effect keeps energy and notifies the player",
+          "[unit][terraform][notice]")
+{
+    // Start while the roll can move the tile, then put it on the floor before completion —
+    // mid-order surface change is the paid no-effect path (docs/thinker/terranx-map.md "Work").
+    MapRulesConfig_t rules = actest::TestMapRules();
+    rules.levelMinMeters = 1000;
+    rules.levelMaxMeters = 1000;
+    TerraformGame_ game(/*bExcludes=*/false, &rules);
+    BaseManager& home = game.MakeBase(8, 8);
+    Unit& seaFormer = game.MakeFormer(10, 10, &home, nullptr, "test_sea_chassis");
+    Tile& tile = *game.fixtures.state.GetWorldMap().GetTile(10, 10);
+    const int floor = rules.minElevationMeters;
+    tile.SetElevation(floor + 1000);
+
+    REQUIRE(game.StartTerraform(seaFormer, "LowerLand"));
+    const int energyAfterPay = game.pPlayer->GetEconomy().GetEnergy();
+    tile.SetElevation(floor);
+
+    game.FinishTerraform(seaFormer);
+    CHECK(game.pPlayer->GetEconomy().GetEnergy() == energyAfterPay);
+    CHECK(tile.GetElevation() == floor);
+
+    PlayerInteractionQueue& rQueue = game.fixtures.state.GetPlayerInteractions();
+    REQUIRE(rQueue.Size() == 1);
+    const auto* pNotice =
+        std::get_if<TerraformNoEffectInteraction_t>(&rQueue.Front()->payload);
+    REQUIRE(pNotice);
+    CHECK(pNotice->projectId == "LowerLand");
+    CHECK(pNotice->cameraTile == tile.GetCoord());
+}
+
 TEST_CASE("A land Former cannot lower through the waterline", "[unit][terraform][elevation]")
 {
     // Shore (ocean level): one SMAC altitude step down is water under a land Former.
@@ -380,7 +414,7 @@ TEST_CASE("A land Former cannot lower through the waterline", "[unit][terraform]
     tile.SetElevation(rRules.oceanLevelMeters);
     REQUIRE(tile.IsLand());
 
-    CHECK_FALSE(FormerElevationChangeAllowed(former, /*bRaise=*/false, rRules));
+    CHECK_FALSE(FormerLowerAllowed(former, rRules));
     CHECK_FALSE(game.StartTerraform(former, "LowerLand"));
 }
 

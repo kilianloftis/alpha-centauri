@@ -207,6 +207,14 @@ struct SubmergenceNoticeInteraction_t
     std::optional<TileCoord_t> cameraTile;
 };
 
+// A paid terraform order finished but ApplyTerraformResult mutated nothing (tile surface
+// shifted mid-project, etc.). Energy is kept (docs/thinker/terranx-map.md "Work").
+struct TerraformNoEffectInteraction_t
+{
+    std::string projectId;
+    std::optional<TileCoord_t> cameraTile;
+};
+
 using PlayerInteraction_t = std::variant<
     NoticeInteraction_t,
     OpenViewInteraction_t,
@@ -223,7 +231,8 @@ using PlayerInteraction_t = std::variant<
     CaptureNoticeInteraction_t,
     HeadquartersEscapeInteraction_t,
     SupplyPodNoticeInteraction_t,
-    SubmergenceNoticeInteraction_t
+    SubmergenceNoticeInteraction_t,
+    TerraformNoEffectInteraction_t
 >;
 
 // Every queued item pauses turn processing for its audience until CompleteFront.

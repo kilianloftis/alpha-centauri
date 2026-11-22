@@ -56,35 +56,55 @@ int NearestOwnedBaseDistance(const Tile& rTile, FactionId_t factionId)
     return nearest;
 }
 
-int FormerElevationAfterMaxLevel(const Tile& rTile, bool bRaise, const MapRulesConfig_t& rRules)
+int FormerElevationAfterRaiseMaxLevel(const Tile& rTile, const MapRulesConfig_t& rRules)
 {
-    const int delta = bRaise ? rRules.levelMaxMeters : -rRules.levelMaxMeters;
-    return std::clamp(rTile.GetElevation() + delta, rRules.minElevationMeters,
+    return std::clamp(rTile.GetElevation() + rRules.levelMaxMeters, rRules.minElevationMeters,
                       rRules.maxElevationMeters);
 }
 
-bool FormerElevationChangeAllowed(const Unit& rUnit, bool bRaise, const MapRulesConfig_t& rRules)
+int FormerElevationAfterLowerMaxLevel(const Tile& rTile, const MapRulesConfig_t& rRules)
+{
+    return std::clamp(rTile.GetElevation() - rRules.levelMaxMeters, rRules.minElevationMeters,
+                      rRules.maxElevationMeters);
+}
+
+namespace
+{
+
+bool FormerElevationChangeAllowed_(const Unit& rUnit, int afterElevation,
+                                   const MapRulesConfig_t& rRules)
 {
     const Tile& rTile = rUnit.GetTile();
-    const int elevation = rTile.GetElevation();
-    if (bRaise)
-    {
-        // TOOHIGH: SMAC refuses raise from altitude 6 — the top reference band under Planet's
-        // ceiling (docs/thinker/terranx-map.md "Starting a project").
-        const int topBandStart = rRules.maxElevationMeters - rRules.referenceLevelMeters;
-        if (elevation >= topBandStart)
-        {
-            return false;
-        }
-    }
-    const int after = FormerElevationAfterMaxLevel(rTile, bRaise, rRules);
-    if (after == elevation)
+    if (afterElevation == rTile.GetElevation())
     {
         return false;
     }
-    const InteractionSurface_t surface =
-        after < rRules.oceanLevelMeters ? InteractionSurface_t::Water : InteractionSurface_t::Land;
+    const InteractionSurface_t surface = afterElevation < rRules.oceanLevelMeters
+                                             ? InteractionSurface_t::Water
+                                             : InteractionSurface_t::Land;
     return CanEnterSurface(rUnit, surface);
+}
+
+} // namespace
+
+bool FormerRaiseAllowed(const Unit& rUnit, const MapRulesConfig_t& rRules)
+{
+    const Tile& rTile = rUnit.GetTile();
+    // TOOHIGH: SMAC refuses raise from altitude 6 — the top reference band under Planet's
+    // ceiling (docs/thinker/terranx-map.md "Starting a project").
+    const int topBandStart = rRules.maxElevationMeters - rRules.referenceLevelMeters;
+    if (rTile.GetElevation() >= topBandStart)
+    {
+        return false;
+    }
+    return FormerElevationChangeAllowed_(rUnit, FormerElevationAfterRaiseMaxLevel(rTile, rRules),
+                                         rRules);
+}
+
+bool FormerLowerAllowed(const Unit& rUnit, const MapRulesConfig_t& rRules)
+{
+    return FormerElevationChangeAllowed_(
+        rUnit, FormerElevationAfterLowerMaxLevel(rUnit.GetTile(), rRules), rRules);
 }
 
 namespace

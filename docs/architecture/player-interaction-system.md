@@ -73,6 +73,7 @@ The visit is an overload set, so a new `PlayerInteraction_t` alternative fails t
 | `CaptureNoticeInteraction_t` | `NoticePopup` from `CaptureNoticeCopy` (captor vs victim battle report); completes without a modal for any other audience |
 | `HeadquartersEscapeInteraction_t` | The player's own: Let it go / Fly the command staff → `EvacuateHeadquarters` → Complete; completes without asking unless `MayEvacuateHeadquarters` still holds. An AI's: `NoticePopup` that it has moved |
 | `SubmergenceNoticeInteraction_t` | `NoticePopup` from `SubmergenceNoticeCopy` (own vs foreign submerged base); camera tile to the lost base |
+| `TerraformNoEffectInteraction_t` | `NoticePopup` from `TerraformNoEffectNoticeCopy` when a paid former order finishes with no tile change; energy kept |
 
 Modal widgets used from here must set `ShouldClose` **before** invoking their callback: `UIManager::CanAdvanceTurn` counts a still-open modal as a reason to refuse `Advance`, so a callback that completes an interaction would otherwise leave the turn stalled.
 

@@ -951,12 +951,15 @@ bool WorldView::TryNotifyBlockedElevationTerraform_(const KeyEvent_t& rEvent, co
         {
             continue;
         }
-        if (FormerElevationChangeAllowed(rUnit, pChange->bRaise, rRules))
+        const bool bAllowed = pChange->bRaise ? FormerRaiseAllowed(rUnit, rRules)
+                                              : FormerLowerAllowed(rUnit, rRules);
+        if (bAllowed)
         {
             continue;
         }
-        const int after =
-            FormerElevationAfterMaxLevel(rUnit.GetTile(), pChange->bRaise, rRules);
+        const int after = pChange->bRaise
+                              ? FormerElevationAfterRaiseMaxLevel(rUnit.GetTile(), rRules)
+                              : FormerElevationAfterLowerMaxLevel(rUnit.GetTile(), rRules);
         const InteractionSurface_t surface = after < rRules.oceanLevelMeters
                                                  ? InteractionSurface_t::Water
                                                  : InteractionSurface_t::Land;

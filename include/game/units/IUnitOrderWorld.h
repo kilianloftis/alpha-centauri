@@ -52,6 +52,9 @@ public:
     // effect applied.
     virtual bool ApplyTerraformCompleteEffects(Tile& rTile, const TerraformProject_t& rProject,
                                                Unit& rFormer, std::mt19937& rRng) = 0;
+
+    // A player Former's paid order finished but applied nothing. Energy is kept.
+    virtual void OnTerraformNoEffect(Unit& rFormer, const std::string& projectId) = 0;
 };
 
 } // namespace ac

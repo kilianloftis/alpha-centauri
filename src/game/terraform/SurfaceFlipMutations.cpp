@@ -58,7 +58,8 @@ void ReconcileTile_(GameState& rGameState, const SurfaceFlip_t& rFlip)
     Tile& rTile = *rFlip.pTile;
     BaseManager* pBase = rGameState.FindBaseAt(rTile);
     const SurfaceFlipConsequences_t consequences =
-        SurfaceFlipConsequences(rTile, rFlip.bNowWater, pBase);
+        pBase ? SurfaceFlipConsequences(rTile, rFlip.bNowWater, *pBase)
+              : SurfaceFlipConsequences(rTile, rFlip.bNowWater);
     bool bBaseStands = pBase != nullptr;
     if (consequences.bRazeBase)
     {

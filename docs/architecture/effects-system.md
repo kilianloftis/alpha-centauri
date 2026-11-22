@@ -705,8 +705,8 @@ both ends. `ElevationChange` applies one signed level roll as a Former edit; unl
 `Earthquake` it has a floor that depends on the subject unit's domain, so a land Former cannot
 dig its own tile below ocean level while a sea Former may reach Planet's floor. None of the
 three checks whether the project *should* run — that is the entry's `condition` (plus
-`FormerElevationChangeAllowed` for the elevation bound — a max-sized level change must leave a
-surface the Former still occupies), asked by `CanStartTerraform` before
+`FormerRaiseAllowed` / `FormerLowerAllowed` for the elevation bound — a max-sized level change
+must leave a surface the Former still occupies), asked by `CanStartTerraform` before
 the order is paid for. By the time they fire the energy is spent, so they clamp rather than
 refuse.
 

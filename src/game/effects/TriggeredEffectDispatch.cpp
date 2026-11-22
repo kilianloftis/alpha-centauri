@@ -832,7 +832,7 @@ bool ElevationChange_(TriggeredEffectContext_t& rCtx, const ElevationChangeEffec
         return false;
     }
     const MapRulesConfig_t& rRules = rCtx.pTile->MapRules();
-    // Start was gated by FormerElevationChangeAllowed. A roll past Planet's range lands on the
+    // Start was gated by FormerRaiseAllowed / FormerLowerAllowed. A roll past Planet's range lands on the
     // bound; only no change at all reports false.
     const int roll = RollLevelMeters(rCtx.Rng(), rRules);
     const int delta = rConfig.bRaise ? roll : -roll;

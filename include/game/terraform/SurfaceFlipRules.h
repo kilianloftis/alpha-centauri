@@ -22,9 +22,12 @@ struct SurfaceFlipConsequences_t
 };
 
 // A flip removes every improvement whose domain is not the new surface (an omitted domain stays),
-// except the Base marker of a base on the tile. A base that may occupy water, or whose tile became
-// land, is untouched and shelters the units on it; any other base on new water is razed.
+// except the Base marker of a base on the tile. Without a base, stranded units always die.
+SurfaceFlipConsequences_t SurfaceFlipConsequences(const Tile& rTile, bool bNowWater);
+
+// A base that may occupy water, or whose tile became land, is untouched and shelters the units
+// on it; any other base on new water is razed.
 SurfaceFlipConsequences_t SurfaceFlipConsequences(const Tile& rTile, bool bNowWater,
-                                                  const BaseManager* pBase);
+                                                  const BaseManager& rBase);
 
 } // namespace ac

@@ -1105,11 +1105,14 @@ command:
   land (`TOOLOW`) (`0x4D4314`–`0x4D4630`). `GameRules & 0x800000` refuses both
   (`NOTINSCENARIO`).
 - Raise and lower then quote `terraform_cost` (`TERRACOST` / `TERRAPAY`), refused without the
-  credits. Each tile in an altitude-sized area around the target (counts at `0x66F8B8` raise and
-  `0x66F8C8` lower) whose territory belongs to a faction the terraformer holds Pact, Treaty or
-  Truce with gets `break_treaty(mask 7)` (`0x4D498F`). Cancelling refunds and ends the command.
-  Otherwise, outside multiplayer (`MultiplayerActive` `0x93F660`), it calls
-  `double_cross(terraformer, owner, -1)` (`0x4D49D1`).
+  credits. Energy is subtracted from `energy_credits` only after the player confirms `TERRAPAY`
+  (`0x4D476B`). Declining before pay leaves credits untouched (`"Didn't or couldn't pay;
+  returning"`). Refunds at `0x4D4A9D` / `0x4D4B87` only abort that **start** dialog after pay
+  when the treaty-break confirm or `break_treaty` fails — before the order is issued. Each tile
+  in an altitude-sized area around the target (counts at `0x66F8B8` raise and `0x66F8C8` lower)
+  whose territory belongs to a faction the terraformer holds Pact, Treaty or Truce with gets
+  `break_treaty(mask 7)` (`0x4D498F`). Otherwise, outside multiplayer (`MultiplayerActive`
+  `0x93F660`), it calls `double_cross(terraformer, owner, -1)` (`0x4D49D1`).
 
 `HASFARM` and `HASROAD` name the order upgrades: the farm order on a land farm becomes Soil
 Enricher, and the road order on a road becomes Mag Tube, each once the tech is known
@@ -1125,13 +1128,15 @@ Enricher, and the road order on a road becomes Mag Tube, each once the tech is k
 - `contribution` is 2 per turn, 4 with Super Former (ability `0x1`). Plant and remove fungus
   double with Xenoempathy Dome; every other project gains ×1.5 with Weather Paradigm. Formers on
   the same tile with the same order pool their work.
-- On completion the clear mask, then the bit, is written. Aquifer adds a river source and runs
-  `world_climate`; raise and lower move **exactly one** altitude level (`world_raise_alt`
-  `0x5C2380` / `world_lower_alt` `0x5C23E0`: `alt±1`, then `world_alt_set`; each ring k pulled
-  to within k + 1 levels) and run `world_climate`. Our meter maps use
-  `reference_level_meters` (1000) as that step; shipping `level_min_meters` /
-  `level_max_meters` are both 1000. Level steps rockiness down one; Condenser and Borehole run
-  `world_climate`.
+- Never reads or writes `energy_credits`. Mid-work abort when a base sits on the tile clears
+  the order (`0x4C9FF4`) with **no** refund of a raise/lower payment already taken at start.
+  On completion the clear mask, then the bit, is written (always applied — no failed-apply
+  path). Aquifer adds a river source and runs `world_climate`; raise and lower move **exactly
+  one** altitude level (`world_raise_alt` `0x5C2380` / `world_lower_alt` `0x5C23E0`: `alt±1`,
+  then `world_alt_set`; each ring k pulled to within k + 1 levels) and run `world_climate`.
+  Our meter maps use `reference_level_meters` (1000) as that step; shipping `level_min_meters`
+  / `level_max_meters` are both 1000. Level steps rockiness down one; Condenser and Borehole
+  run `world_climate`.
 - Losing a forest on land to any project but Raise Land credits `minerals_harvesting_forest`
   (`#RULES`, 5) to the former's home base, else the nearest own base (`HARVESTFOREST`,
   `0x4CA24C`–`0x4CA346`).

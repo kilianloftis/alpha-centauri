@@ -57,7 +57,8 @@ bool ElevationEffectAllowed_(const Unit& rUnit, const TriggeredEffectConfig_t& r
     {
         return true;
     }
-    return FormerElevationChangeAllowed(rUnit, pChange->bRaise, rRules);
+    return pChange->bRaise ? FormerRaiseAllowed(rUnit, rRules)
+                           : FormerLowerAllowed(rUnit, rRules);
 }
 
 // Refused before payment when nothing would happen. Effect conditions answer for terrain

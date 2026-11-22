@@ -426,6 +426,7 @@ add_library(ac-ui STATIC
     ui/ProbeNotices.cpp
     ui/SupplyPodNotices.cpp
     ui/SubmergenceNotices.cpp
+    ui/TerraformNoEffectNotices.cpp
     ui/style/UiStyle.cpp
     ui/style/DrawPanelChrome.cpp
     ui/world/WorldView.cpp

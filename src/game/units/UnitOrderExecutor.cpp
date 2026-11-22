@@ -17,7 +17,6 @@
 #include "game/units/Unit.h"
 #include "game/map/Tile.h"
 
-#include <iostream>
 #include <optional>
 #include <stdexcept>
 #include <variant>
@@ -235,11 +234,11 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, TerraformOrder_t& rOrde
     Tile& rTile = m_rWorldMap.MutableTile(rUnit.GetTile());
 
     // Fails only on a surface the project cannot change, such as the wrong depth band.
-    if (!ApplyTerraformResult(rTile, project, m_rTileEffects, rUnit, m_rRng, m_rWorld))
+    // Energy was paid at start and is kept (docs/thinker/terranx-map.md "Work").
+    if (!ApplyTerraformResult(rTile, project, m_rTileEffects, rUnit, m_rRng, m_rWorld)
+        && rUnit.GetFaction().IsPlayerControlled())
     {
-        std::cerr << "Terraform completed with no effect: '" << rOrder.projectId
-                  << "' could not be applied at (" << rTile.GetX() << ", " << rTile.GetY()
-                  << ") — the tile's surface will not take it\n";
+        m_rWorld.OnTerraformNoEffect(rUnit, rOrder.projectId);
     }
     return OrderProgress_t::Complete;
 }

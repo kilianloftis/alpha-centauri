@@ -157,6 +157,7 @@ public:
     void OnTerritoryEntryRefused(Unit& rUnit, FactionId_t territoryOwner) override;
     bool ApplyTerraformCompleteEffects(Tile& rTile, const TerraformProject_t& rProject,
                                        Unit& rFormer, std::mt19937& rRng) override;
+    void OnTerraformNoEffect(Unit& rFormer, const std::string& projectId) override;
 
     // Peer WorldGlobal effects and council extras, bound onto each faction's pool.
     std::vector<ActiveEffect_t> CollectWorldExtras(const Faction& rFor) const override;

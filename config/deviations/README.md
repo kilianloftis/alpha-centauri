@@ -95,11 +95,11 @@ absent.
 - **Original:** raise is refused on the ocean shelf for every Former (`SEATOOHIGH`, "Starting a
   project" in `docs/thinker/terranx-map.md`), so a sea Former never makes land; the check is
   altitude alone.
-- **Ours:** `FormerElevationChangeAllowed` predicts one level step and asks the enter grid
-  whether the unit may stand on the resulting surface. A unit that may enter both land and
-  water (e.g. a gravship with Terraform) can raise a shelf tile into land.
-- **Where:** `FormerElevationChangeAllowed` (`TerraformRules`); `CanEnterSurface`
-  (`MovementRules`); `config/interaction_grids.json` `enter`.
+- **Ours:** `FormerRaiseAllowed` predicts one level step and asks the enter grid whether the
+  unit may stand on the resulting surface. A unit that may enter both land and water (e.g. a
+  gravship with Terraform) can raise a shelf tile into land.
+- **Where:** `FormerRaiseAllowed` (`ElevationRules`); `CanEnterSurface` (`MovementRules`);
+  `config/interaction_grids.json` `enter`.
 - **Missing:** the original altitude-only `SEATOOHIGH` path and a selectable switch.
 
 ### Sea lower floor vs Planet's minimum elevation `[Ours]`
@@ -108,7 +108,7 @@ absent.
 - **Ours:** sea lower is refused when a max-sized step would not change elevation (already at
   `min_elevation_meters` from the world-gen preset). That floor need not be the same tile set
   as SMAC altitude 0 when the meter range is wider than three water bands.
-- **Where:** `FormerElevationChangeAllowed` / `FormerElevationAfterMaxLevel` (`TerraformRules`);
+- **Where:** `FormerLowerAllowed` / `FormerElevationAfterLowerMaxLevel` (`ElevationRules`);
   preset `min_elevation` via `ApplyElevationRange`.
 - **Missing:** an altitude-0 band gate matching the binary and a selectable switch.
 
@@ -136,7 +136,7 @@ absent.
   loss would raze (`WouldDestroyingBuildingRazeBase`). Sea founding constructs Pressure Dome
   via the founder's `on_found_effects`.
 - **Where:** `MayBaseOccupySurface` (`BaseRules`); `SurfaceFlipConsequences` /
-  `ReconcileSurfaceFlips` (`TerraformRules`, `SurfaceOccupancy`);
+  `ReconcileSurfaceFlips` (`SurfaceFlipRules`, `SurfaceFlipMutations`);
   `BaseManager::OnBuildingDestroyed_`; `CollectDestroyableFacilities` / `CanScrapBuilding`
   (`BuildingRules`, `ProductionRules`); founding `AddBuilding` on Colony_Pod
   `on_found_effects`.
