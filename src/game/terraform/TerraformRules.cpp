@@ -26,6 +26,7 @@
 #include "game/map/OccupantCoexistence.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/movement/MovementRules.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDomain.h"
 
@@ -66,8 +67,7 @@ bool ElevationEffectAllowed_(const Unit& rUnit, const TriggeredEffectConfig_t& r
     {
         return true;
     }
-    return FormerElevationChangeAllowed(rUnit.GetTile(), rUnit.GetDomain(), pChange->bRaise,
-                                        rRules);
+    return FormerElevationChangeAllowed(rUnit, pChange->bRaise, rRules);
 }
 
 // Refused before payment when nothing would happen. Effect conditions answer for terrain
@@ -95,21 +95,14 @@ bool AnyEffectWouldFire_(const Unit& rUnit, const TerraformProject_t& rProject,
 
 bool DomainAllows_(const Unit& rUnit, const TerraformProject_t& rProject, const Tile& rTile)
 {
+    if (rProject.domain.has_value() && !TileMatchesDomain(rTile, *rProject.domain))
+    {
+        return false;
+    }
     if (rProject.formerDomain == FormerDomainRule_t::Any)
     {
         const UnitDomain_t domain = rUnit.GetDomain();
         return domain == UnitDomain_t::Sea || domain == UnitDomain_t::Land;
-    }
-    if (rProject.pPlaces)
-    {
-        if (rProject.pPlaces->domain == ImprovementDomain_t::Sea)
-        {
-            return rTile.IsWater() && rUnit.GetDomain() == UnitDomain_t::Sea;
-        }
-        if (rProject.pPlaces->domain == ImprovementDomain_t::Land)
-        {
-            return rTile.IsLand() && rUnit.GetDomain() == UnitDomain_t::Land;
-        }
     }
     return FormerMatchesTile_(rUnit, rTile);
 }
@@ -138,6 +131,7 @@ std::optional<TerraformProject_t> FindTerraformProject(const std::string& rId,
         project.id = pImprovement->id;
         project.name = pImprovement->name;
         project.project = *pImprovement->project;
+        project.domain = pImprovement->domain;
         project.pPlaces = pImprovement;
         return project;
     }
@@ -149,6 +143,7 @@ std::optional<TerraformProject_t> FindTerraformProject(const std::string& rId,
         project.project = pOperation->project;
         project.energyCostSource = pOperation->energyCostSource;
         project.formerDomain = pOperation->formerDomain;
+        project.domain = pOperation->domain;
         project.onCompleteEffects = pOperation->onCompleteEffects;
         return project;
     }
@@ -234,25 +229,35 @@ bool CanStartTerraform(const Unit& rUnit, const TerraformProject_t& rProject)
     return rUnit.GetFaction().GetEconomy().CanAfford(cost);
 }
 
-bool FormerElevationChangeAllowed(const Tile& rTile, UnitDomain_t formerDomain, bool bRaise,
-                                  const MapRulesConfig_t& rRules)
+int FormerElevationAfterMaxLevel(const Tile& rTile, bool bRaise, const MapRulesConfig_t& rRules)
 {
-    const bool bSeaFormer = formerDomain == UnitDomain_t::Sea;
+    const int delta = bRaise ? rRules.levelMaxMeters : -rRules.levelMaxMeters;
+    return std::clamp(rTile.GetElevation() + delta, rRules.minElevationMeters,
+                      rRules.maxElevationMeters);
+}
+
+bool FormerElevationChangeAllowed(const Unit& rUnit, bool bRaise, const MapRulesConfig_t& rRules)
+{
+    const Tile& rTile = rUnit.GetTile();
     const int elevation = rTile.GetElevation();
     if (bRaise)
     {
-        return bSeaFormer ? elevation <= -rRules.referenceLevelMeters
-                          : elevation < rRules.maxElevationMeters;
+        // TOOHIGH: SMAC refuses raise from altitude 6 — the top reference band under Planet's
+        // ceiling (docs/thinker/terranx-map.md "Starting a project").
+        const int topBandStart = rRules.maxElevationMeters - rRules.referenceLevelMeters;
+        if (elevation >= topBandStart)
+        {
+            return false;
+        }
     }
-    // TODO: SMAC's floor for sea-former lowering is unknown; Planet's own floor is the only
-    // limit we can state.
-    return bSeaFormer ? elevation - rRules.referenceLevelMeters >= rRules.minElevationMeters
-                      : elevation >= rRules.referenceLevelMeters;
-}
-
-int FormerLowerFloorMeters(UnitDomain_t formerDomain, const MapRulesConfig_t& rRules)
-{
-    return formerDomain == UnitDomain_t::Land ? rRules.oceanLevelMeters : rRules.minElevationMeters;
+    const int after = FormerElevationAfterMaxLevel(rTile, bRaise, rRules);
+    if (after == elevation)
+    {
+        return false;
+    }
+    const InteractionSurface_t surface =
+        after < rRules.oceanLevelMeters ? InteractionSurface_t::Water : InteractionSurface_t::Land;
+    return CanEnterSurface(rUnit, surface);
 }
 
 namespace
@@ -524,14 +529,12 @@ std::optional<TerraformSpread_t> PickSpreadTarget(const Tile& rOrigin)
 namespace
 {
 
-// Land units on water and sea units on land; air and orbital units do not care.
-std::vector<Unit*> StrandedUnits_(const Tile& rTile, bool bNowWater)
+std::vector<Unit*> StrandedUnits_(const Tile& rTile)
 {
-    const UnitDomain_t stranded = bNowWater ? UnitDomain_t::Land : UnitDomain_t::Sea;
     std::vector<Unit*> units;
     for (Unit* pUnit : CurrentGameState().GetWorldMap().GetAllUnitsOnTile(rTile))
     {
-        if (pUnit && pUnit->GetDomain() == stranded)
+        if (pUnit && !CanEnterTileTerrain(*pUnit, rTile))
         {
             units.push_back(pUnit);
         }
@@ -547,9 +550,8 @@ SurfaceFlipConsequences_t SurfaceFlipConsequences(const Tile& rTile, bool bNowWa
     SurfaceFlipConsequences_t consequences;
     for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
     {
-        const bool bSeaDomain = pImprovement->domain == ImprovementDomain_t::Sea;
-        const bool bDomainKept = !pImprovement->domain.has_value() || bSeaDomain == bNowWater;
-        if (bDomainKept)
+        if (!pImprovement->domain.has_value()
+            || DomainMatchesSurface(*pImprovement->domain, bNowWater))
         {
             continue;
         }
@@ -565,7 +567,7 @@ SurfaceFlipConsequences_t SurfaceFlipConsequences(const Tile& rTile, bool bNowWa
     {
         consequences.bRazeBase = true;
     }
-    consequences.strandedUnits = StrandedUnits_(rTile, bNowWater);
+    consequences.strandedUnits = StrandedUnits_(rTile);
     return consequences;
 }
 

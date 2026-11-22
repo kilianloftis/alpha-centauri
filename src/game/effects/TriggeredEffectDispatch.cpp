@@ -833,15 +833,13 @@ bool ElevationChange_(TriggeredEffectContext_t& rCtx, const ElevationChangeEffec
         return false;
     }
     const MapRulesConfig_t& rRules = rCtx.pTile->MapRules();
-    const UnitDomain_t domain = rCtx.pUnit->GetDomain();
-    // Whether a Former may start was checked at order time. Now the cost is paid, so a roll past
-    // the floor lands on it; only no change at all reports false.
+    // Start was gated by FormerElevationChangeAllowed. A roll past Planet's range lands on the
+    // bound; only no change at all reports false.
     const int roll = RollLevelMeters(rCtx.Rng(), rRules);
     const int delta = rConfig.bRaise ? roll : -roll;
-    const int floor =
-        rConfig.bRaise ? rRules.minElevationMeters : FormerLowerFloorMeters(domain, rRules);
-    const std::optional<std::vector<MoistureChange_t>> changes = ApplyElevationDelta(
-        *rCtx.pTile, delta, rRules, floor, rRules.maxElevationMeters, rCtx.rGameState);
+    const std::optional<std::vector<MoistureChange_t>> changes =
+        ApplyElevationDelta(*rCtx.pTile, delta, rRules, rRules.minElevationMeters,
+                            rRules.maxElevationMeters, rCtx.rGameState);
     if (!changes)
     {
         return false;

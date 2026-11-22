@@ -56,8 +56,8 @@ MapRulesConfig_t ShippingRules_()
     rules.maxElevationMeters = 4000;
     rules.oceanLevelMeters = 0;
     rules.oceanShelfMeters = -2000;
-    rules.levelMinMeters = 500;
-    rules.levelMaxMeters = 1500;
+    rules.levelMinMeters = 1000;
+    rules.levelMaxMeters = 1000;
     rules.maxAdjacentDifferenceMeters = 1500;
     rules.referenceLevelMeters = 1000;
     rules.spreadAltitudeLimitMeters = 1000;
@@ -543,7 +543,7 @@ TEST_CASE("Detonating a warhead raises its own tile and spends the carrier",
     const int before = At_(game.fixtures.state.GetWorldMap(), 8, 8).GetElevation();
     REQUIRE(ApplyDetonation(game.fixtures.state, warhead));
 
-    // Two levels of [500, 1500] each, so the origin rises by at least 1000m.
+    // Two levels of 1000 m each, so the origin rises by 2000 m before neighbor pull.
     CHECK(At_(game.fixtures.state.GetWorldMap(), 8, 8).GetElevation() >= before + 1000);
     // The neighbor relaxation kept the slope inside the configured limit.
     const int origin = At_(game.fixtures.state.GetWorldMap(), 8, 8).GetElevation();
@@ -561,14 +561,12 @@ TEST_CASE("An earthquake that raises a sea tile onto land removes sea-domain imp
     tile.SetElevation(-100);
     REQUIRE(tile.IsWater());
     game.fixtures.state.GetTileEffects().AddOccupantWithEffects(tile, "KelpFarm");
-    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(tile, "Road");
 
     Unit& warhead = game.MakeWarhead(8, 8, /*reactorLevels=*/1);
     REQUIRE(ApplyDetonation(game.fixtures.state, warhead));
 
     CHECK(tile.IsLand());
     CHECK_FALSE(tile.HasImprovement("KelpFarm"));
-    CHECK(tile.HasImprovement("Road"));
 }
 
 TEST_CASE("A design with no detonation list cannot detonate", "[unit][elevation][detonate]")

@@ -522,18 +522,16 @@ TEST_CASE("A surface flip removes improvements whose domain no longer matches",
     CHECK(origin.IsWater());
     CHECK(neighbor.IsWater());
     CHECK_FALSE(origin.HasImprovement("Farm"));
-    CHECK(origin.HasImprovement("Road"));
+    CHECK_FALSE(origin.HasImprovement("Road"));
     CHECK_FALSE(neighbor.HasImprovement("Farm"));
-    CHECK(neighbor.HasImprovement("Road"));
+    CHECK_FALSE(neighbor.HasImprovement("Road"));
 
     Tile& sea = *game.fixtures.state.GetWorldMap().GetTile(8, 2);
     sea.SetElevation(-100);
     game.fixtures.state.GetTileEffects().AddOccupantWithEffects(sea, "KelpFarm");
-    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(sea, "Road");
     CrossElevation_(game.fixtures.state, sea, 500);
     CHECK(sea.IsLand());
     CHECK_FALSE(sea.HasImprovement("KelpFarm"));
-    CHECK(sea.HasImprovement("Road"));
 }
 
 namespace

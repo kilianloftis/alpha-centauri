@@ -253,6 +253,57 @@ TEST_CASE("A project whose effects would all no-op is refused before it is paid 
     CHECK(game.StartTerraform(former, "LevelTerrain"));
 }
 
+TEST_CASE("A sea Former cannot raise across the waterline", "[unit][terraform][elevation]")
+{
+    TerraformGame_ game;
+    BaseManager& home = game.MakeBase(8, 8);
+    Tile& sea = *game.fixtures.state.GetWorldMap().GetTile(10, 10);
+    const MapRulesConfig_t& rRules = sea.MapRules();
+    sea.SetElevation(rRules.oceanLevelMeters - 1);
+    REQUIRE(sea.IsWater());
+    Unit& seaFormer = game.MakeFormer(10, 10, &home, nullptr, "test_sea_chassis");
+
+    CHECK_FALSE(FormerElevationChangeAllowed(seaFormer, /*bRaise=*/true, rRules));
+    CHECK_FALSE(game.StartTerraform(seaFormer, "RaiseLand"));
+
+    sea.SetElevation(rRules.oceanLevelMeters - rRules.levelMaxMeters - 1);
+    CHECK(FormerElevationChangeAllowed(seaFormer, /*bRaise=*/true, rRules));
+}
+
+TEST_CASE("A land Former cannot raise from the top altitude band", "[unit][terraform][elevation]")
+{
+    // SMAC TOOHIGH: refuse raise from altitude 6 — elev >= max − reference_level.
+    TerraformGame_ game;
+    BaseManager& home = game.MakeBase(8, 8);
+    Unit& former = game.MakeFormer(10, 10, &home);
+    Tile& tile = *game.fixtures.state.GetWorldMap().GetTile(10, 10);
+    const MapRulesConfig_t& rRules = tile.MapRules();
+    const int topBandStart = rRules.maxElevationMeters - rRules.referenceLevelMeters;
+
+    tile.SetElevation(topBandStart);
+    CHECK_FALSE(FormerElevationChangeAllowed(former, /*bRaise=*/true, rRules));
+    CHECK_FALSE(game.StartTerraform(former, "RaiseLand"));
+
+    tile.SetElevation(topBandStart - 1);
+    CHECK(FormerElevationChangeAllowed(former, /*bRaise=*/true, rRules));
+}
+
+TEST_CASE("Land-domain projects refuse a sea tile", "[unit][terraform][domain]")
+{
+    TerraformGame_ game;
+    BaseManager& home = game.MakeBase(8, 8);
+    Tile& sea = *game.fixtures.state.GetWorldMap().GetTile(10, 10);
+    sea.SetElevation(-100);
+    REQUIRE(sea.IsWater());
+    Unit& seaFormer = game.MakeFormer(10, 10, &home, nullptr, "test_sea_chassis");
+    sea.SetRockiness(Rockiness_t::Rocky);
+
+    CHECK_FALSE(game.StartTerraform(seaFormer, "Road"));
+    CHECK_FALSE(game.StartTerraform(seaFormer, "Sensor"));
+    CHECK_FALSE(game.StartTerraform(seaFormer, "LevelTerrain"));
+    CHECK_FALSE(game.StartTerraform(seaFormer, "Aquifer"));
+}
+
 TEST_CASE("Raise and lower land change elevation", "[unit][terraform][mutate]")
 {
     TerraformGame_ game;
@@ -317,29 +368,19 @@ TEST_CASE("Lowering land stops at Planet's floor instead of throwing",
     CHECK(tile.GetElevation() == floor);
 }
 
-TEST_CASE("A land Former's lower stops at ocean level instead of failing the order",
-          "[unit][terraform][mutate]")
+TEST_CASE("A land Former cannot lower through the waterline", "[unit][terraform][elevation]")
 {
-    // A fixed 1500 m level on a 1000 m tile: the roll overshoots ocean level, which used to
-    // return false after CanStartTerraform had already charged for it.
-    MapRulesConfig_t rules = actest::TestMapRules();
-    rules.levelMinMeters = 1500;
-    rules.levelMaxMeters = 1500;
-    TerraformGame_ game(/*bExcludes=*/false, &rules);
+    // Shore (ocean level): one SMAC altitude step down is water under a land Former.
+    TerraformGame_ game;
     BaseManager& home = game.MakeBase(8, 8);
     Unit& former = game.MakeFormer(10, 10, &home);
     Tile& tile = *game.fixtures.state.GetWorldMap().GetTile(10, 10);
-    tile.SetElevation(rules.referenceLevelMeters);
+    const MapRulesConfig_t& rRules = tile.MapRules();
+    tile.SetElevation(rRules.oceanLevelMeters);
+    REQUIRE(tile.IsLand());
 
-    std::mt19937 rng(1);
-    const std::optional<TerraformProject_t> lowerLand =
-        FindTerraformProject("LowerLand", game.fixtures.state.GetTileEffects().GetImprovements(),
-                             *game.fixtures.dataContext.terrainOperationRegistry);
-    REQUIRE(lowerLand);
-    CHECK(ApplyTerraformResult(tile, *lowerLand, game.fixtures.state.GetTileEffects(), former, rng,
-                               game.fixtures.state));
-    CHECK(tile.GetElevation() == rules.oceanLevelMeters);
-    CHECK(tile.IsLand());
+    CHECK_FALSE(FormerElevationChangeAllowed(former, /*bRaise=*/false, rRules));
+    CHECK_FALSE(game.StartTerraform(former, "LowerLand"));
 }
 
 TEST_CASE("ApplyTerraformResult places Farm via rules helper", "[unit][terraform]")

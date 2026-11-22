@@ -3,6 +3,10 @@
 #include "game/base/BaseMutations.h"
 #include "game/base/FoundBaseRules.h"
 #include "game/units/UnitMutations.h"
+#include "game/PlayerInteractionQueue.h"
+#include "game/effects/TriggeredEffect.h"
+#include "game/effects/InteractionGridsConfig.h"
+#include "game/movement/MovementRules.h"
 #include "game/terraform/TerraformMutations.h"
 #include "game/terraform/TerraformRules.h"
 #include "game/units/SupplyCrawlMutations.h"
@@ -37,6 +41,8 @@
 #include "game/effects/TileEffectsContext.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
+#include "game/map/MapRulesConfig.h"
+#include "game/map/TerrainOperationRegistry.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/effects/TriggeredEffectDispatch.h"
@@ -888,7 +894,7 @@ bool WorldView::TrySharedChord_(const KeyEvent_t& rEvent, Unit& rUnit)
     const std::size_t count = (bBombard ? 1 : 0) + projects.size();
     if (count == 0)
     {
-        return false;
+        return TryNotifyBlockedElevationTerraform_(rEvent, rUnit);
     }
     if (count > 1)
     {
@@ -902,6 +908,78 @@ bool WorldView::TrySharedChord_(const KeyEvent_t& rEvent, Unit& rUnit)
     StartTerraform(m_rGameState, rUnit, projects.front());
     SelectNextAvailableUnit_();
     return true;
+}
+
+bool WorldView::TryNotifyBlockedElevationTerraform_(const KeyEvent_t& rEvent, const Unit& rUnit)
+{
+    if (!ResolveFlag(rUnit, RuleFlagId_t::Terraform))
+    {
+        return false;
+    }
+    const ImprovementRegistry& rImprovements =
+        m_rGameState.GetTileEffects().GetImprovements();
+    const TerrainOperationRegistry* pOperations =
+        m_rGameState.GetGameData().terrainOperationRegistry.get();
+    if (!pOperations)
+    {
+        return false;
+    }
+    const MapRulesConfig_t& rRules = rUnit.GetTile().MapRules();
+    for (const TerraformHotkey_t& rBinding : m_rHotkeys.Terraform())
+    {
+        if (!rBinding.chord.Matches(rEvent))
+        {
+            continue;
+        }
+        const std::optional<TerraformProject_t> project =
+            FindTerraformProject(rBinding.projectId, rImprovements, *pOperations);
+        if (!project)
+        {
+            continue;
+        }
+        const ElevationChangeEffect_t* pChange = nullptr;
+        for (const TriggeredEffectConfig_t& rEffect : project->onCompleteEffects)
+        {
+            pChange = std::get_if<ElevationChangeEffect_t>(&rEffect.effect);
+            if (pChange)
+            {
+                break;
+            }
+        }
+        if (!pChange)
+        {
+            continue;
+        }
+        if (FormerElevationChangeAllowed(rUnit, pChange->bRaise, rRules))
+        {
+            continue;
+        }
+        const int after =
+            FormerElevationAfterMaxLevel(rUnit.GetTile(), pChange->bRaise, rRules);
+        const InteractionSurface_t surface = after < rRules.oceanLevelMeters
+                                                 ? InteractionSurface_t::Water
+                                                 : InteractionSurface_t::Land;
+        const bool bWouldStrand =
+            after != rUnit.GetTile().GetElevation() && !CanEnterSurface(rUnit, surface);
+        std::string title = pChange->bRaise ? "Cannot Raise Land" : "Cannot Lower Land";
+        std::string body;
+        if (bWouldStrand)
+        {
+            body = pChange->bRaise
+                       ? "Raising here would turn the sea into land and destroy this Former."
+                       : "Lowering here would flood this tile and destroy this Former.";
+        }
+        else
+        {
+            body = pChange->bRaise ? "This terrain is already at Planet's maximum elevation."
+                                  : "This terrain is already at Planet's lowest elevation.";
+        }
+        EnqueueForPlayer(m_rGameState,
+                         NoticeInteraction_t{std::nullopt, std::move(title), std::move(body),
+                                             rUnit.GetTile().GetCoord()});
+        return true;
+    }
+    return false;
 }
 
 // Terraform projects bound to this chord that the unit could start now.

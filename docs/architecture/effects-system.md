@@ -665,7 +665,8 @@ both name the right faction with no extra plumbing. `severity` is `AtrocitySever
 
 `Earthquake` raises the context tile through `ApplyEarthquake`
 (`include/game/terraform/ElevationChange.h`): `levels` rolls of `[level_min_meters,
-level_max_meters]` from `config/map_rules.json`, then the neighbor slope relaxation. Exactly
+level_max_meters]` from `config/map_rules.json` (shipping both 1000 m), then the neighbor slope
+relaxation. Exactly
 one magnitude source is authored — `levels` is a literal (a scripted quake), `levels_stat`
 names a **unit** stat resolved off the subject the trigger stamped. The rules come from the
 tile's own bound `MapRulesConfig_t`, so the effect needs no `GameDataContext`.
@@ -704,7 +705,8 @@ both ends. `ElevationChange` applies one signed level roll as a Former edit; unl
 `Earthquake` it has a floor that depends on the subject unit's domain, so a land Former cannot
 dig its own tile below ocean level while a sea Former may reach Planet's floor. None of the
 three checks whether the project *should* run — that is the entry's `condition` (plus
-`FormerElevationChangeAllowed` for the elevation bound), asked by `CanStartTerraform` before
+`FormerElevationChangeAllowed` for the elevation bound — a max-sized level change must leave a
+surface the Former still occupies), asked by `CanStartTerraform` before
 the order is paid for. By the time they fire the energy is spent, so they clamp rather than
 refuse.
 

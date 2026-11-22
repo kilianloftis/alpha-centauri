@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/effects/EffectConfig.h"
+#include "game/map/ImprovementConfigParser.h"
 
 #include <span>
 #include <string>
@@ -10,11 +11,15 @@
 namespace ac
 {
 
-struct ImprovementConfig_t;
 class Tile;
 
 // Which occupants may share a tile. Kept apart from the config parser: parsing turns JSON
 // into ImprovementConfig_t, and this answers a game-rules question about two of them.
+
+// Improvement `domain` land/sea vs a water (or land) surface — placement, Former start, and
+// surface-flip clearance all use this.
+bool DomainMatchesSurface(ImprovementDomain_t domain, bool bWater);
+bool TileMatchesDomain(const Tile& rTile, ImprovementDomain_t domain);
 
 // The one coexistence predicate: blocked by domain, or by an occupant either side excludes.
 // leavingIds do not block; overrides then the tile's waivers can allow a denied pair.

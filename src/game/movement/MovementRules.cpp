@@ -61,17 +61,34 @@ bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject)
     return ResolveInteractionCell(rGrids, q, &rSubject, ctx) == InteractionCell_t::Allow;
 }
 
-bool CanEnterTileTerrain(UnitDomain_t domain, const Tile& rTile)
+bool CanEnterSurface(UnitDomain_t domain, InteractionSurface_t surface)
 {
-    const GameState& rGame = CurrentGameState();
     InteractionQuery_t q;
     q.grid = InteractionGridId_t::Enter;
     q.actorDomain = domain;
-    q.surface = SurfaceOf_(rTile);
+    q.surface = surface;
     EffectContext_t ctx;
-    ctx.targetTile = &rTile;
-    return ResolveInteractionCell(rGame.GetGameData().interactionGrids, q, nullptr, ctx)
+    return ResolveInteractionCell(CurrentGameState().GetGameData().interactionGrids, q, nullptr,
+                                  ctx)
         == InteractionCell_t::Allow;
+}
+
+bool CanEnterSurface(const Unit& rMover, InteractionSurface_t surface)
+{
+    InteractionQuery_t q;
+    q.grid = InteractionGridId_t::Enter;
+    q.actorDomain = rMover.GetDomain();
+    q.surface = surface;
+    EffectContext_t ctx;
+    ctx.targetTile = &rMover.GetTile();
+    return ResolveInteractionCell(CurrentGameState().GetGameData().interactionGrids, q, &rMover,
+                                  ctx)
+        == InteractionCell_t::Allow;
+}
+
+bool CanEnterTileTerrain(UnitDomain_t domain, const Tile& rTile)
+{
+    return CanEnterSurface(domain, SurfaceOf_(rTile));
 }
 
 bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile)

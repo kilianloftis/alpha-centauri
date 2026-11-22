@@ -3,6 +3,7 @@
     "id": "Road",
     "name": "Road",
     "turns_required": 1,
+    "domain": "land",
     "effects": [
       {
         "type": "StatModifier",
@@ -55,6 +56,7 @@
       ]
     },
     "turns_required": 3,
+    "domain": "land",
     "effects": [
       {
         "type": "StatModifier",
@@ -487,6 +489,7 @@
       ]
     },
     "turns_required": 5,
+    "domain": "land",
     "effects": [
       {
         "type": "StatModifier",
@@ -565,6 +568,7 @@
       ]
     },
     "turns_required": 10,
+    "domain": "land",
     "effects": [
       {
         "type": "RuleFlag",
@@ -624,6 +628,7 @@
     "id": "Sensor",
     "name": "Sensor",
     "turns_required": 4,
+    "domain": "land",
     "owned_by_territory": true,
     "effects": [
       {

@@ -169,6 +169,8 @@ private:
     // Bombard and former projects bound to this chord. Runs the one that is valid and
     // throws when more than one is.
     bool TrySharedChord_(const KeyEvent_t& rEvent, Unit& rUnit);
+    // Raise/Lower hotkey matched but the altitude gate refuses (would strand this Former).
+    bool TryNotifyBlockedElevationTerraform_(const KeyEvent_t& rEvent, const Unit& rUnit);
     std::vector<std::string> StartableTerraforms_(const KeyEvent_t& rEvent,
                                                   const Unit& rUnit) const;
     // A chord valid for two actions on one unit is a hotkey config defect.

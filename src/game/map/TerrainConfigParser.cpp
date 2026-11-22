@@ -39,6 +39,10 @@ TerrainOperationConfig_t ParseOperation_(const ConfigReader& rReader)
     config.formerDomain = rReader.Has("former_domain")
                               ? rReader.Enum<FormerDomainRule_t>("former_domain", "former_domain")
                               : FormerDomainRule_t::MatchesTile;
+    if (rReader.Has("domain") && !rReader.Json().at("domain").is_null())
+    {
+        config.domain = rReader.Enum<ImprovementDomain_t>("domain", "terrain operation domain");
+    }
     config.onCompleteEffects = TriggeredEffectParser::ParseTriggeredEffects(
         rReader.Json(), "on_complete_effects", config.id);
     if (config.onCompleteEffects.empty())

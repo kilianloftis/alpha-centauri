@@ -83,14 +83,20 @@ bool PairDenied_(const ImprovementConfig_t& rCandidate, std::string_view otherId
 
 bool DomainBlocks_(const ImprovementConfig_t& rCandidate, const Tile& rTile)
 {
-    if (rCandidate.domain == ImprovementDomain_t::Land && !rTile.IsLand())
-    {
-        return true;
-    }
-    return rCandidate.domain == ImprovementDomain_t::Sea && !rTile.IsWater();
+    return rCandidate.domain.has_value() && !TileMatchesDomain(rTile, *rCandidate.domain);
 }
 
 } // namespace
+
+bool DomainMatchesSurface(ImprovementDomain_t domain, bool bWater)
+{
+    return (domain == ImprovementDomain_t::Sea) == bWater;
+}
+
+bool TileMatchesDomain(const Tile& rTile, ImprovementDomain_t domain)
+{
+    return DomainMatchesSurface(domain, rTile.IsWater());
+}
 
 bool OccupantsBlockPlacement(const Tile& rTile, const ImprovementConfig_t& rCandidate,
                              std::span<const std::string> leavingIds,

@@ -1126,9 +1126,12 @@ Enricher, and the road order on a road becomes Mag Tube, each once the tech is k
   double with Xenoempathy Dome; every other project gains ×1.5 with Weather Paradigm. Formers on
   the same tile with the same order pool their work.
 - On completion the clear mask, then the bit, is written. Aquifer adds a river source and runs
-  `world_climate`; raise and lower move one altitude level (`world_raise_alt` /
-  `world_lower_alt`, each ring k pulled to within k + 1 levels) and run `world_climate`; Level
-  steps rockiness down one; Condenser and Borehole run `world_climate`.
+  `world_climate`; raise and lower move **exactly one** altitude level (`world_raise_alt`
+  `0x5C2380` / `world_lower_alt` `0x5C23E0`: `alt±1`, then `world_alt_set`; each ring k pulled
+  to within k + 1 levels) and run `world_climate`. Our meter maps use
+  `reference_level_meters` (1000) as that step; shipping `level_min_meters` /
+  `level_max_meters` are both 1000. Level steps rockiness down one; Condenser and Borehole run
+  `world_climate`.
 - Losing a forest on land to any project but Raise Land credits `minerals_harvesting_forest`
   (`#RULES`, 5) to the former's home base, else the nearest own base (`HARVESTFOREST`,
   `0x4CA24C`–`0x4CA346`).

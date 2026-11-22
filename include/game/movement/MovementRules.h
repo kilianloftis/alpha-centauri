@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/effects/InteractionGridsConfig.h"
 #include "game/units/UnitDomain.h"
 
 namespace ac
@@ -13,6 +14,13 @@ struct EntryTerms_t;
 // Whether foreign rProjector's ZOC holds rSubject. The grid resolves with rSubject acting, so
 // a unit that ignores ZOC declares a zoc deny on itself.
 bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject);
+
+// Enter-grid stock cell for domain × surface (no unit overrides). For a predicted surface
+// before the tile has changed; live tiles use CanEnterTileTerrain.
+bool CanEnterSurface(UnitDomain_t domain, InteractionSurface_t surface);
+
+// Enter-grid for rMover × surface, including the mover's InteractionOverrides.
+bool CanEnterSurface(const Unit& rMover, InteractionSurface_t surface);
 
 // Whether domain may enter rTile per the enter interaction grid stock cell (no unit overrides).
 bool CanEnterTileTerrain(UnitDomain_t domain, const Tile& rTile);

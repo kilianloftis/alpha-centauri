@@ -3,6 +3,7 @@
 #include "game/effects/TriggeredEffect.h"
 #include "game/map/ImprovementConfigParser.h"
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -33,6 +34,8 @@ struct TerrainOperationConfig_t
     FormerProject_t project;
     EnergyCostSource_t energyCostSource = EnergyCostSource_t::Flat;
     FormerDomainRule_t formerDomain = FormerDomainRule_t::MatchesTile;
+    // Tile surface the operation may run on. Empty means either land or sea.
+    std::optional<ImprovementDomain_t> domain;
     // Required and non-empty: a project that declares nothing to do can never complete.
     // Each entry's `condition` is also what says whether the project may start at all.
     std::vector<TriggeredEffectConfig_t> onCompleteEffects;

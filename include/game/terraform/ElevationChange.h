@@ -20,7 +20,8 @@ struct SurfaceFlip_t
     bool bNowWater = false;
 };
 
-// One uniform draw in [level_min_meters, level_max_meters].
+// One uniform draw in [level_min_meters, level_max_meters]. Shipping uses 1000..1000 (one
+// SMAC altitude step).
 int RollLevelMeters(std::mt19937& rRng, const MapRulesConfig_t& rRules);
 
 // Adds deltaMeters to rOrigin within the floor, ceiling and Planet's range, then relaxes the

@@ -33,6 +33,9 @@ struct TerraformProject_t
     FormerProject_t project;
     EnergyCostSource_t energyCostSource = EnergyCostSource_t::Flat;
     FormerDomainRule_t formerDomain = FormerDomainRule_t::MatchesTile;
+    // Surface this project may run on. From the improvement's domain, or an operation's
+    // domain; empty means either surface.
+    std::optional<ImprovementDomain_t> domain;
     const ImprovementConfig_t* pPlaces = nullptr;
     // Into registry-owned storage; valid while the registries that produced it are alive.
     std::span<const TriggeredEffectConfig_t> onCompleteEffects;
@@ -56,14 +59,13 @@ bool CanStartTerraformProject(const Unit& rUnit, const std::string& projectId);
 int TerraformEnergyCost(const Unit& rUnit, const TerraformProject_t& rProject);
 
 
-// Whether a Former of this domain can still move rTile this way. A sea Former raises only deep
-// ground; a land Former never lowers below the reference level.
-bool FormerElevationChangeAllowed(const Tile& rTile, UnitDomain_t formerDomain, bool bRaise,
-                                  const MapRulesConfig_t& rRules);
+// Elevation after a max-sized level change in that direction, clamped to Planet's range.
+int FormerElevationAfterMaxLevel(const Tile& rTile, bool bRaise, const MapRulesConfig_t& rRules);
 
-// The floor a Former of this domain lowers toward: ocean level on land (the tile stops at the
-// waterline), Planet's floor at sea.
-int FormerLowerFloorMeters(UnitDomain_t formerDomain, const MapRulesConfig_t& rRules);
+// True when that change moves the tile, is not raise from the top altitude band (TOOHIGH),
+// and the enter grid still allows this Former on the resulting surface.
+// docs/thinker/terranx-map.md "Starting a project".
+bool FormerElevationChangeAllowed(const Unit& rUnit, bool bRaise, const MapRulesConfig_t& rRules);
 
 // SMAC alien_fauna growth: MapAreaTiles / (turn/4 + 32) samples per turn, turnIndex counted
 // from the first playable year.
