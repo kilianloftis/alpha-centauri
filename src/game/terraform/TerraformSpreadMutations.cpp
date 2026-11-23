@@ -3,6 +3,7 @@
 #include "game/CurrentGameState.h"
 #include "game/GameState.h"
 #include "game/effects/TileEffectsContext.h"
+#include "game/map/ImprovementIds.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/terraform/TerraformSpreadRules.h"
@@ -10,6 +11,7 @@
 
 #include <optional>
 #include <stdexcept>
+#include <string>
 
 namespace ac
 {
@@ -27,6 +29,11 @@ bool TrySpreadTerraformFromTile(Tile& rOrigin, WorldMap& rWorldMap,
     if (pTarget == nullptr)
     {
         throw std::logic_error("TrySpreadTerraformFromTile: spread target is off this world");
+    }
+    // docs/thinker/terranx-map.md "Forest and kelp growth": the fungus bit is cleared.
+    if (pTarget->HasFeature(ImprovementIds::k_Fungus))
+    {
+        rTileEffects.RemoveOccupantWithEffects(*pTarget, std::string(ImprovementIds::k_Fungus));
     }
     rTileEffects.AddOccupantWithEffects(*pTarget, spread->pImprovement->id);
     return true;

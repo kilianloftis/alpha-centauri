@@ -59,7 +59,7 @@ struct ImprovementSpread_t
 {
     // Neighbor preference (moisture, rockiness ordinals).
     Formula_t scoreFormula;
-    // Land: at or below this always qualifies; above needs non-arid. Sea uses ocean_shelf_meters.
+    // Land: below this always qualifies; at/above needs non-arid. Sea uses ocean_shelf_meters.
     std::optional<int> altitudeLimitMeters;
 };
 
@@ -78,6 +78,9 @@ struct ImprovementConfig_t
     // domain is not the new surface. Empty means the improvement survives either surface.
     std::optional<ImprovementDomain_t> domain;
     std::vector<std::string> excludes; // feature ids that can't coexist with this one on a tile
+    // Feature ids that must already be on the tile (SoilEnricher needs Farm; MagTube needs Road).
+    // JSON key: "requires".
+    std::vector<std::string> requiredOccupants;
     // Its effects apply only for the faction owning the host tile's territory (Sensor).
     bool ownedByTerritory = false;
     int frequency = 0;                 // world-gen spawn weight; 0 = not randomly placed

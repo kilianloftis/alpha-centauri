@@ -423,6 +423,34 @@
       ]
     },
     {
+      "id": "MountPlanet",
+      "name": "Mount Planet",
+      "tags": [
+        "landmark"
+      ],
+      "domain": "land",
+      "excludes": [
+        "@landmark",
+        "@resource_bonus",
+        "Monolith"
+      ],
+      "effects": []
+    },
+    {
+      "id": "GreatDunes",
+      "name": "Great Dunes",
+      "tags": [
+        "landmark"
+      ],
+      "domain": "land",
+      "excludes": [
+        "@landmark",
+        "@resource_bonus",
+        "Monolith"
+      ],
+      "effects": []
+    },
+    {
       "id": "Monolith",
       "name": "Monolith",
       "tags": [
@@ -430,7 +458,21 @@
       ],
       "frequency": 3,
       "excludes": [
-        "Monolith"
+        "Monolith",
+        "Farm",
+        "Forest",
+        "Mine",
+        "SolarCollector",
+        "SoilEnricher",
+        "Bunker",
+        "Airbase",
+        "Sensor",
+        "Mirror",
+        "Condenser",
+        "ThermalBorehole",
+        "KelpFarm",
+        "MiningPlatform",
+        "TidalHarness"
       ],
       "suppress_yield_sources": [
         "@landform",

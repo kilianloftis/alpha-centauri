@@ -98,6 +98,15 @@ bool TileMatchesDomain(const Tile& rTile, ImprovementDomain_t domain)
     return DomainMatchesSurface(domain, rTile.IsWater());
 }
 
+bool CoexistenceOverrideAllows(std::span<const CoexistenceOverrideEffect_t> overrides,
+                               std::string_view a, std::string_view b)
+{
+    return std::any_of(overrides.begin(), overrides.end(), [&](const CoexistenceOverrideEffect_t& rOverride) {
+        return rOverride.cell == InteractionCell_t::Allow
+            && OverrideMatchesPair_(rOverride, a, b);
+    });
+}
+
 bool OccupantsBlockPlacement(const Tile& rTile, const ImprovementConfig_t& rCandidate,
                              std::span<const std::string> leavingIds,
                              std::span<const CoexistenceOverrideEffect_t> overrides)
@@ -136,9 +145,28 @@ bool OccupantsBlockPlacement(const Tile& rTile, const ImprovementConfig_t& rCand
             return true;
         }
     }
-    return rTile.ForEachOccupant([&](const ImprovementConfig_t& rOccupant) {
-        return blocked(rOccupant.id, &rOccupant);
-    });
+    if (rTile.ForEachOccupant([&](const ImprovementConfig_t& rOccupant) {
+            return blocked(rOccupant.id, &rOccupant);
+        }))
+    {
+        return true;
+    }
+    for (const std::string& rRequiredId : rCandidate.requiredOccupants)
+    {
+        if (rRequiredId.empty())
+        {
+            continue;
+        }
+        if (std::find(leavingIds.begin(), leavingIds.end(), rRequiredId) != leavingIds.end())
+        {
+            return true;
+        }
+        if (!rTile.HasFeature(rRequiredId))
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool CanBuildImprovement(const Tile& rTile, const ImprovementConfig_t& rCandidate,

@@ -304,6 +304,8 @@ void Tile::RemoveImprovement(std::string_view improvementId)
         return rWaiver.first == improvementId;
     });
     NotifyAppearanceChanged_();
+    // So dependents that `requires` this occupant are swept off.
+    NotifyTileChanged_({});
 }
 
 bool Tile::HasImprovement(std::string_view improvementId) const

@@ -1204,10 +1204,11 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
   `docs/thinker/terranx-map.md` Tile yields energy `max(0, altitude − 2)` with one
   altitude level per step). `Mirror` declares
   the same effect (it *is* a collector) plus a `min_radius: 1, radius: 1` `+1 energy` aura
-  conditioned on `TargetTileHas` `SolarCollector` or `Mirror` — two effects rather than one
-  because `TargetTileHas` takes a single id, and safe from double-counting because the two
-  improvements `excludes` each other. The step lives in `config/tile_yield_rules.json`; nothing
-  about the mechanic is hard-coded, so a mod can add a third collector or move the band width.
+  conditioned on `TargetTileHas` `SolarCollector` with
+  `AnyOf`[`SubjectIsOwner`, `EffectIsUnowned`] (neighbouring Mirrors do not buff each other;
+  ownership matches `docs/thinker/terranx-map.md` Tile yields energy). The step lives in
+  `config/tile_yield_rules.json`; nothing about the mechanic is hard-coded, so a mod can add a
+  third collector or move the band width.
 - **`ResolveTileYield(tile)`**: returns `TileYieldView_t` from `CollectAreaEffects` (so a nearby Mirror's energy aura IS included), including any `bypass_clamp` Adds, with **no** faction pool caps (`effective == potential`). Used where only intrinsic + area yield is wanted (e.g. the auto-assign tile scorer).
 - **`ResolveTileYield(tile, bIsBaseTile, baseEffects)`**: the full worked-tile yield as `TileYieldView_t`. Starts from `CollectAreaEffects`, then appends every `baseEffects` `StatModifier` whose `selector` matches this tile, splits the list into pre-cap vs `bypass_clamp` lanes, resolves the pre-cap lane (MaxClamp conditions evaluated with `targetTile`), then adds the bypass lane. Caps with `removed_by_tech` are omitted from the faction pool once that tech is discovered. Production reads `.effective`; UI may also use `.potential`. Unworked-tile preview (`BaseManager::GetPreviewTileYield`) uses this same overload with `bIsBaseTile == false` — as-if-worked tile-level yield (selectors + caps), without pop `ApplyTileMultipliers`.
 - **`StatId_t::MoistureTier`** (`"moisture_tier"` in JSON): integer tile tier (Arid=0, Moist=1, Wet=2), used exclusively by `RecomputeMoisture` as a terrain-mutation target. Not queryable at runtime — it is a seed for `SetMoisture()`, not a cached stat. `Condenser`'s `+1 moisture_tier Add` effect flows through `RecomputeMoisture` to actually call `Tile::SetMoisture()`, making the change visible in rendering and tile-yield resolution.

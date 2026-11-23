@@ -102,6 +102,17 @@ absent.
   `config/interaction_grids.json` `enter`.
 - **Missing:** the original altitude-only `SEATOOHIGH` path and a selectable switch.
 
+### Aquatic deep-ocean terraform until Adv. Eco Eng `[Ours]`
+
+- **Original:** deep ocean (`LOWTIDAL`, "Starting a project") refuses every project but raise
+  and lower; an aquatic faction (`rule_flags & 0x100`) is refused only until it has Adv.
+  Ecological Engineering.
+- **Ours:** `CanStartTerraform` applies the deep-ocean refuse for every faction; no aquatic
+  waiver ships yet.
+- **Where:** `DeepOceanBlocksProject_` / `CanStartTerraform` (`TerraformRules`).
+- **Missing:** an aquatic faction consumer and the Adv. Eco Eng waiver (and a switch if we
+  keep a non-aquatic-only path).
+
 ### Sea lower floor vs Planet's minimum elevation `[Ours]`
 
 - **Original:** lower is refused only at altitude 0 (`SEATOOLOW`, "Starting a project").

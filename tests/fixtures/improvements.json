@@ -57,6 +57,9 @@
     },
     "turns_required": 3,
     "domain": "land",
+    "requires": [
+      "Road"
+    ],
     "effects": [
       {
         "type": "StatModifier",
@@ -170,7 +173,7 @@
     "turns_required": 4,
     "spreads": {
       "score_formula": "4 * (3 - moisture) - rockiness",
-      "altitude_limit_meters": 1000
+      "altitude_limit_meters": 2000
     },
     "tags": [
       "land_terraform"
@@ -994,6 +997,9 @@
       "land_terraform"
     ],
     "domain": "land",
+    "requires": [
+      "Farm"
+    ],
     "excludes": [
       "Forest",
       "ThermalBorehole"

@@ -212,7 +212,14 @@
         }
       ],
       "excludes": [
-        "@buildable"
+        "Mine",
+        "SolarCollector",
+        "Farm",
+        "SoilEnricher",
+        "Forest",
+        "MiningPlatform",
+        "TidalHarness",
+        "KelpFarm"
       ]
     },
     {

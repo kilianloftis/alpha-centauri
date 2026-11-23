@@ -35,6 +35,7 @@
 #include <optional>
 #include <ranges>
 #include <span>
+#include <variant>
 #include <vector>
 
 namespace ac
@@ -103,13 +104,49 @@ bool DomainAllows_(const Unit& rUnit, const TerraformProject_t& rProject, const 
     return FormerMatchesTile_(rUnit, rTile);
 }
 
+bool IsElevationChangeProject_(const TerraformProject_t& rProject)
+{
+    for (const TriggeredEffectConfig_t& rEffect : rProject.onCompleteEffects)
+    {
+        if (std::holds_alternative<ElevationChangeEffect_t>(rEffect.effect))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+// docs/thinker/terranx-map.md "Starting a project" LOWTIDAL: deep ocean allows only raise/lower.
+bool DeepOceanBlocksProject_(const TerraformProject_t& rProject, const Tile& rTile)
+{
+    if (!rTile.IsWater() || rTile.GetElevation() >= rTile.MapRules().oceanShelfMeters)
+    {
+        return false;
+    }
+    return !IsElevationChangeProject_(rProject);
+}
+
 bool CanApplyProject_(const Unit& rUnit, const TerraformProject_t& rProject, const Tile& rTile,
                       std::span<const CoexistenceOverrideEffect_t> overrides,
                       const MapRulesConfig_t& rRules)
 {
-    if (rProject.pPlaces && ImprovementApplies(rTile, *rProject.pPlaces, overrides))
+    if (DeepOceanBlocksProject_(rProject, rTile))
     {
-        return true;
+        return false;
+    }
+    if (rProject.pPlaces)
+    {
+        // docs/thinker/terranx-map.md "Starting a project": fungus needs CentEmp for roads /
+        // MagTube and CentPsi for other bit projects (CoexistenceOverride from those techs).
+        if (rTile.HasFeature(ImprovementIds::k_Fungus)
+            && !CoexistenceOverrideAllows(overrides, ImprovementIds::k_Fungus, rProject.pPlaces->id))
+        {
+            return false;
+        }
+        if (ImprovementApplies(rTile, *rProject.pPlaces, overrides))
+        {
+            return true;
+        }
     }
     return AnyEffectWouldFire_(rUnit, rProject, rTile, rRules);
 }

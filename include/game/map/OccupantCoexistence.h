@@ -5,6 +5,7 @@
 
 #include <span>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -21,8 +22,13 @@ class Tile;
 bool DomainMatchesSurface(ImprovementDomain_t domain, bool bWater);
 bool TileMatchesDomain(const Tile& rTile, ImprovementDomain_t domain);
 
-// The one coexistence predicate: blocked by domain, or by an occupant either side excludes.
-// leavingIds do not block; overrides then the tile's waivers can allow a denied pair.
+// True when an Allow override names this unordered pair (one id may be empty = wildcard).
+bool CoexistenceOverrideAllows(std::span<const CoexistenceOverrideEffect_t> overrides,
+                               std::string_view a, std::string_view b);
+
+// The one coexistence predicate: blocked by domain, or by an occupant either side excludes,
+// or by a missing requiredOccupants entry. leavingIds do not block excludes; overrides then
+// the tile's waivers can allow a denied pair.
 bool OccupantsBlockPlacement(const Tile& rTile, const ImprovementConfig_t& rCandidate,
                              std::span<const std::string> leavingIds,
                              std::span<const CoexistenceOverrideEffect_t> overrides);

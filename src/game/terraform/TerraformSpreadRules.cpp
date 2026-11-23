@@ -12,12 +12,17 @@
 #include <algorithm>
 #include <optional>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace ac
 {
 
 namespace
 {
+
+// docs/thinker/terranx-map.md "Forest and kelp growth": volcano and dune landmarks are skipped.
+constexpr std::string_view k_SpreadSkipLandmarks[] = {"MountPlanet", "GreatDunes"};
 
 const TerraformSpreadCalculator& SpreadCalculator_()
 {
@@ -43,15 +48,26 @@ bool MeetsAltitudeGate_(const Tile& rTile, const ImprovementSpread_t& rSpread)
         throw std::logic_error(
             "MeetsAltitudeGate_: land spread requires altitude_limit_meters on the improvement");
     }
-    if (rTile.GetElevation() <= *rSpread.altitudeLimitMeters)
+    // Arid refused at/above the limit (SMAC: not arid above altitude 4 → 2000 m).
+    if (rTile.GetElevation() < *rSpread.altitudeLimitMeters)
     {
         return true;
     }
     return rTile.GetMoisture() != Moisture_t::Arid;
 }
 
-// TODO: whether SMAC's forest spread clears fungus off its target is unconfirmed. A fungus
-// neighbour is not a legal target; clearing it would be an explicit removal, not an exception.
+bool HasSpreadSkippedLandmark_(const Tile& rTile)
+{
+    for (const std::string_view landmarkId : k_SpreadSkipLandmarks)
+    {
+        if (rTile.HasFeature(landmarkId))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool IsEligibleSpreadNeighbor_(const Tile& rNeighbor, bool bWantSea,
                                const ImprovementConfig_t& rConfig)
 {
@@ -64,7 +80,17 @@ bool IsEligibleSpreadNeighbor_(const Tile& rNeighbor, bool bWantSea,
     {
         return false;
     }
-    return CanBuildImprovement(rNeighbor, rConfig, {}, {});
+    if (HasSpreadSkippedLandmark_(rNeighbor))
+    {
+        return false;
+    }
+    // Fungus is cleared on spread apply; treat it as leaving for the stock exclude check.
+    std::vector<std::string> leaving;
+    if (rNeighbor.HasFeature(ImprovementIds::k_Fungus))
+    {
+        leaving.emplace_back(ImprovementIds::k_Fungus);
+    }
+    return CanBuildImprovement(rNeighbor, rConfig, leaving, {});
 }
 
 const ImprovementConfig_t* SpreadingImprovementOn_(const Tile& rOrigin)

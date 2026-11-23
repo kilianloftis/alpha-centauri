@@ -168,7 +168,7 @@ TEST_CASE("A base tile is not a fungal bloom target", "[map][fungus]")
     CHECK(FungusCount_(onBase.fixtures.state.GetWorldMap()) == 3);
 }
 
-TEST_CASE("Fungus removes Former improvements that exclude it", "[map][fungus]")
+TEST_CASE("Fungus clears the plant-fungus mask and keeps roads", "[map][fungus]")
 {
     BloomSession_ session(0, 0, /*bExcludes=*/true, false);
     Tile& rTile = session.At_(8, 8);
@@ -180,7 +180,7 @@ TEST_CASE("Fungus removes Former improvements that exclude it", "[map][fungus]")
     CHECK(result.tilesFungused == 1);
     CHECK(rTile.HasFeature("Fungus"));
     CHECK_FALSE(rTile.HasImprovement("Farm"));
-    CHECK_FALSE(rTile.HasImprovement("Road"));
+    CHECK(rTile.HasImprovement("Road"));
     CHECK(rTile.HasFeature("Nutrients"));
 
     const ImprovementConfig_t& rFarm = session.fixtures.improvements.Get("Farm");

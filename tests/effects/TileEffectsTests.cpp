@@ -1342,7 +1342,7 @@ TEST_CASE("Minerals grants +1 with Mine and Road",
     CHECK(world.ctx.ResolveTileYield(withoutRoad).effective.minerals == 4);
 }
 
-TEST_CASE("TrySpreadTerraformFromTile spreads Forest onto open land and leaves fungus",
+TEST_CASE("TrySpreadTerraformFromTile spreads Forest onto fungus and clears it",
           "[terraform][spread]")
 {
     actest::WorldFixture world;
@@ -1351,7 +1351,6 @@ TEST_CASE("TrySpreadTerraformFromTile spreads Forest onto open land and leaves f
     origin.SetRockiness(Rockiness_t::Flat);
     world.ctx.AddOccupantWithEffects(origin, "Forest");
 
-    // Fungus blocks forest. The open wet tile is the legal neighbor.
     ForEachNeighborInChebyshevRadius(origin, world.map, 1,
         [&](Tile* pNeighbor, int /*distance*/)
         {
@@ -1370,9 +1369,40 @@ TEST_CASE("TrySpreadTerraformFromTile spreads Forest onto open land and leaves f
     wet.SetMoisture(Moisture_t::Wet);
 
     REQUIRE(TrySpreadTerraformFromTile(origin, world.map, world.ctx));
-    CHECK_FALSE(arid.HasImprovement("Forest"));
-    CHECK(arid.HasFeature("Fungus"));
-    CHECK(wet.HasImprovement("Forest"));
+    // Arid fungus scores higher than wet open land; fungus is cleared on spread.
+    CHECK(arid.HasImprovement("Forest"));
+    CHECK_FALSE(arid.HasFeature("Fungus"));
+    CHECK_FALSE(wet.HasImprovement("Forest"));
+}
+
+TEST_CASE("Forest spread skips volcano and dune landmarks and arid tiles at the altitude limit",
+          "[terraform][spread]")
+{
+    actest::WorldFixture world;
+    Tile& origin = world.At(8, 8);
+    origin.SetElevation(100);
+    origin.SetRockiness(Rockiness_t::Flat);
+    world.ctx.AddOccupantWithEffects(origin, "Forest");
+
+    ForEachNeighborInChebyshevRadius(origin, world.map, 1,
+        [&](Tile* pNeighbor, int /*distance*/)
+        {
+            pNeighbor->SetElevation(2000);
+            pNeighbor->SetRockiness(Rockiness_t::Flat);
+            pNeighbor->SetMoisture(Moisture_t::Arid);
+        });
+
+    Tile& volcano = world.At(9, 9);
+    world.ctx.AddOccupantWithEffects(volcano, "MountPlanet");
+    Tile& dunes = world.At(7, 7);
+    world.ctx.AddOccupantWithEffects(dunes, "GreatDunes");
+
+    CHECK_FALSE(TrySpreadTerraformFromTile(origin, world.map, world.ctx));
+
+    Tile& highMoist = world.At(9, 7);
+    highMoist.SetMoisture(Moisture_t::Moist);
+    REQUIRE(TrySpreadTerraformFromTile(origin, world.map, world.ctx));
+    CHECK(highMoist.HasImprovement("Forest"));
 }
 
 TEST_CASE("TrySpreadTerraformFromTile does not spread Forest onto Rocky tiles",

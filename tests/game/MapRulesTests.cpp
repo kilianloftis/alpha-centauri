@@ -51,8 +51,8 @@ TEST_CASE("Improvement coexistence is enforced in both directions", "[map][impro
     const ImprovementConfig_t& rMonolith = world.improvements.Get("Monolith");
     const ImprovementConfig_t& rNutrients = world.improvements.Get("Nutrients");
 
-    // SMAC lets a resource bonus share a monolith tile; Monolith only excludes itself (and
-    // landmarks in shipping). Nutrients declares no excludes of its own.
+    // SMAC lets a resource bonus share a monolith tile; Monolith excludes other buildables
+    // (not Road / MagTube) and itself. Nutrients declares no excludes of its own.
     REQUIRE(rNutrients.excludes.empty());
 
     CHECK(CanBuildImprovement(rTile, rMonolith, {}, {}));
@@ -62,6 +62,8 @@ TEST_CASE("Improvement coexistence is enforced in both directions", "[map][impro
 
     CHECK_FALSE(CanBuildImprovement(rTile, rMonolith, {}, {}));
     CHECK(CanBuildImprovement(rTile, rNutrients, {}, {}));
+    CHECK_FALSE(CanBuildImprovement(rTile, world.improvements.Get("Farm"), {}, {}));
+    CHECK(CanBuildImprovement(rTile, world.improvements.Get("Road"), {}, {}));
 }
 
 TEST_CASE("An intrinsic terrain feature excludes a candidate that does not exclude it back",
@@ -97,6 +99,29 @@ TEST_CASE("A feature the caller is clearing does not block the placement", "[map
     const std::string fungusLeaving(ImprovementIds::k_Fungus);
     CHECK(CanBuildImprovement(rTile, rForest, std::span(&fungusLeaving, 1), {}));
     CHECK(rTile.HasFeature("Fungus"));
+}
+
+TEST_CASE("requires blocks placement until the listed occupant is present", "[map][improvements]")
+{
+    actest::WorldFixture world;
+    Tile& rTile = *world.map.GetTile(8, 4);
+    rTile.SetElevation(500);
+
+    const ImprovementConfig_t& rEnricher = world.improvements.Get("SoilEnricher");
+    const ImprovementConfig_t& rMagTube = world.improvements.Get("MagTube");
+    CHECK_FALSE(CanBuildImprovement(rTile, rEnricher, {}, {}));
+    CHECK_FALSE(CanBuildImprovement(rTile, rMagTube, {}, {}));
+
+    world.ctx.AddOccupantWithEffects(rTile, "Farm");
+    CHECK(CanBuildImprovement(rTile, rEnricher, {}, {}));
+    world.ctx.AddOccupantWithEffects(rTile, "SoilEnricher");
+    CHECK(rTile.HasImprovement("SoilEnricher"));
+
+    world.ctx.RemoveOccupantWithEffects(rTile, "Farm");
+    CHECK_FALSE(rTile.HasImprovement("SoilEnricher"));
+
+    world.ctx.AddOccupantWithEffects(rTile, "Road");
+    CHECK(CanBuildImprovement(rTile, rMagTube, {}, {}));
 }
 
 TEST_CASE("WorldMap rejects non-positive dimensions", "[map]")

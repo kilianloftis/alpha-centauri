@@ -310,6 +310,41 @@ TEST_CASE("Land-domain projects refuse a sea tile", "[unit][terraform][domain]")
     CHECK_FALSE(game.StartTerraform(seaFormer, "Aquifer"));
 }
 
+TEST_CASE("Deep ocean refuses every project but raise and lower", "[unit][terraform][lowtidal]")
+{
+    TerraformGame_ game;
+    BaseManager& home = game.MakeBase(8, 8);
+    Tile& deep = *game.fixtures.state.GetWorldMap().GetTile(10, 10);
+    const MapRulesConfig_t& rRules = deep.MapRules();
+    deep.SetElevation(rRules.oceanShelfMeters - 1);
+    REQUIRE(deep.IsWater());
+    REQUIRE(deep.HasFeature("Ocean"));
+    Unit& seaFormer = game.MakeFormer(10, 10, &home, nullptr, "test_sea_chassis");
+
+    CHECK_FALSE(game.StartTerraform(seaFormer, "PlantFungus"));
+    CHECK_FALSE(game.StartTerraform(seaFormer, "KelpFarm"));
+    CHECK(game.StartTerraform(seaFormer, "RaiseLand"));
+}
+
+TEST_CASE("Monolith allows Road and PlantFungus but not Farm", "[unit][terraform][monolith]")
+{
+    TerraformGame_ game;
+    BaseManager& home = game.MakeBase(8, 8);
+    Tile& tile = *game.fixtures.state.GetWorldMap().GetTile(10, 10);
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(tile, "Monolith");
+    Unit& former = game.MakeFormer(10, 10, &home);
+
+    CHECK_FALSE(game.StartTerraform(former, "Farm"));
+    REQUIRE(game.StartTerraform(former, "Road"));
+    game.FinishTerraform(former);
+    CHECK(tile.HasImprovement("Road"));
+    CHECK(tile.HasFeature("Monolith"));
+
+    REQUIRE(game.StartTerraform(former, "PlantFungus"));
+    game.FinishTerraform(former);
+    CHECK(tile.HasFeature("Fungus"));
+}
+
 TEST_CASE("Raise/lower energy quote applies enemy proximity scale", "[unit][terraform][energy]")
 {
     // docs/thinker/terranx-map.md `terraform_cost`: enemy_val/own_val when enemy_val > own_val.
@@ -576,8 +611,59 @@ TEST_CASE("Terraform replaces improvements that cannot share the tile", "[unit][
                                game.fixtures.state));
     CHECK(rFungusTile.HasFeature("Fungus"));
     CHECK_FALSE(rFungusTile.HasImprovement("Farm"));
-    CHECK_FALSE(rFungusTile.HasImprovement("Road"));
+    CHECK(rFungusTile.HasImprovement("Road"));
     CHECK(rFungusTile.HasFeature("Nutrients"));
+}
+
+TEST_CASE("Fungus road and mine starts need CentEmp and CentPsi overrides", "[unit][terraform]")
+{
+    TerraformGame_ game(true);
+    BaseManager& home = game.MakeBase(8, 8);
+    const UnitComponentConfig_t* pStock = game.fixtures.unitComponents.Find("test_terraformer");
+    REQUIRE(pStock);
+
+    UnitComponentConfig_t roadWaiver = *pStock;
+    {
+        EffectConfig_t effect;
+        effect.scope = EffectScope_t::ThisUnit;
+        CoexistenceOverrideEffect_t overrideFx;
+        overrideFx.cell = InteractionCell_t::Allow;
+        overrideFx.firstId = "Fungus";
+        overrideFx.secondId = "Road";
+        effect.effect = overrideFx;
+        roadWaiver.effects.push_back(effect);
+    }
+
+    UnitComponentConfig_t mineWaiver = *pStock;
+    {
+        EffectConfig_t effect;
+        effect.scope = EffectScope_t::ThisUnit;
+        CoexistenceOverrideEffect_t overrideFx;
+        overrideFx.cell = InteractionCell_t::Allow;
+        overrideFx.firstId = "Fungus";
+        effect.effect = overrideFx;
+        mineWaiver.effects.push_back(effect);
+    }
+
+    Tile& rRoadTile = *game.fixtures.state.GetWorldMap().GetTile(10, 10);
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rRoadTile, "Fungus");
+    Unit& noTechRoad = game.MakeFormer(10, 10, &home);
+    CHECK_FALSE(game.StartTerraform(noTechRoad, "Road"));
+    Unit& empRoad = game.MakeFormer(10, 10, &home, &roadWaiver);
+    REQUIRE(game.StartTerraform(empRoad, "Road"));
+    game.FinishTerraform(empRoad);
+    CHECK(rRoadTile.HasImprovement("Road"));
+    CHECK(rRoadTile.HasFeature("Fungus"));
+
+    Tile& rMineTile = *game.fixtures.state.GetWorldMap().GetTile(11, 11);
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rMineTile, "Fungus");
+    Unit& noTechMine = game.MakeFormer(11, 11, &home);
+    CHECK_FALSE(game.StartTerraform(noTechMine, "Mine"));
+    Unit& psiMine = game.MakeFormer(11, 11, &home, &mineWaiver);
+    REQUIRE(game.StartTerraform(psiMine, "Mine"));
+    game.FinishTerraform(psiMine);
+    CHECK(rMineTile.HasImprovement("Mine"));
+    CHECK(rMineTile.HasFeature("Fungus"));
 }
 
 TEST_CASE("A coexistence override lets Farm share a rocky tile", "[unit][terraform]")

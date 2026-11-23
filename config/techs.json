@@ -768,6 +768,24 @@
     "prerequisites": [
       "secrets_of_the_human_brain",
       "centauri_ecology"
+    ],
+    "effects": [
+      {
+        "type": "CoexistenceOverride",
+        "scope": "FactionUnits",
+        "parameters": {
+          "cell": "allow",
+          "occupants": ["Fungus", "Road"]
+        }
+      },
+      {
+        "type": "CoexistenceOverride",
+        "scope": "FactionUnits",
+        "parameters": {
+          "cell": "allow",
+          "occupants": ["Fungus", "MagTube"]
+        }
+      }
     ]
   },
   {
@@ -855,6 +873,14 @@
           "amount": 1,
           "op": "Add",
           "selector": { "kind": "HasImprovement", "improvement": "Fungus" }
+        }
+      },
+      {
+        "type": "CoexistenceOverride",
+        "scope": "FactionUnits",
+        "parameters": {
+          "cell": "allow",
+          "occupants": ["Fungus"]
         }
       }
     ]

@@ -135,6 +135,7 @@ TEST_CASE("MoveCostRules takes max cost or min override", "[move-cost]")
 
     Tile& tube = fixture.At(8, 10);
     tube.AddTerrainFeature(fixture.improvements.Get("Fungus"));
+    tube.AddImprovement(fixture.improvements.Get("Road"));
     tube.AddImprovement(fixture.improvements.Get("MagTube"));
     CHECK(costs.EntryTerms(tube).costFragments == 0);
 
