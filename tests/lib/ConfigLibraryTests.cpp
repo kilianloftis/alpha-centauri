@@ -306,6 +306,37 @@ TEST_CASE("ConfigReader::Formula leaves the result's range to the evaluation", "
     CHECK_NOTHROW(reader.Formula("share", {"treasury", "population"}));
 }
 
+TEST_CASE("ConfigReader::Formula loads a .lua path exporting the field key", "[lib][config][lua]")
+{
+    const actest::TempConfigFile script("ac_formula_path.lua", R"lua(
+function share_formula()
+    return treasury / population
+end
+return { share = "share_formula()" }
+)lua");
+    const nlohmann::json j = {{"share", script.Path()}};
+    const ConfigReader reader(j, "test");
+
+    const Formula_t formula = reader.Formula("share", {"treasury", "population"});
+    CHECK(formula.expression == "share_formula()");
+    CHECK(formula.scriptPath == script.Path());
+
+    LuaRuntime lua;
+    CHECK(lua.EvalDouble(formula, {{"treasury", 100.0}, {"population", 4.0}}) == Catch::Approx(25.0));
+}
+
+TEST_CASE("ConfigReader::Formula rejects a .lua path missing the field key", "[lib][config][lua]")
+{
+    const actest::TempConfigFile script("ac_formula_path_miss.lua", R"lua(
+return { other = "1" }
+)lua");
+    const nlohmann::json j = {{"share", script.Path()}};
+    const ConfigReader reader(j, "test");
+
+    CHECK_THROWS_WITH(reader.Formula("share", {"treasury", "population"}),
+                      Catch::Matchers::ContainsSubstring("must set share"));
+}
+
 TEST_CASE("A script formula is checked against its variables at load", "[lib][config][lua]")
 {
     // The misspelling sits in a function the expression calls, where only running it shows it.

@@ -48,7 +48,7 @@ std::vector<T> LoadFile(const std::string& filePath, const char* noun, ParseFn p
         {
             throw std::runtime_error(context + " must be an object");
         }
-        configs.push_back(parseEntry(ConfigReader(rEntryJson, context)));
+        configs.push_back(parseEntry(ConfigReader(rEntryJson, context, filePath)));
     }
 
     std::cout << "Loaded " << configs.size() << " " << noun << " configurations\n";
@@ -69,7 +69,7 @@ T LoadObjectFile(const std::string& filePath, const char* noun, ParseFn parseObj
     {
         throw std::runtime_error(context + " must be a JSON object");
     }
-    return parseObject(ConfigReader(configJson, context));
+    return parseObject(ConfigReader(configJson, context, filePath));
 }
 
 // LoadFile, or for a directory every *.json in it, sorted by name and concatenated.

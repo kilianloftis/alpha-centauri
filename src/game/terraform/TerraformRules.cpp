@@ -7,6 +7,8 @@
 #include "game/GameState.h"
 #include "game/diplomacy/DiplomacyConfig.h"
 #include "game/diplomacy/DiplomacyLedger.h"
+#include "game/diplomacy/DiplomaticStatus.h"
+#include "game/effects/ActiveEffect.h"
 #include "game/effects/CoexistenceResolve.h"
 #include "game/effects/EffectEnums.h"
 #include "game/effects/TileEffectsContext.h"
@@ -14,12 +16,14 @@
 #include "game/research/ResearchManager.h"
 #include "game/base/BaseManager.h"
 #include "game/base/BaseTypes.h"
+#include "game/map/ImprovementIds.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/MapUtils.h"
 #include "game/map/OccupantCoexistence.h"
 #include "game/map/TerrainOperationRegistry.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/population/PopulationManager.h"
 #include "game/terraform/ElevationRules.h"
 #include "game/terraform/FormerEnergyCostCalculator.h"
 #include "game/effects/TriggeredEffectDispatch.h"
@@ -27,6 +31,7 @@
 #include "game/units/UnitDomain.h"
 
 #include <algorithm>
+#include <limits>
 #include <optional>
 #include <ranges>
 #include <span>
@@ -140,6 +145,86 @@ std::optional<TerraformProject_t> FindTerraformProject(const std::string& rId,
     return std::nullopt;
 }
 
+namespace
+{
+
+const BaseManager* NearestEnemyBase_(const Tile& rTile, FactionId_t factionId)
+{
+    const GameState& rGame = CurrentGameState();
+    const int mapWidth = rGame.GetWorldMap().GetWidth();
+    const BaseManager* pNearest = nullptr;
+    int nearestDist = std::numeric_limits<int>::max();
+
+    for (const Faction& rFaction : rGame.Factions())
+    {
+        if (rFaction.GetFactionId() == factionId)
+        {
+            continue;
+        }
+        for (const BaseManager& rBase : rFaction.Bases())
+        {
+            const int dist = ChebyshevDistance(rTile, rBase.GetTile(), mapWidth);
+            if (dist < nearestDist)
+            {
+                nearestDist = dist;
+                pNearest = &rBase;
+            }
+        }
+    }
+    return pNearest;
+}
+
+void FillEnemyScaleInputs_(FormerEnergyCostInputs_t& rInputs, const Tile& rTile,
+                           FactionId_t factionId)
+{
+    const Faction& rFaction = CurrentGameState().RequireFaction(factionId);
+    const BaseManager* pOwn = rFaction.FindNearestBase(rTile);
+    if (!pOwn)
+    {
+        return;
+    }
+    const BaseManager* pEnemy = NearestEnemyBase_(rTile, factionId);
+    if (!pEnemy)
+    {
+        return;
+    }
+    const DiplomaticStatus_t status = CurrentGameState().GetDiplomacyLedger().GetStatus(
+        factionId, pEnemy->GetFaction().GetFactionId());
+    if (status == DiplomaticStatus_t::Pact)
+    {
+        return;
+    }
+
+    const int mapWidth = CurrentGameState().GetWorldMap().GetWidth();
+    rInputs.ownPop = pOwn->GetPopulation().GetSize();
+    rInputs.enemyPop = pEnemy->GetPopulation().GetSize();
+    rInputs.ownRange = ChebyshevDistance(rTile, pOwn->GetTile(), mapWidth);
+    rInputs.enemyRange = ChebyshevDistance(rTile, pEnemy->GetTile(), mapWidth);
+}
+
+FormerEnergyCostInputs_t RaiseLowerEnergyInputs_(const Unit& rUnit)
+{
+    const Tile& rTile = rUnit.GetTile();
+    const FactionId_t factionId = rUnit.GetFaction().GetFactionId();
+    FormerEnergyCostInputs_t inputs;
+    inputs.elevBand = RaiseLowerElevBand(rTile);
+    inputs.bFungus = rTile.HasFeature(ImprovementIds::k_Fungus);
+    inputs.bAtSea = rTile.IsWater();
+    inputs.seaCostScale = 1.0;
+    if (rTile.IsWater())
+    {
+        // SeedFor (1); terraform_cost.lua multiplies by sea_cost_seed. Doc Air MaxClamp 0.5.
+        inputs.seaCostScale = ResolveFactionStat(
+            rUnit.GetFaction().GetActiveEffects(), StatId_t::SeaRaiseLowerCostScale,
+            SeedFor(StatId_t::SeaRaiseLowerCostScale), nullptr);
+    }
+    inputs.nearestBaseDistance = NearestOwnedBaseDistance(rTile, factionId);
+    FillEnemyScaleInputs_(inputs, rTile, factionId);
+    return inputs;
+}
+
+} // namespace
+
 int TerraformEnergyCost(const Unit& rUnit, const TerraformProject_t& rProject)
 {
     const FormerEnergyCost_t& rCost = rProject.project.energyCost;
@@ -147,10 +232,8 @@ int TerraformEnergyCost(const Unit& rUnit, const TerraformProject_t& rProject)
     {
         return rCost.flat;
     }
-    const Tile& rTile = rUnit.GetTile();
     return CurrentGameState().GetGameData().formerEnergyCostCalculator->Cost(
-        rCost, RaiseLowerElevBand(rTile),
-        NearestOwnedBaseDistance(rTile, rUnit.GetFaction().GetFactionId()));
+        rCost, RaiseLowerEnergyInputs_(rUnit));
 }
 
 bool CanStartTerraformProject(const Unit& rUnit, const std::string& projectId)

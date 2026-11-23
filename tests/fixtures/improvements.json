@@ -178,7 +178,9 @@
     "domain": "land",
     "excludes": [
       "Fungus",
-      "Rocky"
+      "Rocky",
+      "Condenser",
+      "Mirror"
     ],
     "suppress_yield_sources": [
       "@landform"
@@ -296,6 +298,54 @@
     }
   },
   {
+    "id": "MiningPlatform",
+    "name": "Mining Platform",
+    "turns_required": 8,
+    "tags": [
+      "sea_terraform"
+    ],
+    "domain": "sea",
+    "excludes": [
+      "Ocean",
+      "TidalHarness"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "TidalHarness",
+    "name": "Tidal Harness",
+    "turns_required": 4,
+    "tags": [
+      "sea_terraform"
+    ],
+    "domain": "sea",
+    "excludes": [
+      "Ocean",
+      "MiningPlatform"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "energy",
+          "amount": 3,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
     "id": "Mine",
     "name": "Mine",
     "turns_required": 8,
@@ -303,6 +353,14 @@
       "land_terraform"
     ],
     "domain": "land",
+    "excludes": [
+      "Forest",
+      "ThermalBorehole",
+      "SolarCollector",
+      "Condenser",
+      "Mirror",
+      "Sensor"
+    ],
     "effects": [
       {
         "type": "StatModifier",
@@ -368,7 +426,9 @@
       "Mine",
       "Forest",
       "ThermalBorehole",
-      "Mirror"
+      "Mirror",
+      "Condenser",
+      "Sensor"
     ],
     "effects": [
       {
@@ -415,6 +475,9 @@
     },
     "turns_required": 5,
     "domain": "land",
+    "excludes": [
+      "Airbase"
+    ],
     "effects": [
       {
         "type": "StatModifier",
@@ -643,6 +706,9 @@
     },
     "turns_required": 10,
     "domain": "land",
+    "excludes": [
+      "Bunker"
+    ],
     "effects": [
       {
         "type": "RuleFlag",
@@ -688,6 +754,13 @@
     "turns_required": 4,
     "domain": "land",
     "owned_by_territory": true,
+    "excludes": [
+      "Mine",
+      "SolarCollector",
+      "Condenser",
+      "Mirror",
+      "ThermalBorehole"
+    ],
     "effects": [
       {
         "type": "StatModifier",
@@ -760,7 +833,11 @@
     "owned_by_territory": true,
     "excludes": [
       "SolarCollector",
-      "ThermalBorehole"
+      "ThermalBorehole",
+      "Mine",
+      "Condenser",
+      "Sensor",
+      "Forest"
     ],
     "effects": [
       {
@@ -841,6 +918,14 @@
       "land_terraform"
     ],
     "domain": "land",
+    "excludes": [
+      "ThermalBorehole",
+      "Mine",
+      "SolarCollector",
+      "Mirror",
+      "Sensor",
+      "Forest"
+    ],
     "effects": [
       {
         "type": "StatModifier",
@@ -959,6 +1044,10 @@
       "land_terraform"
     ],
     "domain": "land",
+    "excludes": [
+      "@land_terraform",
+      "Sensor"
+    ],
     "terminates_river": true,
     "suppress_yield_sources": [
       "@landform",

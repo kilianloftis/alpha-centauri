@@ -400,6 +400,37 @@
       "effects": []
     },
     {
+      "id": "planet_plus2_policy",
+      "name": "Planet +2",
+      "category": "values",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "planet",
+            "amount": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "planet_plus3_policy",
+      "name": "Planet +3",
+      "category": "values",
+      "effects": [
+        {
+          "type": "SocialRatingModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "rating": "planet",
+            "amount": 3
+          }
+        }
+      ]
+    },
+
+    {
       "id": "none_future",
       "default": true,
       "name": "None",

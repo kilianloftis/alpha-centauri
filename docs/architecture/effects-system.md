@@ -305,6 +305,10 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
     (preview); production assembles unit ∪ base under the base subject so Industry applies.
   - **UpgradeCostScale** (`DomainFor → Faction`): Nano Factory MultiplyGeometric 0.5 on
     `FactionGlobal`; upgrade quotes resolve it with the faction pool.
+  - **SeaRaiseLowerCostScale** (`DomainFor → Faction`): SeedFor 1; `terraform_cost.lua`
+    multiplies by `sea_cost_seed` (4). Doctrine: Air Power MaxClamp 0.5 on `WorldGlobal` so
+    any discoverer halves the sea quote for everyone without stacking when several factions
+    own the tech.
   - **StartingMinerals** (`DomainFor → Base`): continuous modifiers on the new base's pool
     (SE, projects). A founding `GrantResource` may name this stat so those modifiers scale
     the grant's amount seed; the pod itself no longer carries a continuous StartingMinerals

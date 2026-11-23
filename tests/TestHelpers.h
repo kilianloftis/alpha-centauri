@@ -238,6 +238,12 @@ inline ac::Condition_t TargetTileHas(std::string featureId)
     return ac::TargetTileHas_t{std::move(featureId)};
 }
 
+inline ac::Condition_t SocialRatingCondition(ac::SocialRatingId_t rating, ac::CompareOp_t op,
+                                             int value)
+{
+    return ac::SocialRating_t{rating, op, value};
+}
+
 inline ac::Condition_t SubjectDomainCondition(ac::UnitDomain_t domain)
 {
     return ac::SubjectDomain_t{domain};

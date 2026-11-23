@@ -24,10 +24,11 @@ struct ElevationWrite_t
     int elevation = 0;
 };
 
-// Elevation band for raise/lower energy formulas: |elev| / reference_level_meters + 1.
+// Shore-relative altitude levels for raise/lower energy: |elev| / reference_level_meters.
+// docs/thinker/terranx-map.md `terraform_cost` (|altitude − shore|).
 int RaiseLowerElevBand(const Tile& rTile);
 
-// Chebyshev distance to the nearest own base, or max(width, height) when the faction has none.
+// Own-base map_range (lattice Chebyshev) clamped 1..100, or 1 when the faction has no base.
 int NearestOwnedBaseDistance(const Tile& rTile, FactionId_t factionId);
 
 // Elevation after a max-sized raise or lower, clamped to Planet's range.

@@ -1,5 +1,7 @@
 #include "lib/LuaRuntime.h"
 
+#include "lib/config/LuaConfigLoader.h"
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -122,20 +124,34 @@ sol::protected_function& LuaRuntime::LoadChunk_(const std::string& expression)
     return m_chunks.emplace(expression, chunk.get<sol::protected_function>()).first->second;
 }
 
-lua_Number LuaRuntime::EvalNumber_(const std::string& expression, const FormulaVars_t& rVars)
+void LuaRuntime::EnsureScriptLoaded_(const std::string& rScriptPath)
 {
+    if (m_loadedScripts.contains(rScriptPath))
+    {
+        return;
+    }
+    (void)LuaConfigLoader::RunScript(*this, rScriptPath, "formula");
+    m_loadedScripts.insert(rScriptPath);
+}
+
+lua_Number LuaRuntime::EvalNumber_(const Formula_t& rFormula, const FormulaVars_t& rVars)
+{
+    if (!rFormula.scriptPath.empty())
+    {
+        EnsureScriptLoaded_(rFormula.scriptPath);
+    }
     // Before the globals are set: a formula that does not compile cannot leave any behind.
-    sol::protected_function& rChunk = LoadChunk_(expression);
+    sol::protected_function& rChunk = LoadChunk_(rFormula.expression);
     // Globals, so helper functions defined by config scripts can see them. Cleared afterwards
     // so a later formula cannot read an input it forgot to set.
     const ScopedGlobals_ globals(m_lua, rVars);
-    return ResultNumber_(rChunk(), expression);
+    return ResultNumber_(rChunk(), rFormula.expression);
 }
 
 double LuaRuntime::EvalDouble(const Formula_t& rFormula, const FormulaVars_t& rVars)
 {
     RequireDeclaredVariables_(rFormula, rVars);
-    const lua_Number number = EvalNumber_(rFormula.expression, rVars);
+    const lua_Number number = EvalNumber_(rFormula, rVars);
     if (!std::isfinite(number))
     {
         throw std::runtime_error("Lua formula (\"" + rFormula.expression + "\") returned "
@@ -171,7 +187,7 @@ void LuaRuntime::CheckFormula(const Formula_t& rFormula)
     {
         vars.emplace(rName, 1.0);
     }
-    (void)EvalNumber_(rFormula.expression, vars);
+    (void)EvalNumber_(rFormula, vars);
 }
 
 } // namespace ac

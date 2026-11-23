@@ -1,11 +1,14 @@
 #include "lib/config/ConfigReader.h"
 
 #include "lib/LuaRuntime.h"
+#include "lib/config/LuaConfigLoader.h"
 
 #include <algorithm>
 #include <charconv>
 #include <cmath>
+#include <filesystem>
 #include <sstream>
+#include <string_view>
 #include <utility>
 
 namespace ac
@@ -60,16 +63,18 @@ std::string EntryName_(const nlohmann::json& rEntry, std::size_t index)
 
 } // namespace
 
-ConfigReader::ConfigReader(const nlohmann::json& rJson, std::string context)
-    : ConfigReader(rJson, std::move(context), std::string())
+ConfigReader::ConfigReader(const nlohmann::json& rJson, std::string context,
+                           std::string sourcePath)
+    : ConfigReader(rJson, std::move(context), std::string(), std::move(sourcePath))
 {
 }
 
 ConfigReader::ConfigReader(const nlohmann::json& rJson, std::string context,
-                           std::string keyPrefix)
+                           std::string keyPrefix, std::string sourcePath)
     : m_rJson(rJson)
     , m_context(std::move(context))
     , m_keyPrefix(std::move(keyPrefix))
+    , m_sourcePath(std::move(sourcePath))
 {
 }
 
@@ -148,7 +153,7 @@ ConfigReader ConfigReader::Object(const std::string& rKey) const
     {
         FailKey(rKey, "must be an object");
     }
-    return ConfigReader(rValue, m_context, m_keyPrefix + rKey + ".");
+    return ConfigReader(rValue, m_context, m_keyPrefix + rKey + ".", m_sourcePath);
 }
 
 const nlohmann::json& ConfigReader::Array(const std::string& rKey) const
@@ -183,7 +188,8 @@ std::vector<ConfigReader> ConfigReader::Objects(const std::string& rKey) const
         {
             FailKey(entryKey, "must be an object");
         }
-        entries.push_back(ConfigReader(rArray.at(i), m_context, m_keyPrefix + entryKey + "."));
+        entries.push_back(
+            ConfigReader(rArray.at(i), m_context, m_keyPrefix + entryKey + ".", m_sourcePath));
     }
     return entries;
 }
@@ -354,9 +360,41 @@ std::vector<std::string> ConfigReader::StringArray(const std::string& rKey) cons
     return values;
 }
 
+std::string ConfigReader::ResolveFormulaPath_(const std::string& rValue) const
+{
+    namespace fs = std::filesystem;
+    const fs::path path(rValue);
+    if (path.is_absolute() || m_sourcePath.empty())
+    {
+        return path.lexically_normal().string();
+    }
+    return (fs::path(m_sourcePath).parent_path() / path).lexically_normal().string();
+}
+
 Formula_t ConfigReader::Formula(const std::string& rKey, std::vector<std::string> variables) const
 {
-    Formula_t formula{NonEmptyString(rKey), std::move(variables)};
+    const std::string value = NonEmptyString(rKey);
+    constexpr std::string_view k_LuaSuffix = ".lua";
+    if (value.size() >= k_LuaSuffix.size()
+        && std::string_view(value).ends_with(k_LuaSuffix))
+    {
+        const std::string scriptPath = ResolveFormulaPath_(value);
+        try
+        {
+            LuaRuntime lua;
+            const sol::table table = LuaConfigLoader::RunScript(lua, scriptPath, "formula");
+            Formula_t formula = LuaConfigLoader::RequireFormula(
+                lua, table, rKey.c_str(), std::move(variables), scriptPath, "formula");
+            formula.scriptPath = scriptPath;
+            return formula;
+        }
+        catch (const std::runtime_error& e)
+        {
+            FailKey(rKey, e.what());
+        }
+    }
+
+    Formula_t formula{value, std::move(variables)};
     try
     {
         LuaRuntime lua;

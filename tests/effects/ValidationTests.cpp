@@ -213,6 +213,8 @@ static_assert(KindFor(StatId_t::PrototypeSurchargeScale) == StatKind_t::PureMult
 static_assert(KindFor(StatId_t::RetoolPenaltyScale) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::UpgradeCostScale) == StatKind_t::PureMultiplier);
 static_assert(DomainFor(StatId_t::UpgradeCostScale) == ResolveDomain_t::Faction);
+static_assert(KindFor(StatId_t::SeaRaiseLowerCostScale) == StatKind_t::PureMultiplier);
+static_assert(DomainFor(StatId_t::SeaRaiseLowerCostScale) == ResolveDomain_t::Faction);
 static_assert(KindFor(StatId_t::FacilityEnergyUpkeep) == StatKind_t::RawScaled);
 static_assert(KindFor(StatId_t::ProbeActionCost) == StatKind_t::RawScaled);
 static_assert(KindFor(StatId_t::ProbeActorCost) == StatKind_t::RawScaled);
@@ -293,6 +295,7 @@ static_assert(SeedFor(StatId_t::CostMultiplier) == 1.0);
 static_assert(SeedFor(StatId_t::PrototypeSurchargeScale) == 1.0);
 static_assert(SeedFor(StatId_t::RetoolPenaltyScale) == 1.0);
 static_assert(SeedFor(StatId_t::UpgradeCostScale) == 1.0);
+static_assert(SeedFor(StatId_t::SeaRaiseLowerCostScale) == 1.0);
 static_assert(SeedFor(StatId_t::RebelJoinWeight) == 0.0);
 static_assert(SeedFor(StatId_t::GiftSizeThreshold) == 1.0);
 

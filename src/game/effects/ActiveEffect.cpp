@@ -712,12 +712,26 @@ struct ConditionEvaluator_
 
     bool operator()(const SocialRating_t& rRating) const
     {
-        if (ctx.pUnit == nullptr)
+        // Unit, then tile-yield pFaction, then base — Manifold fungus Adds need Planet without a
+        // unit in context (docs/thinker/terranx-map.md Tile yields).
+        const Faction* pFaction = nullptr;
+        if (ctx.pUnit != nullptr)
+        {
+            pFaction = &ctx.pUnit->GetFaction();
+        }
+        else if (ctx.pFaction != nullptr)
+        {
+            pFaction = ctx.pFaction;
+        }
+        else if (ctx.pBase != nullptr)
+        {
+            pFaction = &ctx.pBase->GetFaction();
+        }
+        if (pFaction == nullptr)
         {
             return false;
         }
-        const auto& rSocial = ctx.pUnit->GetFaction().GetSocialEngineering();
-        const int rating = rSocial.GetSocialRating(rRating.rating);
+        const int rating = pFaction->GetSocialEngineering().GetSocialRating(rRating.rating);
         return CompareSatisfied(rating, rRating.op, rRating.value);
     }
 

@@ -258,6 +258,23 @@
     ]
   },
   {
+    "id": "doctrine_air_power",
+    "name": "Doctrine: Air Power",
+    "category": "conquer",
+    "ai_weights": { "power": 2, "tech": 0, "wealth": 0, "growth": 0 },
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "WorldGlobal",
+        "parameters": {
+          "stat": "sea_raise_lower_cost_scale",
+          "amount": 0.5,
+          "op": "MaxClamp"
+        }
+      }
+    ]
+  },
+  {
     "id": "discover_chain_parent",
     "name": "Discover Chain Parent",
     "category": "discover",

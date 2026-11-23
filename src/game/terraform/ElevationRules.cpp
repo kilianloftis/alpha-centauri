@@ -2,9 +2,9 @@
 
 #include "game/CurrentGameState.h"
 #include "game/GameState.h"
-#include "game/map/ImprovementIds.h"
+#include "game/base/BaseManager.h"
+#include "game/faction/Faction.h"
 #include "game/map/MapUtils.h"
-#include "game/map/TerritoryMap.h"
 #include "game/map/WorldMap.h"
 #include "game/movement/MovementRules.h"
 #include "game/units/Unit.h"
@@ -29,31 +29,20 @@ int RaiseLowerElevBand(const Tile& rTile)
     {
         throw std::logic_error("RaiseLowerElevBand: reference_level_meters must be > 0");
     }
-    return std::abs(rTile.GetElevation()) / rRules.referenceLevelMeters + 1;
+    return std::abs(rTile.GetElevation()) / rRules.referenceLevelMeters;
 }
 
 int NearestOwnedBaseDistance(const Tile& rTile, FactionId_t factionId)
 {
-    const WorldMap& rWorldMap = CurrentGameState().GetWorldMap();
-    int nearest = std::numeric_limits<int>::max();
-    const int mapWidth = rWorldMap.GetWidth();
-
-    for (const auto& pTile : rWorldMap.GetTiles())
+    const Faction& rFaction = CurrentGameState().RequireFaction(factionId);
+    const BaseManager* pBase = rFaction.FindNearestBase(rTile);
+    if (!pBase)
     {
-        if (!pTile || !pTile->HasImprovement(ImprovementIds::k_Base))
-        {
-            continue;
-        }
-        if (rWorldMap.GetTerritory().GetOwner(*pTile) == factionId)
-        {
-            nearest = std::min(nearest, ChebyshevDistance(rTile, *pTile, mapWidth));
-        }
+        return 1;
     }
-    if (nearest == std::numeric_limits<int>::max())
-    {
-        return std::max(rWorldMap.GetWidth(), rWorldMap.GetHeight());
-    }
-    return nearest;
+    const int mapWidth = CurrentGameState().GetWorldMap().GetWidth();
+    const int dist = ChebyshevDistance(rTile, pBase->GetTile(), mapWidth);
+    return std::clamp(dist, 1, 100);
 }
 
 int FormerElevationAfterRaiseMaxLevel(const Tile& rTile, const MapRulesConfig_t& rRules)

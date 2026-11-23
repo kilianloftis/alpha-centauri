@@ -5,6 +5,7 @@
 #include <sol/sol.hpp>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace ac
 {
@@ -37,12 +38,15 @@ public:
 private:
     // Compiled "return <expression>", compiling it on first use. Throws if it does not compile.
     sol::protected_function& LoadChunk_(const std::string& expression);
-    lua_Number EvalNumber_(const std::string& expression, const FormulaVars_t& rVars);
+    void EnsureScriptLoaded_(const std::string& rScriptPath);
+    lua_Number EvalNumber_(const Formula_t& rFormula, const FormulaVars_t& rVars);
 
     sol::state m_lua;
     // One compiled chunk per formula, since hot formulas run many times a turn. After m_lua, so
     // the chunks die before the state they reference.
     std::unordered_map<std::string, sol::protected_function> m_chunks;
+    // Scripts already RunScript'd into m_lua (ConfigReader Formula paths).
+    std::unordered_set<std::string> m_loadedScripts;
 };
 
 } // namespace ac

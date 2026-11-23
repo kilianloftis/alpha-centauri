@@ -8,6 +8,9 @@
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
+#include "game/social-engineering/SocialEngineeringManager.h"
+#include "game/social-engineering/SocialPolicyConfig.h"
+#include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/terraform/TerraformSpreadMutations.h"
 #include "game/terraform/TerraformSpreadRules.h"
 #include "game/effects/ActiveEffect.h"
@@ -382,17 +385,15 @@ TEST_CASE("ResolveTileYield: each resource resolves from the matching StatId_t (
     actest::WorldFixture world;
     Tile& tile = world.At(8, 8);
 
-    tile.SetElevation(1000); // one elevation band
-    // River excludes Mine, so a river here would remove the mine.
-    world.ctx.AddOccupantWithEffects(tile, "Farm"); // +1 nutrients
-    world.ctx.AddOccupantWithEffects(tile, "Mine"); // +2 minerals (fixture Mine)
-    // SolarCollector excludes Mine, so adding it would remove the mine.
-    world.ctx.AddOccupantWithEffects(tile, "Mirror");
+    // Clear-mask peers (Mine/Mirror/Farm) cannot share a tile; use coexisting terrain rows.
+    tile.SetMoisture(Moisture_t::Moist);       // +1 nutrients
+    tile.SetRockiness(Rockiness_t::Rolling); // +1 minerals
+    tile.SetHasRiver(true);                  // +1 energy
 
     const TileResources_t yield = world.ctx.ResolveTileYield(tile).effective;
     CHECK(yield.nutrients == 1);
-    CHECK(yield.minerals == 2);
-    CHECK(yield.energy == 2); // mirror: shore + 1 step at 1000 m
+    CHECK(yield.minerals == 1);
+    CHECK(yield.energy == 1);
 }
 
 TEST_CASE("ResolveTileYield: terrain classification contributes through the same registry ids",
@@ -904,6 +905,52 @@ TEST_CASE("CanBuildImprovement: sea terraform excludes Ocean but allows OceanShe
     CHECK_FALSE(CanBuildImprovement(ocean, *pKelp, {}, {}));
 }
 
+TEST_CASE("Kelp Farm shares a shelf with Mining Platform or Tidal Harness",
+          "[effects][tile][excludes]")
+{
+    actest::WorldFixture world;
+    Tile& shelf = world.At(8, 8);
+    shelf.SetElevation(-100);
+    const ImprovementConfig_t& rKelp = world.improvements.Get("KelpFarm");
+    const ImprovementConfig_t& rPlatform = world.improvements.Get("MiningPlatform");
+    const ImprovementConfig_t& rHarness = world.improvements.Get("TidalHarness");
+
+    world.ctx.AddOccupantWithEffects(shelf, "KelpFarm");
+    CHECK(CanBuildImprovement(shelf, rPlatform, {}, {}));
+    CHECK(CanBuildImprovement(shelf, rHarness, {}, {}));
+
+    world.ctx.AddOccupantWithEffects(shelf, "MiningPlatform");
+    CHECK_FALSE(CanBuildImprovement(shelf, rHarness, {}, {}));
+    CHECK(CanBuildImprovement(shelf, rKelp, {}, {}));
+}
+
+TEST_CASE("SMAC clear-mask excludes refuse the listed pairs", "[effects][tile][excludes]")
+{
+    // docs/thinker/terranx-map.md Terraform[] clear masks.
+    actest::WorldFixture world;
+    Tile& tile = world.At(8, 8);
+
+    const auto refuse = [&](const char* existing, const char* candidate)
+    {
+        world.ctx.AddOccupantWithEffects(tile, existing);
+        CHECK_FALSE(CanBuildImprovement(tile, world.improvements.Get(candidate), {}, {}));
+        world.ctx.RemoveOccupantWithEffects(tile, existing);
+    };
+
+    refuse("Mine", "Condenser");
+    refuse("Mine", "Mirror");
+    refuse("Mine", "Sensor");
+    refuse("SolarCollector", "Condenser");
+    refuse("SolarCollector", "Sensor");
+    refuse("Condenser", "Mirror");
+    refuse("Sensor", "Condenser");
+    refuse("Sensor", "Mirror");
+    refuse("Sensor", "ThermalBorehole");
+    refuse("Forest", "Condenser");
+    refuse("Forest", "Mirror");
+    refuse("Bunker", "Airbase");
+}
+
 TEST_CASE("Per-effect radius: an effect's own radius grants reach beyond the host tile",
           "[effects][tile][aura][radius]")
 {
@@ -1091,6 +1138,85 @@ TEST_CASE("ResolveTileYield floors each resource at 0",
     }};
 
     CHECK(fixture.ctx.ResolveTileYield(tile, false, baseEffects).effective.nutrients == 0);
+}
+
+TEST_CASE("Gaian-style FUNGNUTRIENT adds one nutrient on fungus",
+          "[effects][tile][yield][fungus]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(8, 2);
+    Tile& tile = fixture.At(8, 8);
+    fixture.ctx.AddOccupantWithEffects(tile, "Fungus");
+
+    actest::EffectPool pool;
+    const BaseEffects_t baseEffects{base, {
+        actest::Active(pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
+                                    actest::ImprovementSelector("Fungus")), "fung_nutrient"),
+    }};
+    CHECK(fixture.ctx.ResolveTileYield(tile, false, baseEffects).effective.nutrients == 1);
+}
+
+TEST_CASE("Manifold Harmonics fungus Adds follow Planet thresholds",
+          "[effects][tile][yield][fungus]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 8, 2);
+    Tile& tile = fixture.At(8, 8);
+    fixture.ctx.AddOccupantWithEffects(tile, "Fungus");
+
+    actest::EffectPool pool;
+    const auto manifoldEffects = [&]() -> BaseEffects_t
+    {
+        return BaseEffects_t{base, {
+            actest::Active(pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add,
+                                        EffectScope_t::ThisBase, actest::ImprovementSelector("Fungus"),
+                                        actest::SocialRatingCondition(SocialRatingId_t::Planet,
+                                                                      CompareOp_t::Ge, 1)),
+                           "mh_nut"),
+            actest::Active(pool.StatMod(StatId_t::Minerals, 1.0, ModifierOp_t::Add,
+                                        EffectScope_t::ThisBase, actest::ImprovementSelector("Fungus"),
+                                        actest::SocialRatingCondition(SocialRatingId_t::Planet,
+                                                                      CompareOp_t::Ge, 2)),
+                           "mh_min"),
+            actest::Active(pool.StatMod(StatId_t::Energy, 1.0, ModifierOp_t::Add,
+                                        EffectScope_t::ThisBase, actest::ImprovementSelector("Fungus"),
+                                        actest::SocialRatingCondition(SocialRatingId_t::Planet,
+                                                                      CompareOp_t::Ge, 0)),
+                           "mh_en0"),
+            actest::Active(pool.StatMod(StatId_t::Energy, 1.0, ModifierOp_t::Add,
+                                        EffectScope_t::ThisBase, actest::ImprovementSelector("Fungus"),
+                                        actest::SocialRatingCondition(SocialRatingId_t::Planet,
+                                                                      CompareOp_t::Ge, 3)),
+                           "mh_en3"),
+        }};
+    };
+
+    REQUIRE(faction.GetSocialEngineering().GetSocialRating(SocialRatingId_t::Planet) == 0);
+    {
+        const TileResources_t y = fixture.ctx.ResolveTileYield(tile, false, manifoldEffects()).effective;
+        CHECK(y.nutrients == 0);
+        CHECK(y.minerals == 0);
+        CHECK(y.energy == 1);
+    }
+
+    faction.GetSocialEngineering().SetActivePolicy(fixture.socialPolicies().Get("planet_plus2_policy"));
+    REQUIRE(faction.GetSocialEngineering().GetSocialRating(SocialRatingId_t::Planet) == 2);
+    {
+        const TileResources_t y = fixture.ctx.ResolveTileYield(tile, false, manifoldEffects()).effective;
+        CHECK(y.nutrients == 1);
+        CHECK(y.minerals == 1);
+        CHECK(y.energy == 1);
+    }
+
+    faction.GetSocialEngineering().SetActivePolicy(fixture.socialPolicies().Get("planet_plus3_policy"));
+    REQUIRE(faction.GetSocialEngineering().GetSocialRating(SocialRatingId_t::Planet) == 3);
+    {
+        const TileResources_t y = fixture.ctx.ResolveTileYield(tile, false, manifoldEffects()).effective;
+        CHECK(y.nutrients == 1);
+        CHECK(y.minerals == 1);
+        CHECK(y.energy == 2);
+    }
 }
 
 TEST_CASE("Fungus yield stacks Planet clamp contribution with tech fungus Adds",

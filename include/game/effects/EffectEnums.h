@@ -138,6 +138,10 @@ enum class StatId_t
     // Scales unit design upgrade energy rows (PureMultiplier, Faction, seed 1.0). Nano Factory
     // emits MultiplyGeometric 0.5 on FactionGlobal.
     UpgradeCostScale,
+    // Sea raise/lower energy scale (PureMultiplier, Faction, SeedFor 1). terraform_cost.lua
+    // multiplies by sea_cost_seed (4); Doctrine: Air Power MaxClamp 0.5 WorldGlobal → ×2 once
+    // anyone owns it (clamps do not stack when several factions have the tech).
+    SeaRaiseLowerCostScale,
     // Facility energy upkeep (RawScaled from BuildingConfig_t::upkeep), per building type with an
     // optional buildingFilter.
     FacilityEnergyUpkeep,
@@ -409,6 +413,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::PrototypeSurchargeScale:
         case StatId_t::RetoolPenaltyScale:
         case StatId_t::UpgradeCostScale:
+        case StatId_t::SeaRaiseLowerCostScale:
         case StatId_t::ProbeFailureScale:
         case StatId_t::ProbeSuccessScale:
         case StatId_t::PlagueDamageScale:
@@ -534,7 +539,8 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::GiftGivenValue:
         case StatId_t::GiftReceivedValue:
         case StatId_t::GiftSizeThreshold:
-        case StatId_t::UpgradeCostScale: return ResolveDomain_t::Faction;
+        case StatId_t::UpgradeCostScale:
+        case StatId_t::SeaRaiseLowerCostScale: return ResolveDomain_t::Faction;
 
         case StatId_t::ConventionalAttack:
         case StatId_t::PsiAttack:
@@ -651,6 +657,7 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "prototype_surcharge_scale") return StatId_t::PrototypeSurchargeScale;
     if (rStat == "retool_penalty_scale")     return StatId_t::RetoolPenaltyScale;
     if (rStat == "upgrade_cost_scale")       return StatId_t::UpgradeCostScale;
+    if (rStat == "sea_raise_lower_cost_scale") return StatId_t::SeaRaiseLowerCostScale;
     if (rStat == "facility_energy_upkeep")  return StatId_t::FacilityEnergyUpkeep;
     if (rStat == "probe_action_cost")       return StatId_t::ProbeActionCost;
     if (rStat == "probe_actor_cost")        return StatId_t::ProbeActorCost;

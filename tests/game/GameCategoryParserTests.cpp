@@ -34,7 +34,7 @@ TEST_CASE("TechConfigParser parses game categories", "[game][category][parser]")
     const std::vector<TechConfig_t> configs =
         TechConfigParser::ParseConfig(FixturePath("techs.json"));
 
-    REQUIRE(configs.size() == 19);
+    REQUIRE(configs.size() == 20);
     CHECK(configs[0].category == GameCategory_t::Build);
     CHECK(configs[1].category == GameCategory_t::Grow);
     CHECK(configs[2].category == GameCategory_t::Discover);
@@ -76,8 +76,18 @@ TEST_CASE("TechConfigParser parses game categories", "[game][category][parser]")
     CHECK(configs[16].id == "secrets_of_the_human_brain");
     CHECK(configs[16].category == GameCategory_t::Discover);
     REQUIRE(configs[16].onDiscoverEffects.size() == 1);
-    CHECK(configs[17].id == "discover_chain_parent");
-    CHECK(configs[18].id == "discover_chain_child");
+    CHECK(configs[17].id == "doctrine_air_power");
+    CHECK(configs[17].category == GameCategory_t::Conquer);
+    REQUIRE(configs[17].effects.size() == 1);
+    {
+        const auto* pStat = std::get_if<StatModifierEffect_t>(&configs[17].effects[0].effect);
+        REQUIRE(pStat != nullptr);
+        CHECK(pStat->stat == StatId_t::SeaRaiseLowerCostScale);
+        CHECK(pStat->amount == 0.5);
+        CHECK(pStat->op == ModifierOp_t::MaxClamp);
+    }
+    CHECK(configs[18].id == "discover_chain_parent");
+    CHECK(configs[19].id == "discover_chain_child");
 }
 
 TEST_CASE("TechConfigParser reads optional icon and rejects unknown keys", "[game][tech][parser][icon]")

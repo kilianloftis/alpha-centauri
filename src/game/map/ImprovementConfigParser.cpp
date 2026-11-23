@@ -276,10 +276,13 @@ FormerEnergyCost_t ParseFormerEnergyCost(const ConfigReader& rReader)
     }
     if (rValue.is_string())
     {
-        cost.formula = rReader.Formula("energy_cost", {"elev_band", "nearest_base_distance"});
+        cost.formula = rReader.Formula(
+            "energy_cost", {"elev_band", "fungus", "at_sea", "sea_cost_scale",
+                            "nearest_base_distance", "own_pop", "enemy_pop", "own_range",
+                            "enemy_range"});
         return cost;
     }
-    rReader.FailKey("energy_cost", "must be a non-negative integer or a formula string");
+    rReader.FailKey("energy_cost", "must be a non-negative integer or a formula / .lua path");
 }
 
 bool IsBuildable(const ImprovementConfig_t& rConfig)

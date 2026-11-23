@@ -72,7 +72,8 @@ TEST_CASE("An intrinsic terrain feature excludes a candidate that does not exclu
     rTile.SetElevation(500);
 
     const ImprovementConfig_t& rMine = world.improvements.Get("Mine");
-    REQUIRE(rMine.excludes.empty());
+    // River excludes Mine; Mine's clear-mask list does not name River (asymmetric).
+    REQUIRE(std::ranges::find(rMine.excludes, "River") == rMine.excludes.end());
     CHECK(CanBuildImprovement(rTile, rMine, {}, {}));
 
     // River is a TerrainFeature_t, mirrored into the tile's terrain-feature configs rather

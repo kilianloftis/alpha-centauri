@@ -19,7 +19,9 @@ namespace ac
 class ConfigReader
 {
 public:
-    ConfigReader(const nlohmann::json& rJson, std::string context);
+    // sourcePath is the JSON file this object came from (empty for ad-hoc readers). Relative
+    // `.lua` Formula paths resolve against its directory.
+    ConfigReader(const nlohmann::json& rJson, std::string context, std::string sourcePath = {});
 
     // A number, a fraction string ("1/3") or a decimal string ("0.5"). Otherwise throws a
     // message starting "must be", for a caller to prefix with what it was reading.
@@ -64,8 +66,9 @@ public:
     std::string StringOr(const std::string& rKey, const std::string& rFallback) const;
     // Absent is an empty list.
     std::vector<std::string> StringArray(const std::string& rKey) const;
-    // A Lua expression reading only rVariables, checked by LuaRuntime::CheckFormula. It can
-    // use Lua's libraries but nothing a config script defines.
+    // A Lua expression reading only rVariables, or a `.lua` script path whose returned table
+    // exports rKey as that expression. Checked at load (inline via CheckFormula; scripts via
+    // LuaConfigLoader so helpers defined in the file are visible).
     Formula_t Formula(const std::string& rKey, std::vector<std::string> variables) const;
 
     // Case-insensitive by enumerator name; rWhat names the enum in the error.
@@ -84,13 +87,16 @@ public:
     }
 
 private:
-    ConfigReader(const nlohmann::json& rJson, std::string context, std::string keyPrefix);
+    ConfigReader(const nlohmann::json& rJson, std::string context, std::string keyPrefix,
+                 std::string sourcePath);
 
     std::string Quoted_(const std::string& rKey) const;
+    std::string ResolveFormulaPath_(const std::string& rValue) const;
 
     const nlohmann::json& m_rJson;
     std::string m_context;
     std::string m_keyPrefix;
+    std::string m_sourcePath;
 };
 
 } // namespace ac

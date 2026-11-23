@@ -767,6 +767,8 @@ it behind a switch turns the line into a TODO entry.
   `repair_friendly` defaults to 0.
 - **Brood Pit counts in `breed_mod` for native base full heal** ("Unit healing
   (`repair_phase`)"): Thinker adds it (`Fix:`); the binary does not.
+- **Raise/lower energy ×2 on non-fungus tiles** ("`terraform_cost`"): Thinker's rewrite
+  multiplies non-fungus by 2 where the binary does not; we ship the binary formula.
 
 ## Variant files
 

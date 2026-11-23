@@ -191,7 +191,9 @@
       "SoilEnricher",
       "ThermalBorehole",
       "Fungus",
-      "Rocky"
+      "Rocky",
+      "Condenser",
+      "Mirror"
     ],
     "suppress_yield_sources": [
       "@landform"
@@ -275,7 +277,10 @@
     "excludes": [
       "Forest",
       "ThermalBorehole",
-      "SolarCollector"
+      "SolarCollector",
+      "Condenser",
+      "Mirror",
+      "Sensor"
     ],
     "effects": [
       {
@@ -372,7 +377,9 @@
       "Mine",
       "Forest",
       "ThermalBorehole",
-      "Mirror"
+      "Mirror",
+      "Condenser",
+      "Sensor"
     ],
     "effects": [
       {
@@ -494,6 +501,9 @@
     },
     "turns_required": 5,
     "domain": "land",
+    "excludes": [
+      "Airbase"
+    ],
     "effects": [
       {
         "type": "StatModifier",
@@ -573,6 +583,9 @@
     },
     "turns_required": 10,
     "domain": "land",
+    "excludes": [
+      "Bunker"
+    ],
     "effects": [
       {
         "type": "RuleFlag",
@@ -634,6 +647,13 @@
     "turns_required": 4,
     "domain": "land",
     "owned_by_territory": true,
+    "excludes": [
+      "Mine",
+      "SolarCollector",
+      "Condenser",
+      "Mirror",
+      "ThermalBorehole"
+    ],
     "effects": [
       {
         "type": "StatModifier",
@@ -718,7 +738,11 @@
     "owned_by_territory": true,
     "excludes": [
       "SolarCollector",
-      "ThermalBorehole"
+      "ThermalBorehole",
+      "Mine",
+      "Condenser",
+      "Sensor",
+      "Forest"
     ],
     "effects": [
       {
@@ -809,7 +833,12 @@
     ],
     "domain": "land",
     "excludes": [
-      "ThermalBorehole"
+      "ThermalBorehole",
+      "Mine",
+      "SolarCollector",
+      "Mirror",
+      "Sensor",
+      "Forest"
     ],
     "effects": [
       {
@@ -877,7 +906,8 @@
     ],
     "domain": "land",
     "excludes": [
-      "@land_terraform"
+      "@land_terraform",
+      "Sensor"
     ],
     "terminates_river": true,
     "suppress_yield_sources": [
@@ -945,10 +975,7 @@
     ],
     "domain": "sea",
     "excludes": [
-      "Ocean",
-      "MiningPlatform",
-      "TidalHarness",
-      "ThermalBorehole"
+      "Ocean"
     ],
     "effects": [
       {
@@ -990,9 +1017,7 @@
     "domain": "sea",
     "excludes": [
       "Ocean",
-      "KelpFarm",
-      "TidalHarness",
-      "ThermalBorehole"
+      "TidalHarness"
     ],
     "effects": [
       {
@@ -1040,9 +1065,7 @@
     "domain": "sea",
     "excludes": [
       "Ocean",
-      "KelpFarm",
-      "MiningPlatform",
-      "ThermalBorehole"
+      "MiningPlatform"
     ],
     "effects": [
       {

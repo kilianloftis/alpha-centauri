@@ -468,6 +468,17 @@
     "prerequisites": [
       "synthetic_fossil_fuels",
       "doctrine_flexibility"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "WorldGlobal",
+        "parameters": {
+          "stat": "sea_raise_lower_cost_scale",
+          "amount": 0.5,
+          "op": "MaxClamp"
+        }
+      }
     ]
   },
   {

@@ -1191,6 +1191,10 @@ Monolith, then fungus (shelf altitude or above), then sea or land. `#RESOURCEINF
   landmarks do not count. `tech_fungus_*` sum the `#TECHNOLOGY` fungus flags (Ecology and
   CentPsi nutrients; TempMec, CentMed and AlphCen energy; Thresh, Matter and CentGen minerals)
   and the faction's `FUNGNUTRIENT` / `FUNGMINERALS` / `FUNGENERGY` (Gaians: nutrient +1).
+  Manifold Harmonics (SecretProjects owner check at `0x9A6598` in `crop_yield` /
+  `mine_yield` / `energy_yield`): nutrients +1 when Planet > 0; minerals +1 when Planet > 1;
+  energy +1 when Planet ≥ 0 and +1 more when Planet ≥ 3 (Planet < 0 → 0/0/0; 0 → 0/0/1;
+  1 → 1/0/1; 2 → 1/1/1; ≥3 → 1/1/2).
 
 ### Forest and kelp growth (`alien_fauna` `0x522180`, top)
 

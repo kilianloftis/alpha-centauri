@@ -33,7 +33,9 @@ enum class OccupantPlacement_t
     Improvement,
 };
 
-// Former energy price: a flat int, or a Lua formula (elev_band, nearest_base_distance).
+// Former energy price: a flat int, or a Lua formula / `.lua` script path (elev_band, fungus,
+// at_sea, sea_cost_scale, nearest_base_distance, own_pop, enemy_pop, own_range, enemy_range —
+// docs/thinker/terranx-map.md `terraform_cost`).
 struct FormerEnergyCost_t
 {
     int flat = 0;
@@ -49,7 +51,7 @@ struct FormerProject_t
     RequiredTechs_t requiredTechs;
 };
 
-// Parses energy_cost as a non-negative int or a formula string. Absent → flat 0.
+// Parses energy_cost as a non-negative int or a Formula (expression or `.lua` path). Absent → 0.
 FormerEnergyCost_t ParseFormerEnergyCost(const ConfigReader& rReader);
 
 // WorldEvents growth onto a Chebyshev-1 neighbour (Forest, KelpFarm). Absent = does not spread.

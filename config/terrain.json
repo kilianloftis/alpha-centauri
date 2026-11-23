@@ -1048,7 +1048,7 @@
         ]
       },
       "turns_required": 12,
-      "energy_cost": "elev_band * 8 + nearest_base_distance * 2",
+      "energy_cost": "terraform_cost.lua",
       "former_domain": "Any",
       "on_complete_effects": [
         {
@@ -1070,7 +1070,7 @@
         ]
       },
       "turns_required": 12,
-      "energy_cost": "elev_band * 8 + nearest_base_distance * 2",
+      "energy_cost": "terraform_cost.lua",
       "former_domain": "Any",
       "on_complete_effects": [
         {

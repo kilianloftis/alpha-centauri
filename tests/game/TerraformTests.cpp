@@ -16,6 +16,7 @@
 #include "game/PlayerInteraction.h"
 #include "game/PlayerInteractionQueue.h"
 #include "game/terraform/ElevationRules.h"
+#include "game/terraform/FormerEnergyCostCalculator.h"
 #include "game/terraform/TerraformRules.h"
 #include "game/terraform/TerraformMutations.h"
 #include "game/units/Unit.h"
@@ -25,8 +26,10 @@
 #include "game/units/UnitOrderExecutor.h"
 #include "game/units/UnitSlotConfig.h"
 #include "game/units/UnitComponentRegistry.h"
+#include "lib/config/ConfigReader.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <nlohmann/json.hpp>
 #include <algorithm>
 #include <memory>
 #include <random>
@@ -305,6 +308,79 @@ TEST_CASE("Land-domain projects refuse a sea tile", "[unit][terraform][domain]")
     CHECK_FALSE(game.StartTerraform(seaFormer, "Sensor"));
     CHECK_FALSE(game.StartTerraform(seaFormer, "LevelTerrain"));
     CHECK_FALSE(game.StartTerraform(seaFormer, "Aquifer"));
+}
+
+TEST_CASE("Raise/lower energy quote applies enemy proximity scale", "[unit][terraform][energy]")
+{
+    // docs/thinker/terranx-map.md `terraform_cost`: enemy_val/own_val when enemy_val > own_val.
+    TerraformGame_ game;
+    FormerEnergyCostCalculator& rCalc = *game.fixtures.dataContext.formerEnergyCostCalculator;
+    const nlohmann::json j = {{"energy_cost", "terraform_cost.lua"}};
+    const ConfigReader reader(j, "test", FixturePath("terrain.json"));
+    FormerEnergyCost_t cost;
+    cost.formula = reader.Formula(
+        "energy_cost", {"elev_band", "fungus", "at_sea", "sea_cost_scale",
+                        "nearest_base_distance", "own_pop", "enemy_pop", "own_range",
+                        "enemy_range"});
+
+    FormerEnergyCostInputs_t inputs;
+    inputs.elevBand = 1;
+    inputs.nearestBaseDistance = 2;
+    // Band 1, land, no enemy → floor(9 * 2 / 2) = 9.
+    CHECK(rCalc.Cost(cost, inputs) == 9);
+
+    inputs.ownPop = 1;
+    inputs.enemyPop = 10;
+    inputs.ownRange = 6;
+    inputs.enemyRange = 3;
+    // enemy_val/own_val = 8 → floor(9 * 2 * 8 / 2) = 72.
+    CHECK(rCalc.Cost(cost, inputs) == 72);
+}
+
+TEST_CASE("Raise/lower energy quote matches the SMAC terraform_cost shape",
+          "[unit][terraform][energy]")
+{
+    // docs/thinker/terranx-map.md `terraform_cost`: (d+2)^2 * fungus/sea * range / 2.
+    TerraformGame_ game;
+    BaseManager& home = game.MakeBase(8, 8);
+    Unit& former = game.MakeFormer(10, 10, &home);
+    Tile& tile = *game.fixtures.state.GetWorldMap().GetTile(10, 10);
+    tile.SetElevation(1000); // elev_band 1 with reference_level 1000
+
+    const std::optional<TerraformProject_t> raise =
+        FindTerraformProject("RaiseLand", game.fixtures.state.GetTileEffects().GetImprovements(),
+                             *game.fixtures.dataContext.terrainOperationRegistry);
+    REQUIRE(raise);
+    // Band 1, no fungus, land, range from (10,10) to (8,8) = 2 → floor(9 * 1 * 1 * 2 / 2) = 9.
+    CHECK(TerraformEnergyCost(former, *raise) == 9);
+
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(tile, "Fungus");
+    // Fungus ×6 → floor(9 * 6 * 2 / 2) = 54.
+    CHECK(TerraformEnergyCost(former, *raise) == 54);
+}
+
+TEST_CASE("Sea raise energy uses SeaRaiseLowerCostScale from Doctrine: Air Power",
+          "[unit][terraform][energy]")
+{
+    // docs/thinker/terranx-map.md `terraform_cost`: ×4 at sea, ×2 once any faction has Doc Air.
+    TerraformGame_ game;
+    BaseManager& home = game.MakeBase(8, 8);
+    Tile& sea = *game.fixtures.state.GetWorldMap().GetTile(10, 10);
+    sea.SetElevation(-1000); // elev_band 1, below ocean_level 0
+    REQUIRE(sea.IsWater());
+    Unit& seaFormer = game.MakeFormer(10, 10, &home, nullptr, "test_sea_chassis");
+
+    const std::optional<TerraformProject_t> raise =
+        FindTerraformProject("RaiseLand", game.fixtures.state.GetTileEffects().GetImprovements(),
+                             *game.fixtures.dataContext.terrainOperationRegistry);
+    REQUIRE(raise);
+    // Band 1, sea ×4, range 2 → floor(9 * 4 * 2 / 2) = 36.
+    CHECK(TerraformEnergyCost(seaFormer, *raise) == 36);
+
+    Faction& peer = game.fixtures.MakeFaction();
+    peer.GetResearch().AddDiscoveredTech("doctrine_air_power");
+    // Peer WorldGlobal MaxClamp 0.5 → sea_cost_seed*scale = 2 → floor(9 * 2 * 2 / 2) = 18.
+    CHECK(TerraformEnergyCost(seaFormer, *raise) == 18);
 }
 
 TEST_CASE("Raise and lower land change elevation", "[unit][terraform][mutate]")

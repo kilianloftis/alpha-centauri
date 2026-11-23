@@ -787,7 +787,73 @@
     "upkeep": 0,
     "secret_project": true,
     "category": "conquer",
-    "icon": "assets/sprites/projects/proj033.png"
+    "icon": "assets/sprites/projects/proj033.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "condition": {
+          "kind": "SocialRating",
+          "rating": "planet",
+          "op": "Ge",
+          "value": 1
+        },
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "HasImprovement", "improvement": "Fungus" }
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "condition": {
+          "kind": "SocialRating",
+          "rating": "planet",
+          "op": "Ge",
+          "value": 2
+        },
+        "parameters": {
+          "stat": "minerals",
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "HasImprovement", "improvement": "Fungus" }
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "condition": {
+          "kind": "SocialRating",
+          "rating": "planet",
+          "op": "Ge",
+          "value": 0
+        },
+        "parameters": {
+          "stat": "energy",
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "HasImprovement", "improvement": "Fungus" }
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "condition": {
+          "kind": "SocialRating",
+          "rating": "planet",
+          "op": "Ge",
+          "value": 3
+        },
+        "parameters": {
+          "stat": "energy",
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "HasImprovement", "improvement": "Fungus" }
+        }
+      }
+    ]
   },
   {
     "id": "Nethack_Terminus",

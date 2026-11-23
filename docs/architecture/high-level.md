@@ -396,8 +396,11 @@ Every file and class is one kind. The kind says what the code may read, change a
     JSON integers; exact ratios use `ConfigReader::Rational`.
   - A formula field is a `Formula_t`: the Lua expression and the variables its parser lists,
     read through `ConfigReader::Formula` or, from a script, `LuaConfigLoader::RequireFormula`.
-    Reading any other name is a Lua error, and each formula runs once at load with every variable
-    at 1, so a misspelt variable fails at load. A calculator must pass exactly those variables.
+    `ConfigReader::Formula` accepts an inline expression or a `.lua` path whose returned table
+    exports the same key as the JSON field (relative paths resolve against the JSON file's
+    directory; helpers from that script load into the runtime on eval). Reading any other name
+    is a Lua error, and each formula runs once at load with every variable at 1, so a misspelt
+    variable fails at load. A calculator must pass exactly those variables.
 - **The effects system** (`effects/`) follows the same split: resolving effects is rules, and dispatching triggered effects is mutations.
 - **UI copy** is not a game kind. Titles, bodies and labels are formatted in `src/ui/`. The game
   reports what happened (ids, enums, amounts) on `PlayerInteraction_t` arms; `InteractionPresenter`
@@ -454,8 +457,9 @@ One directory under `include/game/` and `src/game/` per domain. The filename suf
 - `stages/`: the turn processor, stage infrastructure and mod hooks, every turn stage
 - `supply/`: supply-pod config, event-group stamp index, open rules and mutations
 - `terraform/`: `TerraformRules` / `TerraformMutations` (projects, rainfall grievance),
-  `ElevationRules` / `ElevationMutations`, `FormerEnergyCostCalculator`,
-  `TerraformSpreadCalculator` / `TerraformSpreadRules` / `TerraformSpreadMutations`,
+  `ElevationRules` / `ElevationMutations`, `FormerEnergyCostCalculator` (Raise/Lower
+  `energy_cost` → `terraform_cost.lua`), `TerraformSpreadCalculator` /
+  `TerraformSpreadRules` / `TerraformSpreadMutations`,
   `SurfaceFlipRules` / `SurfaceFlipMutations`
 - `units/`: the unit aggregate, designs, components and slots, upgrade rules/cost/mutations,
   turn-event ledger (`UnitTurnLatches`), idle healing (`HealingRules` / `HealingMutations`),
