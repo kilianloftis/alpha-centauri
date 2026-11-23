@@ -550,7 +550,7 @@ void InteractionPresenter::PresentTerraformNoEffectNotice_(
     const GameDataContext& rData = m_rGameState.GetGameData();
     const ImprovementRegistry& rImprovements = m_rGameState.GetTileEffects().GetImprovements();
     const std::optional<TerraformProject_t> project =
-        FindTerraformProject(rNotice.projectId, rImprovements, *rData.terrainOperationRegistry);
+        FindTerraformProject(rNotice.projectId, rImprovements, *rData.terraformProjectRegistry);
     const std::string& rProjectName = project ? project->name : rNotice.projectId;
     const TerraformNoEffectNoticeCopy_t copy = TerraformNoEffectNoticeCopy(rProjectName);
     PresentNotice_(

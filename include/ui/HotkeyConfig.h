@@ -14,7 +14,7 @@ namespace ac
 {
 
 class ImprovementRegistry;
-class TerrainOperationRegistry;
+class TerraformProjectRegistry;
 
 // Built-in player actions. A hotkeys.json action that is not one of these is a former
 // project id.
@@ -95,7 +95,7 @@ class HotkeyConfig
 public:
     static HotkeyConfig Load(const std::string& rConfigPath,
                              const ImprovementRegistry& rImprovements,
-                             const TerrainOperationRegistry& rOperations);
+                             const TerraformProjectRegistry& rOperations);
 
     // Empty when this action has no entry. An unbound action is simply unavailable.
     std::optional<HotkeyChord_t> Find(HotkeyAction_t action) const;
@@ -109,7 +109,7 @@ private:
 
     static HotkeyConfig Parse_(const ConfigReader& rReader, const std::string& rConfigPath,
                                const ImprovementRegistry& rImprovements,
-                               const TerrainOperationRegistry& rOperations);
+                               const TerraformProjectRegistry& rOperations);
     // Terraform chords must be unique among themselves.
     void BindTerraform_(const HotkeyChord_t& rChord, const std::string& rProjectId,
                         const std::string& rConfigPath);

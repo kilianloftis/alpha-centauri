@@ -17,38 +17,40 @@ enum class FormerDomainRule_t
     Any,         // either Former, whatever the tile is (raising and lowering land)
 };
 
-// A Former project whose whole result is its on_complete_effects. New ones are terrain.json
-// entries, not C++.
-struct TerrainOperationConfig_t
+// A Former project from terraform_projects.json. May place an occupant, run on_complete
+// effects, or both.
+struct TerraformProjectConfig_t
 {
     std::string id;
     std::string name;
-    // The same former-project half an improvement carries; always present.
     FormerProject_t project;
     FormerDomainRule_t formerDomain = FormerDomainRule_t::MatchesTile;
-    // Tile surface the operation may run on. Empty means either land or sea.
+    // Tile surface the project may run on. Empty means either land or sea.
     std::optional<ImprovementDomain_t> domain;
-    // Required and non-empty: a project that declares nothing to do can never complete.
-    // Each entry's `condition` is also what says whether the project may start at all.
+    // Occupant id placed on complete (Farm, Road, …). Empty when the project only mutates
+    // terrain via on_complete_effects.
+    std::optional<std::string> places;
+    // Occupant ids that refuse start while present (PlantFungus blocked_by Ocean). Not
+    // coexistence — world gen and AddTerrainFeature do not consult this.
+    std::vector<std::string> blockedBy;
+    // Each entry's `condition` is also what says whether the project may start when there
+    // is no places target (or alongside places when effects would also fire).
     std::vector<TriggeredEffectConfig_t> onCompleteEffects;
 };
 
-// Both halves of config/terrain.json. They feed different registries, so parsing the file
-// once and handing each half to its owner beats opening it per consumer.
+// terrain.json features half. Projects live in terraform_projects.json.
 struct TerrainFile_t
 {
     std::vector<ImprovementConfig_t> features;
-    std::vector<TerrainOperationConfig_t> operations;
 };
 
-// Whole file. Requires both halves.
 TerrainFile_t ParseTerrainFile(const std::string& configPath);
 
-// Registry<> adapter over the operations half. Prefer ParseTerrainFile when you need both.
-class TerrainOperationConfigParser
+// Registry<> adapter over terraform_projects.json (a JSON array of projects).
+class TerraformProjectConfigParser
 {
 public:
-    static std::vector<TerrainOperationConfig_t> ParseConfig(const std::string& configPath);
+    static std::vector<TerraformProjectConfig_t> ParseConfig(const std::string& configPath);
 };
 
 } // namespace ac

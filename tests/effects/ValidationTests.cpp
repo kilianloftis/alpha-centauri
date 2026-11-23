@@ -26,7 +26,7 @@
 #include "game/map/TerrainConfig.h"
 #include "game/map/TerrainFeatureValidation.h"
 #include "game/map/MapOccupantLoad.h"
-#include "game/map/TerrainOperationRegistry.h"
+#include "game/map/TerraformProjectRegistry.h"
 #include "game/population/PopTypeRegistry.h"
 #include "game/research/TechRegistry.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
@@ -88,7 +88,7 @@ void FillEffectReferenceContext(GameDataContext& rData)
     rData.ecoDamageConfig = std::make_unique<EcoDamageConfig_t>();
     rData.baseConquestConfig = std::make_unique<BaseConquestConfig_t>();
     rData.popCompositionConfig = std::make_unique<PopCompositionConfig_t>();
-    rData.terrainOperationRegistry = std::make_unique<TerrainOperationRegistry>();
+    rData.terraformProjectRegistry = std::make_unique<TerraformProjectRegistry>();
 }
 
 // The buildings the reference tests name, with no effects of their own to validate.
@@ -110,7 +110,8 @@ void LoadFixtureRegistries(GameDataContext& rData)
     rData.nativeUnitRegistry->Load(actest::FixturePath("native_units_full.json"));
     rData.socialRatingRegistry->Load(actest::FixturePath("social_rating_effects.json"));
     LoadMapOccupants(actest::FixturePath("improvements.json"), actest::FixturePath("terrain.json"),
-                     *rData.improvementRegistry, *rData.terrainOperationRegistry);
+                     actest::FixturePath("terraform_projects.json"), *rData.improvementRegistry,
+                     *rData.terraformProjectRegistry);
     // Declares the defense slots the fixture improvements name.
     *rData.combatConfig = CombatConfigParser::ParseConfig(actest::FixturePath("combat.json"));
 }
@@ -459,15 +460,16 @@ TEST_CASE("ValidateTerrainFeatures: every intrinsic terrain id must have a terra
           "[effects][validation][terrain]")
 {
     ImprovementRegistry occupants;
-    TerrainOperationRegistry operations;
+    TerraformProjectRegistry operations;
     LoadMapOccupants(actest::FixturePath("improvements.json"), actest::FixturePath("terrain.json"),
-                     occupants, operations);
+                     actest::FixturePath("terraform_projects.json"), occupants, operations);
     CHECK_NOTHROW(ValidateTerrainFeatures(occupants));
 
     ImprovementRegistry incomplete;
-    TerrainOperationRegistry incompleteOperations;
+    TerraformProjectRegistry incompleteOperations;
     LoadMapOccupants(actest::FixturePath("improvements.json"),
-                     actest::FixturePath("improvements_missing_terrain.json"), incomplete,
+                     actest::FixturePath("improvements_missing_terrain.json"),
+                     actest::FixturePath("terraform_projects.json"), incomplete,
                      incompleteOperations);
     CHECK_THROWS_WITH(ValidateTerrainFeatures(incomplete),
                       Catch::Matchers::ContainsSubstring("Aquifer"));

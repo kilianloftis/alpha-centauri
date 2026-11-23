@@ -7,7 +7,7 @@
 #include "game/base/BaseManager.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/map/MapUtils.h"
-#include "game/map/TerrainOperationRegistry.h"
+#include "game/map/TerraformProjectRegistry.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
 #include "game/map/Tile.h"
@@ -157,7 +157,7 @@ TEST_CASE("A player Former lowering a ridge that dries an AI's land adds frictio
     Unit& rFormer = game.MakeUnit(*game.pA, 18, 8);
     const std::optional<TerraformProject_t> project = FindTerraformProject(
         "LowerLand", game.fixtures.state.GetTileEffects().GetImprovements(),
-        *game.fixtures.state.GetGameData().terrainOperationRegistry);
+        *game.fixtures.state.GetGameData().terraformProjectRegistry);
     REQUIRE(project);
     std::mt19937 rng(1);
     REQUIRE(game.fixtures.state.ApplyTerraformCompleteEffects(rRidge, *project, rFormer, rng));

@@ -18,6 +18,7 @@ struct GameDataPaths
     std::string stockpiles = "config/stockpiles.json";
     std::string improvements = "config/improvements.json";
     std::string terrain = "config/terrain.json";
+    std::string terraformProjects = "config/terraform_projects.json";
     std::string unitComponents = "config/unit_components";
     std::string unitSlots = "config/unit_slot_config.json";
     std::string unitUpgrade = "config/unit_upgrade.lua";

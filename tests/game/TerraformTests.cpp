@@ -8,7 +8,7 @@
 #include "game/base/BaseManager.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/OccupantCoexistence.h"
-#include "game/map/TerrainOperationRegistry.h"
+#include "game/map/TerraformProjectRegistry.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/map/MapRulesConfig.h"
@@ -21,6 +21,8 @@
 #include "game/terraform/TerraformMutations.h"
 #include "game/units/Unit.h"
 #include "game/effects/EffectConfig.h"
+#include "game/effects/EffectEnums.h"
+#include "TestHelpers.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitOrderExecutor.h"
@@ -214,9 +216,9 @@ TEST_CASE("A terrain operation the code has never heard of runs end to end",
     // The point of composing operations out of triggered effects: "Rockify" matches no C++
     // enumerator and no shipping config entry, and still starts, spends turns, and lands.
     TerraformGame_ game;
-    TerrainOperationRegistry& rOperations = *game.fixtures.dataContext.terrainOperationRegistry;
-    std::vector<TerrainOperationConfig_t> operations = rOperations.GetAll();
-    TerrainOperationConfig_t rockify;
+    TerraformProjectRegistry& rOperations = *game.fixtures.dataContext.terraformProjectRegistry;
+    std::vector<TerraformProjectConfig_t> operations = rOperations.GetAll();
+    TerraformProjectConfig_t rockify;
     rockify.id = "Rockify";
     rockify.name = "Rockify";
     rockify.project.turnsRequired = 1;
@@ -384,7 +386,7 @@ TEST_CASE("Raise/lower energy quote matches the SMAC terraform_cost shape",
 
     const std::optional<TerraformProject_t> raise =
         FindTerraformProject("RaiseLand", game.fixtures.state.GetTileEffects().GetImprovements(),
-                             *game.fixtures.dataContext.terrainOperationRegistry);
+                             *game.fixtures.dataContext.terraformProjectRegistry);
     REQUIRE(raise);
     // Band 1, no fungus, land, range from (10,10) to (8,8) = 2 → floor(9 * 1 * 1 * 2 / 2) = 9.
     CHECK(TerraformEnergyCost(former, *raise) == 9);
@@ -407,7 +409,7 @@ TEST_CASE("Sea raise energy uses SeaRaiseLowerCostScale from Doctrine: Air Power
 
     const std::optional<TerraformProject_t> raise =
         FindTerraformProject("RaiseLand", game.fixtures.state.GetTileEffects().GetImprovements(),
-                             *game.fixtures.dataContext.terrainOperationRegistry);
+                             *game.fixtures.dataContext.terraformProjectRegistry);
     REQUIRE(raise);
     // Band 1, sea ×4, range 2 → floor(9 * 4 * 2 / 2) = 36.
     CHECK(TerraformEnergyCost(seaFormer, *raise) == 36);
@@ -464,7 +466,7 @@ TEST_CASE("Lowering land stops at Planet's floor instead of throwing",
     std::mt19937 rng(1);
     const std::optional<TerraformProject_t> lowerLand =
         FindTerraformProject("LowerLand", game.fixtures.state.GetTileEffects().GetImprovements(),
-                             *game.fixtures.dataContext.terrainOperationRegistry);
+                             *game.fixtures.dataContext.terraformProjectRegistry);
     REQUIRE(lowerLand);
     CHECK(ApplyTerraformResult(tile, *lowerLand, game.fixtures.state.GetTileEffects(), seaFormer, rng,
                                game.fixtures.state));
@@ -538,7 +540,7 @@ TEST_CASE("ApplyTerraformResult places Farm via rules helper", "[unit][terraform
 
     const std::optional<TerraformProject_t> farm =
         FindTerraformProject("Farm", game.fixtures.state.GetTileEffects().GetImprovements(),
-                             *game.fixtures.dataContext.terrainOperationRegistry);
+                             *game.fixtures.dataContext.terraformProjectRegistry);
     REQUIRE(farm);
     std::mt19937 rng(1);
     REQUIRE(ApplyTerraformResult(tile, *farm, game.fixtures.state.GetTileEffects(), former, rng,
@@ -566,7 +568,7 @@ TEST_CASE("Terraform replaces improvements that cannot share the tile", "[unit][
     game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rFarmTile, "Nutrients");
 
     const std::optional<TerraformProject_t> farm = FindTerraformProject(
-        "Farm", rImprovements, *game.fixtures.dataContext.terrainOperationRegistry);
+        "Farm", rImprovements, *game.fixtures.dataContext.terraformProjectRegistry);
     REQUIRE(farm);
     REQUIRE(farm->pPlaces);
     const std::vector<std::string> farmRemoves =
@@ -602,7 +604,7 @@ TEST_CASE("Terraform replaces improvements that cannot share the tile", "[unit][
     game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rFungusTile, "Road");
     game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rFungusTile, "Nutrients");
     const std::optional<TerraformProject_t> plant = FindTerraformProject(
-        "PlantFungus", rImprovements, *game.fixtures.dataContext.terrainOperationRegistry);
+        "PlantFungus", rImprovements, *game.fixtures.dataContext.terraformProjectRegistry);
     REQUIRE(plant);
 
     std::mt19937 rng(1);
@@ -615,41 +617,27 @@ TEST_CASE("Terraform replaces improvements that cannot share the tile", "[unit][
     CHECK(rFungusTile.HasFeature("Nutrients"));
 }
 
-TEST_CASE("Fungus road and mine starts need CentEmp and CentPsi overrides", "[unit][terraform]")
+TEST_CASE("Fungus road and mine starts need CentEmp and CentPsi RuleFlags", "[unit][terraform]")
 {
     TerraformGame_ game(true);
     BaseManager& home = game.MakeBase(8, 8);
     const UnitComponentConfig_t* pStock = game.fixtures.unitComponents.Find("test_terraformer");
     REQUIRE(pStock);
+    EffectPool pool;
 
-    UnitComponentConfig_t roadWaiver = *pStock;
-    {
-        EffectConfig_t effect;
-        effect.scope = EffectScope_t::ThisUnit;
-        CoexistenceOverrideEffect_t overrideFx;
-        overrideFx.cell = InteractionCell_t::Allow;
-        overrideFx.firstId = "Fungus";
-        overrideFx.secondId = "Road";
-        effect.effect = overrideFx;
-        roadWaiver.effects.push_back(effect);
-    }
+    UnitComponentConfig_t roadFormer = *pStock;
+    roadFormer.effects.push_back(
+        pool.RuleFlag(RuleFlagId_t::TerraformFungusRoad, EffectScope_t::ThisUnit));
 
-    UnitComponentConfig_t mineWaiver = *pStock;
-    {
-        EffectConfig_t effect;
-        effect.scope = EffectScope_t::ThisUnit;
-        CoexistenceOverrideEffect_t overrideFx;
-        overrideFx.cell = InteractionCell_t::Allow;
-        overrideFx.firstId = "Fungus";
-        effect.effect = overrideFx;
-        mineWaiver.effects.push_back(effect);
-    }
+    UnitComponentConfig_t mineFormer = *pStock;
+    mineFormer.effects.push_back(
+        pool.RuleFlag(RuleFlagId_t::TerraformFungusImprovement, EffectScope_t::ThisUnit));
 
     Tile& rRoadTile = *game.fixtures.state.GetWorldMap().GetTile(10, 10);
     game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rRoadTile, "Fungus");
     Unit& noTechRoad = game.MakeFormer(10, 10, &home);
     CHECK_FALSE(game.StartTerraform(noTechRoad, "Road"));
-    Unit& empRoad = game.MakeFormer(10, 10, &home, &roadWaiver);
+    Unit& empRoad = game.MakeFormer(10, 10, &home, &roadFormer);
     REQUIRE(game.StartTerraform(empRoad, "Road"));
     game.FinishTerraform(empRoad);
     CHECK(rRoadTile.HasImprovement("Road"));
@@ -659,9 +647,14 @@ TEST_CASE("Fungus road and mine starts need CentEmp and CentPsi overrides", "[un
     game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rMineTile, "Fungus");
     Unit& noTechMine = game.MakeFormer(11, 11, &home);
     CHECK_FALSE(game.StartTerraform(noTechMine, "Mine"));
-    Unit& psiMine = game.MakeFormer(11, 11, &home, &mineWaiver);
+    Unit& psiMine = game.MakeFormer(11, 11, &home, &mineFormer);
     REQUIRE(game.StartTerraform(psiMine, "Mine"));
     game.FinishTerraform(psiMine);
+    CHECK(rMineTile.HasImprovement("Mine"));
+    CHECK(rMineTile.HasFeature("Fungus"));
+
+    // Built-on-fungus occupancy does not need a tile waiver; later sweeps keep both.
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rMineTile, "Road");
     CHECK(rMineTile.HasImprovement("Mine"));
     CHECK(rMineTile.HasFeature("Fungus"));
 }
@@ -793,7 +786,7 @@ TEST_CASE("A terraform result that cannot place destroys nothing", "[unit][terra
 
     const std::optional<TerraformProject_t> farm = FindTerraformProject(
         "Farm", game.fixtures.improvements,
-        *game.fixtures.dataContext.terrainOperationRegistry);
+        *game.fixtures.dataContext.terraformProjectRegistry);
     REQUIRE(farm);
     std::mt19937 rng(3);
     CHECK_FALSE(
@@ -825,7 +818,7 @@ TEST_CASE("A Bunker project finishing on a base tile leaves the base", "[unit][t
     Tile& tile = home.GetTile();
     const std::optional<TerraformProject_t> bunker = FindTerraformProject(
         "Bunker", game.fixtures.improvements,
-        *game.fixtures.dataContext.terrainOperationRegistry);
+        *game.fixtures.dataContext.terraformProjectRegistry);
     REQUIRE(bunker);
 
     std::mt19937 rng(3);

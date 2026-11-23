@@ -100,6 +100,7 @@ private:
     YieldLanes_t ResolveYieldLanes_(const Tile& rTile, const std::vector<ActiveEffect_t>& effects,
                                     const Faction* pFaction) const;
 
+    void ApplyArrivalClears_(Tile& rTile, std::string_view arrivingId);
     void RemoveImprovementsThatCannotRemain_(Tile& rTile, std::string_view keepId);
 
     // pFaction subjects Mirror (and similar) SubjectIsOwner auras when resolving for a base.

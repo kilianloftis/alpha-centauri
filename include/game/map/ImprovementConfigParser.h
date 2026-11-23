@@ -10,6 +10,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace ac
@@ -42,8 +43,7 @@ struct FormerEnergyCost_t
     std::optional<Formula_t> formula;
 };
 
-// A tile occupant that grants effects: an improvement or a terrain feature, told apart by
-// `placement`. The construction half of an improvement a former can build.
+// Turns / energy / techs for a Former project (terraform_projects.json).
 struct FormerProject_t
 {
     int turnsRequired = 0;
@@ -69,8 +69,8 @@ struct ImprovementConfig_t
     std::string name;
     std::string description;
     OccupantPlacement_t placement = OccupantPlacement_t::Improvement;
-    // What a former needs to build it; absent when none can (Base, every terrain entry).
-    std::optional<FormerProject_t> project;
+    // True when a terraform project lists this id in `places` (set at LoadMapOccupants).
+    bool formerPlaceTarget = false;
     // Optional classification labels (e.g. "landmark", "landform"). Stored for later use and
     // available as "@tag" references in excludes / suppress_yield_sources (expanded at parse).
     std::vector<std::string> tags;
@@ -78,6 +78,8 @@ struct ImprovementConfig_t
     // domain is not the new surface. Empty means the improvement survives either surface.
     std::optional<ImprovementDomain_t> domain;
     std::vector<std::string> excludes; // feature ids that can't coexist with this one on a tile
+    // Ids removed when this occupant is added (Fungus Plant Fungus clear mask). Not coexistence.
+    std::vector<std::string> clears;
     // Feature ids that must already be on the tile (SoilEnricher needs Farm; MagTube needs Road).
     // JSON key: "requires".
     std::vector<std::string> requiredOccupants;
@@ -107,22 +109,23 @@ struct ImprovementConfig_t
     int visionRadius = 0;
 };
 
-// True when a former can build this occupant.
+// True when a former project places this occupant (`places` in terraform_projects.json).
 bool IsBuildable(const ImprovementConfig_t& rConfig);
 
-// Expands @tags in excludes, suppress lists and art hides; an unknown tag or id throws. Run
-// over every occupant, since an improvement may name a terrain-only tag.
-void ExpandFeatureTagReferences(std::vector<ImprovementConfig_t>& rConfigs);
+// Expands @tags in excludes / clears / suppress lists and art hides. placeTargetIds feed the
+// implicit @buildable tag. An unknown tag or id throws.
+void ExpandFeatureTagReferences(std::vector<ImprovementConfig_t>& rConfigs,
+                                const std::unordered_set<std::string>& placeTargetIds);
 
-// One occupant object. A terrain entry rejects construction fields; those belong on a
-// terrain operation.
+// One occupant object. Former construction fields belong on a terraform project.
 ImprovementConfig_t ParseImprovementBody(const ConfigReader& rReader,
                                          OccupantPlacement_t placement);
 
 // Parse improvements and the already-parsed terrain occupants (see ParseTerrainFile) into one
-// list, tags expanded across both.
+// list, tags expanded across both. placeTargetIds come from projects' `places`.
 std::vector<ImprovementConfig_t> LoadTileOccupants(
-    const std::string& rImprovementsPath, std::vector<ImprovementConfig_t> terrainFeatures);
+    const std::string& rImprovementsPath, std::vector<ImprovementConfig_t> terrainFeatures,
+    const std::unordered_set<std::string>& placeTargetIds);
 
 // improvements.json with @tags unexpanded, for LoadTileOccupants to expand with terrain.
 std::vector<ImprovementConfig_t> ParseImprovementsUnexpanded(const std::string& rConfigPath);

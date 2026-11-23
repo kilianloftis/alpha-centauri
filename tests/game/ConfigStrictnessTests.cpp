@@ -407,8 +407,8 @@ TEST_CASE("A negative improvement energy cost is rejected, by name", "[config][i
     // A former project spends this through EconomyManager::CanAfford, which treats a negative
     // cost as a caller bug and throws. It should fail at load naming the improvement rather
     // than mid-order.
-    TempConfigFile config("ac_improvement_negative_cost.json", R"([
-        { "id": "cheap_farm", "name": "Cheap Farm", "turns_required": 2, "energy_cost": -5 }
+    TempConfigFile config("ac_improvement_former_field.json", R"([
+        { "id": "cheap_farm", "name": "Cheap Farm", "energy_cost": 5 }
     ])");
 
     CHECK_THROWS_WITH(ImprovementConfigParser::ParseConfig(config.Path()),
@@ -416,29 +416,22 @@ TEST_CASE("A negative improvement energy cost is rejected, by name", "[config][i
                           && Catch::Matchers::ContainsSubstring("energy_cost"));
 }
 
-TEST_CASE("ParseTerrainFile requires both halves of the file", "[config][terrain]")
+TEST_CASE("ParseTerrainFile requires a features array", "[config][terrain]")
 {
-    // Each half feeds a different registry, so a file carrying only one is a partial config
-    // rather than a smaller one, and should fail naming the section that is missing.
-    TempConfigFile featuresOnly("ac_terrain_features_only.json",
-                                R"({ "features": [ { "id": "Flat", "name": "Flat" } ] })");
-    CHECK_THROWS_WITH(ParseTerrainFile(featuresOnly.Path()),
-                      Catch::Matchers::ContainsSubstring("operations"));
-
-    TempConfigFile opsOnly("ac_terrain_ops_only.json", R"({ "operations": [] })");
-    CHECK_THROWS_WITH(ParseTerrainFile(opsOnly.Path()),
+    TempConfigFile emptyObject("ac_terrain_empty.json", R"({ })");
+    CHECK_THROWS_WITH(ParseTerrainFile(emptyObject.Path()),
                       Catch::Matchers::ContainsSubstring("features"));
 }
 
 TEST_CASE("Construction fields on a terrain feature are rejected, by name",
           "[config][improvement]")
 {
-    // Terrain is not built by a former: its cost and duration belong to the terrain operation
-    // that produces it, so naming them here is a config mistake rather than a silent no-op.
+    // Terrain is not built by a former: its cost and duration belong on a terraform project,
+    // so naming them here is a config mistake rather than a silent no-op.
     TempConfigFile config("ac_terrain_with_turns.json",
                           R"({ "features": [
         { "id": "Swamp", "name": "Swamp", "turns_required": 3 }
-    ], "operations": [] })");
+    ] })");
 
     CHECK_THROWS_WITH(ParseTerrainFile(config.Path()),
                       Catch::Matchers::ContainsSubstring("Swamp")

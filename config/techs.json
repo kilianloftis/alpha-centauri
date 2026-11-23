@@ -3,7 +3,12 @@
     "id": "biogenetics",
     "name": "Biogenetics",
     "category": "discover",
-    "ai_weights": { "power": 0, "tech": 3, "wealth": 2, "growth": 2 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 3,
+      "wealth": 2,
+      "growth": 2
+    },
     "icon": "assets/sprites/techs/tech000.png",
     "effects": [
       {
@@ -19,42 +24,72 @@
     "id": "industrial_base",
     "name": "Industrial Base",
     "category": "build",
-    "ai_weights": { "power": 2, "tech": 1, "wealth": 3, "growth": 0 },
+    "ai_weights": {
+      "power": 2,
+      "tech": 1,
+      "wealth": 3,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech001.png"
   },
   {
     "id": "information_networks",
     "name": "Information Networks",
     "category": "discover",
-    "ai_weights": { "power": 0, "tech": 3, "wealth": 2, "growth": 1 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 3,
+      "wealth": 2,
+      "growth": 1
+    },
     "icon": "assets/sprites/techs/tech002.png"
   },
   {
     "id": "applied_physics",
     "name": "Applied Physics",
     "category": "conquer",
-    "ai_weights": { "power": 4, "tech": 2, "wealth": 1, "growth": 0 },
+    "ai_weights": {
+      "power": 4,
+      "tech": 2,
+      "wealth": 1,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech003.png"
   },
   {
     "id": "social_psych",
     "name": "Social Psych",
     "category": "build",
-    "ai_weights": { "power": 0, "tech": 1, "wealth": 3, "growth": 2 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 1,
+      "wealth": 3,
+      "growth": 2
+    },
     "icon": "assets/sprites/techs/tech004.png"
   },
   {
     "id": "doctrine_mobility",
     "name": "Doctrine: Mobility",
     "category": "grow",
-    "ai_weights": { "power": 2, "tech": 0, "wealth": 0, "growth": 3 },
+    "ai_weights": {
+      "power": 2,
+      "tech": 0,
+      "wealth": 0,
+      "growth": 3
+    },
     "icon": "assets/sprites/techs/tech005.png"
   },
   {
     "id": "centauri_ecology",
     "name": "Centauri Ecology",
     "category": "grow",
-    "ai_weights": { "power": 0, "tech": 1, "wealth": 2, "growth": 3 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 1,
+      "wealth": 2,
+      "growth": 3
+    },
     "icon": "assets/sprites/techs/tech006.png",
     "effects": [
       {
@@ -64,7 +99,10 @@
           "stat": "nutrients",
           "amount": 1,
           "op": "Add",
-          "selector": { "kind": "HasImprovement", "improvement": "Fungus" }
+          "selector": {
+            "kind": "HasImprovement",
+            "improvement": "Fungus"
+          }
         }
       }
     ]
@@ -73,7 +111,12 @@
     "id": "superconductor",
     "name": "Superconductor",
     "category": "conquer",
-    "ai_weights": { "power": 4, "tech": 2, "wealth": 0, "growth": 0 },
+    "ai_weights": {
+      "power": 4,
+      "tech": 2,
+      "wealth": 0,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech007.png",
     "prerequisites": [
       "optical_computers",
@@ -84,7 +127,12 @@
     "id": "nonlinear_mathematics",
     "name": "Nonlinear Mathematics",
     "category": "conquer",
-    "ai_weights": { "power": 4, "tech": 3, "wealth": 0, "growth": 0 },
+    "ai_weights": {
+      "power": 4,
+      "tech": 3,
+      "wealth": 0,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech008.png",
     "prerequisites": [
       "applied_physics",
@@ -95,7 +143,12 @@
     "id": "applied_relativity",
     "name": "Applied Relativity",
     "category": "discover",
-    "ai_weights": { "power": 1, "tech": 3, "wealth": 2, "growth": 0 },
+    "ai_weights": {
+      "power": 1,
+      "tech": 3,
+      "wealth": 2,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech009.png",
     "prerequisites": [
       "superconductor",
@@ -106,7 +159,12 @@
     "id": "fusion_power",
     "name": "Fusion Power",
     "category": "discover",
-    "ai_weights": { "power": 3, "tech": 4, "wealth": 3, "growth": 1 },
+    "ai_weights": {
+      "power": 3,
+      "tech": 4,
+      "wealth": 3,
+      "growth": 1
+    },
     "icon": "assets/sprites/techs/tech010.png",
     "prerequisites": [
       "pre_sentient_algorithms",
@@ -132,7 +190,12 @@
     "id": "silksteel_alloys",
     "name": "Silksteel Alloys",
     "category": "build",
-    "ai_weights": { "power": 3, "tech": 0, "wealth": 4, "growth": 2 },
+    "ai_weights": {
+      "power": 3,
+      "tech": 0,
+      "wealth": 4,
+      "growth": 2
+    },
     "icon": "assets/sprites/techs/tech011.png",
     "prerequisites": [
       "advanced_subatomic_theory",
@@ -143,7 +206,12 @@
     "id": "advanced_subatomic_theory",
     "name": "Advanced Subatomic Theory",
     "category": "discover",
-    "ai_weights": { "power": 2, "tech": 3, "wealth": 2, "growth": 0 },
+    "ai_weights": {
+      "power": 2,
+      "tech": 3,
+      "wealth": 2,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech012.png",
     "prerequisites": [
       "high_energy_chemistry",
@@ -154,7 +222,12 @@
     "id": "high_energy_chemistry",
     "name": "High Energy Chemistry",
     "category": "conquer",
-    "ai_weights": { "power": 3, "tech": 1, "wealth": 2, "growth": 0 },
+    "ai_weights": {
+      "power": 3,
+      "tech": 1,
+      "wealth": 2,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech013.png",
     "prerequisites": [
       "industrial_base",
@@ -165,7 +238,12 @@
     "id": "frictionless_surfaces",
     "name": "Frictionless Surfaces",
     "category": "discover",
-    "ai_weights": { "power": 1, "tech": 3, "wealth": 2, "growth": 0 },
+    "ai_weights": {
+      "power": 1,
+      "tech": 3,
+      "wealth": 2,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech014.png",
     "prerequisites": [
       "unified_field_theory",
@@ -176,7 +254,12 @@
     "id": "nanometallurgy",
     "name": "Nanometallurgy",
     "category": "grow",
-    "ai_weights": { "power": 1, "tech": 1, "wealth": 0, "growth": 3 },
+    "ai_weights": {
+      "power": 1,
+      "tech": 1,
+      "wealth": 0,
+      "growth": 3
+    },
     "icon": "assets/sprites/techs/tech015.png",
     "prerequisites": [
       "probability_mechanics",
@@ -187,7 +270,12 @@
     "id": "superstring_theory",
     "name": "Superstring Theory",
     "category": "conquer",
-    "ai_weights": { "power": 3, "tech": 2, "wealth": 0, "growth": 1 },
+    "ai_weights": {
+      "power": 3,
+      "tech": 2,
+      "wealth": 0,
+      "growth": 1
+    },
     "icon": "assets/sprites/techs/tech016.png",
     "prerequisites": [
       "nonlinear_mathematics",
@@ -198,7 +286,12 @@
     "id": "advanced_military_algorithms",
     "name": "Advanced Military Algorithms",
     "category": "conquer",
-    "ai_weights": { "power": 3, "tech": 0, "wealth": 1, "growth": 2 },
+    "ai_weights": {
+      "power": 3,
+      "tech": 0,
+      "wealth": 1,
+      "growth": 2
+    },
     "icon": "assets/sprites/techs/tech017.png",
     "prerequisites": [
       "adaptive_doctrine",
@@ -209,7 +302,12 @@
     "id": "monopole_magnets",
     "name": "Monopole Magnets",
     "category": "discover",
-    "ai_weights": { "power": 1, "tech": 1, "wealth": 5, "growth": 0 },
+    "ai_weights": {
+      "power": 1,
+      "tech": 1,
+      "wealth": 5,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech018.png",
     "prerequisites": [
       "superstring_theory",
@@ -220,7 +318,12 @@
     "id": "matter_compression",
     "name": "Matter Compression",
     "category": "conquer",
-    "ai_weights": { "power": 3, "tech": 1, "wealth": 2, "growth": 0 },
+    "ai_weights": {
+      "power": 3,
+      "tech": 1,
+      "wealth": 2,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech019.png",
     "prerequisites": [
       "nanometallurgy",
@@ -231,7 +334,12 @@
     "id": "unified_field_theory",
     "name": "Unified Field Theory",
     "category": "conquer",
-    "ai_weights": { "power": 4, "tech": 3, "wealth": 0, "growth": 1 },
+    "ai_weights": {
+      "power": 4,
+      "tech": 3,
+      "wealth": 0,
+      "growth": 1
+    },
     "icon": "assets/sprites/techs/tech020.png",
     "prerequisites": [
       "monopole_magnets",
@@ -242,7 +350,12 @@
     "id": "graviton_theory",
     "name": "Graviton Theory",
     "category": "discover",
-    "ai_weights": { "power": 3, "tech": 1, "wealth": 0, "growth": 3 },
+    "ai_weights": {
+      "power": 3,
+      "tech": 1,
+      "wealth": 0,
+      "growth": 3
+    },
     "icon": "assets/sprites/techs/tech021.png",
     "prerequisites": [
       "quantum_machinery",
@@ -262,7 +375,12 @@
     "id": "polymorphic_software",
     "name": "Polymorphic Software",
     "category": "discover",
-    "ai_weights": { "power": 2, "tech": 3, "wealth": 1, "growth": 0 },
+    "ai_weights": {
+      "power": 2,
+      "tech": 3,
+      "wealth": 1,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech022.png",
     "prerequisites": [
       "industrial_base",
@@ -273,7 +391,12 @@
     "id": "applied_gravitonics",
     "name": "Applied Gravitonics",
     "category": "grow",
-    "ai_weights": { "power": 3, "tech": 1, "wealth": 0, "growth": 4 },
+    "ai_weights": {
+      "power": 3,
+      "tech": 1,
+      "wealth": 0,
+      "growth": 4
+    },
     "icon": "assets/sprites/techs/tech023.png",
     "prerequisites": [
       "graviton_theory",
@@ -284,7 +407,12 @@
     "id": "quantum_power",
     "name": "Quantum Power",
     "category": "discover",
-    "ai_weights": { "power": 3, "tech": 4, "wealth": 3, "growth": 0 },
+    "ai_weights": {
+      "power": 3,
+      "tech": 4,
+      "wealth": 3,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech025.png",
     "prerequisites": [
       "frictionless_surfaces",
@@ -310,7 +438,12 @@
     "id": "singularity_mechanics",
     "name": "Singularity Mechanics",
     "category": "discover",
-    "ai_weights": { "power": 1, "tech": 4, "wealth": 3, "growth": 0 },
+    "ai_weights": {
+      "power": 1,
+      "tech": 4,
+      "wealth": 3,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech026.png",
     "prerequisites": [
       "secrets_of_creation",
@@ -321,7 +454,12 @@
     "id": "controlled_singularity",
     "name": "Controlled Singularity",
     "category": "conquer",
-    "ai_weights": { "power": 4, "tech": 1, "wealth": 2, "growth": 0 },
+    "ai_weights": {
+      "power": 4,
+      "tech": 1,
+      "wealth": 2,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech027.png",
     "prerequisites": [
       "singularity_mechanics",
@@ -332,7 +470,12 @@
     "id": "temporal_mechanics",
     "name": "Temporal Mechanics",
     "category": "build",
-    "ai_weights": { "power": 0, "tech": 1, "wealth": 3, "growth": 2 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 1,
+      "wealth": 3,
+      "growth": 2
+    },
     "icon": "assets/sprites/techs/tech028.png",
     "prerequisites": [
       "eudaimonia",
@@ -346,7 +489,10 @@
           "stat": "energy",
           "amount": 1,
           "op": "Add",
-          "selector": { "kind": "HasImprovement", "improvement": "Fungus" }
+          "selector": {
+            "kind": "HasImprovement",
+            "improvement": "Fungus"
+          }
         }
       }
     ]
@@ -355,7 +501,12 @@
     "id": "probability_mechanics",
     "name": "Probability Mechanics",
     "category": "build",
-    "ai_weights": { "power": 1, "tech": 1, "wealth": 3, "growth": 2 },
+    "ai_weights": {
+      "power": 1,
+      "tech": 1,
+      "wealth": 3,
+      "growth": 2
+    },
     "icon": "assets/sprites/techs/tech029.png",
     "prerequisites": [
       "photon_wave_mechanics",
@@ -366,7 +517,12 @@
     "id": "pre_sentient_algorithms",
     "name": "Pre-Sentient Algorithms",
     "category": "discover",
-    "ai_weights": { "power": 2, "tech": 4, "wealth": 3, "growth": 2 },
+    "ai_weights": {
+      "power": 2,
+      "tech": 4,
+      "wealth": 3,
+      "growth": 2
+    },
     "icon": "assets/sprites/techs/tech030.png",
     "prerequisites": [
       "advanced_military_algorithms",
@@ -377,7 +533,12 @@
     "id": "super_tensile_solids",
     "name": "Super Tensile Solids",
     "category": "build",
-    "ai_weights": { "power": 1, "tech": 0, "wealth": 5, "growth": 2 },
+    "ai_weights": {
+      "power": 1,
+      "tech": 0,
+      "wealth": 5,
+      "growth": 2
+    },
     "icon": "assets/sprites/techs/tech031.png",
     "prerequisites": [
       "matter_compression",
@@ -388,7 +549,12 @@
     "id": "planetary_networks",
     "name": "Planetary Networks",
     "category": "discover",
-    "ai_weights": { "power": 0, "tech": 4, "wealth": 3, "growth": 1 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 4,
+      "wealth": 3,
+      "growth": 1
+    },
     "icon": "assets/sprites/techs/tech032.png",
     "prerequisites": [
       "information_networks"
@@ -398,7 +564,12 @@
     "id": "digital_sentience",
     "name": "Digital Sentience",
     "category": "discover",
-    "ai_weights": { "power": 0, "tech": 4, "wealth": 3, "growth": 2 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 4,
+      "wealth": 3,
+      "growth": 2
+    },
     "icon": "assets/sprites/techs/tech033.png",
     "prerequisites": [
       "industrial_nanorobotics",
@@ -409,7 +580,12 @@
     "id": "self_aware_machines",
     "name": "Self-Aware Machines",
     "category": "discover",
-    "ai_weights": { "power": 0, "tech": 4, "wealth": 3, "growth": 3 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 4,
+      "wealth": 3,
+      "growth": 3
+    },
     "icon": "assets/sprites/techs/tech034.png",
     "prerequisites": [
       "n_space_compression",
@@ -420,7 +596,12 @@
     "id": "doctrine_initiative",
     "name": "Doctrine: Initiative",
     "category": "grow",
-    "ai_weights": { "power": 2, "tech": 0, "wealth": 0, "growth": 4 },
+    "ai_weights": {
+      "power": 2,
+      "tech": 0,
+      "wealth": 0,
+      "growth": 4
+    },
     "icon": "assets/sprites/techs/tech035.png",
     "prerequisites": [
       "doctrine_flexibility",
@@ -431,7 +612,12 @@
     "id": "doctrine_flexibility",
     "name": "Doctrine: Flexibility",
     "category": "grow",
-    "ai_weights": { "power": 2, "tech": 0, "wealth": 1, "growth": 4 },
+    "ai_weights": {
+      "power": 2,
+      "tech": 0,
+      "wealth": 1,
+      "growth": 4
+    },
     "icon": "assets/sprites/techs/tech036.png",
     "prerequisites": [
       "doctrine_mobility"
@@ -441,7 +627,12 @@
     "id": "intellectual_integrity",
     "name": "Intellectual Integrity",
     "category": "discover",
-    "ai_weights": { "power": 0, "tech": 1, "wealth": 3, "growth": 4 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 1,
+      "wealth": 3,
+      "growth": 4
+    },
     "icon": "assets/sprites/techs/tech037.png",
     "prerequisites": [
       "ethical_calculus",
@@ -452,7 +643,12 @@
     "id": "synthetic_fossil_fuels",
     "name": "Synthetic Fossil Fuels",
     "category": "grow",
-    "ai_weights": { "power": 1, "tech": 0, "wealth": 2, "growth": 4 },
+    "ai_weights": {
+      "power": 1,
+      "tech": 0,
+      "wealth": 2,
+      "growth": 4
+    },
     "icon": "assets/sprites/techs/tech038.png",
     "prerequisites": [
       "high_energy_chemistry",
@@ -463,7 +659,12 @@
     "id": "doctrine_air_power",
     "name": "Doctrine: Air Power",
     "category": "conquer",
-    "ai_weights": { "power": 3, "tech": 0, "wealth": 3, "growth": 4 },
+    "ai_weights": {
+      "power": 3,
+      "tech": 0,
+      "wealth": 3,
+      "growth": 4
+    },
     "icon": "assets/sprites/techs/tech039.png",
     "prerequisites": [
       "synthetic_fossil_fuels",
@@ -485,7 +686,12 @@
     "id": "photon_wave_mechanics",
     "name": "Photon/Wave Mechanics",
     "category": "conquer",
-    "ai_weights": { "power": 3, "tech": 2, "wealth": 2, "growth": 0 },
+    "ai_weights": {
+      "power": 3,
+      "tech": 2,
+      "wealth": 2,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech040.png",
     "prerequisites": [
       "applied_relativity",
@@ -496,7 +702,12 @@
     "id": "mind_machine_interface",
     "name": "Mind/Machine Interface",
     "category": "conquer",
-    "ai_weights": { "power": 4, "tech": 0, "wealth": 2, "growth": 2 },
+    "ai_weights": {
+      "power": 4,
+      "tech": 0,
+      "wealth": 2,
+      "growth": 2
+    },
     "icon": "assets/sprites/techs/tech041.png",
     "prerequisites": [
       "doctrine_air_power",
@@ -507,7 +718,12 @@
     "id": "nanominiaturization",
     "name": "Nanominiaturization",
     "category": "build",
-    "ai_weights": { "power": 1, "tech": 0, "wealth": 4, "growth": 3 },
+    "ai_weights": {
+      "power": 1,
+      "tech": 0,
+      "wealth": 4,
+      "growth": 3
+    },
     "icon": "assets/sprites/techs/tech042.png",
     "prerequisites": [
       "monopole_magnets",
@@ -518,7 +734,12 @@
     "id": "doctrine_loyalty",
     "name": "Doctrine: Loyalty",
     "category": "conquer",
-    "ai_weights": { "power": 3, "tech": 0, "wealth": 2, "growth": 2 },
+    "ai_weights": {
+      "power": 3,
+      "tech": 0,
+      "wealth": 2,
+      "growth": 2
+    },
     "icon": "assets/sprites/techs/tech043.png",
     "prerequisites": [
       "doctrine_mobility",
@@ -529,7 +750,12 @@
     "id": "ethical_calculus",
     "name": "Ethical Calculus",
     "category": "grow",
-    "ai_weights": { "power": 0, "tech": 1, "wealth": 3, "growth": 3 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 1,
+      "wealth": 3,
+      "growth": 3
+    },
     "icon": "assets/sprites/techs/tech044.png",
     "prerequisites": [
       "social_psych"
@@ -539,7 +765,12 @@
     "id": "industrial_economics",
     "name": "Industrial Economics",
     "category": "build",
-    "ai_weights": { "power": 0, "tech": 0, "wealth": 5, "growth": 2 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 0,
+      "wealth": 5,
+      "growth": 2
+    },
     "icon": "assets/sprites/techs/tech045.png",
     "prerequisites": [
       "industrial_base"
@@ -560,7 +791,12 @@
     "id": "industrial_automation",
     "name": "Industrial Automation",
     "category": "build",
-    "ai_weights": { "power": 0, "tech": 1, "wealth": 4, "growth": 3 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 1,
+      "wealth": 4,
+      "growth": 3
+    },
     "icon": "assets/sprites/techs/tech046.png",
     "prerequisites": [
       "industrial_economics",
@@ -582,7 +818,12 @@
     "id": "centauri_meditation",
     "name": "Centauri Meditation",
     "category": "grow",
-    "ai_weights": { "power": 0, "tech": 0, "wealth": 2, "growth": 4 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 0,
+      "wealth": 2,
+      "growth": 4
+    },
     "icon": "assets/sprites/techs/tech047.png",
     "prerequisites": [
       "ecological_engineering",
@@ -596,7 +837,10 @@
           "stat": "energy",
           "amount": 1,
           "op": "Add",
-          "selector": { "kind": "HasImprovement", "improvement": "Fungus" }
+          "selector": {
+            "kind": "HasImprovement",
+            "improvement": "Fungus"
+          }
         }
       }
     ]
@@ -605,7 +849,12 @@
     "id": "secrets_of_the_human_brain",
     "name": "Secrets of the Human Brain",
     "category": "discover",
-    "ai_weights": { "power": 1, "tech": 5, "wealth": 0, "growth": 3 },
+    "ai_weights": {
+      "power": 1,
+      "tech": 5,
+      "wealth": 0,
+      "growth": 3
+    },
     "icon": "assets/sprites/techs/tech048.png",
     "prerequisites": [
       "social_psych",
@@ -625,7 +874,12 @@
     "id": "gene_splicing",
     "name": "Gene Splicing",
     "category": "discover",
-    "ai_weights": { "power": 0, "tech": 2, "wealth": 4, "growth": 3 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 2,
+      "wealth": 4,
+      "growth": 3
+    },
     "icon": "assets/sprites/techs/tech049.png",
     "prerequisites": [
       "biogenetics",
@@ -645,7 +899,12 @@
     "id": "bio_engineering",
     "name": "Bio-Engineering",
     "category": "build",
-    "ai_weights": { "power": 0, "tech": 2, "wealth": 3, "growth": 2 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 2,
+      "wealth": 3,
+      "growth": 2
+    },
     "icon": "assets/sprites/techs/tech050.png",
     "prerequisites": [
       "gene_splicing",
@@ -665,7 +924,12 @@
     "id": "biomachinery",
     "name": "Biomachinery",
     "category": "build",
-    "ai_weights": { "power": 3, "tech": 1, "wealth": 4, "growth": 1 },
+    "ai_weights": {
+      "power": 3,
+      "tech": 1,
+      "wealth": 4,
+      "growth": 1
+    },
     "icon": "assets/sprites/techs/tech051.png",
     "prerequisites": [
       "mind_machine_interface",
@@ -685,7 +949,12 @@
     "id": "neural_grafting",
     "name": "Neural Grafting",
     "category": "conquer",
-    "ai_weights": { "power": 3, "tech": 1, "wealth": 1, "growth": 1 },
+    "ai_weights": {
+      "power": 3,
+      "tech": 1,
+      "wealth": 1,
+      "growth": 1
+    },
     "icon": "assets/sprites/techs/tech052.png",
     "prerequisites": [
       "secrets_of_the_human_brain",
@@ -696,7 +965,12 @@
     "id": "cyberethics",
     "name": "Cyberethics",
     "category": "build",
-    "ai_weights": { "power": 1, "tech": 3, "wealth": 4, "growth": 0 },
+    "ai_weights": {
+      "power": 1,
+      "tech": 3,
+      "wealth": 4,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech053.png",
     "prerequisites": [
       "planetary_networks",
@@ -707,7 +981,12 @@
     "id": "eudaimonia",
     "name": "Eudaimonia",
     "category": "grow",
-    "ai_weights": { "power": 0, "tech": 0, "wealth": 3, "growth": 4 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 0,
+      "wealth": 3,
+      "growth": 4
+    },
     "icon": "assets/sprites/techs/tech054.png",
     "prerequisites": [
       "sentient_econometrics",
@@ -718,7 +997,12 @@
     "id": "the_will_to_power",
     "name": "The Will to Power",
     "category": "grow",
-    "ai_weights": { "power": 0, "tech": 3, "wealth": 1, "growth": 4 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 3,
+      "wealth": 1,
+      "growth": 4
+    },
     "icon": "assets/sprites/techs/tech055.png",
     "prerequisites": [
       "homo_superior",
@@ -729,7 +1013,12 @@
     "id": "threshold_of_transcendence",
     "name": "Threshold of Transcendence",
     "category": "grow",
-    "ai_weights": { "power": 0, "tech": 1, "wealth": 3, "growth": 4 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 1,
+      "wealth": 3,
+      "growth": 4
+    },
     "icon": "assets/sprites/techs/tech056.png",
     "prerequisites": [
       "secrets_of_the_manifolds",
@@ -743,7 +1032,10 @@
           "stat": "minerals",
           "amount": 1,
           "op": "Add",
-          "selector": { "kind": "HasImprovement", "improvement": "Fungus" }
+          "selector": {
+            "kind": "HasImprovement",
+            "improvement": "Fungus"
+          }
         }
       }
     ]
@@ -752,7 +1044,12 @@
     "id": "matter_transmission",
     "name": "Matter Transmission",
     "category": "build",
-    "ai_weights": { "power": 1, "tech": 0, "wealth": 3, "growth": 2 },
+    "ai_weights": {
+      "power": 1,
+      "tech": 0,
+      "wealth": 3,
+      "growth": 2
+    },
     "icon": "assets/sprites/techs/tech057.png",
     "prerequisites": [
       "matter_editation",
@@ -763,7 +1060,12 @@
     "id": "centauri_empathy",
     "name": "Centauri Empathy",
     "category": "grow",
-    "ai_weights": { "power": 0, "tech": 1, "wealth": 0, "growth": 6 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 1,
+      "wealth": 0,
+      "growth": 6
+    },
     "icon": "assets/sprites/techs/tech058.png",
     "prerequisites": [
       "secrets_of_the_human_brain",
@@ -771,19 +1073,10 @@
     ],
     "effects": [
       {
-        "type": "CoexistenceOverride",
+        "type": "RuleFlag",
         "scope": "FactionUnits",
         "parameters": {
-          "cell": "allow",
-          "occupants": ["Fungus", "Road"]
-        }
-      },
-      {
-        "type": "CoexistenceOverride",
-        "scope": "FactionUnits",
-        "parameters": {
-          "cell": "allow",
-          "occupants": ["Fungus", "MagTube"]
+          "flag": "terraform_fungus_road"
         }
       }
     ]
@@ -792,7 +1085,12 @@
     "id": "environmental_economics",
     "name": "Environmental Economics",
     "category": "build",
-    "ai_weights": { "power": 0, "tech": 0, "wealth": 4, "growth": 3 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 0,
+      "wealth": 4,
+      "growth": 3
+    },
     "icon": "assets/sprites/techs/tech059.png",
     "prerequisites": [
       "industrial_economics",
@@ -814,7 +1112,12 @@
     "id": "ecological_engineering",
     "name": "Ecological Engineering",
     "category": "build",
-    "ai_weights": { "power": 0, "tech": 0, "wealth": 3, "growth": 4 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 0,
+      "wealth": 3,
+      "growth": 4
+    },
     "icon": "assets/sprites/techs/tech060.png",
     "prerequisites": [
       "centauri_ecology",
@@ -825,7 +1128,12 @@
     "id": "planetary_economics",
     "name": "Planetary Economics",
     "category": "build",
-    "ai_weights": { "power": 0, "tech": 0, "wealth": 4, "growth": 3 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 0,
+      "wealth": 4,
+      "growth": 3
+    },
     "icon": "assets/sprites/techs/tech061.png",
     "prerequisites": [
       "adaptive_economics",
@@ -847,7 +1155,12 @@
     "id": "advanced_ecological_engineering",
     "name": "Adv. Ecological Engineering",
     "category": "build",
-    "ai_weights": { "power": 0, "tech": 0, "wealth": 4, "growth": 2 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 0,
+      "wealth": 4,
+      "growth": 2
+    },
     "icon": "assets/sprites/techs/tech062.png",
     "prerequisites": [
       "fusion_power",
@@ -858,7 +1171,12 @@
     "id": "centauri_psi",
     "name": "Centauri Psi",
     "category": "grow",
-    "ai_weights": { "power": 0, "tech": 1, "wealth": 1, "growth": 6 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 1,
+      "wealth": 1,
+      "growth": 6
+    },
     "icon": "assets/sprites/techs/tech063.png",
     "prerequisites": [
       "centauri_genetics",
@@ -872,15 +1190,17 @@
           "stat": "nutrients",
           "amount": 1,
           "op": "Add",
-          "selector": { "kind": "HasImprovement", "improvement": "Fungus" }
+          "selector": {
+            "kind": "HasImprovement",
+            "improvement": "Fungus"
+          }
         }
       },
       {
-        "type": "CoexistenceOverride",
+        "type": "RuleFlag",
         "scope": "FactionUnits",
         "parameters": {
-          "cell": "allow",
-          "occupants": ["Fungus"]
+          "flag": "terraform_fungus_improvement"
         }
       }
     ]
@@ -889,7 +1209,12 @@
     "id": "secrets_of_alpha_centauri",
     "name": "Secrets of Alpha Centauri",
     "category": "discover",
-    "ai_weights": { "power": 0, "tech": 4, "wealth": 0, "growth": 2 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 4,
+      "wealth": 0,
+      "growth": 2
+    },
     "icon": "assets/sprites/techs/tech064.png",
     "prerequisites": [
       "centauri_psi",
@@ -903,7 +1228,10 @@
           "stat": "energy",
           "amount": 1,
           "op": "Add",
-          "selector": { "kind": "HasImprovement", "improvement": "Fungus" }
+          "selector": {
+            "kind": "HasImprovement",
+            "improvement": "Fungus"
+          }
         }
       }
     ]
@@ -912,7 +1240,12 @@
     "id": "secrets_of_creation",
     "name": "Secrets of Creation",
     "category": "discover",
-    "ai_weights": { "power": 1, "tech": 4, "wealth": 1, "growth": 0 },
+    "ai_weights": {
+      "power": 1,
+      "tech": 4,
+      "wealth": 1,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech065.png",
     "prerequisites": [
       "unified_field_theory",
@@ -923,7 +1256,12 @@
     "id": "advanced_spaceflight",
     "name": "Advanced Spaceflight",
     "category": "discover",
-    "ai_weights": { "power": 2, "tech": 4, "wealth": 2, "growth": 3 },
+    "ai_weights": {
+      "power": 2,
+      "tech": 4,
+      "wealth": 2,
+      "growth": 3
+    },
     "icon": "assets/sprites/techs/tech066.png",
     "prerequisites": [
       "orbital_spaceflight",
@@ -934,7 +1272,12 @@
     "id": "homo_superior",
     "name": "Homo Superior",
     "category": "grow",
-    "ai_weights": { "power": 3, "tech": 2, "wealth": 1, "growth": 4 },
+    "ai_weights": {
+      "power": 3,
+      "tech": 2,
+      "wealth": 1,
+      "growth": 4
+    },
     "icon": "assets/sprites/techs/tech067.png",
     "prerequisites": [
       "biomachinery",
@@ -945,7 +1288,12 @@
     "id": "organic_superlubricant",
     "name": "Organic Superlubricant",
     "category": "conquer",
-    "ai_weights": { "power": 3, "tech": 1, "wealth": 2, "growth": 0 },
+    "ai_weights": {
+      "power": 3,
+      "tech": 1,
+      "wealth": 2,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech068.png",
     "prerequisites": [
       "fusion_power",
@@ -956,7 +1304,12 @@
     "id": "quantum_machinery",
     "name": "Quantum Machinery",
     "category": "build",
-    "ai_weights": { "power": 3, "tech": 1, "wealth": 4, "growth": 0 },
+    "ai_weights": {
+      "power": 3,
+      "tech": 1,
+      "wealth": 4,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech069.png",
     "prerequisites": [
       "quantum_power",
@@ -967,7 +1320,12 @@
     "id": "matter_editation",
     "name": "Matter Editation",
     "category": "build",
-    "ai_weights": { "power": 1, "tech": 2, "wealth": 3, "growth": 1 },
+    "ai_weights": {
+      "power": 1,
+      "tech": 2,
+      "wealth": 3,
+      "growth": 1
+    },
     "icon": "assets/sprites/techs/tech071.png",
     "prerequisites": [
       "self_aware_machines",
@@ -988,7 +1346,10 @@
           "stat": "minerals",
           "amount": 1,
           "op": "Add",
-          "selector": { "kind": "HasImprovement", "improvement": "Fungus" }
+          "selector": {
+            "kind": "HasImprovement",
+            "improvement": "Fungus"
+          }
         }
       }
     ]
@@ -997,7 +1358,12 @@
     "id": "optical_computers",
     "name": "Optical Computers",
     "category": "discover",
-    "ai_weights": { "power": 2, "tech": 4, "wealth": 1, "growth": 0 },
+    "ai_weights": {
+      "power": 2,
+      "tech": 4,
+      "wealth": 1,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech072.png",
     "prerequisites": [
       "applied_physics",
@@ -1008,7 +1374,12 @@
     "id": "industrial_nanorobotics",
     "name": "Industrial Nanorobotics",
     "category": "build",
-    "ai_weights": { "power": 3, "tech": 1, "wealth": 8, "growth": 1 },
+    "ai_weights": {
+      "power": 3,
+      "tech": 1,
+      "wealth": 8,
+      "growth": 1
+    },
     "icon": "assets/sprites/techs/tech073.png",
     "prerequisites": [
       "nanominiaturization",
@@ -1030,7 +1401,12 @@
     "id": "centauri_genetics",
     "name": "Centauri Genetics",
     "category": "grow",
-    "ai_weights": { "power": 0, "tech": 2, "wealth": 0, "growth": 5 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 2,
+      "wealth": 0,
+      "growth": 5
+    },
     "icon": "assets/sprites/techs/tech074.png",
     "prerequisites": [
       "centauri_meditation",
@@ -1044,7 +1420,10 @@
           "stat": "minerals",
           "amount": 1,
           "op": "Add",
-          "selector": { "kind": "HasImprovement", "improvement": "Fungus" }
+          "selector": {
+            "kind": "HasImprovement",
+            "improvement": "Fungus"
+          }
         }
       }
     ]
@@ -1053,7 +1432,12 @@
     "id": "sentient_econometrics",
     "name": "Sentient Econometrics",
     "category": "build",
-    "ai_weights": { "power": 1, "tech": 1, "wealth": 3, "growth": 4 },
+    "ai_weights": {
+      "power": 1,
+      "tech": 1,
+      "wealth": 3,
+      "growth": 4
+    },
     "icon": "assets/sprites/techs/tech075.png",
     "prerequisites": [
       "planetary_economics",
@@ -1075,7 +1459,12 @@
     "id": "retroviral_engineering",
     "name": "Retroviral Engineering",
     "category": "conquer",
-    "ai_weights": { "power": 4, "tech": 2, "wealth": 0, "growth": 2 },
+    "ai_weights": {
+      "power": 4,
+      "tech": 2,
+      "wealth": 0,
+      "growth": 2
+    },
     "icon": "assets/sprites/techs/tech076.png",
     "prerequisites": [
       "bio_engineering",
@@ -1102,7 +1491,12 @@
     "id": "orbital_spaceflight",
     "name": "Orbital Spaceflight",
     "category": "discover",
-    "ai_weights": { "power": 0, "tech": 4, "wealth": 3, "growth": 3 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 4,
+      "wealth": 3,
+      "growth": 3
+    },
     "icon": "assets/sprites/techs/tech077.png",
     "prerequisites": [
       "doctrine_air_power",
@@ -1113,14 +1507,24 @@
     "id": "progenitor_psych",
     "name": "Progenitor Psych",
     "category": "grow",
-    "ai_weights": { "power": 0, "tech": 2, "wealth": 3, "growth": 4 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 2,
+      "wealth": 3,
+      "growth": 4
+    },
     "icon": "assets/sprites/techs/tech078.png"
   },
   {
     "id": "field_modulation",
     "name": "Field Modulation",
     "category": "conquer",
-    "ai_weights": { "power": 4, "tech": 2, "wealth": 0, "growth": 2 },
+    "ai_weights": {
+      "power": 4,
+      "tech": 2,
+      "wealth": 0,
+      "growth": 2
+    },
     "icon": "assets/sprites/techs/tech079.png",
     "prerequisites": [
       "progenitor_psych",
@@ -1131,7 +1535,12 @@
     "id": "adaptive_doctrine",
     "name": "Adaptive Doctrine",
     "category": "conquer",
-    "ai_weights": { "power": 5, "tech": 2, "wealth": 0, "growth": 0 },
+    "ai_weights": {
+      "power": 5,
+      "tech": 2,
+      "wealth": 0,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech080.png",
     "prerequisites": [
       "polymorphic_software",
@@ -1142,7 +1551,12 @@
     "id": "adaptive_economics",
     "name": "Adaptive Economics",
     "category": "build",
-    "ai_weights": { "power": 0, "tech": 1, "wealth": 5, "growth": 2 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 1,
+      "wealth": 5,
+      "growth": 2
+    },
     "icon": "assets/sprites/techs/tech081.png",
     "prerequisites": [
       "progenitor_psych",
@@ -1153,7 +1567,12 @@
     "id": "bioadaptive_resonance",
     "name": "Bioadaptive Resonance",
     "category": "conquer",
-    "ai_weights": { "power": 5, "tech": 2, "wealth": 0, "growth": 0 },
+    "ai_weights": {
+      "power": 5,
+      "tech": 2,
+      "wealth": 0,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech082.png",
     "prerequisites": [
       "field_modulation",
@@ -1164,7 +1583,12 @@
     "id": "sentient_resonance",
     "name": "Sentient Resonance",
     "category": "conquer",
-    "ai_weights": { "power": 5, "tech": 2, "wealth": 0, "growth": 0 },
+    "ai_weights": {
+      "power": 5,
+      "tech": 2,
+      "wealth": 0,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech083.png",
     "prerequisites": [
       "bioadaptive_resonance",
@@ -1175,7 +1599,12 @@
     "id": "secrets_of_the_manifolds",
     "name": "Secrets of the Manifolds",
     "category": "discover",
-    "ai_weights": { "power": 0, "tech": 5, "wealth": 4, "growth": 2 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 5,
+      "wealth": 4,
+      "growth": 2
+    },
     "icon": "assets/sprites/techs/tech084.png",
     "prerequisites": [
       "sentient_resonance",
@@ -1186,7 +1615,12 @@
     "id": "n_space_compression",
     "name": "N-Space Compression",
     "category": "conquer",
-    "ai_weights": { "power": 4, "tech": 0, "wealth": 2, "growth": 0 },
+    "ai_weights": {
+      "power": 4,
+      "tech": 0,
+      "wealth": 2,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech085.png",
     "prerequisites": [
       "orbital_spaceflight",
@@ -1197,7 +1631,12 @@
     "id": "string_resonance",
     "name": "String Resonance",
     "category": "conquer",
-    "ai_weights": { "power": 8, "tech": 0, "wealth": 0, "growth": 0 },
+    "ai_weights": {
+      "power": 8,
+      "tech": 0,
+      "wealth": 0,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech086.png",
     "prerequisites": [
       "secrets_of_the_manifolds",
@@ -1208,14 +1647,24 @@
     "id": "user_technology",
     "name": "User Technology",
     "category": "discover",
-    "ai_weights": { "power": 0, "tech": 2, "wealth": 0, "growth": 0 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 2,
+      "wealth": 0,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech087.png"
   },
   {
     "id": "transcendent_thought",
     "name": "Transcendent Thought",
     "category": "discover",
-    "ai_weights": { "power": 0, "tech": 2, "wealth": 0, "growth": 0 },
+    "ai_weights": {
+      "power": 0,
+      "tech": 2,
+      "wealth": 0,
+      "growth": 0
+    },
     "icon": "assets/sprites/techs/tech088.png",
     "prerequisites": [
       "threshold_of_transcendence",

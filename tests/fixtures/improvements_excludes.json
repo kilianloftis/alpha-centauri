@@ -2,7 +2,6 @@
   {
     "id": "Road",
     "name": "Road",
-    "turns_required": 1,
     "domain": "land",
     "effects": [
       {
@@ -37,14 +36,6 @@
   {
     "id": "MagTube",
     "name": "Mag Tube",
-    "required_techs": {
-      "any": [
-        {
-          "tech": "monopole_magnets"
-        }
-      ]
-    },
-    "turns_required": 3,
     "domain": "land",
     "effects": [
       {
@@ -79,7 +70,6 @@
   {
     "id": "Farm",
     "name": "Farm",
-    "turns_required": 4,
     "tags": [
       "land_terraform"
     ],
@@ -122,7 +112,6 @@
   {
     "id": "Forest",
     "name": "Forest",
-    "turns_required": 4,
     "spreads": {
       "score_formula": "4 * (3 - moisture) - rockiness",
       "altitude_limit_meters": 1000
@@ -136,7 +125,6 @@
       "Mine",
       "SolarCollector",
       "ThermalBorehole",
-      "Fungus",
       "Rocky"
     ],
     "suppress_yield_sources": [
@@ -184,7 +172,6 @@
   {
     "id": "KelpFarm",
     "name": "Kelp Farm",
-    "turns_required": 4,
     "spreads": {
       "score_formula": "4 * (3 - moisture) - rockiness"
     },
@@ -219,7 +206,6 @@
   {
     "id": "Mine",
     "name": "Mine",
-    "turns_required": 8,
     "tags": [
       "land_terraform"
     ],
@@ -277,7 +263,6 @@
   {
     "id": "SolarCollector",
     "name": "Solar Collector",
-    "turns_required": 4,
     "tags": [
       "land_terraform"
     ],
@@ -324,14 +309,6 @@
   {
     "id": "Bunker",
     "name": "Bunker",
-    "required_techs": {
-      "any": [
-        {
-          "tech": "advanced_military_algorithms"
-        }
-      ]
-    },
-    "turns_required": 5,
     "domain": "land",
     "effects": [
       {
@@ -465,14 +442,6 @@
   {
     "id": "Airbase",
     "name": "Airbase",
-    "required_techs": {
-      "any": [
-        {
-          "tech": "doctrine_air_power"
-        }
-      ]
-    },
-    "turns_required": 10,
     "domain": "land",
     "effects": [
       {
@@ -503,7 +472,6 @@
   {
     "id": "Sensor",
     "name": "Sensor",
-    "turns_required": 4,
     "domain": "land",
     "owned_by_territory": true,
     "effects": [
@@ -545,14 +513,6 @@
   {
     "id": "Mirror",
     "name": "Mirror",
-    "required_techs": {
-      "any": [
-        {
-          "tech": "ecological_engineering"
-        }
-      ]
-    },
-    "turns_required": 12,
     "tags": [
       "land_terraform"
     ],
@@ -629,14 +589,6 @@
   {
     "id": "Condenser",
     "name": "Condenser",
-    "required_techs": {
-      "any": [
-        {
-          "tech": "ecological_engineering"
-        }
-      ]
-    },
-    "turns_required": 12,
     "tags": [
       "land_terraform"
     ],
@@ -685,14 +637,6 @@
   {
     "id": "SoilEnricher",
     "name": "Soil Enricher",
-    "required_techs": {
-      "any": [
-        {
-          "tech": "advanced_ecological_engineering"
-        }
-      ]
-    },
-    "turns_required": 8,
     "tags": [
       "land_terraform"
     ],
@@ -717,14 +661,6 @@
   {
     "id": "ThermalBorehole",
     "name": "Thermal Borehole",
-    "required_techs": {
-      "any": [
-        {
-          "tech": "ecological_engineering"
-        }
-      ]
-    },
-    "turns_required": 24,
     "tags": [
       "land_terraform"
     ],

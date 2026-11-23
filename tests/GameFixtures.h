@@ -71,16 +71,18 @@ inline const ac::Formula_t k_TestTechCostFormula = TestTechCostFormula("10");
 // `effects`, so never do that; editing an existing entry is safe.
 void SetBaseConquestStat(ac::BaseConquestConfig_t& rConfig, ac::StatId_t stat, double amount);
 
-// The improvement and terrain files, under tests/fixtures/, a fixture session loads.
+// The improvement, terrain, and terraform-project files under tests/fixtures/.
 struct OccupantFiles_t
 {
     std::string improvements = "improvements.json";
     std::string terrain = "terrain.json";
+    std::string terraformProjects = "terraform_projects.json";
 };
 
 // The fixture occupants with the Farm, Forest, Mine and Fungus excludes rules.
 inline const OccupantFiles_t k_ExcludesOccupantFiles{"improvements_excludes.json",
-                                                     "terrain_excludes.json"};
+                                                     "terrain_excludes.json",
+                                                     "terraform_projects_excludes.json"};
 
 // Everything a session's factions and units reference, so it outlives the session.
 // TileEffectsContext caches the max effect radius at construction, so the registries must

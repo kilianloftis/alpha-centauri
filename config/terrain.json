@@ -359,7 +359,15 @@
           }
         }
       ],
-      "excludes": [
+      "art": {
+        "layer": "vegetation",
+        "tiles": {
+          "layout": "blob",
+          "land": "assets/sprites/landforms/fungus_land/{mask}.png",
+          "sea": "assets/sprites/landforms/fungus_sea/{mask}.png"
+        }
+      },
+      "clears": [
         "Mine",
         "SolarCollector",
         "Farm",
@@ -368,15 +376,7 @@
         "MiningPlatform",
         "TidalHarness",
         "KelpFarm"
-      ],
-      "art": {
-        "layer": "vegetation",
-        "tiles": {
-          "layout": "blob",
-          "land": "assets/sprites/landforms/fungus_land/{mask}.png",
-          "sea": "assets/sprites/landforms/fungus_sea/{mask}.png"
-        }
-      }
+      ]
     },
     {
       "id": "Aquifer",
@@ -987,158 +987,6 @@
         },
         "overhang": 0.24
       }
-    }
-  ],
-  "operations": [
-    {
-      "id": "PlantFungus",
-      "name": "Plant Fungus",
-      "required_techs": {
-        "any": [
-          {
-            "tech": "ecological_engineering"
-          }
-        ]
-      },
-      "turns_required": 6,
-      "energy_cost": 0,
-      "on_complete_effects": [
-        {
-          "type": "SetTerrainFeature",
-          "parameters": {
-            "feature": "Fungus",
-            "present": true
-          },
-          "condition": {
-            "kind": "TargetTileHas",
-            "value": "Fungus",
-            "present": false
-          }
-        }
-      ]
-    },
-    {
-      "id": "RemoveFungus",
-      "name": "Remove Fungus",
-      "turns_required": 6,
-      "energy_cost": 0,
-      "on_complete_effects": [
-        {
-          "type": "SetTerrainFeature",
-          "parameters": {
-            "feature": "Fungus",
-            "present": false
-          },
-          "condition": {
-            "kind": "TargetTileHas",
-            "value": "Fungus"
-          }
-        }
-      ]
-    },
-    {
-      "id": "LevelTerrain",
-      "name": "Level Terrain",
-      "turns_required": 8,
-      "energy_cost": 0,
-      "domain": "land",
-      "on_complete_effects": [
-        {
-          "type": "StepRockiness",
-          "parameters": {
-            "steps": -1
-          },
-          "condition": {
-            "kind": "AnyOf",
-            "values": [
-              "Rocky",
-              "Rolling"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "id": "RaiseLand",
-      "name": "Raise Land",
-      "required_techs": {
-        "any": [
-          {
-            "tech": "environmental_economics"
-          }
-        ]
-      },
-      "turns_required": 12,
-      "energy_cost": "terraform_cost.lua",
-      "former_domain": "Any",
-      "on_complete_effects": [
-        {
-          "type": "ElevationChange",
-          "parameters": {
-            "direction": "raise"
-          }
-        }
-      ]
-    },
-    {
-      "id": "LowerLand",
-      "name": "Lower Land",
-      "required_techs": {
-        "any": [
-          {
-            "tech": "environmental_economics"
-          }
-        ]
-      },
-      "turns_required": 12,
-      "energy_cost": "terraform_cost.lua",
-      "former_domain": "Any",
-      "on_complete_effects": [
-        {
-          "type": "ElevationChange",
-          "parameters": {
-            "direction": "lower"
-          }
-        }
-      ]
-    },
-    {
-      "id": "Aquifer",
-      "name": "Aquifer",
-      "required_techs": {
-        "any": [
-          {
-            "tech": "ecological_engineering"
-          }
-        ]
-      },
-      "turns_required": 18,
-      "energy_cost": 0,
-      "domain": "land",
-      "on_complete_effects": [
-        {
-          "type": "SetTerrainFeature",
-          "parameters": {
-            "feature": "Aquifer",
-            "present": true
-          },
-          "condition": {
-            "kind": "AllOf",
-            "conditions": [
-              {
-                "kind": "TargetTileHas",
-                "value": "Aquifer",
-                "present": false
-              },
-              {
-                "kind": "TargetTileHas",
-                "value": "Water",
-                "present": false
-              }
-            ]
-          }
-        }
-      ]
     }
   ]
 }

@@ -90,15 +90,15 @@ TEST_CASE("A feature the caller is clearing does not block the placement", "[map
     actest::WorldFixture world;
     Tile& rTile = *world.map.GetTile(8, 4);
     rTile.SetElevation(500);
-    rTile.AddTerrainFeature(world.improvements.Get("Fungus"));
+    rTile.SetRockiness(Rockiness_t::Rocky);
 
-    const ImprovementConfig_t& rForest = world.improvements.Get("Forest");
-    CHECK_FALSE(CanBuildImprovement(rTile, rForest, {}, {}));
+    const ImprovementConfig_t& rFarm = world.improvements.Get("Farm");
+    CHECK_FALSE(CanBuildImprovement(rTile, rFarm, {}, {}));
 
-    // Naming an occupant as ignored does not remove it. Forest spread does not use this.
-    const std::string fungusLeaving(ImprovementIds::k_Fungus);
-    CHECK(CanBuildImprovement(rTile, rForest, std::span(&fungusLeaving, 1), {}));
-    CHECK(rTile.HasFeature("Fungus"));
+    // Naming an occupant as ignored does not remove it.
+    const std::string rockyLeaving("Rocky");
+    CHECK(CanBuildImprovement(rTile, rFarm, std::span(&rockyLeaving, 1), {}));
+    CHECK(rTile.GetRockiness() == Rockiness_t::Rocky);
 }
 
 TEST_CASE("requires blocks placement until the listed occupant is present", "[map][improvements]")

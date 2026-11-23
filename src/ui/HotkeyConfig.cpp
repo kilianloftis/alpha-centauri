@@ -1,7 +1,7 @@
 #include "ui/HotkeyConfig.h"
 
 #include "game/map/ImprovementRegistry.h"
-#include "game/map/TerrainOperationRegistry.h"
+#include "game/map/TerraformProjectRegistry.h"
 #include "game/terraform/TerraformRules.h"
 #include "lib/config/EnumNames.h"
 #include "lib/config/JsonConfigLoader.h"
@@ -104,7 +104,7 @@ HotkeyChord_t ReadChord_(const ConfigReader& rEntry)
 // The built-in action, or nullopt for a terraform project; exactly one must match.
 std::optional<HotkeyAction_t> ResolveAction_(const std::string& rActionName,
                                              const ImprovementRegistry& rImprovements,
-                                             const TerrainOperationRegistry& rOperations,
+                                             const TerraformProjectRegistry& rOperations,
                                              const std::string& rConfigPath)
 {
     const std::optional<HotkeyAction_t> builtin = FindBuiltin(rActionName);
@@ -193,7 +193,7 @@ std::string DescribeHotkeyChord(const HotkeyChord_t& rChord)
 
 HotkeyConfig HotkeyConfig::Load(const std::string& rConfigPath,
                                 const ImprovementRegistry& rImprovements,
-                                const TerrainOperationRegistry& rOperations)
+                                const TerraformProjectRegistry& rOperations)
 {
     return JsonConfigLoader::LoadObjectFile<HotkeyConfig>(
         rConfigPath, "hotkey",
@@ -204,7 +204,7 @@ HotkeyConfig HotkeyConfig::Load(const std::string& rConfigPath,
 
 HotkeyConfig HotkeyConfig::Parse_(const ConfigReader& rReader, const std::string& rConfigPath,
                                   const ImprovementRegistry& rImprovements,
-                                  const TerrainOperationRegistry& rOperations)
+                                  const TerraformProjectRegistry& rOperations)
 {
     HotkeyConfig config;
     BindingLedger_ ledger(rConfigPath);

@@ -71,8 +71,17 @@
     {
       "id": "Fungus",
       "name": "Fungus",
-      "effects": []
+      "effects": [],
+      "clears": [
+        "Mine",
+        "SolarCollector",
+        "Farm",
+        "SoilEnricher",
+        "Forest",
+        "MiningPlatform",
+        "TidalHarness",
+        "KelpFarm"
+      ]
     }
-  ],
-  "operations": []
+  ]
 }

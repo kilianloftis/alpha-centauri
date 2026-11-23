@@ -52,7 +52,7 @@ struct MovementHarness_
         , pathfinder(moveCosts, steps, fixture.map)
         , moves(moveCosts, steps, fixture.map, rng, fixture.state)
         , orders(moves, steps, fixture.map, fixture.ctx, pathfinder,
-                 *fixture.dataContext.terrainOperationRegistry, rng, fixture.state)
+                 *fixture.dataContext.terraformProjectRegistry, rng, fixture.state)
         , attacks(moveCosts, steps, fixture.map, fixture.ctx, fixture.morale(), rng, fixture.state,
                   orders)
     {

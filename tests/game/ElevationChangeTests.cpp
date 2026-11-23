@@ -101,7 +101,7 @@ struct OrderHarness_
         , rng(k_TestRngSeed)
         , moves(moveCosts, steps, rFixture.map, rng, rFixture.state)
         , orders(moves, steps, rFixture.map, rFixture.ctx, pathfinder,
-                 *rFixture.dataContext.terrainOperationRegistry, rng, rFixture.state)
+                 *rFixture.dataContext.terraformProjectRegistry, rng, rFixture.state)
         , attacks(moveCosts, steps, rFixture.map, rFixture.ctx, rFixture.morale(), rng, rFixture.state,
                   orders)
     {

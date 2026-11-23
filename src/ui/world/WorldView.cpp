@@ -43,7 +43,7 @@
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/MapRulesConfig.h"
-#include "game/map/TerrainOperationRegistry.h"
+#include "game/map/TerraformProjectRegistry.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/effects/TriggeredEffectDispatch.h"
@@ -919,8 +919,8 @@ bool WorldView::TryNotifyBlockedElevationTerraform_(const KeyEvent_t& rEvent, co
     }
     const ImprovementRegistry& rImprovements =
         m_rGameState.GetTileEffects().GetImprovements();
-    const TerrainOperationRegistry* pOperations =
-        m_rGameState.GetGameData().terrainOperationRegistry.get();
+    const TerraformProjectRegistry* pOperations =
+        m_rGameState.GetGameData().terraformProjectRegistry.get();
     if (!pOperations)
     {
         return false;

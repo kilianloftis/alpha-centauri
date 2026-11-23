@@ -52,6 +52,7 @@ inline ac::GameDataPaths FixtureDataPaths()
     paths.stockpiles = FixturePath("stockpiles.json");
     paths.improvements = FixturePath("improvements.json");
     paths.terrain = FixturePath("terrain.json");
+    paths.terraformProjects = FixturePath("terraform_projects.json");
     paths.unitComponents = FixturePath("unit_components.json");
     paths.unitSlots = FixturePath("unit_slots.json");
     paths.unitUpgrade = FixturePath("unit_upgrade.lua");

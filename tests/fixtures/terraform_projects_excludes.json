@@ -1,0 +1,277 @@
+[
+  {
+    "id": "PlantFungus",
+    "name": "Plant Fungus",
+    "turns_required": 6,
+    "energy_cost": 0,
+    "on_complete_effects": [
+      {
+        "type": "SetTerrainFeature",
+        "parameters": {
+          "feature": "Fungus",
+          "present": true
+        },
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "Fungus",
+          "present": false
+        }
+      }
+    ],
+    "blocked_by": [
+      "Ocean"
+    ]
+  },
+  {
+    "id": "RemoveFungus",
+    "name": "Remove Fungus",
+    "turns_required": 6,
+    "energy_cost": 0,
+    "on_complete_effects": [
+      {
+        "type": "SetTerrainFeature",
+        "parameters": {
+          "feature": "Fungus",
+          "present": false
+        },
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "Fungus"
+        }
+      }
+    ],
+    "blocked_by": [
+      "Ocean"
+    ]
+  },
+  {
+    "id": "LevelTerrain",
+    "name": "Level Terrain",
+    "turns_required": 8,
+    "energy_cost": 0,
+    "domain": "land",
+    "on_complete_effects": [
+      {
+        "type": "StepRockiness",
+        "parameters": {
+          "steps": -1
+        },
+        "condition": {
+          "kind": "AnyOf",
+          "values": [
+            "Rocky",
+            "Rolling"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "RaiseLand",
+    "name": "Raise Land",
+    "turns_required": 12,
+    "energy_cost": "terraform_cost.lua",
+    "former_domain": "Any",
+    "on_complete_effects": [
+      {
+        "type": "ElevationChange",
+        "parameters": {
+          "direction": "raise"
+        }
+      }
+    ]
+  },
+  {
+    "id": "LowerLand",
+    "name": "Lower Land",
+    "turns_required": 12,
+    "energy_cost": "terraform_cost.lua",
+    "former_domain": "Any",
+    "on_complete_effects": [
+      {
+        "type": "ElevationChange",
+        "parameters": {
+          "direction": "lower"
+        }
+      }
+    ]
+  },
+  {
+    "id": "Aquifer",
+    "name": "Aquifer",
+    "turns_required": 18,
+    "energy_cost": 0,
+    "domain": "land",
+    "on_complete_effects": [
+      {
+        "type": "SetTerrainFeature",
+        "parameters": {
+          "feature": "Aquifer",
+          "present": true
+        },
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "TargetTileHas",
+              "value": "Aquifer",
+              "present": false
+            },
+            {
+              "kind": "TargetTileHas",
+              "value": "Water",
+              "present": false
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "Road",
+    "name": "Road",
+    "turns_required": 1,
+    "places": "Road",
+    "domain": "land"
+  },
+  {
+    "id": "MagTube",
+    "name": "Mag Tube",
+    "turns_required": 3,
+    "places": "MagTube",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "monopole_magnets"
+        }
+      ]
+    },
+    "domain": "land"
+  },
+  {
+    "id": "Farm",
+    "name": "Farm",
+    "turns_required": 4,
+    "places": "Farm",
+    "domain": "land"
+  },
+  {
+    "id": "Forest",
+    "name": "Forest",
+    "turns_required": 4,
+    "places": "Forest",
+    "domain": "land"
+  },
+  {
+    "id": "Mine",
+    "name": "Mine",
+    "turns_required": 8,
+    "places": "Mine",
+    "domain": "land"
+  },
+  {
+    "id": "SolarCollector",
+    "name": "Solar Collector",
+    "turns_required": 4,
+    "places": "SolarCollector",
+    "domain": "land"
+  },
+  {
+    "id": "SoilEnricher",
+    "name": "Soil Enricher",
+    "turns_required": 8,
+    "places": "SoilEnricher",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "advanced_ecological_engineering"
+        }
+      ]
+    },
+    "domain": "land"
+  },
+  {
+    "id": "Bunker",
+    "name": "Bunker",
+    "turns_required": 5,
+    "places": "Bunker",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "advanced_military_algorithms"
+        }
+      ]
+    },
+    "domain": "land"
+  },
+  {
+    "id": "Airbase",
+    "name": "Airbase",
+    "turns_required": 10,
+    "places": "Airbase",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "doctrine_air_power"
+        }
+      ]
+    },
+    "domain": "land"
+  },
+  {
+    "id": "Sensor",
+    "name": "Sensor",
+    "turns_required": 4,
+    "places": "Sensor",
+    "domain": "land"
+  },
+  {
+    "id": "Mirror",
+    "name": "Echelon Mirror",
+    "turns_required": 12,
+    "places": "Mirror",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "ecological_engineering"
+        }
+      ]
+    },
+    "domain": "land"
+  },
+  {
+    "id": "Condenser",
+    "name": "Condenser",
+    "turns_required": 12,
+    "places": "Condenser",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "ecological_engineering"
+        }
+      ]
+    },
+    "domain": "land"
+  },
+  {
+    "id": "ThermalBorehole",
+    "name": "Thermal Borehole",
+    "turns_required": 24,
+    "places": "ThermalBorehole",
+    "required_techs": {
+      "any": [
+        {
+          "tech": "ecological_engineering"
+        }
+      ]
+    },
+    "domain": "land"
+  },
+  {
+    "id": "KelpFarm",
+    "name": "Kelp Farm",
+    "turns_required": 4,
+    "places": "KelpFarm",
+    "domain": "sea"
+  }
+]

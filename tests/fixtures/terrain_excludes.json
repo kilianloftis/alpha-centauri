@@ -211,14 +211,12 @@
           }
         }
       ],
-      "excludes": [
+      "clears": [
         "Mine",
         "SolarCollector",
         "Farm",
         "SoilEnricher",
         "Forest",
-        "MiningPlatform",
-        "TidalHarness",
         "KelpFarm"
       ]
     },
@@ -312,130 +310,6 @@
       "name": "Aquifer",
       "domain": "land",
       "effects": []
-    }
-  ],
-  "operations": [
-    {
-      "id": "PlantFungus",
-      "name": "Plant Fungus",
-      "turns_required": 6,
-      "energy_cost": 0,
-      "on_complete_effects": [
-        {
-          "type": "SetTerrainFeature",
-          "parameters": {
-            "feature": "Fungus",
-            "present": true
-          },
-          "condition": {
-            "kind": "TargetTileHas",
-            "value": "Fungus",
-            "present": false
-          }
-        }
-      ]
-    },
-    {
-      "id": "RemoveFungus",
-      "name": "Remove Fungus",
-      "turns_required": 6,
-      "energy_cost": 0,
-      "on_complete_effects": [
-        {
-          "type": "SetTerrainFeature",
-          "parameters": {
-            "feature": "Fungus",
-            "present": false
-          },
-          "condition": {
-            "kind": "TargetTileHas",
-            "value": "Fungus"
-          }
-        }
-      ]
-    },
-    {
-      "id": "LevelTerrain",
-      "name": "Level Terrain",
-      "turns_required": 8,
-      "energy_cost": 0,
-      "domain": "land",
-      "on_complete_effects": [
-        {
-          "type": "StepRockiness",
-          "parameters": {
-            "steps": -1
-          },
-          "condition": {
-            "kind": "AnyOf",
-            "values": [
-              "Rocky",
-              "Rolling"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "id": "RaiseLand",
-      "name": "Raise Land",
-      "turns_required": 12,
-      "energy_cost": "terraform_cost.lua",
-      "former_domain": "Any",
-      "on_complete_effects": [
-        {
-          "type": "ElevationChange",
-          "parameters": {
-            "direction": "raise"
-          }
-        }
-      ]
-    },
-    {
-      "id": "LowerLand",
-      "name": "Lower Land",
-      "turns_required": 12,
-      "energy_cost": "terraform_cost.lua",
-      "former_domain": "Any",
-      "on_complete_effects": [
-        {
-          "type": "ElevationChange",
-          "parameters": {
-            "direction": "lower"
-          }
-        }
-      ]
-    },
-    {
-      "id": "Aquifer",
-      "name": "Aquifer",
-      "turns_required": 18,
-      "energy_cost": 0,
-      "domain": "land",
-      "on_complete_effects": [
-        {
-          "type": "SetTerrainFeature",
-          "parameters": {
-            "feature": "Aquifer",
-            "present": true
-          },
-          "condition": {
-            "kind": "AllOf",
-            "conditions": [
-              {
-                "kind": "TargetTileHas",
-                "value": "Aquifer",
-                "present": false
-              },
-              {
-                "kind": "TargetTileHas",
-                "value": "Water",
-                "present": false
-              }
-            ]
-          }
-        }
-      ]
     }
   ]
 }

@@ -45,7 +45,7 @@
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/MapOccupantLoad.h"
 #include "game/map/TerrainConfig.h"
-#include "game/map/TerrainOperationRegistry.h"
+#include "game/map/TerraformProjectRegistry.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/movement/MovementRules.h"
@@ -138,9 +138,10 @@ SessionInputs::SessionInputs(const OccupantFiles_t& rOccupants,
         ac::MapRulesConfigParser::ParseConfig(FixturePath("map_rules.json"));
     // The same call production uses, so the fixture cannot drift from it or skip the
     // improvement-shadows-operation check that only this path performs.
-    dataContext.terrainOperationRegistry = std::make_unique<ac::TerrainOperationRegistry>();
+    dataContext.terraformProjectRegistry = std::make_unique<ac::TerraformProjectRegistry>();
     ac::LoadMapOccupants(FixturePath(rOccupants.improvements), FixturePath(rOccupants.terrain),
-                         improvements, *dataContext.terrainOperationRegistry);
+                         FixturePath(rOccupants.terraformProjects), improvements,
+                         *dataContext.terraformProjectRegistry);
     unitComponents.Load(FixturePath("unit_components.json"));
     // Before any TileEffectsContext: it holds the yield rules by reference and stamps
     // them into every per-tile resolve (ElevationEnergy reads the step from here).

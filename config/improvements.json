@@ -2,7 +2,6 @@
   {
     "id": "Road",
     "name": "Road",
-    "turns_required": 1,
     "domain": "land",
     "effects": [
       {
@@ -48,14 +47,6 @@
   {
     "id": "MagTube",
     "name": "Mag Tube",
-    "required_techs": {
-      "any": [
-        {
-          "tech": "monopole_magnets"
-        }
-      ]
-    },
-    "turns_required": 3,
     "domain": "land",
     "requires": [
       "Road"
@@ -105,7 +96,6 @@
   {
     "id": "Farm",
     "name": "Farm",
-    "turns_required": 4,
     "tags": [
       "land_terraform"
     ],
@@ -178,7 +168,6 @@
   {
     "id": "Forest",
     "name": "Forest",
-    "turns_required": 4,
     "spreads": {
       "score_formula": "4 * (3 - moisture) - rockiness",
       "altitude_limit_meters": 2000
@@ -193,7 +182,6 @@
       "SolarCollector",
       "SoilEnricher",
       "ThermalBorehole",
-      "Fungus",
       "Rocky",
       "Condenser",
       "Mirror"
@@ -272,7 +260,6 @@
   {
     "id": "Mine",
     "name": "Mine",
-    "turns_required": 8,
     "tags": [
       "land_terraform"
     ],
@@ -371,7 +358,6 @@
   {
     "id": "SolarCollector",
     "name": "Solar Collector",
-    "turns_required": 4,
     "tags": [
       "land_terraform"
     ],
@@ -429,14 +415,6 @@
   {
     "id": "SoilEnricher",
     "name": "Soil Enricher",
-    "required_techs": {
-      "any": [
-        {
-          "tech": "advanced_ecological_engineering"
-        }
-      ]
-    },
-    "turns_required": 8,
     "tags": [
       "land_terraform"
     ],
@@ -498,14 +476,6 @@
   {
     "id": "Bunker",
     "name": "Bunker",
-    "required_techs": {
-      "any": [
-        {
-          "tech": "advanced_military_algorithms"
-        }
-      ]
-    },
-    "turns_required": 5,
     "domain": "land",
     "excludes": [
       "Airbase"
@@ -580,14 +550,6 @@
   {
     "id": "Airbase",
     "name": "Airbase",
-    "required_techs": {
-      "any": [
-        {
-          "tech": "doctrine_air_power"
-        }
-      ]
-    },
-    "turns_required": 10,
     "domain": "land",
     "excludes": [
       "Bunker"
@@ -650,7 +612,6 @@
   {
     "id": "Sensor",
     "name": "Sensor",
-    "turns_required": 4,
     "domain": "land",
     "owned_by_territory": true,
     "excludes": [
@@ -729,14 +690,6 @@
   {
     "id": "Mirror",
     "name": "Echelon Mirror",
-    "required_techs": {
-      "any": [
-        {
-          "tech": "ecological_engineering"
-        }
-      ]
-    },
-    "turns_required": 12,
     "tags": [
       "land_terraform"
     ],
@@ -826,14 +779,6 @@
   {
     "id": "Condenser",
     "name": "Condenser",
-    "required_techs": {
-      "any": [
-        {
-          "tech": "ecological_engineering"
-        }
-      ]
-    },
-    "turns_required": 12,
     "tags": [
       "land_terraform"
     ],
@@ -899,14 +844,6 @@
   {
     "id": "ThermalBorehole",
     "name": "Thermal Borehole",
-    "required_techs": {
-      "any": [
-        {
-          "tech": "ecological_engineering"
-        }
-      ]
-    },
-    "turns_required": 24,
     "tags": [
       "land_terraform"
     ],
@@ -972,7 +909,6 @@
   {
     "id": "KelpFarm",
     "name": "Kelp Farm",
-    "turns_required": 4,
     "spreads": {
       "score_formula": "4 * (3 - moisture) - rockiness"
     },
@@ -1016,7 +952,6 @@
   {
     "id": "MiningPlatform",
     "name": "Mining Platform",
-    "turns_required": 8,
     "tags": [
       "sea_terraform"
     ],
@@ -1064,7 +999,6 @@
   {
     "id": "TidalHarness",
     "name": "Tidal Harness",
-    "turns_required": 4,
     "tags": [
       "sea_terraform"
     ],

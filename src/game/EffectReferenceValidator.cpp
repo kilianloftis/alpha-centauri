@@ -8,7 +8,7 @@
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/TerrainFeatureValidation.h"
-#include "game/map/TerrainOperationRegistry.h"
+#include "game/map/TerraformProjectRegistry.h"
 #include "game/population/PopTypeConfigParser.h"
 #include "game/population/PopTypeRegistry.h"
 #include "game/research/TechRegistry.h"
@@ -501,9 +501,9 @@ void CheckMapSources_(const GameDataContext& rData, const EffectSourceChecker_& 
         rCheck.Triggered(rConfig.onVisitEffects, rConfig.id);
     }
     // A terrain operation is only its effects, so a typo makes it do nothing.
-    const TerrainOperationRegistry& rOperations =
-        RequireRegistry(rData.terrainOperationRegistry, "terrainOperationRegistry");
-    for (const TerrainOperationConfig_t& rConfig : rOperations.GetAll())
+    const TerraformProjectRegistry& rOperations =
+        RequireRegistry(rData.terraformProjectRegistry, "terraformProjectRegistry");
+    for (const TerraformProjectConfig_t& rConfig : rOperations.GetAll())
     {
         rCheck.Triggered(rConfig.onCompleteEffects, rConfig.id);
     }

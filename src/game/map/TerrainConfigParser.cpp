@@ -5,11 +5,12 @@
 #include "game/research/RequiredTechsParser.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/MapOccupantLoad.h"
-#include "game/map/TerrainOperationRegistry.h"
+#include "game/map/TerraformProjectRegistry.h"
 #include "lib/config/JsonConfigLoader.h"
 
 #include <stdexcept>
 #include <unordered_set>
+#include <utility>
 
 namespace ac
 {
@@ -27,9 +28,66 @@ std::vector<ImprovementConfig_t> ParseFeatures_(const ConfigReader& rReader)
     return configs;
 }
 
-TerrainOperationConfig_t ParseOperation_(const ConfigReader& rReader)
+std::vector<std::string> ExpandBlockedBy_(
+    const std::unordered_map<std::string, std::vector<std::string>>& rTagIndex,
+    const std::vector<std::string>& rRaw, std::string_view projectId)
 {
-    TerrainOperationConfig_t config;
+    std::vector<std::string> expanded;
+    std::unordered_set<std::string> seen;
+    for (const std::string& rEntry : rRaw)
+    {
+        if (rEntry.empty() || rEntry.front() != '@')
+        {
+            if (seen.insert(rEntry).second)
+            {
+                expanded.push_back(rEntry);
+            }
+            continue;
+        }
+        const std::string tag = rEntry.substr(1);
+        if (tag.empty())
+        {
+            throw std::runtime_error("Project '" + std::string(projectId)
+                                     + "' blocked_by: tag reference '@' is missing a tag name");
+        }
+        const auto it = rTagIndex.find(tag);
+        if (it == rTagIndex.end())
+        {
+            throw std::runtime_error("Project '" + std::string(projectId)
+                                     + "' blocked_by: unknown tag '@" + tag + "'");
+        }
+        for (const std::string& rTaggedId : it->second)
+        {
+            if (seen.insert(rTaggedId).second)
+            {
+                expanded.push_back(rTaggedId);
+            }
+        }
+    }
+    return expanded;
+}
+
+std::unordered_map<std::string, std::vector<std::string>> OccupantTagIndex_(
+    const std::vector<ImprovementConfig_t>& rOccupants)
+{
+    std::unordered_map<std::string, std::vector<std::string>> tagToIds;
+    for (const ImprovementConfig_t& rConfig : rOccupants)
+    {
+        if (IsBuildable(rConfig))
+        {
+            tagToIds["buildable"].push_back(rConfig.id);
+        }
+        for (const std::string& rTag : rConfig.tags)
+        {
+            tagToIds[rTag].push_back(rConfig.id);
+        }
+    }
+    return tagToIds;
+}
+
+TerraformProjectConfig_t ParseProject_(const ConfigReader& rReader)
+{
+    TerraformProjectConfig_t config;
     config.id = rReader.NonEmptyString("id");
     config.name = rReader.String("name");
     config.formerDomain = rReader.Has("former_domain")
@@ -37,14 +95,18 @@ TerrainOperationConfig_t ParseOperation_(const ConfigReader& rReader)
                               : FormerDomainRule_t::MatchesTile;
     if (rReader.Has("domain") && !rReader.Json().at("domain").is_null())
     {
-        config.domain = rReader.Enum<ImprovementDomain_t>("domain", "terrain operation domain");
+        config.domain = rReader.Enum<ImprovementDomain_t>("domain", "terraform project domain");
     }
+    if (rReader.Has("places") && !rReader.Json().at("places").is_null())
+    {
+        config.places = rReader.NonEmptyString("places");
+    }
+    config.blockedBy = rReader.StringArray("blocked_by");
     config.onCompleteEffects = TriggeredEffectParser::ParseTriggeredEffects(
         rReader.Json(), "on_complete_effects", config.id);
-    if (config.onCompleteEffects.empty())
+    if (!config.places && config.onCompleteEffects.empty())
     {
-        rReader.FailKey("on_complete_effects",
-                        "must name at least one effect, or the project can never do anything");
+        rReader.Fail("must declare 'places' and/or a non-empty 'on_complete_effects'");
     }
     config.project.turnsRequired = rReader.IntAtLeast("turns_required", 1);
     config.project.energyCost = ParseFormerEnergyCost(rReader);
@@ -52,20 +114,52 @@ TerrainOperationConfig_t ParseOperation_(const ConfigReader& rReader)
     return config;
 }
 
-std::vector<TerrainOperationConfig_t> ParseOperations_(const ConfigReader& rReader)
+std::unordered_set<std::string> PlaceTargetIds_(
+    const std::vector<TerraformProjectConfig_t>& rProjects)
 {
-    std::vector<TerrainOperationConfig_t> configs;
-    std::unordered_set<std::string> seen;
-    for (const ConfigReader& rEntry : rReader.Objects("operations"))
+    std::unordered_set<std::string> ids;
+    for (const TerraformProjectConfig_t& rProject : rProjects)
     {
-        TerrainOperationConfig_t config = ParseOperation_(rEntry);
-        if (!seen.insert(config.id).second)
+        if (rProject.places)
         {
-            rReader.FailKey("operations", "repeats terrain operation '" + config.id + "'");
+            ids.insert(*rProject.places);
         }
-        configs.push_back(std::move(config));
     }
-    return configs;
+    return ids;
+}
+
+void ValidateProjects_(std::vector<TerraformProjectConfig_t>& rProjects,
+                       const ImprovementRegistry& rOccupants)
+{
+    const std::vector<ImprovementConfig_t>& rAll = rOccupants.GetAll();
+    const auto tagIndex = OccupantTagIndex_(rAll);
+    std::unordered_set<std::string> occupantIds;
+    for (const ImprovementConfig_t& rConfig : rAll)
+    {
+        occupantIds.insert(rConfig.id);
+    }
+
+    for (TerraformProjectConfig_t& rProject : rProjects)
+    {
+        if (rProject.places)
+        {
+            if (!occupantIds.contains(*rProject.places))
+            {
+                throw std::runtime_error("Terraform project '" + rProject.id
+                                         + "' places unknown occupant '" + *rProject.places
+                                         + "'");
+            }
+        }
+        rProject.blockedBy = ExpandBlockedBy_(tagIndex, rProject.blockedBy, rProject.id);
+        for (const std::string& rId : rProject.blockedBy)
+        {
+            if (!occupantIds.contains(rId))
+            {
+                throw std::runtime_error("Terraform project '" + rProject.id
+                                         + "' blocked_by unknown id '" + rId + "'");
+            }
+        }
+    }
 }
 
 } // namespace
@@ -76,36 +170,35 @@ TerrainFile_t ParseTerrainFile(const std::string& configPath)
         configPath, "terrain", [](const ConfigReader& rReader) {
             TerrainFile_t file;
             file.features = ParseFeatures_(rReader);
-            file.operations = ParseOperations_(rReader);
             return file;
         });
 }
 
 void LoadMapOccupants(const std::string& rImprovementsPath, const std::string& rTerrainPath,
-                      ImprovementRegistry& rOccupants, TerrainOperationRegistry& rOperations)
+                      const std::string& rTerraformProjectsPath, ImprovementRegistry& rOccupants,
+                      TerraformProjectRegistry& rProjects)
 {
     TerrainFile_t terrain = ParseTerrainFile(rTerrainPath);
-    rOperations.Assign(std::move(terrain.operations));
+    std::vector<TerraformProjectConfig_t> projects =
+        TerraformProjectConfigParser::ParseConfig(rTerraformProjectsPath);
+    const std::unordered_set<std::string> placeTargets = PlaceTargetIds_(projects);
     std::vector<ImprovementConfig_t> occupants =
-        LoadTileOccupants(rImprovementsPath, std::move(terrain.features));
-    rOccupants.Assign(std::move(occupants));
-
-    for (const TerrainOperationConfig_t& rOperation : rOperations.GetAll())
+        LoadTileOccupants(rImprovementsPath, std::move(terrain.features), placeTargets);
+    for (ImprovementConfig_t& rConfig : occupants)
     {
-        const ImprovementConfig_t* pClash = rOccupants.Find(rOperation.id);
-        if (pClash && IsBuildable(*pClash))
-        {
-            throw std::runtime_error("Terrain operation '" + rOperation.id
-                                     + "' is shadowed by a buildable improvement of the same id");
-        }
+        rConfig.formerPlaceTarget = placeTargets.contains(rConfig.id);
     }
+    rOccupants.Assign(std::move(occupants));
+    ValidateProjects_(projects, rOccupants);
+    rProjects.Assign(std::move(projects));
 }
 
-std::vector<TerrainOperationConfig_t> TerrainOperationConfigParser::ParseConfig(
+std::vector<TerraformProjectConfig_t> TerraformProjectConfigParser::ParseConfig(
     const std::string& configPath)
 {
-    return JsonConfigLoader::LoadObjectFile<std::vector<TerrainOperationConfig_t>>(
-        configPath, "terrain operation", ParseOperations_);
+    return JsonConfigLoader::LoadPath<TerraformProjectConfig_t>(
+        configPath, "terraform project",
+        [](const ConfigReader& rReader) { return ParseProject_(rReader); });
 }
 
 } // namespace ac

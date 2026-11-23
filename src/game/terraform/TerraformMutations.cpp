@@ -61,7 +61,7 @@ void StartTerraform(GameState& rGameState, Unit& rFormer, const std::string& pro
 {
     const TerraformProject_t project =
         FindTerraformProject(projectId, rGameState.GetTileEffects().GetImprovements(),
-                             *rGameState.GetGameData().terrainOperationRegistry)
+                             *rGameState.GetGameData().terraformProjectRegistry)
             .value();
     rFormer.GetFaction().GetEconomy().SpendEnergy(TerraformEnergyCost(rFormer, project));
     rFormer.SetOrder(TerraformOrder_t{projectId, project.project.turnsRequired});

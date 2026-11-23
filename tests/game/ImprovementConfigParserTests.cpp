@@ -25,68 +25,46 @@ std::filesystem::path WriteTempJson(const std::string& name, const std::string& 
 
 } // namespace
 
-TEST_CASE("An improvement is buildable exactly when it declares turns_required",
+TEST_CASE("Former construction fields are rejected on an improvement occupant",
           "[improvements][parser][orders]")
 {
-    const auto path = WriteTempJson("ac_buildable.json", R"([
-        { "id": "Farm", "name": "Farm", "turns_required": 4, "energy_cost": 0 },
-        { "id": "Base", "name": "Base" }
-    ])");
-    const auto configs = ImprovementConfigParser::ParseConfig(path.string());
-    REQUIRE(configs.size() == 2);
-    CHECK(configs[0].placement == OccupantPlacement_t::Improvement);
-    REQUIRE(configs[0].project);
-    CHECK(configs[0].project->turnsRequired == 4);
-    CHECK(IsBuildable(configs[0]));
-    CHECK_FALSE(IsBuildable(configs[1]));
-    std::filesystem::remove(path);
-}
-
-TEST_CASE("An energy cost with no build time is rejected", "[improvements][parser][orders]")
-{
-    // Nothing can ever pay it, so it is a config mistake rather than an unbuildable entry.
-    const auto path = WriteTempJson("ac_cost_no_time.json", R"([
-        { "id": "Farm", "name": "Farm", "energy_cost": 5 }
+    const auto path = WriteTempJson("ac_buildable_rejected.json", R"([
+        { "id": "Farm", "name": "Farm", "turns_required": 4, "energy_cost": 0 }
     ])");
     CHECK_THROWS_WITH(ImprovementConfigParser::ParseConfig(path.string()),
-                      Catch::Matchers::ContainsSubstring("turns_required"));
+                      Catch::Matchers::ContainsSubstring("turns_required")
+                          && Catch::Matchers::ContainsSubstring("project"));
     std::filesystem::remove(path);
 }
 
-TEST_CASE("A terrain operation must declare what it does", "[improvements][parser][terrain]")
+TEST_CASE("A terraform project must declare places and/or on_complete_effects",
+          "[improvements][parser][terrain]")
 {
-    // The operation set is open, so nothing checks an id against a list in code. What keeps a
-    // typo from becoming a project that silently does nothing is the effects list itself.
-    const auto path = WriteTempJson("ac_terrain_ops_empty.json", R"({
-        "operations": [
-            { "id": "Dance", "name": "Dance", "turns_required": 1, "energy_cost": 0 }
-        ]
-    })");
-    CHECK_THROWS_WITH(TerrainOperationConfigParser::ParseConfig(path.string()),
-                      Catch::Matchers::ContainsSubstring("Dance")
+    const auto path = WriteTempJson("ac_terraform_projects_empty.json", R"([
+        { "id": "Dance", "name": "Dance", "turns_required": 1, "energy_cost": 0 }
+    ])");
+    CHECK_THROWS_WITH(TerraformProjectConfigParser::ParseConfig(path.string()),
+                      Catch::Matchers::ContainsSubstring("places")
                           && Catch::Matchers::ContainsSubstring("on_complete_effects"));
     std::filesystem::remove(path);
 }
 
-TEST_CASE("A terrain operation composed of existing effects parses",
+TEST_CASE("A terraform project composed of existing effects parses",
           "[improvements][parser][terrain]")
 {
-    // An id no C++ enum names: the point of the open set is that this is ordinary config.
-    const auto path = WriteTempJson("ac_terrain_ops_custom.json", R"({
-        "operations": [
-            {
-                "id": "Rockify",
-                "name": "Rockify",
-                "turns_required": 4,
-                "energy_cost": 0,
-                "on_complete_effects": [
-                    { "type": "StepRockiness", "parameters": { "steps": 1 } }
-                ]
-            }
-        ]
-    })");
-    const std::vector<TerrainOperationConfig_t> ops =
-        TerrainOperationConfigParser::ParseConfig(path.string());
+    const auto path = WriteTempJson("ac_terraform_projects_custom.json", R"([
+        {
+            "id": "Rockify",
+            "name": "Rockify",
+            "turns_required": 4,
+            "energy_cost": 0,
+            "on_complete_effects": [
+                { "type": "StepRockiness", "parameters": { "steps": 1 } }
+            ]
+        }
+    ])");
+    const std::vector<TerraformProjectConfig_t> ops =
+        TerraformProjectConfigParser::ParseConfig(path.string());
     REQUIRE(ops.size() == 1);
     CHECK(ops[0].id == "Rockify");
     REQUIRE(ops[0].onCompleteEffects.size() == 1);
@@ -96,14 +74,32 @@ TEST_CASE("A terrain operation composed of existing effects parses",
     std::filesystem::remove(path);
 }
 
-TEST_CASE("@buildable stands for every former-built improvement", "[improvements][parser]")
+TEST_CASE("A terraform project may places an occupant without on_complete_effects",
+          "[improvements][parser][terrain]")
 {
-    // One entry states "clear me before building anything here", instead of every buildable
-    // improvement restating the relationship and a new one silently forgetting to.
+    const auto path = WriteTempJson("ac_terraform_projects_places.json", R"([
+        {
+            "id": "Farm",
+            "name": "Farm",
+            "turns_required": 4,
+            "places": "Farm",
+            "domain": "land"
+        }
+    ])");
+    const std::vector<TerraformProjectConfig_t> projects =
+        TerraformProjectConfigParser::ParseConfig(path.string());
+    REQUIRE(projects.size() == 1);
+    REQUIRE(projects[0].places);
+    CHECK(*projects[0].places == "Farm");
+    CHECK(projects[0].onCompleteEffects.empty());
+    std::filesystem::remove(path);
+}
+
+TEST_CASE("@buildable stands for every former place-target", "[improvements][parser]")
+{
     std::vector<ImprovementConfig_t> occupants;
     ImprovementConfig_t farm;
     farm.id = "Farm";
-    farm.project = FormerProject_t{4, {}, {}};
     ImprovementConfig_t base;
     base.id = "Base";
     ImprovementConfig_t fungus;
@@ -114,9 +110,8 @@ TEST_CASE("@buildable stands for every former-built improvement", "[improvements
     occupants.push_back(base);
     occupants.push_back(fungus);
 
-    ExpandFeatureTagReferences(occupants);
+    ExpandFeatureTagReferences(occupants, {"Farm"});
 
-    // Farm is buildable; Base declares no project, so founding a base on fungus is untouched.
     CHECK(occupants[2].excludes == std::vector<std::string>{"Farm"});
 }
 
@@ -128,9 +123,9 @@ TEST_CASE("@buildable cannot be authored by hand", "[improvements][parser]")
     odd.tags = {"buildable"};
     occupants.push_back(odd);
 
-    CHECK_THROWS_WITH(ExpandFeatureTagReferences(occupants),
+    CHECK_THROWS_WITH(ExpandFeatureTagReferences(occupants, {}),
                       Catch::Matchers::ContainsSubstring("reserved")
-                          && Catch::Matchers::ContainsSubstring("turns_required"));
+                          && Catch::Matchers::ContainsSubstring("places"));
 }
 
 TEST_CASE("suppress_terrain expands tags and rejects ids no occupant has",
@@ -146,11 +141,11 @@ TEST_CASE("suppress_terrain expands tags and rejects ids no occupant has",
     occupants.push_back(fungus);
     occupants.push_back(ocean);
 
-    ExpandFeatureTagReferences(occupants);
+    ExpandFeatureTagReferences(occupants, {});
     CHECK(occupants[1].suppressTerrain == std::vector<std::string>{"Fungus"});
 
     occupants[1].suppressTerrain = {"Kraken"};
-    CHECK_THROWS_WITH(ExpandFeatureTagReferences(occupants),
+    CHECK_THROWS_WITH(ExpandFeatureTagReferences(occupants, {}),
                       Catch::Matchers::ContainsSubstring("suppress_terrain")
                           && Catch::Matchers::ContainsSubstring("Kraken"));
 }
@@ -319,10 +314,7 @@ TEST_CASE("ImprovementConfigParser loads fixture improvements.json", "[improveme
     }
     REQUIRE(pFarm);
     CHECK(pFarm->excludes == std::vector<std::string>({"Rocky"}));
-
-    REQUIRE(pFarm->project);
-    CHECK(pFarm->project->turnsRequired == 4);
-    CHECK(IsBuildable(*pFarm));
+    CHECK_FALSE(IsBuildable(*pFarm));
 }
 
 TEST_CASE("art variants list sprites per tile surface", "[improvements][parser][art]")
@@ -590,7 +582,7 @@ TEST_CASE("Improvement art fields reject what the renderer cannot use",
         roadArt.sprites = roadTiles;
         occupants[0].art = roadArt;
         occupants[1].id = "Enricher";
-        CHECK_THROWS_WITH(ExpandFeatureTagReferences(occupants),
+        CHECK_THROWS_WITH(ExpandFeatureTagReferences(occupants, {}),
                           Catch::Matchers::ContainsSubstring("link_occupants")
                               && Catch::Matchers::ContainsSubstring("Base"));
 
@@ -599,7 +591,7 @@ TEST_CASE("Improvement art fields reject what the renderer cannot use",
         enricherArt.layer = ArtLayer_t::Object;
         enricherArt.hides = {"Farm"};
         occupants[1].art = enricherArt;
-        CHECK_THROWS_WITH(ExpandFeatureTagReferences(occupants),
+        CHECK_THROWS_WITH(ExpandFeatureTagReferences(occupants, {}),
                           Catch::Matchers::ContainsSubstring("art.hides"));
     }
 }

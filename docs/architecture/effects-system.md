@@ -698,8 +698,8 @@ literal, `radius_stat` names a unit stat resolved off the subject. Shipping reac
 1, 2, 3, and 4 to `explosion_radius`.
 
 `SetTerrainFeature`, `StepRockiness` and `ElevationChange` are the terrain edits a Former
-project composes itself from (`config/terrain.json`'s `operations`), which is why the set of
-operations is open rather than an enum in code. `SetTerrainFeature` adds or clears one terrain
+project composes itself from (`config/terraform_projects.json`), which is why the set of
+Former projects is open rather than an enum in code. `SetTerrainFeature` adds or clears one terrain
 occupant on the context tile (`present: false` clears); the id decides where it is stored —
 `Aquifer` and `River` are tile bools, everything else is optional terrain — and terrain a tile
 *derives* rather than stores (the two axes, and the `Water`/`Ocean`/`OceanShelf` depth bands)
@@ -1144,7 +1144,7 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
 
 ### Tile Improvement Effects
 
-- **Purpose**: Improvements and terrain occupants share `ImprovementConfig_t` **and one `ImprovementRegistry`**, so effect collection walks one pointer type through one lookup. `ImprovementConfig_t::placement` says which of the two an entry is, stamped by the parser from the file it came from: improvements (Farm, Forest, Mine, Base) from `config/improvements.json`, terrain occupants from `config/terrain.json`. An improvement that declares `turns_required` is a former project. `config/terrain.json`'s `operations` half holds former projects that place nothing: they carry an `on_complete_effects` list instead, and live in `TerrainOperationRegistry` rather than in the occupant registry, because they never sit on a tile.
+- **Purpose**: Improvements and terrain occupants share `ImprovementConfig_t` **and one `ImprovementRegistry`**, so effect collection walks one pointer type through one lookup. `ImprovementConfig_t::placement` says which of the two an entry is, stamped by the parser from the file it came from: improvements (Farm, Forest, Mine, Base) from `config/improvements.json`, terrain occupants from `config/terrain.json`. Former projects live in `config/terraform_projects.json` / `TerraformProjectRegistry`: builds declare `places`, terrain mutations declare `on_complete_effects` (or both). They never sit on a tile as projects.
 - **`ImprovementConfig_t`**: `id`, `name`, `description`, `placement`, `turnsRequired` / `energyCost` / `requiredTechs` (a former project when `turnsRequired` > 0; rejected outright on a terrain entry), `excludes` (other occupant ids that can't coexist with this one on a tile), `frequency`, `spritePaths` (`sprite_paths`: ordered `land` / `sea` lists; a surface left out has no sprite), `spriteOverhangRatio` (`sprite_overhang_ratio`: object sprites reach this fraction of the tile height above the tile), `effects` (the standard `EffectConfig_t` vector, parsed via `EffectConfigParser::ParseEffects`).
 - **How a tile holds features**: improvements are `const ImprovementConfig_t*` in `Tile::GetImprovements()`. Axes and flags (rockiness, moisture, water band, river, aquifer) stay on the tile and are mirrored into `GetTerrainFeatures()`. Optional terrain (fungus, landmarks, bonuses, Monolith) is stored separately and appended to that same cache. Both lists point into the same registry. `Tile::HasFeature(id)` answers either. A finished improvement project does not flatten rockiness or remove fungus.
 - **`CollectTileEffects(tile, improvementRegistry)`**: collects a tile's own `ThisTile`-scoped effects into a flat `ActiveEffect_t` list (sourceId = the feature's id) in two passes — each `GetTerrainFeatures()` config, plus each `GetImprovements()` config, both read directly (no lookup). Mirrors `CollectPopEffects`/`CollectUnitEffects`. Only ever resolves a tile's *own* effects (radius 0) — it has no `WorldMap` to look at neighbors.

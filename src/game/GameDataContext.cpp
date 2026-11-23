@@ -16,7 +16,7 @@
 #include "game/map/MapOccupantLoad.h"
 #include "game/map/TerrainConfig.h"
 #include "game/map/TerrainFeatureValidation.h"
-#include "game/map/TerrainOperationRegistry.h"
+#include "game/map/TerraformProjectRegistry.h"
 #include "game/worldgen/LandmarkConfig.h"
 #include "game/worldgen/LandmarkConfigParser.h"
 #include "game/worldgen/WorldGenDecorationConfigParser.h"
@@ -190,10 +190,10 @@ void LoadReferenceRegistries_(GameDataContext& rData)
 {
     const GameDataPaths& rPaths = rData.paths;
     rData.techRegistry = LoadRegistry_<TechRegistry>(rPaths.techs);
-    rData.terrainOperationRegistry = std::make_unique<TerrainOperationRegistry>();
+    rData.terraformProjectRegistry = std::make_unique<TerraformProjectRegistry>();
     rData.improvementRegistry = std::make_unique<ImprovementRegistry>();
-    LoadMapOccupants(rPaths.improvements, rPaths.terrain, *rData.improvementRegistry,
-                     *rData.terrainOperationRegistry);
+    LoadMapOccupants(rPaths.improvements, rPaths.terrain, rPaths.terraformProjects,
+                     *rData.improvementRegistry, *rData.terraformProjectRegistry);
     // HasComponent conditions and component required_techs need this before the reference
     // validators.
     rData.unitComponentRegistry = LoadRegistry_<UnitComponentRegistry>(rPaths.unitComponents);
@@ -350,7 +350,7 @@ void ThrowIfIncomplete(const GameDataContext& rData)
         {rData.diplomacyConfig.get(), "diplomacyConfig"},
         {rData.techCostConfig.get(), "techCostConfig"},
         {rData.improvementRegistry.get(), "improvementRegistry"},
-        {rData.terrainOperationRegistry.get(), "terrainOperationRegistry"},
+        {rData.terraformProjectRegistry.get(), "terraformProjectRegistry"},
         {rData.worldGenPresetRegistry.get(), "worldGenPresetRegistry"},
         {rData.worldGenDecorationConfig.get(), "worldGenDecorationConfig"},
         {rData.moraleConfig.get(), "moraleConfig"},

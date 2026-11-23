@@ -13,6 +13,7 @@ namespace ImprovementIds
     inline constexpr std::string_view k_Forest = "Forest";
     inline constexpr std::string_view k_KelpFarm = "KelpFarm";
     inline constexpr std::string_view k_Road = "Road";
+    inline constexpr std::string_view k_MagTube = "MagTube";
     inline constexpr std::string_view k_Base = "Base";
     inline constexpr std::string_view k_Sensor = "Sensor";
     inline constexpr std::string_view k_Monolith = "Monolith";

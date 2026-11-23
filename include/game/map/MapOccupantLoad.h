@@ -6,11 +6,12 @@ namespace ac
 {
 
 class ImprovementRegistry;
-class TerrainOperationRegistry;
+class TerraformProjectRegistry;
 
-// Installs everything improvements.json and terrain.json describe: occupants and former
-// projects. Rejects an operation id a buildable improvement would shadow.
+// Installs improvements.json + terrain.json occupants and terraform_projects.json Former
+// projects. Marks place-targets for @buildable; validates places / blocked_by ids.
 void LoadMapOccupants(const std::string& rImprovementsPath, const std::string& rTerrainPath,
-                      ImprovementRegistry& rOccupants, TerrainOperationRegistry& rOperations);
+                      const std::string& rTerraformProjectsPath, ImprovementRegistry& rOccupants,
+                      TerraformProjectRegistry& rProjects);
 
 } // namespace ac

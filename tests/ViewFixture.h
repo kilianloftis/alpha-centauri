@@ -98,7 +98,7 @@ struct ViewFixture : WorldFixture
         dataContext.paths.hotkeys = FixturePath("hotkeys.json");
         pHotkeys = std::make_unique<ac::HotkeyConfig>(ac::HotkeyConfig::Load(
             dataContext.paths.hotkeys, *dataContext.improvementRegistry,
-            *dataContext.terrainOperationRegistry));
+            *dataContext.terraformProjectRegistry));
         dataContext.paths.standingCaptions = FixturePath("standing_captions.json");
         pStandingCaptions = std::make_unique<ac::StandingCaptions>(ac::StandingCaptions::Load(
             dataContext.paths.standingCaptions, *dataContext.diplomacyConfig));

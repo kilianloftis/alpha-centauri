@@ -20,7 +20,7 @@
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/MapUtils.h"
 #include "game/map/OccupantCoexistence.h"
-#include "game/map/TerrainOperationRegistry.h"
+#include "game/map/TerraformProjectRegistry.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/population/PopulationManager.h"
@@ -104,11 +104,11 @@ bool DomainAllows_(const Unit& rUnit, const TerraformProject_t& rProject, const 
     return FormerMatchesTile_(rUnit, rTile);
 }
 
-bool IsElevationChangeProject_(const TerraformProject_t& rProject)
+bool BlockedByOccupant_(const TerraformProject_t& rProject, const Tile& rTile)
 {
-    for (const TriggeredEffectConfig_t& rEffect : rProject.onCompleteEffects)
+    for (const std::string& rId : rProject.blockedBy)
     {
-        if (std::holds_alternative<ElevationChangeEffect_t>(rEffect.effect))
+        if (rTile.HasFeature(rId))
         {
             return true;
         }
@@ -116,36 +116,44 @@ bool IsElevationChangeProject_(const TerraformProject_t& rProject)
     return false;
 }
 
-// docs/thinker/terranx-map.md "Starting a project" LOWTIDAL: deep ocean allows only raise/lower.
-bool DeepOceanBlocksProject_(const TerraformProject_t& rProject, const Tile& rTile)
+// docs/thinker/terranx-map.md "Starting a project": fungus needs CentEmp for roads /
+// MagTube and CentPsi for other place-projects.
+bool FungusBlocksPlaceProject_(const Unit& rUnit, const ImprovementConfig_t& rPlaces,
+                               const Tile& rTile)
 {
-    if (!rTile.IsWater() || rTile.GetElevation() >= rTile.MapRules().oceanShelfMeters)
+    if (!rTile.HasFeature(ImprovementIds::k_Fungus))
     {
         return false;
     }
-    return !IsElevationChangeProject_(rProject);
+    // TODO: Try to remove direct reference to road and magtube
+    const bool bRoadOrTube =
+        rPlaces.id == ImprovementIds::k_Road || rPlaces.id == ImprovementIds::k_MagTube;
+    const RuleFlagId_t flag = bRoadOrTube ? RuleFlagId_t::TerraformFungusRoad
+                                          : RuleFlagId_t::TerraformFungusImprovement;
+    return !ResolveFlag(rUnit, flag);
 }
 
 bool CanApplyProject_(const Unit& rUnit, const TerraformProject_t& rProject, const Tile& rTile,
                       std::span<const CoexistenceOverrideEffect_t> overrides,
                       const MapRulesConfig_t& rRules)
 {
-    if (DeepOceanBlocksProject_(rProject, rTile))
+    if (BlockedByOccupant_(rProject, rTile))
     {
         return false;
     }
     if (rProject.pPlaces)
     {
-        // docs/thinker/terranx-map.md "Starting a project": fungus needs CentEmp for roads /
-        // MagTube and CentPsi for other bit projects (CoexistenceOverride from those techs).
-        if (rTile.HasFeature(ImprovementIds::k_Fungus)
-            && !CoexistenceOverrideAllows(overrides, ImprovementIds::k_Fungus, rProject.pPlaces->id))
+        if (FungusBlocksPlaceProject_(rUnit, *rProject.pPlaces, rTile))
         {
             return false;
         }
         if (ImprovementApplies(rTile, *rProject.pPlaces, overrides))
         {
             return true;
+        }
+        if (rProject.onCompleteEffects.empty())
+        {
+            return false;
         }
     }
     return AnyEffectWouldFire_(rUnit, rProject, rTile, rRules);
@@ -155,31 +163,26 @@ bool CanApplyProject_(const Unit& rUnit, const TerraformProject_t& rProject, con
 
 std::optional<TerraformProject_t> FindTerraformProject(const std::string& rId,
                                                       const ImprovementRegistry& rImprovements,
-                                                      const TerrainOperationRegistry& rOperations)
+                                                      const TerraformProjectRegistry& rProjects)
 {
-    const ImprovementConfig_t* pImprovement = rImprovements.Find(rId);
-    if (pImprovement && IsBuildable(*pImprovement))
+    const TerraformProjectConfig_t* pConfig = rProjects.Find(rId);
+    if (!pConfig)
     {
-        TerraformProject_t project;
-        project.id = pImprovement->id;
-        project.name = pImprovement->name;
-        project.project = *pImprovement->project;
-        project.domain = pImprovement->domain;
-        project.pPlaces = pImprovement;
-        return project;
+        return std::nullopt;
     }
-    if (const TerrainOperationConfig_t* pOperation = rOperations.Find(rId))
+    TerraformProject_t project;
+    project.id = pConfig->id;
+    project.name = pConfig->name;
+    project.project = pConfig->project;
+    project.formerDomain = pConfig->formerDomain;
+    project.domain = pConfig->domain;
+    project.blockedBy = pConfig->blockedBy;
+    project.onCompleteEffects = pConfig->onCompleteEffects;
+    if (pConfig->places)
     {
-        TerraformProject_t project;
-        project.id = pOperation->id;
-        project.name = pOperation->name;
-        project.project = pOperation->project;
-        project.formerDomain = pOperation->formerDomain;
-        project.domain = pOperation->domain;
-        project.onCompleteEffects = pOperation->onCompleteEffects;
-        return project;
+        project.pPlaces = &rImprovements.Get(*pConfig->places);
     }
-    return std::nullopt;
+    return project;
 }
 
 namespace
@@ -278,7 +281,7 @@ bool CanStartTerraformProject(const Unit& rUnit, const std::string& projectId)
     const GameState& rGame = CurrentGameState();
     const std::optional<TerraformProject_t> resolved =
         FindTerraformProject(projectId, rGame.GetTileEffects().GetImprovements(),
-                             *rGame.GetGameData().terrainOperationRegistry);
+                             *rGame.GetGameData().terraformProjectRegistry);
     return resolved && CanStartTerraform(rUnit, *resolved);
 }
 

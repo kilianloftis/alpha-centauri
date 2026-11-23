@@ -39,14 +39,14 @@ OrderProgress_t ProgressOfHaltedMove_(const Unit& rUnit)
 UnitOrderExecutor::UnitOrderExecutor(UnitMoveExecutor& rMoves, const StepEvaluator& rSteps,
                                      WorldMap& rWorldMap, TileEffectsContext& rTileEffects,
                                      Pathfinder& rPathfinder,
-                                     const TerrainOperationRegistry& rTerrainOperations,
+                                     const TerraformProjectRegistry& rTerraformProjects,
                                      std::mt19937& rRng, IUnitOrderWorld& rWorld)
     : m_rMoves(rMoves)
     , m_rSteps(rSteps)
     , m_rWorldMap(rWorldMap)
     , m_rTileEffects(rTileEffects)
     , m_rPathfinder(rPathfinder)
-    , m_rTerrainOperations(rTerrainOperations)
+    , m_rTerraformProjects(rTerraformProjects)
     , m_rRng(rRng)
     , m_rWorld(rWorld)
 {
@@ -230,7 +230,7 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, TerraformOrder_t& rOrde
 
     // Order remains until Execute clears on Complete — safe to read rOrder here.
     const TerraformProject_t project = FindTerraformProject(
-        rOrder.projectId, m_rTileEffects.GetImprovements(), m_rTerrainOperations).value();
+        rOrder.projectId, m_rTileEffects.GetImprovements(), m_rTerraformProjects).value();
     Tile& rTile = m_rWorldMap.MutableTile(rUnit.GetTile());
 
     // Fails only on a surface the project cannot change, such as the wrong depth band.

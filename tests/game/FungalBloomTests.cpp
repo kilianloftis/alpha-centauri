@@ -74,7 +74,7 @@ int UnitCount_(const Faction& rFaction)
 }
 
 // lifeMin/lifeMax override the fixture's lifeform roll. bExcludes loads the occupants whose
-// Former improvements Fungus excludes. bPlanet adds a native-life owner for spawns.
+// Former improvements Fungus clears. bPlanet adds a native-life owner for spawns.
 struct BloomSession_
 {
     FactionFixture fixtures;
@@ -183,8 +183,10 @@ TEST_CASE("Fungus clears the plant-fungus mask and keeps roads", "[map][fungus]"
     CHECK(rTile.HasImprovement("Road"));
     CHECK(rTile.HasFeature("Nutrients"));
 
+    // Arrival used clears, not excludes: Farm may share the tile again (start still needs
+    // CentPsi via CanStartTerraform).
     const ImprovementConfig_t& rFarm = session.fixtures.improvements.Get("Farm");
-    CHECK_FALSE(CanBuildImprovement(rTile, rFarm, {}, {}));
+    CHECK(CanBuildImprovement(rTile, rFarm, {}, {}));
 }
 
 TEST_CASE("A fungal bloom spawns one native lifeform on a new fungal tile", "[map][fungus]")

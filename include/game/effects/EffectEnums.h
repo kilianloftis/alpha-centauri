@@ -768,6 +768,10 @@ enum class RuleFlagId_t
     // Non-combat special equipment (weapon-slot) capability gates.
     // Founding is on_found_effects presence (UnitCanFoundBase), not a RuleFlag.
     Terraform,
+    // Former may start Road/MagTube on a fungus tile (Centauri Empathy).
+    TerraformFungusRoad,
+    // Former may start other place-projects on a fungus tile (Centauri Psi).
+    TerraformFungusImprovement,
     SupplyCrawl,
     ProbeTeam,
     // Not a combatant for the non-combatant stack census. Probe Team declares it.
@@ -869,6 +873,9 @@ inline RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "forces_psi_defense")           return RuleFlagId_t::ForcesPsiDefense;
     if (rFlag == "native_life")                  return RuleFlagId_t::NativeLife;
     if (rFlag == "terraform")                   return RuleFlagId_t::Terraform;
+    if (rFlag == "terraform_fungus_road")        return RuleFlagId_t::TerraformFungusRoad;
+    if (rFlag == "terraform_fungus_improvement")
+        return RuleFlagId_t::TerraformFungusImprovement;
     if (rFlag == "supply_crawl")                return RuleFlagId_t::SupplyCrawl;
     if (rFlag == "probe_team")                  return RuleFlagId_t::ProbeTeam;
     if (rFlag == "non_combatant")               return RuleFlagId_t::NonCombatant;

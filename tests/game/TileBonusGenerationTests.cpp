@@ -1,5 +1,5 @@
 #include "game/map/MapOccupantLoad.h"
-#include "game/map/TerrainOperationRegistry.h"
+#include "game/map/TerraformProjectRegistry.h"
 #include "TestHelpers.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/Tile.h"
@@ -28,9 +28,9 @@ TEST_CASE("PlaceTileBonuses stamps frequency-weighted improvements on viable til
           "[worldgen][tile-bonus]")
 {
     ImprovementRegistry terrain;
-    TerrainOperationRegistry operations;
+    TerraformProjectRegistry operations;
     LoadMapOccupants(actest::FixturePath("improvements.json"), actest::FixturePath("terrain.json"),
-                     terrain, operations);
+                     actest::FixturePath("terraform_projects.json"), terrain, operations);
 
     WorldMap world(24, 24, actest::TestMapRules(), Rainfall_t::Average);
     FillLand_(world);
@@ -78,9 +78,9 @@ TEST_CASE("PlaceTileBonuses stamps water tiles the bonus entry can occupy",
           "[worldgen][tile-bonus]")
 {
     ImprovementRegistry terrain;
-    TerrainOperationRegistry operations;
+    TerraformProjectRegistry operations;
     LoadMapOccupants(actest::FixturePath("improvements.json"), actest::FixturePath("terrain.json"),
-                     terrain, operations);
+                     actest::FixturePath("terraform_projects.json"), terrain, operations);
 
     WorldMap world(16, 16, actest::TestMapRules(), Rainfall_t::Average);
     for (auto& pTile : world.GetTiles())

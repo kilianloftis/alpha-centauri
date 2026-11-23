@@ -47,7 +47,7 @@
 #include "game/combat/MoraleConfig.h"
 #include "game/base/FoundBaseRules.h"
 #include "game/map/ImprovementRegistry.h"
-#include "game/map/TerrainOperationRegistry.h"
+#include "game/map/TerraformProjectRegistry.h"
 #include "ui/HotkeyConfig.h"
 #include "ui/IGameView.h"
 #include "game/worldgen/MapGenerationConfig.h"
@@ -675,7 +675,7 @@ void Engine::InitializeUi_()
     m_pHotkeys = std::make_unique<HotkeyConfig>(HotkeyConfig::Load(
         m_gameDataContext->paths.hotkeys,
         *m_gameDataContext->improvementRegistry,
-        *m_gameDataContext->terrainOperationRegistry));
+        *m_gameDataContext->terraformProjectRegistry));
     m_pStandingCaptions = std::make_unique<StandingCaptions>(StandingCaptions::Load(
         m_gameDataContext->paths.standingCaptions, *m_gameDataContext->diplomacyConfig));
     m_pTextPack = std::make_unique<TextPack>(

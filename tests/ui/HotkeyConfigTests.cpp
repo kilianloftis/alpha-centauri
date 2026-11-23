@@ -5,7 +5,7 @@
 
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/MapOccupantLoad.h"
-#include "game/map/TerrainOperationRegistry.h"
+#include "game/map/TerraformProjectRegistry.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
@@ -23,12 +23,13 @@ namespace
 struct OccupantRegistries
 {
     ImprovementRegistry improvements;
-    TerrainOperationRegistry operations;
+    TerraformProjectRegistry operations;
 
     OccupantRegistries()
     {
         LoadMapOccupants(actest::FixturePath("improvements.json"),
-                         actest::FixturePath("terrain.json"), improvements, operations);
+                         actest::FixturePath("terrain.json"),
+                         actest::FixturePath("terraform_projects.json"), improvements, operations);
     }
 };
 

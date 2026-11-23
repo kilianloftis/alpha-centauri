@@ -3,7 +3,7 @@
 #include "game/map/MapOccupantLoad.h"
 #include "game/map/MapUtils.h"
 #include "game/map/OccupantCoexistence.h"
-#include "game/map/TerrainOperationRegistry.h"
+#include "game/map/TerraformProjectRegistry.h"
 #include "TestHelpers.h"
 #include "game/worldgen/FungusGeneration.h"
 #include "game/map/ImprovementConfigParser.h"
@@ -35,12 +35,13 @@ std::filesystem::path TempPath_(const char* name)
 ImprovementRegistry& TestOccupants_()
 {
     static ImprovementRegistry registry;
-    static TerrainOperationRegistry operations;
+    static TerraformProjectRegistry operations;
     static bool bLoaded = false;
     if (!bLoaded)
     {
         LoadMapOccupants(actest::FixturePath("improvements.json"),
-                         actest::FixturePath("terrain.json"), registry, operations);
+                         actest::FixturePath("terrain.json"),
+                         actest::FixturePath("terraform_projects.json"), registry, operations);
         bLoaded = true;
     }
     return registry;

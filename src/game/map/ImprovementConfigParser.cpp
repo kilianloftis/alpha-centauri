@@ -1,7 +1,6 @@
 #include "game/map/ImprovementConfigParser.h"
 #include "game/display/OccupantArtParser.h"
 #include "game/map/TerrainConfig.h"
-#include "game/research/RequiredTechsParser.h"
 #include "game/map/Tile.h"
 #include "game/movement/MovementConstants.h"
 #include "lib/config/JsonConfigLoader.h"
@@ -31,8 +30,8 @@ namespace ac
 namespace
 {
 
-// Implicit tag every former-buildable improvement carries. Lets one `excludes` entry stand
-// for "anything a former builds" without each improvement restating the relationship.
+// Implicit tag every former place-target carries. Lets one `excludes` entry stand for
+// "anything a former places" without each improvement restating the relationship.
 constexpr std::string_view k_BuildableTag = "buildable";
 
 // Ensures the rational is non-negative and lands on a whole number of move fragments.
@@ -56,17 +55,17 @@ int ParseMoveCostFragments_(const ConfigReader& rReader, const char* pKey)
 
 using TagIndex_t = std::unordered_map<std::string, std::vector<std::string>>;
 
-// Derived, not authored, so a rule about "anything a former builds" covers future
-// improvements. Declaring it by hand is rejected.
-TagIndex_t BuildTagIndex_(const std::vector<ImprovementConfig_t>& rConfigs)
+// Derived from projects' `places`, not authored. Declaring it by hand is rejected.
+TagIndex_t BuildTagIndex_(const std::vector<ImprovementConfig_t>& rConfigs,
+                          const std::unordered_set<std::string>& placeTargetIds)
 {
     TagIndex_t tagToIds;
+    for (const std::string& rId : placeTargetIds)
+    {
+        tagToIds[std::string(k_BuildableTag)].push_back(rId);
+    }
     for (const ImprovementConfig_t& rConfig : rConfigs)
     {
-        if (IsBuildable(rConfig))
-        {
-            tagToIds[std::string(k_BuildableTag)].push_back(rConfig.id);
-        }
         for (const std::string& rTag : rConfig.tags)
         {
             if (rTag.empty())
@@ -76,10 +75,9 @@ TagIndex_t BuildTagIndex_(const std::vector<ImprovementConfig_t>& rConfigs)
             }
             if (rTag == k_BuildableTag)
             {
-                throw std::runtime_error("Improvement '" + rConfig.id + "': '"
-                                         + std::string(k_BuildableTag)
-                                         + "' is a reserved tag, set by declaring "
-                                           "'turns_required' rather than by hand");
+                throw std::runtime_error(
+                    "Improvement '" + rConfig.id + "': '" + std::string(k_BuildableTag)
+                    + "' is a reserved tag, set by a project's 'places' rather than by hand");
             }
             tagToIds[rTag].push_back(rConfig.id);
         }
@@ -87,7 +85,6 @@ TagIndex_t BuildTagIndex_(const std::vector<ImprovementConfig_t>& rConfigs)
     return tagToIds;
 }
 
-// The ids an `@tag` entry names.
 const std::vector<std::string>& TaggedIds_(const TagIndex_t& rTagIndex, const std::string& rEntry,
                                            std::string_view field, std::string_view id)
 {
@@ -108,7 +105,6 @@ const std::vector<std::string>& TaggedIds_(const TagIndex_t& rTagIndex, const st
     return it->second;
 }
 
-// Replaces each `@tag` with the ids carrying it, dropping duplicates.
 std::vector<std::string> ExpandTagRefs_(const TagIndex_t& rTagIndex,
                                         const std::vector<std::string>& rRaw,
                                         std::string_view field, std::string_view id)
@@ -127,8 +123,6 @@ std::vector<std::string> ExpandTagRefs_(const TagIndex_t& rTagIndex,
         }
         for (const std::string& rTaggedId : TaggedIds_(rTagIndex, rEntry, field, id))
         {
-            // Skip self: a feature tagged X that lists @X must not suppress/exclude
-            // its own yields (ThermalBorehole + @land_terraform).
             if (rTaggedId != id && seen.insert(rTaggedId).second)
             {
                 expanded.push_back(rTaggedId);
@@ -141,6 +135,7 @@ std::vector<std::string> ExpandTagRefs_(const TagIndex_t& rTagIndex,
 void ExpandConfigTagRefs_(const TagIndex_t& rTagIndex, ImprovementConfig_t& rConfig)
 {
     rConfig.excludes = ExpandTagRefs_(rTagIndex, rConfig.excludes, "excludes", rConfig.id);
+    rConfig.clears = ExpandTagRefs_(rTagIndex, rConfig.clears, "clears", rConfig.id);
     rConfig.requiredOccupants =
         ExpandTagRefs_(rTagIndex, rConfig.requiredOccupants, "requires", rConfig.id);
     rConfig.suppressYieldSources = ExpandTagRefs_(rTagIndex, rConfig.suppressYieldSources,
@@ -178,6 +173,7 @@ void RequireKnownReferences_(const std::vector<ImprovementConfig_t>& rConfigs)
     {
         RequireKnownIds_(ids, rConfig, "suppress_terrain", rConfig.suppressTerrain);
         RequireKnownIds_(ids, rConfig, "requires", rConfig.requiredOccupants);
+        RequireKnownIds_(ids, rConfig, "clears", rConfig.clears);
         if (!rConfig.art)
         {
             continue;
@@ -194,42 +190,14 @@ void RequireKnownReferences_(const std::vector<ImprovementConfig_t>& rConfigs)
 
 void RejectProjectFields_(const ConfigReader& rReader)
 {
-    for (const char* pField : {"turns_required", "energy_cost", "required_techs"})
+    for (const char* pField : {"turns_required", "energy_cost", "required_techs", "places",
+                               "blocked_by", "on_complete_effects", "former_domain"})
     {
         if (rReader.Has(pField))
         {
-            rReader.FailKey(pField, "belongs on a terrain operation, not on a terrain feature");
+            rReader.FailKey(pField, "belongs on a terraform project, not on an occupant");
         }
     }
-    if (rReader.Has("spreads"))
-    {
-        rReader.FailKey("spreads", "belongs on an improvement, not on a terrain feature");
-    }
-}
-
-bool EnergyCostIsSet_(const FormerEnergyCost_t& rCost)
-{
-    return rCost.formula.has_value() || rCost.flat != 0;
-}
-
-std::optional<FormerProject_t> ParseFormerProject_(const ConfigReader& rReader)
-{
-    FormerProject_t project;
-    project.turnsRequired =
-        rReader.Has("turns_required") ? rReader.IntAtLeast("turns_required", 0) : 0;
-    project.energyCost = ParseFormerEnergyCost(rReader);
-    project.requiredTechs = ParseRequiredTechs(rReader);
-    if (project.turnsRequired == 0
-        && (EnergyCostIsSet_(project.energyCost) || HasTechRequirements(project.requiredTechs)))
-    {
-        rReader.Fail("'energy_cost' / 'required_techs' need a 'turns_required' > 0, or no former "
-                     "can ever build it");
-    }
-    if (project.turnsRequired == 0)
-    {
-        return std::nullopt;
-    }
-    return project;
 }
 
 std::optional<ImprovementDomain_t> ParseImprovementDomain_(const ConfigReader& rReader)
@@ -290,7 +258,7 @@ FormerEnergyCost_t ParseFormerEnergyCost(const ConfigReader& rReader)
 
 bool IsBuildable(const ImprovementConfig_t& rConfig)
 {
-    return rConfig.project.has_value();
+    return rConfig.formerPlaceTarget;
 }
 
 std::vector<ImprovementConfig_t> ParseImprovementsUnexpanded(const std::string& rConfigPath)
@@ -304,24 +272,26 @@ std::vector<ImprovementConfig_t> ParseImprovementsUnexpanded(const std::string& 
 std::vector<ImprovementConfig_t> ImprovementConfigParser::ParseConfig(const std::string& configPath)
 {
     std::vector<ImprovementConfig_t> configs = ParseImprovementsUnexpanded(configPath);
-    ExpandFeatureTagReferences(configs);
+    ExpandFeatureTagReferences(configs, {});
     return configs;
 }
 
 std::vector<ImprovementConfig_t> LoadTileOccupants(
-    const std::string& rImprovementsPath, std::vector<ImprovementConfig_t> terrainFeatures)
+    const std::string& rImprovementsPath, std::vector<ImprovementConfig_t> terrainFeatures,
+    const std::unordered_set<std::string>& placeTargetIds)
 {
     std::vector<ImprovementConfig_t> occupants =
         ParseImprovementsUnexpanded(rImprovementsPath);
     occupants.insert(occupants.end(), std::make_move_iterator(terrainFeatures.begin()),
                      std::make_move_iterator(terrainFeatures.end()));
-    ExpandFeatureTagReferences(occupants);
+    ExpandFeatureTagReferences(occupants, placeTargetIds);
     return occupants;
 }
 
-void ExpandFeatureTagReferences(std::vector<ImprovementConfig_t>& rConfigs)
+void ExpandFeatureTagReferences(std::vector<ImprovementConfig_t>& rConfigs,
+                                const std::unordered_set<std::string>& placeTargetIds)
 {
-    const TagIndex_t tagIndex = BuildTagIndex_(rConfigs);
+    const TagIndex_t tagIndex = BuildTagIndex_(rConfigs, placeTargetIds);
     for (ImprovementConfig_t& rConfig : rConfigs)
     {
         ExpandConfigTagRefs_(tagIndex, rConfig);
@@ -329,8 +299,6 @@ void ExpandFeatureTagReferences(std::vector<ImprovementConfig_t>& rConfigs)
     RequireKnownReferences_(rConfigs);
 }
 
-// Sight radius from ThisTile Vision StatModifiers — same amount encoding as unit Vision
-// (Sensor declares amount: 2).
 int ResolveVisionRadius_(const ImprovementConfig_t& rConfig)
 {
     int sight = 0;
@@ -364,13 +332,10 @@ ImprovementConfig_t ParseImprovementBody(const ConfigReader& rReader,
     config.name = rReader.String("name");
     config.description = rReader.StringOr("description", "");
     config.placement = placement;
-    if (placement == OccupantPlacement_t::Terrain)
+    RejectProjectFields_(rReader);
+    if (placement == OccupantPlacement_t::Terrain && rReader.Has("spreads"))
     {
-        RejectProjectFields_(rReader);
-    }
-    else
-    {
-        config.project = ParseFormerProject_(rReader);
+        rReader.FailKey("spreads", "belongs on an improvement, not on a terrain feature");
     }
     config.ownedByTerritory = rReader.BoolOr("owned_by_territory", false);
     config.frequency = rReader.IntOr("frequency", 0);
@@ -378,6 +343,7 @@ ImprovementConfig_t ParseImprovementBody(const ConfigReader& rReader,
     config.tags = rReader.StringArray("tags");
     config.domain = ParseImprovementDomain_(rReader);
     config.excludes = rReader.StringArray("excludes");
+    config.clears = rReader.StringArray("clears");
     config.requiredOccupants = rReader.StringArray("requires");
     config.suppressYieldSources = rReader.StringArray("suppress_yield_sources");
     config.suppressTerrain = rReader.StringArray("suppress_terrain");

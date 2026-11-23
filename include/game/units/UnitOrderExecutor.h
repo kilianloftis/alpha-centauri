@@ -12,7 +12,7 @@ namespace ac
 class IUnitOrderWorld;
 class Pathfinder;
 class StepEvaluator;
-class TerrainOperationRegistry;
+class TerraformProjectRegistry;
 class Tile;
 class TileEffectsContext;
 class UnitMoveExecutor;
@@ -24,7 +24,7 @@ class UnitOrderExecutor
 public:
     UnitOrderExecutor(UnitMoveExecutor& rMoves, const StepEvaluator& rSteps, WorldMap& rWorldMap,
                       TileEffectsContext& rTileEffects, Pathfinder& rPathfinder,
-                      const TerrainOperationRegistry& rTerrainOperations, std::mt19937& rRng,
+                      const TerraformProjectRegistry& rTerraformProjects, std::mt19937& rRng,
                       IUnitOrderWorld& rWorld);
 
     // Advances the unit's order one pass, and clears the order once it ends.
@@ -55,7 +55,7 @@ private:
     WorldMap& m_rWorldMap;
     TileEffectsContext& m_rTileEffects;
     Pathfinder& m_rPathfinder;
-    const TerrainOperationRegistry& m_rTerrainOperations;
+    const TerraformProjectRegistry& m_rTerraformProjects;
     std::mt19937& m_rRng;
     IUnitOrderWorld& m_rWorld;
 };

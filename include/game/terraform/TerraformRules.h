@@ -14,38 +14,36 @@ namespace ac
 
 class Faction;
 class ImprovementRegistry;
-class TerrainOperationRegistry;
+class TerraformProjectRegistry;
 class Tile;
 class Unit;
 struct CoexistenceOverrideEffect_t;
 struct TriggeredEffectConfig_t;
 
-// A Former project from an improvement (pPlaces) or a terrain operation (onCompleteEffects);
-// exactly one is filled.
+// A resolved Former project from the terraform project registry.
 struct TerraformProject_t
 {
     std::string id;
     std::string name;
     FormerProject_t project;
     FormerDomainRule_t formerDomain = FormerDomainRule_t::MatchesTile;
-    // Surface this project may run on. From the improvement's domain, or an operation's
-    // domain; empty means either surface.
+    // Surface this project may run on. Empty means either surface.
     std::optional<ImprovementDomain_t> domain;
+    // Occupant placed on complete, when the project declares `places`.
     const ImprovementConfig_t* pPlaces = nullptr;
+    std::span<const std::string> blockedBy;
     // Into registry-owned storage; valid while the registries that produced it are alive.
     std::span<const TriggeredEffectConfig_t> onCompleteEffects;
 };
 
-// Resolves a project id against buildable improvements first, then terrain operations.
-// LoadGameData rejects an id that is both, so the order is not a tie-break.
+// Resolves a project id against the former-project registry; fills pPlaces from occupants.
 std::optional<TerraformProject_t> FindTerraformProject(const std::string& rId,
                                                       const ImprovementRegistry& rImprovements,
-                                                      const TerrainOperationRegistry& rOperations);
+                                                      const TerraformProjectRegistry& rProjects);
 
 bool CanStartTerraform(const Unit& rUnit, const TerraformProject_t& rProject);
 
-// Whether rUnit may start projectId (a buildable improvement or a terrain operation) on its tile
-// now: FindTerraformProject, then CanStartTerraform.
+// Whether rUnit may start projectId now: FindTerraformProject, then CanStartTerraform.
 bool CanStartTerraformProject(const Unit& rUnit, const std::string& projectId);
 
 int TerraformEnergyCost(const Unit& rUnit, const TerraformProject_t& rProject);

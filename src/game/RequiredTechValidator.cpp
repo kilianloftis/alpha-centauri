@@ -5,7 +5,7 @@
 #include "game/buildings/BuildingRegistry.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
-#include "game/map/TerrainOperationRegistry.h"
+#include "game/map/TerraformProjectRegistry.h"
 #include "game/population/PopTypeConfigParser.h"
 #include "game/population/PopTypeRegistry.h"
 #include "game/research/TechRegistry.h"
@@ -98,8 +98,8 @@ void ValidateRequiredTechReferences(const GameDataContext& rData)
         RequireRegistry(rData.buildingRegistry, "buildingRegistry");
     const ImprovementRegistry& rImprovements =
         RequireRegistry(rData.improvementRegistry, "improvementRegistry");
-    const TerrainOperationRegistry& rOperations =
-        RequireRegistry(rData.terrainOperationRegistry, "terrainOperationRegistry");
+    const TerraformProjectRegistry& rOperations =
+        RequireRegistry(rData.terraformProjectRegistry, "terraformProjectRegistry");
     const UnitComponentRegistry& rUnitComponents =
         RequireRegistry(rData.unitComponentRegistry, "unitComponentRegistry");
     const UnitSlotRegistry& rUnitSlots =
@@ -114,16 +114,9 @@ void ValidateRequiredTechReferences(const GameDataContext& rData)
         RequireRegistry(rData.probeActionsConfig, "probeActionsConfig");
 
     ValidateRequiredTechs(rBuildings.GetAll(), rTechs, "Building");
-    for (const ImprovementConfig_t& rConfig : rImprovements.GetAll())
+    for (const TerraformProjectConfig_t& rConfig : rOperations.GetAll())
     {
-        if (rConfig.project)
-        {
-            ValidateProjectTechs_(rConfig.id, *rConfig.project, rTechs, "Improvement");
-        }
-    }
-    for (const TerrainOperationConfig_t& rConfig : rOperations.GetAll())
-    {
-        ValidateProjectTechs_(rConfig.id, rConfig.project, rTechs, "Terrain operation");
+        ValidateProjectTechs_(rConfig.id, rConfig.project, rTechs, "Terraform project");
     }
     ValidateRequiredTechs(rUnitComponents.GetAll(), rTechs, "Unit component");
     ValidateRequiredTechs(rUnitSlots.GetAll(), rTechs, "Unit slot");

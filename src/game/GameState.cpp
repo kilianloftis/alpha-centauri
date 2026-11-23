@@ -203,7 +203,7 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
                                                       m_rng, *this);
     m_pUnitOrderExecutor = std::make_unique<UnitOrderExecutor>(
         *m_pUnitMoves, *m_pSteps, *m_worldMap, *m_pTileEffects, *m_pPathfinder,
-        *rGameData.terrainOperationRegistry, m_rng, *this);
+        *rGameData.terraformProjectRegistry, m_rng, *this);
     m_pUnitAttacks = std::make_unique<UnitAttackExecutor>(
         *m_pMoveCosts, *m_pSteps, *m_worldMap, *m_pTileEffects, *rGameData.moraleCalculator, m_rng,
         *this, *m_pUnitOrderExecutor);

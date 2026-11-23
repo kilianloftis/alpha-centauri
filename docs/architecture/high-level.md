@@ -616,11 +616,11 @@ seed. (Persisting that seed into save state is still open — see the world-gene
 - **Components**:
   - `Tile`: A single map tile — position (x,y), terrain characteristics (Moisture_t, Rockiness_t, elevation, river, aquifer), optional terrain occupants (fungus, landmarks, bonuses, Monolith), its improvements, and the coexistence waivers those improvements were built under. Holds no worked-tile or ownership state; those live in the world-scoped indexes below.
   - `WorldMap`: Owns the tile grid plus `UnitPositionIndex`, `WorkedTileIndex` and `TerritoryMap`. Tile addresses are stable for its lifetime, so `GetTiles()` hands out a const-element span rather than the owning vector.
-  - `ImprovementRegistry`: every tile occupant, from both `improvements.json` and `terrain.json`, with `ImprovementConfig_t::placement` telling improvements from terrain features (rockiness, moisture, water bands, river, aquifer, fungus, landmarks, bonuses, Monolith). An improvement with a `turns_required` is a former project. `TerrainOperationRegistry` holds the closed terrain mutations.
+  - `ImprovementRegistry`: every tile occupant, from both `improvements.json` and `terrain.json`, with `ImprovementConfig_t::placement` telling improvements from terrain features (rockiness, moisture, water bands, river, aquifer, fungus, landmarks, bonuses, Monolith). `TerraformProjectRegistry` holds every Former project (`places` and/or `on_complete_effects`) from `terraform_projects.json`.
   - `WorldGenerator`: Builds a `WorldMap` from a seed — elevation, fungus, landmarks, aquifers/rivers, rainfall, rockiness (elevation-weight bands), tile bonuses, in that order.
 - **Dependencies**:
   - Faction subsystems (particularly Military with Bases) work tiles for resources
-  - ImprovementRegistry loads config/improvements.json and config/terrain.json together (`LoadOccupants`); TerrainOperationRegistry loads config/terrain.json
+  - ImprovementRegistry and TerraformProjectRegistry load together via `LoadMapOccupants` from improvements.json, terrain.json, and terraform_projects.json
 - **Details**: See `docs/architecture/map-system.md` for detailed architecture
 
 ### Unit Movement System
@@ -663,7 +663,7 @@ seed. (Persisting that seed into save state is still open — see the world-gene
 
 ### Configuration
 - **Turn Stages Config**: `config/turn_stages.json` - The stage order, and the pre/post/replace hooks each stage carries (`HookContext`)
-- **Improvements Config**: `config/improvements.json` defines improvements, each with its own build time and cost when a former can build it. `config/terrain.json` defines terrain occupants (`features`) and the closed terrain operations (`operations`).
+- **Improvements Config**: `config/improvements.json` defines improvement occupants. `config/terrain.json` defines terrain occupants (`features`). `config/terraform_projects.json` defines Former projects, including builds that `places` an occupant.
 - **World Gen Config**: `config/worldGen/` - `presets.json` (landmass recipes), `decoration.json` (moisture/rockiness/aquifer/fungus/bonus knobs), `landmarks.json` (placement recipes)
 - **Tech Config**: `config/techs.json` - Loaded by TechRegistry to define available technologies, their costs, and unlock chains
 
