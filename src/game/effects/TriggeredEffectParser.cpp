@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <ranges>
 #include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
@@ -383,6 +384,22 @@ void ParseFungalBloom_(const ConfigReader& rParams, TriggeredEffectConfig_t& rEf
     else
     {
         bloom.chance = RequireChanceArray_(rParams);
+    }
+
+    // Required: a bloom states what it destroys. Omitting it would silently destroy nothing,
+    // and the three trigger sites (eco damage, supply pod, fungal payload) are authored
+    // independently, so a forgotten key must fail at load rather than at play.
+    if (!rParams.Has("destroys"))
+    {
+        rParams.FailKey("destroys",
+                        "is required: list the occupant ids or @tags a bloom destroys, or [] "
+                        "for none");
+    }
+    rParams.Array("destroys");
+    bloom.destroys = rParams.StringArray("destroys");
+    if (std::ranges::contains(bloom.destroys, std::string()))
+    {
+        rParams.FailKey("destroys", "entries must be non-empty occupant ids or @tags");
     }
     rEffect.effect = bloom;
 }

@@ -135,7 +135,6 @@ std::vector<std::string> ExpandTagRefs_(const TagIndex_t& rTagIndex,
 void ExpandConfigTagRefs_(const TagIndex_t& rTagIndex, ImprovementConfig_t& rConfig)
 {
     rConfig.excludes = ExpandTagRefs_(rTagIndex, rConfig.excludes, "excludes", rConfig.id);
-    rConfig.clears = ExpandTagRefs_(rTagIndex, rConfig.clears, "clears", rConfig.id);
     rConfig.requiredOccupants =
         ExpandTagRefs_(rTagIndex, rConfig.requiredOccupants, "requires", rConfig.id);
     rConfig.suppressYieldSources = ExpandTagRefs_(rTagIndex, rConfig.suppressYieldSources,
@@ -173,7 +172,6 @@ void RequireKnownReferences_(const std::vector<ImprovementConfig_t>& rConfigs)
     {
         RequireKnownIds_(ids, rConfig, "suppress_terrain", rConfig.suppressTerrain);
         RequireKnownIds_(ids, rConfig, "requires", rConfig.requiredOccupants);
-        RequireKnownIds_(ids, rConfig, "clears", rConfig.clears);
         if (!rConfig.art)
         {
             continue;
@@ -343,7 +341,6 @@ ImprovementConfig_t ParseImprovementBody(const ConfigReader& rReader,
     config.tags = rReader.StringArray("tags");
     config.domain = ParseImprovementDomain_(rReader);
     config.excludes = rReader.StringArray("excludes");
-    config.clears = rReader.StringArray("clears");
     config.requiredOccupants = rReader.StringArray("requires");
     config.suppressYieldSources = rReader.StringArray("suppress_yield_sources");
     config.suppressTerrain = rReader.StringArray("suppress_terrain");

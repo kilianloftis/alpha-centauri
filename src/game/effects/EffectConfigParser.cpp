@@ -887,6 +887,40 @@ void ParseCoexistenceOverride_(const ConfigReader& rParams, EffectConfig_t& rEff
     rEffect.effect = overrideFx;
 }
 
+// Lifts a project's blocked_by entries. Both axes are optional and each wild-cards when
+// omitted, but both omitted would switch blocked_by off wholesale, so that is rejected --
+// the same hazard ParseCoexistenceOccupants_ rejects zero ids for. `blocked_by` is always a
+// list, so one entry is ["Fungus"]; entries may be @tag refs, resolved where the rule is
+// applied because the project's own blocked_by is expanded by then.
+void ParseTerraformBlockOverride_(const ConfigReader& rParams, EffectConfig_t& rEffect)
+{
+    if (rEffect.scope != EffectScope_t::ThisUnit
+        && rEffect.scope != EffectScope_t::FactionUnits)
+    {
+        throw std::runtime_error(
+            "TerraformBlockOverride scope must be ThisUnit or FactionUnits");
+    }
+
+    TerraformBlockOverrideEffect_t overrideFx;
+    overrideFx.projectId = rParams.StringOr("project", "");
+    if (rParams.Has("blocked_by"))
+    {
+        rParams.Array("blocked_by");
+        overrideFx.blockedByIds = rParams.StringArray("blocked_by");
+        if (std::ranges::contains(overrideFx.blockedByIds, std::string()))
+        {
+            rParams.FailKey("blocked_by", "entries must be non-empty occupant ids or @tags");
+        }
+    }
+    if (overrideFx.projectId.empty() && overrideFx.blockedByIds.empty())
+    {
+        throw std::runtime_error(
+            "TerraformBlockOverride must name 'project' and/or a non-empty 'blocked_by': "
+            "omitting both would lift every project's blocked_by");
+    }
+    rEffect.effect = overrideFx;
+}
+
 using ParseEffectFn_ = void (*)(const ConfigReader& rParams, EffectConfig_t& rEffect);
 
 const std::unordered_map<std::string, ParseEffectFn_>& EffectTypeParsers_()
@@ -898,6 +932,7 @@ const std::unordered_map<std::string, ParseEffectFn_>& EffectTypeParsers_()
         {"RuleFlag", ParseRuleFlag_},
         {"InteractionOverride", ParseInteractionOverride_},
         {"CoexistenceOverride", ParseCoexistenceOverride_},
+        {"TerraformBlockOverride", ParseTerraformBlockOverride_},
         {"ForbiddenSocialPolicy", ParseForbiddenSocialPolicy_},
         {"SocialPolicyImpunity", ParseSocialPolicyImpunity_},
         {"SocialRatingModifier", ParseSocialRatingModifier_},

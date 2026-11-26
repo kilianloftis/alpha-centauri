@@ -38,6 +38,7 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <span>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -73,8 +74,8 @@ int UnitCount_(const Faction& rFaction)
     return count;
 }
 
-// lifeMin/lifeMax override the fixture's lifeform roll. bExcludes loads the occupants whose
-// Former improvements Fungus clears. bPlanet adds a native-life owner for spawns.
+// lifeMin/lifeMax override the fixture's lifeform roll. bExcludes loads the occupant set with
+// the Farm / Forest / Mine / Fungus exclusion rules. bPlanet adds a native-life owner for spawns.
 struct BloomSession_
 {
     FactionFixture fixtures;
@@ -98,10 +99,11 @@ struct BloomSession_
 
     Tile& At_(int x, int y) { return *fixtures.state.GetWorldMap().GetTile(x, y); }
 
-    FungalBloomResult_t Bloom_(int x, int y, int count)
+    FungalBloomResult_t Bloom_(int x, int y, int count,
+                               std::span<const std::string> destroys = {})
     {
-        return ApplyFungalBloom(At_(x, y), fixtures.state.GetWorldMap(), count, fixtures.state.GetRng(),
-                                fixtures.state);
+        return ApplyFungalBloom(At_(x, y), fixtures.state.GetWorldMap(), count, destroys,
+                                fixtures.state.GetRng(), fixtures.state);
     }
 };
 
@@ -168,25 +170,54 @@ TEST_CASE("A base tile is not a fungal bloom target", "[map][fungus]")
     CHECK(FungusCount_(onBase.fixtures.state.GetWorldMap()) == 3);
 }
 
-TEST_CASE("Fungus clears the plant-fungus mask and keeps roads", "[map][fungus]")
+// docs/thinker/terranx-map.md "Case 7 — FungalBloom": the pod clears road and mag tube on
+// top of the Plant Fungus mask. The bloom's destroys list is that extra.
+TEST_CASE("A fungal bloom destroys what it lists", "[map][fungus]")
+{
+    BloomSession_ session(0, 0, /*bExcludes=*/true, false);
+    Tile& rTile = session.At_(8, 8);
+    session.fixtures.state.GetTileEffects().AddOccupantWithEffects(rTile, "Road");
+    session.fixtures.state.GetTileEffects().AddOccupantWithEffects(rTile, "Sensor");
+    session.fixtures.state.GetTileEffects().AddOccupantWithEffects(rTile, "Nutrients");
+
+    const std::vector<std::string> destroys{"Road"};
+    const FungalBloomResult_t result = session.Bloom_(8, 8, 1, destroys);
+    CHECK(result.tilesFungused == 1);
+    CHECK(rTile.HasFeature("Fungus"));
+    CHECK_FALSE(rTile.HasImprovement("Road"));
+    CHECK(rTile.HasImprovement("Sensor"));
+    // A terrain feature is not an improvement, so the bloom leaves it alone.
+    CHECK(rTile.HasFeature("Nutrients"));
+}
+
+// docs/thinker/terranx-map.md "Eco-damage fungus": eco damage clears only the Plant Fungus
+// mask. Fungus's own excludes do that, so a bloom that lists nothing still takes the Farm.
+TEST_CASE("A fungal bloom that lists nothing still destroys what fungus excludes",
+          "[map][fungus]")
 {
     BloomSession_ session(0, 0, /*bExcludes=*/true, false);
     Tile& rTile = session.At_(8, 8);
     session.fixtures.state.GetTileEffects().AddOccupantWithEffects(rTile, "Farm");
     session.fixtures.state.GetTileEffects().AddOccupantWithEffects(rTile, "Road");
-    session.fixtures.state.GetTileEffects().AddOccupantWithEffects(rTile, "Nutrients");
 
     const FungalBloomResult_t result = session.Bloom_(8, 8, 1);
     CHECK(result.tilesFungused == 1);
     CHECK(rTile.HasFeature("Fungus"));
     CHECK_FALSE(rTile.HasImprovement("Farm"));
     CHECK(rTile.HasImprovement("Road"));
-    CHECK(rTile.HasFeature("Nutrients"));
+}
 
-    // Arrival used clears, not excludes: Farm may share the tile again (start still needs
-    // CentPsi via CanStartTerraform).
-    const ImprovementConfig_t& rFarm = session.fixtures.improvements.Get("Farm");
-    CHECK(CanBuildImprovement(rTile, rFarm, {}, {}));
+TEST_CASE("A fungal bloom never razes the base", "[map][fungus]")
+{
+    BloomSession_ session(0, 0, /*bExcludes=*/true, false);
+    Tile& rTile = session.At_(9, 9);
+    session.fixtures.state.GetTileEffects().AddOccupantWithEffects(rTile, "Base");
+    session.fixtures.state.GetTileEffects().AddOccupantWithEffects(rTile, "Road");
+
+    // Naming Base explicitly still cannot remove it: IsRemovableByOccupancy refuses.
+    const std::vector<std::string> destroys{"Base", "Road"};
+    session.Bloom_(9, 9, 1, destroys);
+    CHECK(rTile.HasImprovement("Base"));
 }
 
 TEST_CASE("A fungal bloom spawns one native lifeform on a new fungal tile", "[map][fungus]")
@@ -284,7 +315,7 @@ TEST_CASE("chance [1, 1/1] funguses the origin and every eligible neighbour", "[
         (candidates.pOrigin != nullptr ? 1 : 0) + static_cast<int>(candidates.neighbours.size());
     const std::array<Rational_t, 2> chances{Rational_t::FromInt(1), Rational_t{1, 1}};
     const FungalBloomResult_t result =
-        ApplyFungalBloom(rOrigin, session.fixtures.state.GetWorldMap(), chances,
+        ApplyFungalBloom(rOrigin, session.fixtures.state.GetWorldMap(), chances, {},
                          session.fixtures.state.GetRng(), session.fixtures.state);
 
     CHECK(result.tilesFungused == expected);
@@ -301,7 +332,7 @@ TEST_CASE("chance [1, 0] funguses only the origin when it is eligible", "[map][f
     Tile& rOrigin = session.At_(8, 8);
     const std::array<Rational_t, 2> chances{Rational_t::FromInt(1), Rational_t{0, 1}};
     const FungalBloomResult_t result =
-        ApplyFungalBloom(rOrigin, session.fixtures.state.GetWorldMap(), chances,
+        ApplyFungalBloom(rOrigin, session.fixtures.state.GetWorldMap(), chances, {},
                          session.fixtures.state.GetRng(), session.fixtures.state);
     CHECK(result.tilesFungused == 1);
     CHECK(rOrigin.HasFeature("Fungus"));

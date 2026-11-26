@@ -237,6 +237,15 @@ struct CoexistenceOverrideEffect_t
     std::string secondId;
 };
 
+// Lifts a terraform project's blocked_by entries for the acting former: an empty projectId
+// matches any project, an empty blockedByIds matches every entry. Both empty is rejected at
+// parse, since that would switch blocked_by off wholesale.
+struct TerraformBlockOverrideEffect_t
+{
+    std::string projectId;
+    std::vector<std::string> blockedByIds;
+};
+
 // Overrides an interaction grid cell (allow or deny); one restating the stock cell is
 // skipped, so order never matters. Omit an axis to match any value.
 struct InteractionOverrideEffect_t
@@ -264,7 +273,8 @@ using EffectVariant_t = std::variant<
     ScrambleEffect_t,
     TransportParamsEffect_t,
     InteractionOverrideEffect_t,
-    CoexistenceOverrideEffect_t
+    CoexistenceOverrideEffect_t,
+    TerraformBlockOverrideEffect_t
 >;
 
 // Runtime predicates on EffectConfig_t, as a variant so AllOf_t can recurse. Visit through

@@ -104,49 +104,91 @@ bool DomainAllows_(const Unit& rUnit, const TerraformProject_t& rProject, const 
     return FormerMatchesTile_(rUnit, rTile);
 }
 
-bool BlockedByOccupant_(const TerraformProject_t& rProject, const Tile& rTile)
+// An override entry is either a concrete occupant id or an "@tag" the blocking occupant
+// carries. Matching the tag against the occupant avoids re-expanding the ref here: the
+// project's own blockedBy is already expanded, so the two sides meet on the occupant.
+bool OverrideEntryMatches_(const std::string& rEntry, const std::string& rBlockingId,
+                           const ImprovementRegistry& rImprovements)
 {
-    for (const std::string& rId : rProject.blockedBy)
+    if (rEntry.empty())
     {
-        if (rTile.HasFeature(rId))
+        return false;
+    }
+    if (rEntry.front() != '@')
+    {
+        return rEntry == rBlockingId;
+    }
+    const std::string_view tag(rEntry.begin() + 1, rEntry.end());
+    const ImprovementConfig_t* pBlocking = rImprovements.Find(rBlockingId);
+    if (!pBlocking)
+    {
+        return false;
+    }
+    if (tag == "buildable")
+    {
+        return IsBuildable(*pBlocking);
+    }
+    return std::ranges::contains(pBlocking->tags, tag);
+}
+
+// True when some override lifts this blocked_by entry for this project. An empty projectId
+// matches any project; an empty blockedByIds matches every entry.
+bool OverrideLiftsBlock_(std::span<const TerraformBlockOverrideEffect_t> blockOverrides,
+                         const TerraformProject_t& rProject, const std::string& rBlockingId,
+                         const ImprovementRegistry& rImprovements)
+{
+    for (const TerraformBlockOverrideEffect_t& rOverride : blockOverrides)
+    {
+        if (!rOverride.projectId.empty() && rOverride.projectId != rProject.id)
+        {
+            continue;
+        }
+        if (rOverride.blockedByIds.empty())
         {
             return true;
+        }
+        for (const std::string& rEntry : rOverride.blockedByIds)
+        {
+            if (OverrideEntryMatches_(rEntry, rBlockingId, rImprovements))
+            {
+                return true;
+            }
         }
     }
     return false;
 }
 
-// docs/thinker/terranx-map.md "Starting a project": fungus needs CentEmp for roads /
-// MagTube and CentPsi for other place-projects.
-bool FungusBlocksPlaceProject_(const Unit& rUnit, const ImprovementConfig_t& rPlaces,
-                               const Tile& rTile)
+bool BlockedByOccupant_(const TerraformProject_t& rProject, const Tile& rTile,
+                        std::span<const TerraformBlockOverrideEffect_t> blockOverrides,
+                        const ImprovementRegistry& rImprovements)
 {
-    if (!rTile.HasFeature(ImprovementIds::k_Fungus))
+    for (const std::string& rId : rProject.blockedBy)
     {
-        return false;
+        if (!rTile.HasFeature(rId))
+        {
+            continue;
+        }
+        if (OverrideLiftsBlock_(blockOverrides, rProject, rId, rImprovements))
+        {
+            continue;
+        }
+        return true;
     }
-    // TODO: Try to remove direct reference to road and magtube
-    const bool bRoadOrTube =
-        rPlaces.id == ImprovementIds::k_Road || rPlaces.id == ImprovementIds::k_MagTube;
-    const RuleFlagId_t flag = bRoadOrTube ? RuleFlagId_t::TerraformFungusRoad
-                                          : RuleFlagId_t::TerraformFungusImprovement;
-    return !ResolveFlag(rUnit, flag);
+    return false;
 }
 
 bool CanApplyProject_(const Unit& rUnit, const TerraformProject_t& rProject, const Tile& rTile,
                       std::span<const CoexistenceOverrideEffect_t> overrides,
+                      std::span<const TerraformBlockOverrideEffect_t> blockOverrides,
                       const MapRulesConfig_t& rRules)
 {
-    if (BlockedByOccupant_(rProject, rTile))
+    if (BlockedByOccupant_(rProject, rTile, blockOverrides,
+                           CurrentGameState().GetTileEffects().GetImprovements()))
     {
         return false;
     }
     if (rProject.pPlaces)
     {
-        if (FungusBlocksPlaceProject_(rUnit, *rProject.pPlaces, rTile))
-        {
-            return false;
-        }
         if (ImprovementApplies(rTile, *rProject.pPlaces, overrides))
         {
             return true;
@@ -306,7 +348,9 @@ bool CanStartTerraform(const Unit& rUnit, const TerraformProject_t& rProject)
     }
 
     const std::vector<CoexistenceOverrideEffect_t> overrides = ActiveCoexistenceOverrides(rUnit);
-    if (!CanApplyProject_(rUnit, rProject, rUnit.GetTile(), overrides,
+    const std::vector<TerraformBlockOverrideEffect_t> blockOverrides =
+        ActiveTerraformBlockOverrides(rUnit);
+    if (!CanApplyProject_(rUnit, rProject, rUnit.GetTile(), overrides, blockOverrides,
                           rUnit.GetTile().MapRules()))
     {
         return false;

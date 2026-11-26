@@ -1073,10 +1073,23 @@
     ],
     "effects": [
       {
-        "type": "RuleFlag",
+        "type": "TerraformBlockOverride",
         "scope": "FactionUnits",
         "parameters": {
-          "flag": "terraform_fungus_road"
+          "project": "Road",
+          "blocked_by": [
+            "Fungus"
+          ]
+        }
+      },
+      {
+        "type": "TerraformBlockOverride",
+        "scope": "FactionUnits",
+        "parameters": {
+          "project": "MagTube",
+          "blocked_by": [
+            "Fungus"
+          ]
         }
       }
     ]
@@ -1197,10 +1210,22 @@
         }
       },
       {
-        "type": "RuleFlag",
+        "type": "CoexistenceOverride",
         "scope": "FactionUnits",
         "parameters": {
-          "flag": "terraform_fungus_improvement"
+          "cell": "Allow",
+          "occupants": [
+            "Fungus"
+          ]
+        }
+      },
+      {
+        "type": "TerraformBlockOverride",
+        "scope": "FactionUnits",
+        "parameters": {
+          "blocked_by": [
+            "Fungus"
+          ]
         }
       }
     ]

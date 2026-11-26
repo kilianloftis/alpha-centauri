@@ -605,6 +605,19 @@ Per-turn Planet fauna (with forest/kelp growth samples at the top — that half 
 Related, not fully mapped here: `do_fungal_towers` (`0x522F00`); eco-damage native burst
 after fungus grows in `base_ecology` (`0x4F67F0`).
 
+**Eco-damage fungus (`base_ecology` `0x4F67F0`).** The chosen tile skips fungus at shelf
+altitude or above, a base, and a volcano landmark (`0x4F6D5B`–`0x4F6D97`). It gets the fungus
+bit, then loses the Plant Fungus clear mask read from `Terraform[11]` +0x14 (`0x6919EC`,
+`0x4F6DE3`): mine, solar, farm, soil enricher and forest, or kelp, platform and harness at sea.
+Road, mag tube, condenser, mirror, borehole, sensor, bunker and airbase stay. Deep ocean below
+the shelf is raised to the shelf (`world_alt_set(x, y, 2, 0)` at `0x4F6E1E`). The notice is
+`FUNGUSGROWS2` ("$TERRAINIMPROVEMENT1 destroyed!") naming the highest-index cleared project
+(`0x4F6DAB`–`0x4F6DD6`) when the base is the player's, else `FUNGUSGROWS`.
+
+**Fungal payload (`action_fungal` `0x4CE790`).** Each fungused tile gets `0x28805C` cleared, then
+the Plant Fungus mask (`0x4CEBC6`–`0x4CEBDD`), then is raised to the shelf if lower
+(`0x4CEC0B`). A tile already in fungus is skipped. The same sequence appears at `0x4CE6BC`.
+
 ## Unit capture in combat
 
 Two ways a fight hands units to the attacker: Marine Detachment boarding, and alien artifacts.
@@ -693,6 +706,9 @@ cap (Thinker's optional `rare_supply_pods` `40+rand(60)` gate is not in this bin
 **Case 7 — FungalBloom** (`0x57b9fc`): after notice, `site_radius` then fungus on every tile in
 the 3×3 (`iterate_tiles` count 9) with altitude ≥ ocean shelf — clear forest/farm/solar/mine/
 road/magtube bits. Shipping uses `FungalBloom` `chance: [1.0, "1/1"]` on bloom candidates.
+The clear is `bit_set(x, y, 0x28805C, 0)` (`0x57BB3F`): forest, soil enricher, farm, solar, mine,
+mag tube, road. Condenser, mirror, borehole, sensor, bunker and airbase stay. Tiles that already
+hold fungus are not skipped, so their road and other masked bits are cleared too.
 
 **Cases 12–17 — NativeLife** (`0x57c…` / Thinker `goody_box` case 12): always adjacent
 (`BaseOffset` ring). Empty same-surface tile (`anything_at() < 0`). Sea → Isle of the Deep
@@ -746,6 +762,15 @@ new reading in the binary before changing the table.
 **Case 11 — TerraformCluster** (`0x57c271`): center tile always; each of 8 neighbors included
 when `rand % (3 - (choice > 1)) != 0` (`0x57c2c7`) — chance 2/3 for forest/farm (and sea
 kelp, choice 0), 1/2 for mine/solar. Shipping uses `chance: [1.0, "2/3"]`.
+Each included tile is filtered first, then cleared, then given the improvement
+(`0x57C391`–`0x57C4AE`). Land needs altitude ≥ 3. Forest and farm skip rocky, and the mine skips
+flat. Sea needs altitude < 3; a deep-ocean tile is skipped unless it is the centre, which is
+raised to the shelf (`alt_set_both(x, y, 2)` at `0x57C419`). A tile marked `BIT_SUPPLY_REMOVE`
+is skipped. A tile that passes loses `0x288070` (`0x57C423`): fungus plus the Plant Fungus mask
+(mine, solar, farm, soil enricher, forest; kelp, platform, harness at sea). Then it gets
+the forest, farm (kelp at sea), mine + road, or solar bit. Road, mag tube, sensor, bunker,
+airbase, condenser, mirror and borehole are untouched. There is no base check in the loop
+because a base within 2 already re-rolled the event.
 
 `goody_at` (`0x5C0…` / Thinker `mod_goody_at`): returns 0 when `BIT_SUPPLY_REMOVE` or
 `BIT_MONOLITH` is set. `RULES_NO_UNITY_SCATTERING` limits pods to landing-site bits. Unity
@@ -1094,6 +1119,12 @@ command:
 - Fungus at shelf altitude or above: a road needs `tech_preq_build_road_fungus` (`0x94977C`,
   CentEmp); any other project with a bit needs `tech_preq_improv_fungus` (`0x949774`, CentPsi)
   (`NOTINFUNGUS` / `NOTYETFUNGUS`, `0x4D3C85`–`0x4D3E1C`). Building does not clear the fungus.
+  The test is `Terraform[i].bit & 4` (road only, `0x4D3CA8`), on the index after the order
+  upgrades (`0x4D35D9`–`0x4D362F`, stored at `0x4D3943`). Mag Tube (bit `0x8`) therefore needs
+  CentPsi, not CentEmp. The same upgrade block turns the farm order on fungus at shelf altitude
+  or above into Remove Fungus (index `0xA`). Plant Fungus has no check on what the tile already
+  holds; its clear mask (`0x288050`) removes mine, solar, farm, soil enricher and forest on
+  completion. Aquifer, raise, lower and level have no bit and skip the fungus gate.
 - Solar: refused when `energy_yield(flag = 1)` is 0 (`LOWSOLAR`, `0x4D3E46`).
 - Thermal Borehole: refused when a land neighbour has a borehole or holds an own unit with the
   borehole order (`0x12`) (`TWOBOREHOLES`), or a land neighbour sits at a lower altitude level
@@ -1113,6 +1144,13 @@ command:
   whose territory belongs to a faction the terraformer holds Pact, Treaty or Truce with gets
   `break_treaty(mask 7)` (`0x4D498F`). Otherwise, outside multiplayer (`MultiplayerActive`
   `0x93F660`), it calls `double_cross(terraformer, owner, -1)` (`0x4D49D1`).
+
+No popup warns that a project will destroy what the tile holds. The command's popups are the
+refusals above, `TERRACOST` / `TERRAPAY`, the treaty-break confirm, and the `TERRAFORM` tutorial
+tip on raised terrain and rainfall (`tut_check(0x800)` then `popt`, `0x4D49F5`–`0x4D4A17`;
+text in `tutor.txt`). `action_terraform`'s popups on completion are `HARVESTFOREST`,
+`TERRAMINE` / `TERRAYOURS`, `DROWNMINE` / `DROWNYOURS`, `BOREHOLEMINE` and the `MADE*` family;
+none names a destroyed improvement.
 
 `HASFARM` and `HASROAD` name the order upgrades: the farm order on a land farm becomes Soil
 Enricher, and the road order on a road becomes Mag Tube, each once the tech is known

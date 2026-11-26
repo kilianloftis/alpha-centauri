@@ -169,6 +169,32 @@ public:
         return Add(std::move(config));
     }
 
+    const ac::EffectConfig_t& TerraformBlockOverride(
+        std::string projectId, std::vector<std::string> blockedByIds,
+        ac::EffectScope_t scope = ac::EffectScope_t::FactionGlobal)
+    {
+        ac::EffectConfig_t config;
+        config.effect = ac::TerraformBlockOverrideEffect_t{std::move(projectId),
+                                                           std::move(blockedByIds)};
+        config.scope = scope;
+        return Add(std::move(config));
+    }
+
+    // An empty secondId wild-cards the other side of the pair.
+    const ac::EffectConfig_t& CoexistenceOverride(
+        ac::InteractionCell_t cell, std::string firstId, std::string secondId = {},
+        ac::EffectScope_t scope = ac::EffectScope_t::FactionGlobal)
+    {
+        ac::EffectConfig_t config;
+        ac::CoexistenceOverrideEffect_t overrideFx;
+        overrideFx.cell = cell;
+        overrideFx.firstId = std::move(firstId);
+        overrideFx.secondId = std::move(secondId);
+        config.effect = overrideFx;
+        config.scope = scope;
+        return Add(std::move(config));
+    }
+
     const ac::EffectConfig_t& RatingMod(ac::SocialRatingId_t rating, int amount,
                                         ac::EffectScope_t scope = ac::EffectScope_t::FactionGlobal,
                                         ac::ModifierOp_t op = ac::ModifierOp_t::Add)

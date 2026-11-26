@@ -347,7 +347,11 @@
       {
         "type": "FungalBloom",
         "parameters": {
-          "tiles_stat": "fungal_bloom_tiles"
+          "tiles_stat": "fungal_bloom_tiles",
+          "destroys": [
+            "Road",
+            "MagTube"
+          ]
         }
       },
       {

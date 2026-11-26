@@ -78,8 +78,6 @@ struct ImprovementConfig_t
     // domain is not the new surface. Empty means the improvement survives either surface.
     std::optional<ImprovementDomain_t> domain;
     std::vector<std::string> excludes; // feature ids that can't coexist with this one on a tile
-    // Ids removed when this occupant is added (Fungus Plant Fungus clear mask). Not coexistence.
-    std::vector<std::string> clears;
     // Feature ids that must already be on the tile (SoilEnricher needs Farm; MagTube needs Road).
     // JSON key: "requires".
     std::vector<std::string> requiredOccupants;
@@ -112,7 +110,7 @@ struct ImprovementConfig_t
 // True when a former project places this occupant (`places` in terraform_projects.json).
 bool IsBuildable(const ImprovementConfig_t& rConfig);
 
-// Expands @tags in excludes / clears / suppress lists and art hides. placeTargetIds feed the
+// Expands @tags in excludes / requires / suppress lists and art hides. placeTargetIds feed the
 // implicit @buildable tag. An unknown tag or id throws.
 void ExpandFeatureTagReferences(std::vector<ImprovementConfig_t>& rConfigs,
                                 const std::unordered_set<std::string>& placeTargetIds);

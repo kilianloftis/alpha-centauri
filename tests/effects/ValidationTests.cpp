@@ -411,6 +411,28 @@ TEST_CASE("ValidateEffectReferences: selector improvement ids must exist", "[eff
     CHECK_THROWS_WITH(ValidateEffectReferences(data), Catch::Matchers::ContainsSubstring("Fram"));
 }
 
+TEST_CASE("ValidateEffectReferences: TerraformBlockOverride ids must exist",
+          "[effects][validation]")
+{
+    GameDataContext data;
+    LoadFixtureRegistries(data);
+
+    actest::EffectPool pool;
+    data.productionConfig->effects = {pool.TerraformBlockOverride(
+        "PlantFungus", {"@buildable", "Fungus"}, EffectScope_t::FactionUnits)};
+    CHECK_NOTHROW(ValidateEffectReferences(data));
+
+    data.productionConfig->effects = {
+        pool.TerraformBlockOverride("PlantFungs", {"Fungus"}, EffectScope_t::FactionUnits)};
+    CHECK_THROWS_WITH(ValidateEffectReferences(data),
+                      Catch::Matchers::ContainsSubstring("PlantFungs"));
+
+    data.productionConfig->effects = {
+        pool.TerraformBlockOverride("PlantFungus", {"Fungs"}, EffectScope_t::FactionUnits)};
+    CHECK_THROWS_WITH(ValidateEffectReferences(data),
+                      Catch::Matchers::ContainsSubstring("Fungs"));
+}
+
 TEST_CASE("ValidateEffectReferences: defense slots must be declared in combat.json",
           "[effects][validation]")
 {

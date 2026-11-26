@@ -1,7 +1,12 @@
 [
       {
-        "id": "ResourceCollection",
-        "name": "Resource Collection",
+        "id": "TurnStart",
+        "name": "A",
+        "repeatForEachFaction": false
+      },
+      {
+        "id": "TurnStart",
+        "name": "B",
         "repeatForEachFaction": false
       }
     ]

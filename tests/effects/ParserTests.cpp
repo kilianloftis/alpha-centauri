@@ -1672,23 +1672,27 @@ TEST_CASE("ParseTriggeredEffectConfig: Earthquake", "[effects][parser][triggered
         "on_detonate_effects"), ContainsSubstring("must be >= 1"));
 
     const TriggeredEffectConfig_t bloom = TriggeredEffectParser::ParseTriggeredEffectConfig(
-        json::parse(R"({ "type": "FungalBloom", "parameters": { "tiles": 3 } })"),
+        json::parse(R"({ "type": "FungalBloom",
+                         "parameters": { "tiles": 3, "destroys": ["Farm"] } })"),
         "on_detonate_effects");
     const auto* pBloom = std::get_if<FungalBloomEffect_t>(&bloom.effect);
     REQUIRE(pBloom);
     CHECK(pBloom->tiles == 3);
     CHECK_FALSE(pBloom->tilesStat.has_value());
+    CHECK(pBloom->destroys == std::vector<std::string>{"Farm"});
 
     const TriggeredEffectConfig_t bloomStat = TriggeredEffectParser::ParseTriggeredEffectConfig(
         json::parse(R"({ "type": "FungalBloom",
-                         "parameters": { "tiles_stat": "fungal_bloom_tiles" } })"),
+                         "parameters": { "tiles_stat": "fungal_bloom_tiles",
+                                         "destroys": [] } })"),
         "on_detonate_effects");
     const auto* pBloomStat = std::get_if<FungalBloomEffect_t>(&bloomStat.effect);
     REQUIRE(pBloomStat);
     CHECK(pBloomStat->tilesStat == StatId_t::FungalBloomTiles);
 
     const TriggeredEffectConfig_t bloomChance = TriggeredEffectParser::ParseTriggeredEffectConfig(
-        json::parse(R"({ "type": "FungalBloom", "parameters": { "chance": [1.0, "1/1"] } })"),
+        json::parse(R"({ "type": "FungalBloom",
+                         "parameters": { "chance": [1.0, "1/1"], "destroys": ["@land_terraform"] } })"),
         "on_detonate_effects");
     const auto* pBloomChance = std::get_if<FungalBloomEffect_t>(&bloomChance.effect);
     REQUIRE(pBloomChance);
@@ -1700,17 +1704,29 @@ TEST_CASE("ParseTriggeredEffectConfig: Earthquake", "[effects][parser][triggered
 
     CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(
         json::parse(R"({ "type": "FungalBloom",
-                         "parameters": { "tiles": 1, "tiles_stat": "fungal_bloom_tiles" } })"),
+                         "parameters": { "tiles": 1, "tiles_stat": "fungal_bloom_tiles",
+                                         "destroys": [] } })"),
         "on_detonate_effects"), ContainsSubstring("exactly one"));
     CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(
         json::parse(R"({ "type": "FungalBloom",
-                         "parameters": { "tiles": 1, "chance": [1.0, "1/1"] } })"),
+                         "parameters": { "tiles": 1, "chance": [1.0, "1/1"],
+                                         "destroys": [] } })"),
         "on_detonate_effects"), ContainsSubstring("exactly one"));
     CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(
         json::parse(R"({ "type": "FungalBloom", "parameters": {} })"), "on_detonate_effects"),
         ContainsSubstring("exactly one"));
+    // A bloom must state what it destroys: the three trigger sites are authored separately,
+    // so a forgotten key fails at load instead of silently destroying nothing.
     CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(
-        json::parse(R"({ "type": "FungalBloom", "parameters": { "tiles": 0 } })"),
+        json::parse(R"({ "type": "FungalBloom", "parameters": { "tiles": 1 } })"),
+        "on_detonate_effects"), ContainsSubstring("destroys"));
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "FungalBloom",
+                         "parameters": { "tiles": 1, "destroys": ["Farm", ""] } })"),
+        "on_detonate_effects"), ContainsSubstring("non-empty"));
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "FungalBloom",
+                         "parameters": { "tiles": 0, "destroys": [] } })"),
         "on_detonate_effects"), ContainsSubstring("must be >= 1"));
     // A base stat cannot be resolved off the unit the trigger stamped.
     CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(
@@ -1839,6 +1855,7 @@ TEST_CASE("Continuous type detection tracks the continuous parser's table",
     for (const char* pType : {"StatModifier", "RuleFlag", "GrantBuilding", "Infiltration",
                               "Conceal", "Detect", "Intercept", "Scramble", "TransportParams",
                               "InteractionOverride", "CoexistenceOverride",
+                              "TerraformBlockOverride",
                               "ForbiddenSocialPolicy", "SocialPolicyImpunity",
                               "SocialRatingModifier", "OrbitalAttack"})
     {
@@ -2951,6 +2968,55 @@ TEST_CASE("A tile-feature condition can be negated, and AnyOf is an OR", "[effec
 
     CHECK_THROWS_WITH(parseCondition(R"({"kind":"AnyOf"})"),
                       ContainsSubstring("AnyOf") && ContainsSubstring("non-empty"));
+}
+
+TEST_CASE("TerraformBlockOverride names a project, blocked_by entries, or both",
+          "[effects][parser]")
+{
+    const auto parse = [](const char* pParams) {
+        json host;
+        host["effects"] = json::array({json::parse(
+            std::string(R"({"type":"TerraformBlockOverride","scope":"ThisUnit",)")
+            + R"("parameters":)" + pParams + "}")});
+        return EffectConfigParser::ParseEffects(host, EffectSourceKind_t::UnitComponent, "src");
+    };
+
+    // Naming neither axis would lift every project's blocked_by wholesale.
+    CHECK_THROWS_WITH(parse("{}"), ContainsSubstring("project"));
+    CHECK_THROWS_WITH(parse(R"({"blocked_by":[""]})"), ContainsSubstring("non-empty"));
+    // blocked_by is always a list, never a bare string.
+    CHECK_THROWS(parse(R"({"blocked_by":"Fungus"})"));
+
+    const std::vector<EffectConfig_t> both =
+        parse(R"({"project":"PlantFungus","blocked_by":["@buildable"]})");
+    REQUIRE(both.size() == 1);
+    const auto* pBoth = std::get_if<TerraformBlockOverrideEffect_t>(&both[0].effect);
+    REQUIRE(pBoth);
+    CHECK(pBoth->projectId == "PlantFungus");
+    CHECK(pBoth->blockedByIds == std::vector<std::string>{"@buildable"});
+
+    // Project only: every entry of that project's blocked_by is lifted.
+    const std::vector<EffectConfig_t> projectOnly = parse(R"({"project":"Road"})");
+    const auto* pProject = std::get_if<TerraformBlockOverrideEffect_t>(&projectOnly[0].effect);
+    REQUIRE(pProject);
+    CHECK(pProject->projectId == "Road");
+    CHECK(pProject->blockedByIds.empty());
+
+    // Entries only: that block is lifted for any project (Centauri Psi's fungus lift).
+    const std::vector<EffectConfig_t> entriesOnly = parse(R"({"blocked_by":["Fungus","Road"]})");
+    const auto* pEntries = std::get_if<TerraformBlockOverrideEffect_t>(&entriesOnly[0].effect);
+    REQUIRE(pEntries);
+    CHECK(pEntries->projectId.empty());
+    CHECK(pEntries->blockedByIds == std::vector<std::string>{"Fungus", "Road"});
+
+    // Unit-scoped only, like CoexistenceOverride: it is the acting former's permission.
+    json host;
+    host["effects"] = json::array({json::parse(
+        R"({"type":"TerraformBlockOverride","scope":"FactionGlobal",)"
+        R"("parameters":{"project":"Road"}})")});
+    CHECK_THROWS_WITH(
+        EffectConfigParser::ParseEffects(host, EffectSourceKind_t::UnitComponent, "src"),
+        ContainsSubstring("ThisUnit or FactionUnits"));
 }
 
 TEST_CASE("CoexistenceOverride needs one or two occupant ids", "[effects][parser]")

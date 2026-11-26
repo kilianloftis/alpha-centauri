@@ -78,6 +78,7 @@ struct EffectPayloadValidator
     const SocialRatingRegistry& rSocialRatings;
     const SocialPolicyRegistry& rSocialPolicies;
     const CombatConfig_t& rCombat;
+    const TerraformProjectRegistry& rTerraformProjects;
 
     void operator()(const GrantBuildingEffect_t& rGrant) const
     {
@@ -152,6 +153,27 @@ struct EffectPayloadValidator
             }
         }
     }
+
+    // blockedByIds are matched against the project's already-expanded blocked_by, so a @tag
+    // here is resolved at the call site; only concrete ids can be checked against a registry.
+    void operator()(const TerraformBlockOverrideEffect_t& rOverride) const
+    {
+        if (!rOverride.projectId.empty() && !rTerraformProjects.Find(rOverride.projectId))
+        {
+            ThrowBadReference(rSourceId, "terraform project", rOverride.projectId);
+        }
+        for (const std::string& rId : rOverride.blockedByIds)
+        {
+            if (rId.empty() || rId.front() == '@')
+            {
+                continue;
+            }
+            if (!rImprovements.Find(rId))
+            {
+                ThrowBadReference(rSourceId, "terraform block occupant", rId);
+            }
+        }
+    }
 };
 
 // The same for TriggeredEffectVariant_t, exhaustive so a new alternative breaks the build here.
@@ -204,7 +226,22 @@ struct TriggeredPayloadValidator
     void operator()(const RebelEffect_t&) const {}
     void operator()(const DestroyUnitEffect_t&) const {}
     void operator()(const EarthquakeEffect_t&) const {}
-    void operator()(const FungalBloomEffect_t&) const {}
+    // `destroys` entries may be "@tag" refs, resolved at dispatch against the occupant
+    // registry; only concrete ids can be checked against it here.
+    void operator()(const FungalBloomEffect_t& rBloom) const
+    {
+        for (const std::string& rId : rBloom.destroys)
+        {
+            if (rId.empty() || rId.front() == '@')
+            {
+                continue;
+            }
+            if (!rImprovements.Find(rId))
+            {
+                ThrowBadReference(rSourceId, "fungal bloom occupant", rId);
+            }
+        }
+    }
     void operator()(const ExplosionEffect_t&) const {}
     void operator()(const StepRockinessEffect_t&) const {}
     void operator()(const ElevationChangeEffect_t&) const {}
@@ -401,13 +438,17 @@ public:
         , m_rSocialPolicies(RequireRegistry(rData.socialPolicyRegistry, "socialPolicyRegistry"))
         , m_rNativeUnits(RequireRegistry(rData.nativeUnitRegistry, "nativeUnitRegistry"))
         , m_rCombat(RequireRegistry(rData.combatConfig, "combatConfig"))
+        , m_rTerraformProjects(
+              RequireRegistry(rData.terraformProjectRegistry, "terraformProjectRegistry"))
     {
     }
 
     void Effects(const std::vector<EffectConfig_t>& rEffects, const std::string& rSourceId) const
     {
-        const EffectPayloadValidator payloads{rSourceId, m_rBuildings, m_rImprovements,
-                                              m_rSocialRatings, m_rSocialPolicies, m_rCombat};
+        const EffectPayloadValidator payloads{rSourceId,        m_rBuildings,
+                                              m_rImprovements,  m_rSocialRatings,
+                                              m_rSocialPolicies, m_rCombat,
+                                              m_rTerraformProjects};
         for (const EffectConfig_t& rEffect : rEffects)
         {
             std::visit(payloads, rEffect.effect);
@@ -473,6 +514,7 @@ private:
     const SocialPolicyRegistry& m_rSocialPolicies;
     const NativeUnitRegistry& m_rNativeUnits;
     const CombatConfig_t& m_rCombat;
+    const TerraformProjectRegistry& m_rTerraformProjects;
 };
 
 void CheckMapSources_(const GameDataContext& rData, const EffectSourceChecker_& rCheck)

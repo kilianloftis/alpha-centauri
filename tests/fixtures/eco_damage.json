@@ -9,7 +9,13 @@
   "fungal_pop": {
     "max_chance_percent": 100,
     "on_pop_effects": [
-      { "type": "FungalBloom", "parameters": { "tiles": 1 } }
+      {
+        "type": "FungalBloom",
+        "parameters": {
+          "tiles": 1,
+          "destroys": []
+        }
+      }
     ]
   }
 }

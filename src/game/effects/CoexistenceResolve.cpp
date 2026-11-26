@@ -7,14 +7,19 @@
 namespace ac
 {
 
-std::vector<CoexistenceOverrideEffect_t> ActiveCoexistenceOverrides(const Unit& rUnit)
+namespace
 {
-    std::vector<CoexistenceOverrideEffect_t> overrides;
+
+// Both override kinds select the same way: unit-scoped, condition satisfied. Collecting one
+// payload type is the only thing that differs.
+template <typename Payload_t>
+std::vector<Payload_t> ActiveUnitOverrides_(const Unit& rUnit)
+{
+    std::vector<Payload_t> overrides;
     const EffectContext_t context;
     for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rUnit).effects)
     {
-        const CoexistenceOverrideEffect_t* pOverride =
-            std::get_if<CoexistenceOverrideEffect_t>(&rEffect.config->effect);
+        const Payload_t* pOverride = std::get_if<Payload_t>(&rEffect.config->effect);
         if (!pOverride)
         {
             continue;
@@ -32,6 +37,18 @@ std::vector<CoexistenceOverrideEffect_t> ActiveCoexistenceOverrides(const Unit& 
         overrides.push_back(*pOverride);
     }
     return overrides;
+}
+
+} // namespace
+
+std::vector<CoexistenceOverrideEffect_t> ActiveCoexistenceOverrides(const Unit& rUnit)
+{
+    return ActiveUnitOverrides_<CoexistenceOverrideEffect_t>(rUnit);
+}
+
+std::vector<TerraformBlockOverrideEffect_t> ActiveTerraformBlockOverrides(const Unit& rUnit)
+{
+    return ActiveUnitOverrides_<TerraformBlockOverrideEffect_t>(rUnit);
 }
 
 } // namespace ac

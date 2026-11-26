@@ -582,11 +582,6 @@ void TileEffectsContext::OnTileChanged(Tile& rTile, std::string_view keepId)
     }
 
     m_bSweepingOccupancy = true;
-    // Arrival `clears` (e.g. Fungus plant mask) before coexistence sweep.
-    if (!keepId.empty())
-    {
-        ApplyArrivalClears_(rTile, keepId);
-    }
     // First clears what the new occupant displaces, then re-judges it. It survives a stock
     // exclude only on a waiver the tile recorded.
     RemoveImprovementsThatCannotRemain_(rTile, keepId);
@@ -604,28 +599,6 @@ void TileEffectsContext::OnTileChanged(Tile& rTile, std::string_view keepId)
         {
             OnTileChanged(*pTile, {});
         }
-    }
-}
-
-void TileEffectsContext::ApplyArrivalClears_(Tile& rTile, std::string_view arrivingId)
-{
-    const ImprovementConfig_t* pArriving = m_rImprovements.Find(std::string(arrivingId));
-    if (!pArriving || pArriving->clears.empty())
-    {
-        return;
-    }
-    for (const std::string& rId : pArriving->clears)
-    {
-        if (!rTile.HasImprovement(rId) && !rTile.HasTerrainFeature(rId))
-        {
-            continue;
-        }
-        const ImprovementConfig_t* pVictim = m_rImprovements.Find(rId);
-        if (!pVictim || !IsRemovableByOccupancy(*pVictim))
-        {
-            continue;
-        }
-        RemoveOccupantWithEffects(rTile, rId);
     }
 }
 

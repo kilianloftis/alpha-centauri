@@ -62,6 +62,7 @@
 #include <cmath>
 #include <magic_enum.hpp>
 #include <random>
+#include <ranges>
 #include <set>
 #include <span>
 #include <stdexcept>
@@ -848,6 +849,35 @@ bool ElevationChange_(TriggeredEffectContext_t& rCtx, const ElevationChangeEffec
     return true;
 }
 
+// `destroys` may name "@tag" refs. The occupant tag index lives behind the registry rather
+// than in the triggered-effect parser, so the refs resolve here, at the one site that has it.
+std::vector<std::string> ExpandBloomDestroys_(std::span<const std::string> destroys,
+                                              const ImprovementRegistry& rImprovements)
+{
+    std::vector<std::string> expanded;
+    for (const std::string& rEntry : destroys)
+    {
+        if (rEntry.empty())
+        {
+            continue;
+        }
+        if (rEntry.front() != '@')
+        {
+            expanded.push_back(rEntry);
+            continue;
+        }
+        const std::string_view tag(rEntry.begin() + 1, rEntry.end());
+        for (const ImprovementConfig_t& rConfig : rImprovements.GetAll())
+        {
+            if (std::ranges::contains(rConfig.tags, tag))
+            {
+                expanded.push_back(rConfig.id);
+            }
+        }
+    }
+    return expanded;
+}
+
 bool FungalBloom_(TriggeredEffectContext_t& rCtx, const FungalBloomEffect_t& rConfig,
                   std::vector<TriggeredEffectResult_t>& rOut)
 {
@@ -855,11 +885,13 @@ bool FungalBloom_(TriggeredEffectContext_t& rCtx, const FungalBloomEffect_t& rCo
     {
         return false;
     }
+    const std::vector<std::string> destroys = ExpandBloomDestroys_(
+        rConfig.destroys, rCtx.rGameState.GetTileEffects().GetImprovements());
     FungalBloomResult_t result;
     if (!rConfig.chance.empty())
     {
         result = ApplyFungalBloom(*rCtx.pTile, rCtx.rGameState.GetWorldMap(), rConfig.chance,
-                                  rCtx.Rng(), rCtx.rGameState);
+                                  destroys, rCtx.Rng(), rCtx.rGameState);
     }
     else
     {
@@ -872,8 +904,8 @@ bool FungalBloom_(TriggeredEffectContext_t& rCtx, const FungalBloomEffect_t& rCo
             }
             tiles = ResolveStat(*rCtx.pUnit, *rConfig.tilesStat);
         }
-        result = ApplyFungalBloom(*rCtx.pTile, rCtx.rGameState.GetWorldMap(), tiles, rCtx.Rng(),
-                                  rCtx.rGameState);
+        result = ApplyFungalBloom(*rCtx.pTile, rCtx.rGameState.GetWorldMap(), tiles, destroys,
+                                  rCtx.Rng(), rCtx.rGameState);
     }
     if (result.tilesFungused == 0)
     {

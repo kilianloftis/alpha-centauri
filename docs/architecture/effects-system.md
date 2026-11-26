@@ -177,6 +177,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   - `SocialRatingModifierEffect_t`
   - `InteractionOverrideEffect_t`
   - `CoexistenceOverrideEffect_t`
+  - `TerraformBlockOverrideEffect_t`
 
 ### CoexistenceOverrideEffect_t
 - **Purpose**: Licenses one former to build past a stock `excludes` deny (or to be denied a
@@ -193,6 +194,27 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   later query, so the occupancy sweep that runs on any subsequent tile change does not evict
   what was legitimately built. A waiver is dropped with the improvement it belongs to, and
   losing the component or tech that earned it changes nothing.
+
+### TerraformBlockOverrideEffect_t
+- **Purpose**: Lifts entries of a terraform project's `blocked_by` for the acting former — the
+  action-precondition counterpart to `CoexistenceOverride`'s tile-coexistence deny. Scope must
+  be `ThisUnit` (a component) or `FactionUnits` (a tech); the parser rejects anything else.
+- **Config**: `project` is one project id and `blocked_by` is **always a list** of occupant ids
+  or `@tag` refs. Each axis is optional and wild-cards when omitted (no `project` matches every
+  project; no `blocked_by` matches every entry), but omitting both is rejected — it would lift
+  every project's `blocked_by` wholesale. Every override is a lift, so there is no polarity and
+  first-match order never matters.
+- **Matching**: an entry matches by exact id, or when the blocking occupant carries the named
+  tag (`@buildable` is the derived tag for anything a project `places`). The project's own
+  `blocked_by` is already tag-expanded at load, so the two sides meet on the occupant rather
+  than re-expanding the ref. An entry no override names stays blocking.
+- **Shipping use**: Centauri Empathy lifts `Fungus` for `Road` and `MagTube`; Centauri Psi lifts
+  `Fungus` for any project. Centauri Psi also carries a `CoexistenceOverride` allowing any pair
+  with `Fungus`, because Fungus `excludes` the improvements Plant Fungus destroys: the block
+  lift lets the order start, the coexistence licence lets the placement land and records the
+  tile waiver that keeps it. This replaced the `terraform_fungus_road` /
+  `terraform_fungus_improvement` rule flags, moving the Road/MagTube distinction out of a
+  hardcoded id comparison and into which tech names which project.
 
 ### StatModifierEffect_t
 - **Purpose**: Modifies any stat identified by `StatId_t` — both base resources and unit stats. Also expresses **per-tile yield modifiers** via its optional `selector` (see below); there is no separate tile-yield effect type.
@@ -680,8 +702,16 @@ tile's own bound `MapRulesConfig_t`, so the effect needs no `GameDataContext`.
 also skip existing fungus). Exactly one size mode: fixed `tiles` (origin-first quota in
 radius 1), `tiles_stat` (same, resolved off the subject unit), or `chance` (per-distance
 `Rational_t` rolls, same shape as `TerraformCluster`). Supply-pod `GOODYFUNGUS` uses
-`chance: [1.0, "1/1"]` for the full 3×3. Setting fungus removes improvements that cannot
-coexist with it. A nutrient bonus stays.
+`chance: [1.0, "1/1"]` for the full 3×3. Adding Fungus runs the occupancy sweep, so whatever
+Fungus `excludes` (the Plant Fungus set: farm, soil enricher, mine, solar, forest and the sea
+equivalents) goes with every bloom. A required `destroys` list names what the bloom razes on top
+of that on each newly fungused tile — ids or `@tag` refs, resolved at dispatch because the
+occupant tag index lives behind the registry and not in the triggered-effect parser. Shipping
+eco damage lists `[]`; the supply pod and fungal payload list `Road` and `MagTube`
+(`docs/thinker/terranx-map.md` "Case 7 — FungalBloom", "Eco-damage fungus", "Fungal payload").
+It is required so that a forgotten key on one of the three independently authored trigger
+sites fails at load instead of silently destroying nothing. Only improvements are razed, and
+`IsRemovableByOccupancy` keeps the Base, so a terrain feature such as a nutrient bonus stays.
 A uniform draw of `[fungal_bloom_native_lifeforms_min, fungal_bloom_native_lifeforms_max]` from
 `config/native_life.json` spawns that many of the `EligibleLifeforms` on the new tiles, owned by the
 session's native-life faction (Planet). A design is eligible when its domain can hold the

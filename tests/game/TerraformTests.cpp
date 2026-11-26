@@ -22,6 +22,7 @@
 #include "game/units/Unit.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
+#include "game/effects/TileEffectsContext.h"
 #include "TestHelpers.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitOrder.h"
@@ -332,19 +333,27 @@ TEST_CASE("Monolith allows Road and PlantFungus but not Farm", "[unit][terraform
 {
     TerraformGame_ game;
     BaseManager& home = game.MakeBase(8, 8);
-    Tile& tile = *game.fixtures.state.GetWorldMap().GetTile(10, 10);
-    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(tile, "Monolith");
-    Unit& former = game.MakeFormer(10, 10, &home);
 
-    CHECK_FALSE(game.StartTerraform(former, "Farm"));
-    REQUIRE(game.StartTerraform(former, "Road"));
-    game.FinishTerraform(former);
-    CHECK(tile.HasImprovement("Road"));
-    CHECK(tile.HasFeature("Monolith"));
+    // One Monolith tile per project. Sharing a tile would entangle the claim with the fungus
+    // start gate -- planted Fungus blocks Road -- which is not about the Monolith.
+    Tile& rRoadTile = *game.fixtures.state.GetWorldMap().GetTile(10, 10);
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rRoadTile, "Monolith");
+    Unit& roadFormer = game.MakeFormer(10, 10, &home);
 
-    REQUIRE(game.StartTerraform(former, "PlantFungus"));
-    game.FinishTerraform(former);
-    CHECK(tile.HasFeature("Fungus"));
+    CHECK_FALSE(game.StartTerraform(roadFormer, "Farm"));
+    REQUIRE(game.StartTerraform(roadFormer, "Road"));
+    game.FinishTerraform(roadFormer);
+    CHECK(rRoadTile.HasImprovement("Road"));
+    CHECK(rRoadTile.HasFeature("Monolith"));
+
+    Tile& rFungusTile = *game.fixtures.state.GetWorldMap().GetTile(11, 11);
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rFungusTile, "Monolith");
+    Unit& fungusFormer = game.MakeFormer(11, 11, &home);
+
+    REQUIRE(game.StartTerraform(fungusFormer, "PlantFungus"));
+    game.FinishTerraform(fungusFormer);
+    CHECK(rFungusTile.HasFeature("Fungus"));
+    CHECK(rFungusTile.HasFeature("Monolith"));
 }
 
 TEST_CASE("Raise/lower energy quote applies enemy proximity scale", "[unit][terraform][energy]")
@@ -599,25 +608,140 @@ TEST_CASE("Terraform replaces improvements that cannot share the tile", "[unit][
     CHECK_FALSE(rBlockedFungus.HasImprovement("Farm"));
     CHECK(rBlockedFungus.HasFeature("Fungus"));
 
-    Tile& rFungusTile = *game.fixtures.state.GetWorldMap().GetTile(7, 7);
-    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rFungusTile, "Farm");
-    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rFungusTile, "Road");
-    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rFungusTile, "Nutrients");
-    const std::optional<TerraformProject_t> plant = FindTerraformProject(
-        "PlantFungus", rImprovements, *game.fixtures.dataContext.terraformProjectRegistry);
-    REQUIRE(plant);
-
-    std::mt19937 rng(1);
-    REQUIRE(
-        ApplyTerraformResult(rFungusTile, *plant, game.fixtures.state.GetTileEffects(), former, rng,
-                               game.fixtures.state));
-    CHECK(rFungusTile.HasFeature("Fungus"));
-    CHECK_FALSE(rFungusTile.HasImprovement("Farm"));
-    CHECK(rFungusTile.HasImprovement("Road"));
-    CHECK(rFungusTile.HasFeature("Nutrients"));
 }
 
-TEST_CASE("Fungus road and mine starts need CentEmp and CentPsi RuleFlags", "[unit][terraform]")
+// docs/thinker/terranx-map.md "Starting a project": Plant Fungus has no check on what the tile
+// holds, and its clear mask removes mine, solar, farm, soil enricher and forest. Here that is
+// Fungus's excludes, swept when it arrives; everything it does not name stays under it.
+TEST_CASE("Plant Fungus destroys what fungus excludes and keeps the rest", "[unit][terraform]")
+{
+    TerraformGame_ game(/*bExcludes=*/true);
+    BaseManager& home = game.MakeBase(8, 8);
+    TileEffectsContext& rTileEffects = game.fixtures.state.GetTileEffects();
+
+    Tile& rTile = *game.fixtures.state.GetWorldMap().GetTile(10, 10);
+    rTileEffects.AddOccupantWithEffects(rTile, "Farm");
+    rTileEffects.AddOccupantWithEffects(rTile, "Mine");
+    rTileEffects.AddOccupantWithEffects(rTile, "Road");
+    rTileEffects.AddOccupantWithEffects(rTile, "Sensor");
+    rTileEffects.AddOccupantWithEffects(rTile, "Nutrients");
+
+    // No Centauri Psi: the improvements already there do not refuse the order.
+    Unit& former = game.MakeFormer(10, 10, &home);
+    REQUIRE(game.StartTerraform(former, "PlantFungus"));
+    game.FinishTerraform(former);
+
+    CHECK(rTile.HasFeature("Fungus"));
+    CHECK_FALSE(rTile.HasImprovement("Farm"));
+    CHECK_FALSE(rTile.HasImprovement("Mine"));
+    CHECK(rTile.HasImprovement("Road"));
+    CHECK(rTile.HasImprovement("Sensor"));
+    CHECK(rTile.HasFeature("Nutrients"));
+}
+
+// Centauri Psi licenses building onto fungus, not keeping an improvement fungus arrives on.
+TEST_CASE("Plant Fungus by a Centauri Psi former still destroys the Farm", "[unit][terraform]")
+{
+    TerraformGame_ game(/*bExcludes=*/true);
+    BaseManager& home = game.MakeBase(8, 8);
+    const UnitComponentConfig_t* pStock = game.fixtures.unitComponents.Find("test_terraformer");
+    REQUIRE(pStock);
+    EffectPool pool;
+
+    UnitComponentConfig_t psiFormer = *pStock;
+    psiFormer.effects.push_back(
+        pool.TerraformBlockOverride({}, {"Fungus"}, EffectScope_t::ThisUnit));
+    psiFormer.effects.push_back(pool.CoexistenceOverride(InteractionCell_t::Allow, "Fungus", {},
+                                                         EffectScope_t::ThisUnit));
+
+    Tile& rTile = *game.fixtures.state.GetWorldMap().GetTile(10, 10);
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rTile, "Farm");
+
+    Unit& psi = game.MakeFormer(10, 10, &home, &psiFormer);
+    REQUIRE(game.StartTerraform(psi, "PlantFungus"));
+    game.FinishTerraform(psi);
+    CHECK(rTile.HasFeature("Fungus"));
+    CHECK_FALSE(rTile.HasImprovement("Farm"));
+}
+
+// The binary never re-checks a project after it starts, so what decides the outcome is which
+// finishes last: fungus landing on a Farm destroys it, however the Farm got there.
+TEST_CASE("A Farm finished while fungus is being planted is destroyed when it lands",
+          "[unit][terraform]")
+{
+    TerraformGame_ game(/*bExcludes=*/true);
+    BaseManager& home = game.MakeBase(8, 8);
+    Tile& rTile = *game.fixtures.state.GetWorldMap().GetTile(10, 10);
+
+    Unit& planter = game.MakeFormer(10, 10, &home);
+    Unit& farmer = game.MakeFormer(10, 10, &home);
+    REQUIRE(game.StartTerraform(planter, "PlantFungus"));
+    REQUIRE(game.StartTerraform(farmer, "Farm"));
+
+    game.FinishTerraform(farmer);
+    REQUIRE(rTile.HasImprovement("Farm"));
+    game.FinishTerraform(planter);
+    CHECK(rTile.HasFeature("Fungus"));
+    CHECK_FALSE(rTile.HasImprovement("Farm"));
+}
+
+// A Farm built onto fungus keeps its licence only while that fungus stays. Removing the fungus
+// ends it, so fungus planted there again destroys the Farm, as it would any other.
+TEST_CASE("Replanted fungus destroys a Farm built on the fungus before it", "[unit][terraform]")
+{
+    TerraformGame_ game(/*bExcludes=*/true);
+    BaseManager& home = game.MakeBase(8, 8);
+    const UnitComponentConfig_t* pStock = game.fixtures.unitComponents.Find("test_terraformer");
+    REQUIRE(pStock);
+    EffectPool pool;
+
+    UnitComponentConfig_t psiFormer = *pStock;
+    psiFormer.effects.push_back(
+        pool.TerraformBlockOverride({}, {"Fungus"}, EffectScope_t::ThisUnit));
+    psiFormer.effects.push_back(pool.CoexistenceOverride(InteractionCell_t::Allow, "Fungus", {},
+                                                         EffectScope_t::ThisUnit));
+
+    Tile& rTile = *game.fixtures.state.GetWorldMap().GetTile(10, 10);
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rTile, "Fungus");
+
+    Unit& psi = game.MakeFormer(10, 10, &home, &psiFormer);
+    REQUIRE(game.StartTerraform(psi, "Farm"));
+    game.FinishTerraform(psi);
+    REQUIRE(rTile.HasImprovement("Farm"));
+
+    Unit& former = game.MakeFormer(10, 10, &home);
+    REQUIRE(game.StartTerraform(former, "RemoveFungus"));
+    game.FinishTerraform(former);
+    REQUIRE_FALSE(rTile.HasFeature("Fungus"));
+    CHECK(rTile.HasImprovement("Farm"));
+
+    REQUIRE(game.StartTerraform(former, "PlantFungus"));
+    game.FinishTerraform(former);
+    CHECK(rTile.HasFeature("Fungus"));
+    CHECK_FALSE(rTile.HasImprovement("Farm"));
+}
+
+// The override names @buildable, so it must not lift an unrelated blocked_by entry.
+TEST_CASE("The PlantFungus override does not lift the Ocean block", "[unit][terraform]")
+{
+    TerraformGame_ game(/*bExcludes=*/true);
+    BaseManager& home = game.MakeBase(8, 8);
+    const UnitComponentConfig_t* pStock = game.fixtures.unitComponents.Find("test_terraformer");
+    REQUIRE(pStock);
+    EffectPool pool;
+
+    UnitComponentConfig_t psiFormer = *pStock;
+    psiFormer.effects.push_back(pool.TerraformBlockOverride("PlantFungus", {"@buildable"},
+                                                            EffectScope_t::ThisUnit));
+
+    Tile& rSea = *game.fixtures.state.GetWorldMap().GetTile(12, 12);
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rSea, "Ocean");
+    Unit& psi = game.MakeFormer(12, 12, &home, &psiFormer);
+    CHECK_FALSE(game.StartTerraform(psi, "PlantFungus"));
+}
+
+TEST_CASE("Fungus road and mine starts need the CentEmp and CentPsi overrides",
+          "[unit][terraform]")
 {
     TerraformGame_ game(true);
     BaseManager& home = game.MakeBase(8, 8);
@@ -625,13 +749,18 @@ TEST_CASE("Fungus road and mine starts need CentEmp and CentPsi RuleFlags", "[un
     REQUIRE(pStock);
     EffectPool pool;
 
+    // Centauri Empathy lifts the fungus block for Road / MagTube only.
     UnitComponentConfig_t roadFormer = *pStock;
     roadFormer.effects.push_back(
-        pool.RuleFlag(RuleFlagId_t::TerraformFungusRoad, EffectScope_t::ThisUnit));
+        pool.TerraformBlockOverride("Road", {"Fungus"}, EffectScope_t::ThisUnit));
 
+    // Centauri Psi wild-cards the project, so every other place-project is lifted, and
+    // licenses the improvements fungus excludes to be built onto it.
     UnitComponentConfig_t mineFormer = *pStock;
     mineFormer.effects.push_back(
-        pool.RuleFlag(RuleFlagId_t::TerraformFungusImprovement, EffectScope_t::ThisUnit));
+        pool.TerraformBlockOverride({}, {"Fungus"}, EffectScope_t::ThisUnit));
+    mineFormer.effects.push_back(pool.CoexistenceOverride(InteractionCell_t::Allow, "Fungus", {},
+                                                          EffectScope_t::ThisUnit));
 
     Tile& rRoadTile = *game.fixtures.state.GetWorldMap().GetTile(10, 10);
     game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rRoadTile, "Fungus");
@@ -653,10 +782,17 @@ TEST_CASE("Fungus road and mine starts need CentEmp and CentPsi RuleFlags", "[un
     CHECK(rMineTile.HasImprovement("Mine"));
     CHECK(rMineTile.HasFeature("Fungus"));
 
-    // Built-on-fungus occupancy does not need a tile waiver; later sweeps keep both.
+    // The placement recorded a waiver, so later sweeps, which carry no overrides, keep both.
     game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rMineTile, "Road");
     CHECK(rMineTile.HasImprovement("Mine"));
     CHECK(rMineTile.HasFeature("Fungus"));
+
+    // The Road override names its project, so it does not lift a Mine start.
+    Tile& rScopedTile = *game.fixtures.state.GetWorldMap().GetTile(12, 12);
+    game.fixtures.state.GetTileEffects().AddOccupantWithEffects(rScopedTile, "Fungus");
+    Unit& empMine = game.MakeFormer(12, 12, &home, &roadFormer);
+    CHECK_FALSE(game.StartTerraform(empMine, "Mine"));
+    CHECK(game.StartTerraform(empMine, "Road"));
 }
 
 TEST_CASE("A coexistence override lets Farm share a rocky tile", "[unit][terraform]")

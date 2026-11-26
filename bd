@@ -5,25 +5,48 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 DEFAULT_BUILD_DIR="${ROOT_DIR}/build"
 DEFAULT_CONFIG="Debug"
 
-# Low-memory / WSL hosts OOM under heavy C++ parallelism; stronger machines can take 16.
+# Heavy C++ parallelism OOMs low-memory hosts: a single TU in this tree peaks near 1 GiB
+# resident, so the cap is a memory budget, not a core count. Derived from whichever of
+# MemAvailable / MemTotal is smaller (MemAvailable reflects what a WSL host will really
+# hand out) minus a reserve for the linker, which peaks late while compiles are in flight.
 # Override with -j / --jobs, or BD_JOBS in the environment.
+BD_MIB_PER_JOB="${BD_MIB_PER_JOB:-1024}"
+BD_MIB_RESERVE="${BD_MIB_RESERVE:-1024}"
+
 function default_parallel_jobs() {
   if [[ -n "${BD_JOBS:-}" ]]; then
     echo "$BD_JOBS"
     return
   fi
 
-  local mem_kb=0
+  local total_mib=0 avail_mib=0
   if [[ -r /proc/meminfo ]]; then
-    mem_kb=$(awk '/^MemTotal:/ { print $2; exit }' /proc/meminfo)
+    total_mib=$(awk '/^MemTotal:/ { print int($2 / 1024); exit }' /proc/meminfo)
+    avail_mib=$(awk '/^MemAvailable:/ { print int($2 / 1024); exit }' /proc/meminfo)
   fi
-  local mem_gb=$((mem_kb / 1024 / 1024))
 
-  if (( mem_gb < 16 )); then
-    echo 4
-  else
-    echo 16
+  # No /proc/meminfo (or an unreadable one): stay conservative rather than guess high.
+  if (( total_mib == 0 )); then
+    echo 2
+    return
   fi
+
+  local budget_mib="$total_mib"
+  if (( avail_mib > 0 && avail_mib < budget_mib )); then
+    budget_mib="$avail_mib"
+  fi
+  budget_mib=$((budget_mib - BD_MIB_RESERVE))
+
+  local jobs=$((budget_mib / BD_MIB_PER_JOB))
+  local cores
+  cores=$(nproc 2>/dev/null || echo 1)
+  if (( jobs > cores )); then
+    jobs="$cores"
+  fi
+  if (( jobs < 1 )); then
+    jobs=1
+  fi
+  echo "$jobs"
 }
 
 function usage() {
@@ -52,9 +75,11 @@ Commands:
       Show this help message.
 
 Parallelism:
-  Default job count is chosen from MemTotal (<16 GiB → 2, else → 16) so constrained
-  WSL hosts stay safe while larger machines use more cores. Override with -j / --jobs,
-  or set BD_JOBS. Forms: -j2, -j 2, --jobs 2.
+  The default job count is a memory budget, not a core count: a single translation unit
+  here peaks near 1 GiB, so jobs = (min(MemAvailable, MemTotal) - 1 GiB reserve) / 1 GiB,
+  capped at nproc and floored at 1. The reserve covers the linker, which peaks late while
+  compiles are still running. Tune with BD_MIB_PER_JOB / BD_MIB_RESERVE, or force a count
+  with -j / --jobs or BD_JOBS. Forms: -j2, -j 2, --jobs 2.
 EOF
 }
 

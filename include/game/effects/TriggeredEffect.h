@@ -199,6 +199,9 @@ struct FungalBloomEffect_t
     int tiles = 0;
     std::optional<StatId_t> tilesStat;
     std::vector<Rational_t> chance;
+    // Occupant ids (or "@tag" refs, expanded at dispatch) the bloom destroys on each newly
+    // fungused tile. Required in config: an explicit [] is how a bloom destroys nothing.
+    std::vector<std::string> destroys;
 };
 
 // Destroys other units, razes bases and removes improvements in a disk, then lowers it a

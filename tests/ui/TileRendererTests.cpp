@@ -472,7 +472,8 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
 
     actest::FactionFixture world;
     for (const char* id :
-         {"Moist", "Fungus", "MonsoonJungle", "River", "OceanShelf", "Nutrients", "Mine"})
+         {"Moist", "Fungus", "MonsoonJungle", "River", "OceanShelf", "Nutrients", "Mine",
+          "Condenser"})
     {
         rig.AddOccupant(world.improvements.Get(id));
     }
@@ -518,7 +519,8 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
     {
         world.map.GetTile(9, 3)->SetElevation(shelfMeters);
         rLand.AddTerrainFeature(world.improvements.Get("Fungus"));
-        rLand.AddImprovement(world.improvements.Get("Mine"));
+        // An object-layer improvement fungus does not exclude, so it stays on the tile.
+        rLand.AddImprovement(world.improvements.Get("Condenser"));
 
         RecordingGraphics graphics;
         Draw_(rig.renderer, graphics, rLand, FlatTileShape(k_X, k_Y, k_Size), Live_(world.map));
@@ -528,15 +530,15 @@ TEST_CASE("TileRenderer draws SMAC coast overlays on land next to water", "[ui][
         const std::ptrdiff_t fungus = FirstSpriteIndex_(graphics, tilePrefix("Fungus"));
         const std::ptrdiff_t firstCoast = FirstSpriteIndex_(graphics, coastPrefix);
         const std::ptrdiff_t lastCoast = LastSpriteIndex_(graphics, coastPrefix);
-        const std::ptrdiff_t mine =
-            FirstSpriteIndex_(graphics, Variants_(world.improvements.Get("Mine")).land.front());
+        const std::ptrdiff_t condenser = FirstSpriteIndex_(
+            graphics, Variants_(world.improvements.Get("Condenser")).land.front());
         REQUIRE(moist >= 0);
         REQUIRE(fungus >= 0);
         REQUIRE(firstCoast >= 0);
-        REQUIRE(mine >= 0);
+        REQUIRE(condenser >= 0);
         CHECK(moist < firstCoast);
         CHECK(fungus < firstCoast);
-        CHECK(lastCoast < mine);
+        CHECK(lastCoast < condenser);
     }
 
     SECTION("landmarks draw between the base and vegetation, rivers between coast and bonuses")

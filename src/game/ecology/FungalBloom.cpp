@@ -2,6 +2,7 @@
 
 #include "game/CurrentGameState.h"
 #include "game/ecology/EcologyRules.h"
+#include "game/effects/TileEffectsContext.h"
 #include "game/faction/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
@@ -10,6 +11,7 @@
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/ImprovementRegistry.h"
+#include "game/map/OccupantCoexistence.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
@@ -118,6 +120,27 @@ std::vector<Tile*> FungusTiles_(const std::vector<Tile*>& rSelected,
     return newly;
 }
 
+// Everything the bloom destroys on one newly-fungused tile. IsRemovableByOccupancy keeps the
+// Base, which a bloom never razes; only improvements are touched, so a terrain feature a
+// modder happened to tag cannot be eaten.
+void DestroyImprovements_(Tile& rTile, std::span<const std::string> destroys,
+                          TileEffectsContext& rTileEffects)
+{
+    for (const std::string& rId : destroys)
+    {
+        if (!rTile.HasImprovement(rId))
+        {
+            continue;
+        }
+        const ImprovementConfig_t* pVictim = rTileEffects.GetImprovements().Find(rId);
+        if (!pVictim || !IsRemovableByOccupancy(*pVictim))
+        {
+            continue;
+        }
+        rTileEffects.RemoveOccupantWithEffects(rTile, rId);
+    }
+}
+
 int RollLifeformCount_(const NativeLifeConfig_t& rLife, std::mt19937& rRng)
 {
     if (rLife.fungalBloomNativeLifeformsMin < 0
@@ -130,6 +153,7 @@ int RollLifeformCount_(const NativeLifeConfig_t& rLife, std::mt19937& rRng)
 }
 
 FungalBloomResult_t ApplySelectedBloom_(WorldMap& rWorldMap, std::vector<Tile*> selected,
+                                        std::span<const std::string> destroys,
                                         std::mt19937& rRng, GameState& rGameState)
 {
     RequireCurrentGameState(rGameState);
@@ -159,6 +183,17 @@ FungalBloomResult_t ApplySelectedBloom_(WorldMap& rWorldMap, std::vector<Tile*> 
         return result;
     }
 
+    // After the fungus is on the tile, so each occupancy sweep sees the settled state and
+    // EligibleLifeforms below judges habitability against it.
+    if (!destroys.empty())
+    {
+        TileEffectsContext& rTileEffects = rGameState.GetTileEffects();
+        for (Tile* pTile : newly)
+        {
+            DestroyImprovements_(*pTile, destroys, rTileEffects);
+        }
+    }
+
     const int lifeformCount = RollLifeformCount_(*pLife, rRng);
     if (lifeformCount <= 0)
     {
@@ -172,20 +207,22 @@ FungalBloomResult_t ApplySelectedBloom_(WorldMap& rWorldMap, std::vector<Tile*> 
 } // namespace
 
 FungalBloomResult_t ApplyFungalBloom(Tile& rOrigin, WorldMap& rWorldMap, int tileCount,
-                                     std::mt19937& rRng, GameState& rGameState)
+                                     std::span<const std::string> destroys, std::mt19937& rRng,
+                                     GameState& rGameState)
 {
     std::vector<Tile*> selected =
         SelectTilesByRingQuota(rOrigin, rWorldMap, /*radius=*/1, tileCount, IsBloomCandidate, rRng);
-    return ApplySelectedBloom_(rWorldMap, std::move(selected), rRng, rGameState);
+    return ApplySelectedBloom_(rWorldMap, std::move(selected), destroys, rRng, rGameState);
 }
 
 FungalBloomResult_t ApplyFungalBloom(Tile& rOrigin, WorldMap& rWorldMap,
-                                     std::span<const Rational_t> rChances, std::mt19937& rRng,
+                                     std::span<const Rational_t> rChances,
+                                     std::span<const std::string> destroys, std::mt19937& rRng,
                                      GameState& rGameState)
 {
     std::vector<Tile*> selected =
         SelectTilesByRingChance(rOrigin, rWorldMap, rChances, IsBloomCandidate, rRng);
-    return ApplySelectedBloom_(rWorldMap, std::move(selected), rRng, rGameState);
+    return ApplySelectedBloom_(rWorldMap, std::move(selected), destroys, rRng, rGameState);
 }
 
 } // namespace ac

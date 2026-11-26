@@ -132,7 +132,10 @@
     "name": "Road",
     "turns_required": 1,
     "places": "Road",
-    "domain": "land"
+    "domain": "land",
+    "blocked_by": [
+      "Fungus"
+    ]
   },
   {
     "id": "MagTube",
@@ -146,35 +149,50 @@
         }
       ]
     },
-    "domain": "land"
+    "domain": "land",
+    "blocked_by": [
+      "Fungus"
+    ]
   },
   {
     "id": "Farm",
     "name": "Farm",
     "turns_required": 4,
     "places": "Farm",
-    "domain": "land"
+    "domain": "land",
+    "blocked_by": [
+      "Fungus"
+    ]
   },
   {
     "id": "Forest",
     "name": "Forest",
     "turns_required": 4,
     "places": "Forest",
-    "domain": "land"
+    "domain": "land",
+    "blocked_by": [
+      "Fungus"
+    ]
   },
   {
     "id": "Mine",
     "name": "Mine",
     "turns_required": 8,
     "places": "Mine",
-    "domain": "land"
+    "domain": "land",
+    "blocked_by": [
+      "Fungus"
+    ]
   },
   {
     "id": "SolarCollector",
     "name": "Solar Collector",
     "turns_required": 4,
     "places": "SolarCollector",
-    "domain": "land"
+    "domain": "land",
+    "blocked_by": [
+      "Fungus"
+    ]
   },
   {
     "id": "SoilEnricher",
@@ -188,7 +206,10 @@
         }
       ]
     },
-    "domain": "land"
+    "domain": "land",
+    "blocked_by": [
+      "Fungus"
+    ]
   },
   {
     "id": "Bunker",
@@ -202,7 +223,10 @@
         }
       ]
     },
-    "domain": "land"
+    "domain": "land",
+    "blocked_by": [
+      "Fungus"
+    ]
   },
   {
     "id": "Airbase",
@@ -216,14 +240,20 @@
         }
       ]
     },
-    "domain": "land"
+    "domain": "land",
+    "blocked_by": [
+      "Fungus"
+    ]
   },
   {
     "id": "Sensor",
     "name": "Sensor",
     "turns_required": 4,
     "places": "Sensor",
-    "domain": "land"
+    "domain": "land",
+    "blocked_by": [
+      "Fungus"
+    ]
   },
   {
     "id": "Mirror",
@@ -237,7 +267,10 @@
         }
       ]
     },
-    "domain": "land"
+    "domain": "land",
+    "blocked_by": [
+      "Fungus"
+    ]
   },
   {
     "id": "Condenser",
@@ -251,7 +284,10 @@
         }
       ]
     },
-    "domain": "land"
+    "domain": "land",
+    "blocked_by": [
+      "Fungus"
+    ]
   },
   {
     "id": "ThermalBorehole",
@@ -265,13 +301,19 @@
         }
       ]
     },
-    "domain": "land"
+    "domain": "land",
+    "blocked_by": [
+      "Fungus"
+    ]
   },
   {
     "id": "KelpFarm",
     "name": "Kelp Farm",
     "turns_required": 4,
     "places": "KelpFarm",
-    "domain": "sea"
+    "domain": "sea",
+    "blocked_by": [
+      "Fungus"
+    ]
   }
 ]

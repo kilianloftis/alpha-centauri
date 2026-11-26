@@ -269,6 +269,16 @@
       "id": "Fungus",
       "name": "Fungus",
       "move_cost": 3,
+      "excludes": [
+        "Farm",
+        "SoilEnricher",
+        "Mine",
+        "SolarCollector",
+        "Forest",
+        "KelpFarm",
+        "MiningPlatform",
+        "TidalHarness"
+      ],
       "suppress_yield_sources": [
         "@landform",
         "@land_terraform",
@@ -366,17 +376,7 @@
           "land": "assets/sprites/landforms/fungus_land/{mask}.png",
           "sea": "assets/sprites/landforms/fungus_sea/{mask}.png"
         }
-      },
-      "clears": [
-        "Mine",
-        "SolarCollector",
-        "Farm",
-        "SoilEnricher",
-        "Forest",
-        "MiningPlatform",
-        "TidalHarness",
-        "KelpFarm"
-      ]
+      }
     },
     {
       "id": "Aquifer",
